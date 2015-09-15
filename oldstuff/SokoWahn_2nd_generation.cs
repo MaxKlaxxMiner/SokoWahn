@@ -1,35 +1,38 @@
 ﻿#region # using *.*
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+// ReSharper disable LocalVariableHidesMember
+
 #endregion
 
 namespace Sokosolver
 {
-  public class SokoWahn_2nd : SokoWahnInterface
+  // ReSharper disable once InconsistentNaming
+  internal sealed class SokoWahn_2nd : SokoWahnInterface
   {
     #region # // --- Feld-Daten ---
     /// <summary>
     /// merkt sich die Breite des Spielfeldes
     /// </summary>
-    int feldBreite;
+    readonly int feldBreite;
     /// <summary>
     /// merkt sich die Höhe des Spielfeldes
     /// </summary>
-    int feldHöhe;
+    readonly int feldHöhe;
     /// <summary>
     /// merkt sich die Anzahl der Spielfelder
     /// </summary>
-    int feldAnzahl;
+    readonly int feldAnzahl;
     /// <summary>
     /// merkt sich das Spielfeld: ' ' = leer, '#' = Wand, '@' = Spieler, '$' = Kiste, '.' = Zielfeld, '*' = Kisten auf Zielfeld, '+' = Spieler auf Zielfeld
     /// </summary>
-    char[] feld;
+    readonly char[] feld;
     /// <summary>
     /// gleiche wie "feld" nur ohne Kisten und ohne Spieler
     /// </summary>
-    char[] feldLeer;
+    readonly char[] feldLeer;
     #endregion
 
     #region # // --- Spieler-Daten ---
@@ -40,30 +43,30 @@ namespace Sokosolver
     /// <summary>
     /// gleiche Größe wie das Feld, gibt an, ob dort jeweils der Spieler sich aufhalten darf
     /// </summary>
-    bool[] spielerRaum;
+    readonly bool[] spielerRaum;
     /// <summary>
     /// merkt sich alle begehbaren Adressen direkt
     /// </summary>
-    short[] spielerRaumIndex;
+    readonly short[] spielerRaumIndex;
     /// <summary>
     /// merkt sich die eigenen Index-Einträge
     /// </summary>
-    int[] spielerRaumReIndex;
+    readonly int[] spielerRaumReIndex;
     #endregion
 
     #region # // --- Kisten-Daten ---
     /// <summary>
     /// merkt sich die Startaufstellung am Anfang des Spiels
     /// </summary>
-    string kistenStartAufstellung;
+    readonly string kistenStartAufstellung;
     /// <summary>
     /// merkt sich, wieviele Kisten allgemein auf dem Spielfeld sich befinden
     /// </summary>
-    int kistenAnzahl;
+    readonly int kistenAnzahl;
     /// <summary>
     /// gibt an, ob sich auf dem Feld eine Kiste befinden darf
     /// </summary>
-    bool[] kistenRaum;
+    readonly bool[] kistenRaum;
     /// <summary>
     /// merk sich die Anzahl der Kisten-Felder
     /// </summary>
@@ -103,7 +106,8 @@ namespace Sokosolver
 
     #endregion
 
-    bool ohneBlocker = false; // default: false für bessere Leistung
+    // ReSharper disable once ConvertToConstant.Local
+    readonly bool ohneBlocker = false; // default: false für bessere Leistung
 
     #region # // --- Hash-Daten ---
     /// <summary>
@@ -301,7 +305,6 @@ namespace Sokosolver
             if (spielerRaum[p - feldBreite] && spielerRaum[p + feldBreite])
             {
               kistenRaum[p] = true;
-              continue;
             }
           }
         }
@@ -337,7 +340,7 @@ namespace Sokosolver
       if (stellung.Length == kistenAnzahl + 1)
       {
         Array.Copy(feldLeer, feld, feld.Length);
-        spielerPos = (int)stellung[0];
+        spielerPos = stellung[0];
         feld[spielerPos] = feld[spielerPos] == '.' ? '+' : '@';
         stellung.Skip(1).Select(x =>
         {
@@ -387,7 +390,7 @@ namespace Sokosolver
       int bis = archivSatzPos / archivSatzGröße;
       int mit = 0;
 
-      byte[] such = stellung.Select(x => (byte)spielerRaumReIndex[x]).ToArray();
+      var such = stellung.Select(x => (byte)spielerRaumReIndex[x]).ToArray();
 
       do
       {
@@ -582,7 +585,7 @@ namespace Sokosolver
           {
             while (i < kistenPositionen.Length - 1 && kistenRaumIndex[kistenPositionen[i + 1]] < pos) { kistenPositionen[i] = kistenPositionen[i + 1]; i++; }
           }
-          kistenPositionen[i] = kistenRaumIndex.Select((x, p) => new { x, p }).Where(x => x.x == pos).First().p;
+          kistenPositionen[i] = kistenRaumIndex.Select((x, p) => new { x, p }).First(x => x.x == pos).p;
           return;
         }
       }
@@ -611,11 +614,10 @@ namespace Sokosolver
       // kistenPositionen.Select(x => feld[kistenRaumIndex[x]] = feld[kistenRaumIndex[x]] == '.' ? '*' : '$').Count();
       // feld[kistenSpielerPos] = feld[kistenSpielerPos] == '.' ? '+' : '@'; // test
 
-      bool[] spielerGewesen = new bool[feld.Length];
-      List<int> posis = new List<int>();
-      posis.Add(kistenSpielerPos);
+      var spielerGewesen = new bool[feld.Length];
+      var posis = new List<int> {kistenSpielerPos};
 
-      List<string> merker = new List<string>();
+      var merker = new List<string>();
 
       while (posis.Count > 0)
       {
@@ -807,14 +809,14 @@ namespace Sokosolver
           #region # if (kistenSpielerCheck == -1) // Liste muss erst erstellt werden?
           if (kistenSpielerCheck == -1) // Liste muss erst erstellt werden?
           {
-            List<int> neu = new List<int>();
-            for (int y = 0; y < kistenPositionen.Length; y++)
+            var neu = new List<int>();
+            foreach (int p in kistenPositionen)
             {
               for (int r = 0; r < 4; r++)
               {
-                int pos = kistenRaumIndex[kistenPositionen[y]] + kistenSpielerOffset[r];
+                int pos = kistenRaumIndex[p] + kistenSpielerOffset[r];
                 if (!spielerRaum[pos] || (feld[pos] != ' ' && feld[pos] != '.')) continue; // Spieler darf hier nicht stehen
-                neu.Add((kistenPositionen[y] << 2) + r);
+                neu.Add((p << 2) + r);
               }
             }
             kistenSpielerCheckListe = neu.ToArray();
@@ -831,88 +833,86 @@ namespace Sokosolver
               limit++;
               continue;
             }
-            else
+            // filtern nach gültigen und ungültigen Zugvarianten
+            prüfStellungen = new List<string>();
+            foreach (string check in kistenStellungenWertung.Where(x => !x.Value).Select(x => x.Key))
             {
-              // filtern nach gültigen und ungültigen Zugvarianten
-              prüfStellungen = new List<string>();
-              foreach (string check in kistenStellungenWertung.Where(x => !x.Value).Select(x => x.Key))
+              //int find = KistenSucheSpielzüge(check).Where(x => kistenStellungenWertung[x]).Count();
+              //if (find > 0) prüfStellungen.Add(check);
+              if (KistenSucheSpielzüge(check).Any(x => kistenStellungenWertung[x])) prüfStellungen.Add(check);
+            }
+            // ReSharper disable once UseMethodAny.0
+            if (prüfStellungen.Select(x => kistenStellungenWertung[x] = true).Count() > 0) return true;
+
+            // ungültige Stellungen Sammeln
+            prüfStellungen.AddRange(kistenStellungenWertung.Where(x => !x.Value).Select(x => x.Key));
+
+            if (kistenAufbauModus == 1)
+            {
+              LadeStellung(kistenStartAufstellung);
+              int zusatzKill = prüfStellungen.Where(x => kistenStellungenWertung.Where(i => i.Value).All(i => i.Key[1] != x[1])).Select(x =>
               {
-                //int find = KistenSucheSpielzüge(check).Where(x => kistenStellungenWertung[x]).Count();
-                //if (find > 0) prüfStellungen.Add(check);
-                if (KistenSucheSpielzüge(check).Any(x => kistenStellungenWertung[x])) prüfStellungen.Add(check);
-              }
-              if (prüfStellungen.Select(x => kistenStellungenWertung[x] = true).Count() > 0) return true;
-
-              // ungültige Stellungen Sammeln
-              prüfStellungen.AddRange(kistenStellungenWertung.Where(x => !x.Value).Select(x => x.Key));
-
-              if (kistenAufbauModus == 1)
-              {
-                LadeStellung(kistenStartAufstellung);
-                int zusatzKill = prüfStellungen.Where(x => !kistenStellungenWertung.Where(i => i.Value).Any(i => i.Key[1] == x[1])).Select(x =>
-                 {
-                   int pos = kistenRaumIndex[x[1]];
-                   if (feld[pos] == ' ') feld[pos] = 'x';
-                   kistenRaum[pos] = false;
-                   return 0;
-                 }).Count();
-
-                if (zusatzKill > 0) // wurden neue Verbotsfelder für Kisten gefunden?
-                {
-                  kistenRaumAnzahl = kistenRaum.Where(x => x).Count();
-                  kistenRaumIndex = kistenRaum.Select((x, i) => new { x, i }).Where(x => x.x).Select(x => x.i).ToArray();
-                  kistenAufbauModus = 0;
-                  return true;
-                }
-                Array.Copy(feldLeer, feld, feld.Length);
-              }
-
-              // --- zusätzlichen Stop-Index berechnen ---
-              var tempListe = Enumerable.Range(0, feldAnzahl * 4).Select(i => { List<char> dummy = null; return dummy; }).ToArray();
-
-              kistenStellungenWertung.Where(x => !x.Value).Select(x =>
-              {
-                int spielerPos = x.Key[0];
-                char[] kistenPosis = x.Key.Skip(1).ToArray();
-                for (int r = 0; r < kistenPosis.Length; r++)
-                {
-                  int kistenPos = kistenPosis[r];
-                  int off = spielerPos - kistenRaumIndex[kistenPos];
-                  if (off == -1) off = 0; else if (off == +1) off = feldAnzahl; else if (off == -feldBreite) off = feldAnzahl * 2; else if (off == +feldBreite) off = feldAnzahl * 3; else continue;
-                  off += kistenRaumIndex[kistenPos];
-                  if (tempListe[off] == null) tempListe[off] = new List<char>();
-                  int dazu = kistenPosis.Where(i => (int)i != kistenPos).Select(i => { tempListe[off].Add(i); return 0; }).Count();
-                  if (dazu != kistenAufbauModus - 1) throw new Exception("Stop?");
-                }
-
+                int pos = kistenRaumIndex[x[1]];
+                if (feld[pos] == ' ') feld[pos] = 'x';
+                kistenRaum[pos] = false;
                 return 0;
               }).Count();
 
-              // --- temporären Stop-Index in die Haupttabellen eintragen ---
-              Array.Resize(ref kistenStopperIndex, feldAnzahl * kistenAufbauModus * 4);
-
-              for (int y = 0; y < feldAnzahl * 4; y++)
+              if (zusatzKill > 0) // wurden neue Verbotsfelder für Kisten gefunden?
               {
-                if (tempListe[y] != null)
-                {
-                  kistenStopperIndex[feldAnzahl * (kistenAufbauModus - 1) * 4 + y] = kistenStopperPos;
-                  if (tempListe[y].Count + 1 >= kistenStopper.Length - kistenStopperPos) Array.Resize(ref kistenStopper, kistenStopper.Length * 2 + tempListe[y].Count);
-                  tempListe[y].Select(x => kistenStopper[kistenStopperPos++] = x).Count();
-                  kistenStopper[kistenStopperPos++] = (char)9999;
-                }
+                kistenRaumAnzahl = kistenRaum.Where(x => x).Count();
+                kistenRaumIndex = kistenRaum.Select((x, i) => new { x, i }).Where(x => x.x).Select(x => x.i).ToArray();
+                kistenAufbauModus = 0;
+                return true;
+              }
+              Array.Copy(feldLeer, feld, feld.Length);
+            }
+
+            // --- zusätzlichen Stop-Index berechnen ---
+            var tempListe = Enumerable.Range(0, feldAnzahl * 4).Select(i => (List<char>) null).ToArray();
+
+            kistenStellungenWertung.Where(x => !x.Value).Select(x =>
+            {
+              int spielerPos = x.Key[0];
+              var kistenPosis = x.Key.Skip(1).ToArray();
+              foreach (var kistenPos in kistenPosis)
+              {
+                int off = spielerPos - kistenRaumIndex[kistenPos];
+                if (off == -1) off = 0; else if (off == +1) off = feldAnzahl; else if (off == -feldBreite) off = feldAnzahl * 2; else if (off == +feldBreite) off = feldAnzahl * 3; else continue;
+                off += kistenRaumIndex[kistenPos];
+                if (tempListe[off] == null) tempListe[off] = new List<char>();
+                var pos = kistenPos;
+                int dazu = kistenPosis.Where(i => (int)i != pos).Select(i => { tempListe[off].Add(i); return 0; }).Count();
+                if (dazu != kistenAufbauModus - 1) throw new Exception("Stop?");
               }
 
-              // --- zum nächsten Aufbaumodus wecheln ---
-              kistenAufbauModus++;
-              kistenPositionen = Enumerable.Range(0, kistenAufbauModus).ToArray();
-              kistenPositionen.Select(x => feld[kistenRaumIndex[x]] = feld[kistenRaumIndex[x]] == '.' ? '*' : '$').Count();
-              kistenSpielerCheck = -1;
-              kistenSpielerCheckAktiv = false;
-              bekannteStellungen = new Dictionary<string, string>();
-              kistenStellungenWertung = new Dictionary<string, bool>();
-              prüfStellungen = new List<string>();
-              return true;
+              return 0;
+            }).Count();
+
+            // --- temporären Stop-Index in die Haupttabellen eintragen ---
+            Array.Resize(ref kistenStopperIndex, feldAnzahl * kistenAufbauModus * 4);
+
+            for (int y = 0; y < feldAnzahl * 4; y++)
+            {
+              if (tempListe[y] != null)
+              {
+                kistenStopperIndex[feldAnzahl * (kistenAufbauModus - 1) * 4 + y] = kistenStopperPos;
+                if (tempListe[y].Count + 1 >= kistenStopper.Length - kistenStopperPos) Array.Resize(ref kistenStopper, kistenStopper.Length * 2 + tempListe[y].Count);
+                tempListe[y].Select(x => kistenStopper[kistenStopperPos++] = x).Count();
+                kistenStopper[kistenStopperPos++] = (char)9999;
+              }
             }
+
+            // --- zum nächsten Aufbaumodus wecheln ---
+            kistenAufbauModus++;
+            kistenPositionen = Enumerable.Range(0, kistenAufbauModus).ToArray();
+            kistenPositionen.Select(x => feld[kistenRaumIndex[x]] = feld[kistenRaumIndex[x]] == '.' ? '*' : '$').Count();
+            kistenSpielerCheck = -1;
+            kistenSpielerCheckAktiv = false;
+            bekannteStellungen = new Dictionary<string, string>();
+            kistenStellungenWertung = new Dictionary<string, bool>();
+            prüfStellungen = new List<string>();
+            return true;
           }
 
           kistenSpielerPos = kistenRaumIndex[kistenSpielerCheckListe[kistenSpielerCheck] >> 2] + kistenSpielerOffset[kistenSpielerCheckListe[kistenSpielerCheck] & 3];
@@ -1051,9 +1051,9 @@ namespace Sokosolver
     }
     #endregion
 
-    int archivSatzGröße = 0;
-    int archivSatzPos = 0;
-    byte[] archivData = null;
+    int archivSatzGröße;
+    int archivSatzPos;
+    byte[] archivData;
     //  int[] archivCounter = null;
 
     void ArchivEintrag(string[] neues)
@@ -1079,7 +1079,7 @@ namespace Sokosolver
       neuPos--; altPos--; zielPos--;
       if (archivSatzPos > archivData.Length) Array.Resize(ref archivData, archivSatzPos);
 
-      byte[] such = neues[neuPos].Select(x => (byte)spielerRaumReIndex[x]).ToArray();
+      var such = neues[neuPos].Select(x => (byte)spielerRaumReIndex[x]).ToArray();
 
       while (zielPos >= 0)
       {
@@ -1108,11 +1108,11 @@ namespace Sokosolver
       var alt = bekannteStellungen;
       int vorher = alt.Count;
       bekannteStellungen = new Dictionary<string, string>();
-      List<string> nochZuÜbertragen = prüfStellungen.ToList();
+      var nochZuÜbertragen = prüfStellungen.ToList();
 
       while (nochZuÜbertragen.Count > 0)
       {
-        nochZuÜbertragen.Sort((x, y) => string.CompareOrdinal(x, y));
+        nochZuÜbertragen.Sort(string.CompareOrdinal);
         string davor = "?";
         nochZuÜbertragen = nochZuÜbertragen.Where(x => x != davor).Select(x => davor = x).ToList();
 
@@ -1129,8 +1129,8 @@ namespace Sokosolver
       }
 
       // gelöschte Stellungen merken
-      string[] gelöschte = alt.Where(x => !bekannteStellungen.ContainsKey(x.Key)).Select(x => x.Key).ToArray();
-      Array.Sort(gelöschte, (x, y) => string.CompareOrdinal(x, y));
+      var gelöschte = alt.Where(x => !bekannteStellungen.ContainsKey(x.Key)).Select(x => x.Key).ToArray();
+      Array.Sort(gelöschte, string.CompareOrdinal);
       ArchivEintrag(gelöschte);
       alt = null;
       gelöschte = null;
@@ -1148,8 +1148,8 @@ namespace Sokosolver
     /// <returns>fertig lesbares Spielfeld (inkl. Enter-Zeichen)</returns>
     string KurzToString(string kurzKette)
     {
-      char[] ausgabe = feldLeer.ToArray();
-      int pos = (int)kurzKette[0];
+      var ausgabe = feldLeer.ToArray();
+      int pos = kurzKette[0];
       ausgabe[pos] = ausgabe[pos] == '.' ? '+' : '@';
       kurzKette.Skip(1).Select(x => ausgabe[x] = ausgabe[x] == '.' ? '*' : '$').Count();
       return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x => ausgabe[x + y * feldBreite]).ToArray()) + "\r\n"));
@@ -1163,9 +1163,9 @@ namespace Sokosolver
     /// <returns>Kurzschreibweise (enthält Spielerposition und Kistenpositionen kodiert)</returns>
     string StringToKurz(string langKette)
     {
-      char[] ausgabe = new char[kistenAnzahl + 1];
+      var ausgabe = new char[kistenAnzahl + 1];
       int p = 1;
-      char[] lang = langKette.Replace("\r\n", "").ToCharArray();
+      var lang = langKette.Replace("\r\n", "").ToCharArray();
       for (int i = 0; i < lang.Length; i++)
       {
         switch (lang[i])
@@ -1191,7 +1191,7 @@ namespace Sokosolver
     /// <returns>fertige Kurzschreibweise</returns>
     string ToKurzKette()
     {
-      char[] ausgabe = new char[kistenAnzahl + 1];
+      var ausgabe = new char[kistenAnzahl + 1];
       int p = 1;
       for (int i = 0; i < feld.Length; i++)
       {
