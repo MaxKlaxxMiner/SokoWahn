@@ -8,8 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.IO;
-using ngMax;
-using ngMax.Zip;
+using System.IO.Compression;
+
 #endregion
 
 namespace Sokosolver.SokowahnTools
@@ -846,7 +846,7 @@ namespace Sokosolver.SokowahnTools
     /// </summary>
     void SpeichereAlleBlocker()
     {
-      BinaryWriter schreib = new BinaryWriter(new GZipOutputStream(new FileStream(blockerDatei, FileMode.Create, FileAccess.Write)));
+      BinaryWriter schreib = new BinaryWriter(new GZipStream(new FileStream(blockerDatei, FileMode.Create, FileAccess.Write), CompressionLevel.Optimal));
 
       schreib.Write(106); // Version
 
@@ -872,7 +872,7 @@ namespace Sokosolver.SokowahnTools
     /// </summary>
     void LadeAlleBlocker()
     {
-      BinaryReader lese = new BinaryReader(new GZipInputStream(new FileStream(blockerDatei, FileMode.Open, FileAccess.Read)));
+      BinaryReader lese = new BinaryReader(new GZipStream(new FileStream(blockerDatei, FileMode.Open, FileAccess.Read), CompressionMode.Decompress));
 
       int version = lese.ReadInt32();
       if (version != 103 && version != 105 && version != 106) throw new Exception("falsche Version Blocker-Datei: (" + version + ") " + blockerDatei);

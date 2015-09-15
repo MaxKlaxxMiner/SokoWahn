@@ -72,6 +72,12 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="ngMaxLite\ArrayTools.cs" />
+    <Compile Include="ngMaxLite\Crc64.cs" />
+    <Compile Include="ngMaxLite\RamStream.cs" />
+    <Compile Include="ngMaxLite\Sort.cs" />
+    <Compile Include="ngMaxLite\Tools.cs" />
+    <Compile Include="ngMaxLite\Zp.cs" />
     <Compile Include="SokowahnTools\ISokowahnHash.cs" />
     <Compile Include="SokowahnTools\ISokowahnBlocker.cs" />
     <Compile Include="SokowahnTools\SokowahnBlockerB.cs" />
@@ -128,12 +134,6 @@
   <ItemGroup>
     <Content Include="debug.txt" />
     <Content Include="Stats.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\progBase\ngMax\ngMax.csproj">
-      <Project>{e4ba46b9-0270-4305-b5fd-142edcc41ae8}</Project>
-      <Name>ngMax</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">

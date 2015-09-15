@@ -11,7 +11,6 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 using System.Diagnostics;
-using ngMax;
 #endregion
 
 namespace Sokosolver
@@ -111,7 +110,7 @@ namespace Sokosolver
     nochmal:
       if (!sokoWahn.Next(counter))
       {
-        mess = Zp.TickCount2 - mess;
+        mess = Zp.TickCount - mess;
         if (counter < 0)
         {
           textBox5.Text = (-counter).ToString();
@@ -128,14 +127,14 @@ namespace Sokosolver
       }
       else
       {
-        if (speedMode && Zp.TickCount2 - mess < 100.0) goto nochmal;
-        mess = Zp.TickCount2 - mess;
+        if (speedMode && Zp.TickCount - mess < 100.0) goto nochmal;
+        mess = Zp.TickCount - mess;
       }
       textBox4.Text = sokoWahn.ToString();
 
       string anzeige = sokoWahn.KnotenAnzahl.ToString("#,##0") + " - " + sokoWahn.KnotenRest.ToString("#,##0") + " (" + sokoWahn.SuchTiefe + ")" + Schnitt(sokoWahn.KnotenAnzahl, sokoWahn.KnotenRest) + " - " + mess.ToString("#,##0.0") + " ms";
 
-      mess2 = Zp.TickCount2 - mess2 - mess;
+      mess2 = Zp.TickCount - mess2 - mess;
 
       button2.Text = "Next";
       Text = anzeige + " / " + mess2.ToString("#,##0.0") + " ms";
@@ -181,13 +180,13 @@ namespace Sokosolver
 #else
       textBox5.Text = "-200";
 #endif
-      comboBox2.Text = (string)comboBox2.Items[20];
+      comboBox2.Text = (string)comboBox2.Items[16];
 
       comboBox1.Items.AddRange(GetSokowahnInterfaces().Select(x => x.Item1).ToArray());
 #if DEBUG
-      comboBox1.Text = (string)comboBox1.Items[7];
+      comboBox1.Text = (string)comboBox1.Items[6];
 #else
-      comboBox1.Text = (string)comboBox1.Items[7];
+      comboBox1.Text = (string)comboBox1.Items[6];
 #endif
       Text = MaxRamverbrauch.ToString();
     }

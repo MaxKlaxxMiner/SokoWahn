@@ -14,7 +14,6 @@ using System.Text;
 using Sokosolver.SokowahnTools;
 using System.IO;
 using System.Threading;
-using ngMax;
 #endregion
 
 namespace Sokosolver

@@ -11,7 +11,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
-using ngMax;
 #endregion
 
 namespace Sokosolver.SokowahnTools
@@ -157,7 +156,7 @@ namespace Sokosolver.SokowahnTools
 
         FileStream wdat = new FileStream(tempDatei, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         wdat.Position = (long)wpos * (long)wbuf.Length;
-        wdat.Write(wbuf);
+        wdat.Write(wbuf, 0, wbuf.Length);
         wdat.Close();
 
         tmpBufferBelegt.Add(wpos);
@@ -201,7 +200,7 @@ namespace Sokosolver.SokowahnTools
 
         FileStream wdat = new FileStream(tempDatei, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         wdat.Position = (long)wpos * (long)wbuf.Length;
-        wdat.Write(wbuf);
+        wdat.Write(wbuf, 0, wbuf.Length);
         wdat.Close();
 
         tmpBufferBelegt.Add(wpos);
@@ -248,7 +247,7 @@ namespace Sokosolver.SokowahnTools
 
         FileStream wdat = new FileStream(tempDatei, FileMode.OpenOrCreate, FileAccess.ReadWrite);
         wdat.Position = (long)wpos * (long)wbuf.Length;
-        wdat.Write(wbuf);
+        wdat.Write(wbuf, 0, wbuf.Length);
         wdat.Close();
 
         tmpBufferBelegt.Add(wpos);

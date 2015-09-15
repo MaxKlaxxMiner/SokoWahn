@@ -9,7 +9,6 @@ using System.Text;
 using Sokosolver.SokowahnTools;
 using System.IO;
 using System.Threading;
-using ngMax;
 using System.Windows.Forms;
 #endregion
 
@@ -536,7 +535,7 @@ namespace Sokosolver
             {
               #region // --- neue (bessere) Variante gefunden ---
               maxZüge = variante.zugTiefe + 60000 - findZiel;
-              gefundenCrc = variante.crc64;
+              //gefundenCrc = variante.crc64;
 
               for (int i = maxZüge; i < vorwärtsSucher.Length; i++)
               {

@@ -9,8 +9,6 @@ using System.Text;
 using System.Threading;
 using System.IO;
 using System.IO.Compression;
-using ngMax;
-using ngMax.Zip;
 using System.Windows.Forms;
 #endregion
 
