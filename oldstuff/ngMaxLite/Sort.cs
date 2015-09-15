@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿// ReSharper disable TailRecursiveCall
 namespace Sokosolver
 {
-  public static class Sort
+  internal static class Sort
   {
     /// <summary>
     /// Kernmethode QuickSort für den Typ UInt64
@@ -18,16 +13,15 @@ namespace Sokosolver
     {
       if (von + 32 > bis) // Insertsort bevorzugen?
       {
-        ulong* listeV = &liste[von];
-        ulong* listeB = &liste[bis];
-        for (ulong* listeP = listeV + 1; listeP <= listeB; listeP++)
+        var listeV = &liste[von];
+        var listeB = &liste[bis];
+        for (var listeP = listeV + 1; listeP <= listeB; listeP++)
         {
-          ulong* listeJ = listeP;
+          var listeJ = listeP;
           ulong tmp = *listeJ;
           for (; listeJ > listeV && tmp < listeJ[-1]; listeJ--) *listeJ = listeJ[-1];
           *listeJ = tmp;
         }
-        return;
       }
       else
       {
@@ -50,8 +44,8 @@ namespace Sokosolver
         int i, j;
         for (i = von, j = bis - 1; ; )
         {
-          while (liste[++i] < pivot) ;
-          while (pivot < liste[--j]) ;
+          while (liste[++i] < pivot) { }
+          while (pivot < liste[--j]) { }
           if (i >= j) break;
           tmp = liste[i]; liste[i] = liste[j]; liste[j] = tmp;
         }
@@ -79,9 +73,9 @@ namespace Sokosolver
     public static unsafe void Quick(ulong[] liste)
     {
       if (liste.Length < 2) return;
-      fixed (ulong* _liste = liste)
+      fixed (ulong* listeP = liste)
       {
-        QuickSort(_liste, 0, liste.Length - 1);
+        QuickSort(listeP, 0, liste.Length - 1);
       }
     }
   }

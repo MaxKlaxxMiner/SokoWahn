@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#region # using *.*
+
+using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+#endregion
 
 namespace Sokosolver
 {
@@ -11,7 +11,7 @@ namespace Sokosolver
   /// <summary>
   /// Stream, welcher die gesamten Daten im Arbeitsspeicher hält (ähnlich wie MemoryStream, jedoch kann die gesamte Größe jederzeit angepasst werden)
   /// </summary>
-  public sealed class RamStream : Stream
+  internal sealed class RamStream : Stream
   {
     /// <summary>
     /// merkt sich die Daten des Streams
@@ -118,17 +118,6 @@ namespace Sokosolver
     }
 
     /// <summary>
-    /// überspringt mehrere Bytes
-    /// </summary>
-    /// <param name="count">Anzahl der Bytes, welche übersprungen werden sollen</param>
-    /// <returns>übersprungene Bytes</returns>
-    public int Skip(int count)
-    {
-      pos += count;
-      return count;
-    }
-
-    /// <summary>
     /// setzt die Lese- / Schreibposition im Stream
     /// </summary>
     /// <param name="offset">Positionsangabe</param>
@@ -216,40 +205,6 @@ namespace Sokosolver
     /// <summary>
     /// Konstruktor
     /// </summary>
-    /// <param name="größe">Größe des Streams in Bytes</param>
-    public RamStream(int größe)
-    {
-      data = new byte[größe];
-      pos = 0;
-      gro = größe;
-    }
-
-    /// <summary>
-    /// Konstruktor
-    /// </summary>
-    /// <param name="data">ByteArray, welches benutzt werden soll</param>
-    public RamStream(byte[] data)
-    {
-      this.data = data;
-      pos = 0;
-      gro = data.Length;
-    }
-
-    /// <summary>
-    /// Konstruktor
-    /// </summary>
-    /// <param name="data">ByteArray, welches benutzt werden soll</param>
-    /// <param name="dataLength">Länge der zu benutzenden Daten im Array</param>
-    public RamStream(byte[] data, int dataLength)
-    {
-      this.data = data;
-      pos = 0;
-      gro = dataLength;
-    }
-
-    /// <summary>
-    /// Konstruktor
-    /// </summary>
     /// <param name="data">ByteArray, welches benutzt werden soll</param>
     /// <param name="kopieErstellen">gibt an, ob eine Kopie vom Array erstellt werden soll (deafult: false = das Array wird direkt verwendet)</param>
     public RamStream(byte[] data, bool kopieErstellen)
@@ -267,24 +222,6 @@ namespace Sokosolver
         pos = 0;
         gro = data.Length;
       }
-    }
-
-    /// <summary>
-    /// gibt den Streams als Byte-Array zurück
-    /// </summary>
-    /// <param name="erstelleKopie">gibt an, ob eine Kopie des Arrays erstellt werden soll</param>
-    /// <returns>Byte-Array mit den entsprechenden Daten</returns>
-    public byte[] ToArray(bool erstelleKopie = true)
-    {
-      if (erstelleKopie)
-      {
-        var ausgabe = new byte[gro];
-        for (int i = 0; i < gro; i++) ausgabe[i] = data[i];
-        return ausgabe;
-      }
-
-      Flush();
-      return data;
     }
   }
   #endregion

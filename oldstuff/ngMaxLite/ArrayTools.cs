@@ -1,13 +1,15 @@
-﻿using System;
+﻿#region # using *.*
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+
+#endregion
 
 namespace Sokosolver
 {
-  public static class ArrayTools
+  internal static class ArrayTools
   {
     /// <summary>
     /// wandelt das gesamte Struct-Array in ein Byte-Array um
@@ -26,7 +28,7 @@ namespace Sokosolver
     /// <param name="start">Start-Position im Quell-Array</param>
     /// <param name="anzahl">Anzahl der zu kopierenden Einträge im Array</param>
     /// <returns>fertig umgewandeltes Byte-Array</returns>
-    public static byte[] ToByteArray<T>(this T[] array, int start, int anzahl) where T : struct
+    private static byte[] ToByteArray<T>(this T[] array, int start, int anzahl) where T : struct
     {
       int len = Marshal.SizeOf(typeof(T));
       var ausgabe = new byte[anzahl * len];
@@ -66,7 +68,7 @@ namespace Sokosolver
     /// <param name="quelle">Adresse auf die Quelldaten</param>
     /// <param name="ziel">Adresse auf die Zieldaten</param>
     /// <param name="bytes">Anzahl der Bytes, welche kopiert werden sollen</param>
-    public static unsafe void CopyBytes(byte* quelle, byte* ziel, int bytes)
+    private static unsafe void CopyBytes(byte* quelle, byte* ziel, int bytes)
     {
       int pos;
 
@@ -109,7 +111,7 @@ namespace Sokosolver
     /// <typeparam name="T">Typ eines Datensatzes</typeparam>
     /// <param name="data">Datensatz, welcher sich vergleichen lässt</param>
     /// <returns>Pack-Bytes</returns>
-    public static byte[] RlePackerStats<T>(this T[] data) where T : IEquatable<T>
+    private static byte[] RlePackerStats<T>(this T[] data) where T : IEquatable<T>
     {
       int pos = 0;
       int max = data.Length;
@@ -196,7 +198,7 @@ namespace Sokosolver
     /// <param name="data"></param>
     /// <param name="packerBytes"></param>
     /// <returns></returns>
-    public static IEnumerable<T> RlePackerFilter<T>(this T[] data, byte[] packerBytes) where T : IEquatable<T>
+    private static IEnumerable<T> RlePackerFilter<T>(this T[] data, byte[] packerBytes) where T : IEquatable<T>
     {
       int lesePos = 0;
       int max = packerBytes.Length;
@@ -289,7 +291,7 @@ namespace Sokosolver
     /// <param name="start">Offset im Byte-Array</param>
     /// <param name="bytes">Anzahl der Bytes, welche umgewandelt werden sollen (muss durch dir Länge des Structs teilbar sein)</param>
     /// <returns>fertig erstelltes Struct-Array</returns>
-    public static T[] ToStructArray<T>(this byte[] array, int start, int bytes) where T : struct
+    private static T[] ToStructArray<T>(this byte[] array, int start, int bytes) where T : struct
     {
       var ausgabe = new T[bytes / Marshal.SizeOf(typeof(T))];
 
@@ -307,7 +309,7 @@ namespace Sokosolver
     /// <param name="zielData">Ziel-Array</param>
     /// <param name="zielStart">Startposition im Ziel-Array</param>
     /// <returns>Anzahl der kopierten Einträge</returns>
-    public static unsafe int ToStructArray<T>(this byte[] array, int start, int bytes, T[] zielData, int zielStart) where T : struct
+    public static unsafe void ToStructArray<T>(this byte[] array, int start, int bytes, T[] zielData, int zielStart) where T : struct
     {
       int len = Marshal.SizeOf(typeof(T));
       int anzahl = bytes / len;
@@ -322,45 +324,6 @@ namespace Sokosolver
       }
 
       ghandle.Free();
-
-      return anzahl;
-    }
-
-    /// <summary>
-    /// wandelt ein Struct-Array in ein anderes Struct-Array um, die Größen der Structs müssen identisch sein oder um ein vielfaches der Array-Länge entsprechen (z.B. short[12] -> uint[6] -> double[3] -> byte[24] usw...)
-    /// </summary>
-    /// <typeparam name="TQuelle">Struktur der Quell-Daten</typeparam>
-    /// <typeparam name="TZiel">Struktur der Ziel-Daten</typeparam>
-    /// <param name="array">Array mit den Quelldaten</param>
-    /// <returns>fertig umgewandeltes Array</returns>
-    public static TZiel[] ToStructArray<TQuelle, TZiel>(this TQuelle[] array)
-      where TQuelle : struct
-      where TZiel : struct
-    {
-      return array.ToStructArray<TQuelle, TZiel>(0, array.Length);
-    }
-
-    /// <summary>
-    /// wandelt ein Struct-Array in ein anderes Struct-Array um, die Größen der Structs müssen identisch sein oder um ein vielfaches der Array-Länge entsprechen (z.B. short[12] -> uint[6] -> double[3] -> byte[24] usw...)
-    /// </summary>
-    /// <typeparam name="TQuelle">Struktur der Quell-Daten</typeparam>
-    /// <typeparam name="TZiel">Struktur der Ziel-Daten</typeparam>
-    /// <param name="array">Array mit den Quelldaten</param>
-    /// <param name="start">Offset im Quell-Array</param>
-    /// <param name="anzahl">Anzahl der Quell-Einträge, welche umgewandelt werden sollen</param>
-    /// <returns>fertig umgewandeltes Array</returns>
-    public static TZiel[] ToStructArray<TQuelle, TZiel>(this TQuelle[] array, int start, int anzahl)
-      where TQuelle : struct
-      where TZiel : struct
-    {
-      int lenQuelle = Marshal.SizeOf(typeof(TQuelle));
-      int lenZiel = Marshal.SizeOf(typeof(TZiel));
-
-      var ausgabe = new TZiel[anzahl * lenQuelle / lenZiel];
-
-      array.ToStructArray(start, anzahl, ausgabe, 0);
-
-      return ausgabe;
     }
 
     /// <summary>
@@ -374,7 +337,7 @@ namespace Sokosolver
     /// <param name="zielArray">Array mit den Zieldaten</param>
     /// <param name="startZiel">Offset im Ziel-Array</param>
     /// <returns>Anzahl der kopierten Einträge im Ziel-Array</returns>
-    public static unsafe int ToStructArray<TQuelle, TZiel>(this TQuelle[] quellArray, int start, int anzahl, TZiel[] zielArray, int startZiel)
+    public static unsafe void ToStructArray<TQuelle, TZiel>(this TQuelle[] quellArray, int start, int anzahl, TZiel[] zielArray, int startZiel)
     {
       int lenQuelle = Marshal.SizeOf(typeof(TQuelle));
       int lenZiel = Marshal.SizeOf(typeof(TZiel));
@@ -393,8 +356,6 @@ namespace Sokosolver
 
       ghandleZiel.Free();
       ghandleQuelle.Free();
-
-      return anzahlZiel;
     }
 
     /// <summary>

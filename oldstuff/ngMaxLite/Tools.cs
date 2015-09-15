@@ -1,22 +1,25 @@
-﻿using System;
+﻿#region # using *.*
+
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Threading.Tasks;
+
+#endregion
 
 namespace Sokosolver
 {
-  public static class Tools
+  internal static class Tools
   {
     /// <summary>
     /// wandelt ein Byte-Array in eine Zeichenkette um (UTF8-kodiert)
     /// </summary>
     /// <param name="datenArray">Byte-Array mit den Daten</param>
     /// <returns>fertiger dekodierter String</returns>
-    public static string ToUtf8String(this byte[] datenArray)
+    internal static string ToUtf8String(this byte[] datenArray)
     {
       return Encoding.UTF8.GetString(datenArray);
     }
@@ -30,7 +33,7 @@ namespace Sokosolver
     /// <param name="suchKey">Schlüssel, welcher gesucht werden soll</param>
     /// <param name="alternative">alternativer Wert, wenn der Schlüssel nicht gefunden wurde</param>
     /// <returns>Inhalt des gefunden Schlüssels oder alternativer Wert</returns>
-    public static TValue TryGetValue<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey suchKey, TValue alternative)
+    internal static TValue TryGetValue<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey suchKey, TValue alternative)
     {
       TValue ergebnis;
       return dict.TryGetValue(suchKey, out ergebnis) ? ergebnis : alternative;
@@ -42,7 +45,7 @@ namespace Sokosolver
     /// <param name="wert">String, welcher geparst wird</param>
     /// <param name="alternative">alternativer Wert, falls beim Parsen ein Fehler auftritt</param>
     /// <returns>entsprechend geparster Wert</returns>
-    public static int TryParse(this string wert, int alternative)
+    internal static int TryParse(this string wert, int alternative)
     {
       int ergebnis;
       return int.TryParse(wert, out ergebnis) ? ergebnis : alternative;
@@ -54,7 +57,7 @@ namespace Sokosolver
     /// <param name="wert">String, welcher geparst wird</param>
     /// <param name="alternative">alternativer Wert, falls beim Parsen ein Fehler auftritt</param>
     /// <returns>entsprechend geparster Wert</returns>
-    public static double TryParse(this string wert, double alternative)
+    internal static double TryParse(this string wert, double alternative)
     {
       double ergebnis;
       return double.TryParse((wert ?? "").Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out ergebnis) ? ergebnis : alternative;
@@ -76,7 +79,7 @@ namespace Sokosolver
     /// <param name="httpMethode">gibt fest die HTTP-Methode an (z.B. "GET", "POST", "PUT", "UPDATE" usw.)</param>
     /// <param name="kekse">mit zu sendene Cookies (Standard = null)</param>
     /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, string nutzerName, string passwort, byte[] zusatzDaten, string zusatzDatenTyp, int timeOut, string[] headers, string httpMethode, params Cookie[] kekse)
+    private static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, string nutzerName, string passwort, byte[] zusatzDaten, string zusatzDatenTyp, int timeOut, string[] headers, string httpMethode, params Cookie[] kekse)
     {
 
       // WICHTIG !!! Wenn diese Methode sehr langsam ist, dann Internet Explorer öffnen und unter Optionen "automatische Suche nach Proxy Einstellungen" deaktivieren
@@ -183,28 +186,9 @@ namespace Sokosolver
     /// <param name="headers">zusätzliche Headers, welche gesendet werden sollen (Standard = null)</param>
     /// <param name="kekse">mit zu sendene Cookies (Standard = null)</param>
     /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, string nutzerName, string passwort, byte[] zusatzDaten, string zusatzDatenTyp, int timeOut, string[] headers, params Cookie[] kekse)
+    private static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, string nutzerName, string passwort, byte[] zusatzDaten, string zusatzDatenTyp, int timeOut, string[] headers, params Cookie[] kekse)
     {
       return Download(downloadUrl, simulateBrowser, userAgent, nutzerName, passwort, zusatzDaten, zusatzDatenTyp, timeOut, headers, null, kekse);
-    }
-    #endregion
-    #region # public static byte[] Download(string downloadURL, bool simulateBrowser, string userAgent, string nutzerName, string passwort, byte[] zusatzDaten, string zusatzDatenTyp, int timeOut, params Cookie[] kekse) // lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// <summary>
-    /// lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// </summary>
-    /// <param name="downloadUrl">Download-Adresse</param>
-    /// <param name="simulateBrowser">gibt an, ob ein Browser simuliert werden soll (Standard = true)</param>
-    /// <param name="userAgent">gibt den Namen des Browsers bzw. den Name vom Bot an (Standard = null)</param>
-    /// <param name="nutzerName">Nutzername für Authentifizierung (Standard = null)</param>
-    /// <param name="passwort">Passwort für Authentifizierung (Standard = null)</param>
-    /// <param name="zusatzDaten">Zusätzliche Daten, welche per Post verschickt werden sollen (Standard = null)</param>
-    /// <param name="zusatzDatenTyp">Mime-Typ der Zusatzdaten (Standard = null)</param>
-    /// <param name="timeOut">gibt den Timeout in Millisekunden an (Standard: 10000)</param>
-    /// <param name="kekse">mit zu sendene Cookies (Standard = null)</param>
-    /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, string nutzerName, string passwort, byte[] zusatzDaten, string zusatzDatenTyp, int timeOut, params Cookie[] kekse)
-    {
-      return Download(downloadUrl, simulateBrowser, userAgent, nutzerName, passwort, zusatzDaten, zusatzDatenTyp, timeOut, null, kekse);
     }
     #endregion
     #region # public static byte[] Download(string downloadURL, bool simulateBrowser, string userAgent, int timeOut, params Cookie[] kekse) // lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
@@ -217,46 +201,9 @@ namespace Sokosolver
     /// <param name="kekse">mit zu sendene Cookies (Standard = null)</param>
     /// <param name="timeOut">gibt den Timeout in Millisekunden an (Standard: 10000)</param>
     /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, int timeOut, params Cookie[] kekse)
+    private static byte[] Download(string downloadUrl, bool simulateBrowser, string userAgent, int timeOut, params Cookie[] kekse)
     {
       return Download(downloadUrl, simulateBrowser, userAgent, null, null, null, null, timeOut, null, kekse);
-    }
-    #endregion
-    #region # public static byte[] Download(string downloadURL, bool simulateBrowser, Cookie[] kekse) // lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// <summary>
-    /// lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// </summary>
-    /// <param name="downloadUrl">Download-Adresse</param>
-    /// <param name="simulateBrowser">gibt an, ob ein Browser simuliert werden soll (Standard = true)</param>
-    /// <param name="kekse">mit zu sendene Cookies (Standard = null)</param>
-    /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, bool simulateBrowser, params Cookie[] kekse)
-    {
-      return Download(downloadUrl, simulateBrowser, null, 10000, kekse);
-    }
-    #endregion
-    #region # public static byte[] Download(string downloadURL, bool simulateBrowser) // lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// <summary>
-    /// lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// </summary>
-    /// <param name="downloadUrl">Download-Adresse</param>
-    /// <param name="simulateBrowser">gibt an, ob ein Browser simuliert werden soll (Standard = true)</param>
-    /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, bool simulateBrowser)
-    {
-      return Download(downloadUrl, simulateBrowser, null, 10000, null);
-    }
-    #endregion
-    #region # public static byte[] Download(string downloadURL, string userAgent) // lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// <summary>
-    /// lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)
-    /// </summary>
-    /// <param name="downloadUrl">Download-Adresse</param>
-    /// <param name="userAgent">gibt den Namen des Browsers bzw. den Name vom Bot an (Standard = null)</param>
-    /// <returns>fertige geladene Datei</returns>
-    public static byte[] Download(string downloadUrl, string userAgent)
-    {
-      return Download(downloadUrl, true, userAgent, 10000, null);
     }
     #endregion
     #region # public static byte[] Download(string downloadURL) // lädt eine Datei von einer bestimmten Adresse herrunter (gibt "null" zurück, wenn ein Fehler aufgetreten ist)

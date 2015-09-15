@@ -4,6 +4,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Collections;
+// ReSharper disable CanBeReplacedWithTryCastAndCheckForNull
 
 #endregion
 
@@ -12,7 +13,7 @@ namespace Sokosolver
   /// <summary>
   /// Interface zum berechnen eines Crc64-Schlüssels
   /// </summary>
-  public interface ICrc64
+  internal interface ICrc64
   {
     /// <summary>
     /// Methode zum berechnen eines Crc64-Schlüssels
@@ -25,25 +26,16 @@ namespace Sokosolver
   /// <summary>
   /// Klasse zum berechnen von Crc64-Schlüsseln (FNV)
   /// </summary>
-  public static class Crc64
+  internal static class Crc64
   {
     /// <summary>
     /// Crc64 Startwert
     /// </summary>
-    public const ulong Start = 0xcbf29ce484222325u;
+    internal const ulong Start = 0xcbf29ce484222325u;
     /// <summary>
     /// Crc64 Multiplikator
     /// </summary>
-    public const ulong Mul = 0x100000001b3;
-
-    /// <summary>
-    /// erstellt einen neuen Crc64-Schlüssel
-    /// </summary>
-    /// <returns>erstellter Crc64-Wert</returns>
-    public static ulong New()
-    {
-      return Start;
-    }
+    private const ulong Mul = 0x100000001b3;
 
     /// <summary>
     /// aktualisiert die Prüfsumme
@@ -51,95 +43,7 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, byte wert)
-    {
-      return (crc64 ^ wert) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, sbyte wert)
-    {
-      return (crc64 ^ (byte)wert) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, ushort wert)
-    {
-      return (crc64 ^ wert) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, short wert)
-    {
-      return (crc64 ^ (ushort)wert) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, uint wert)
-    {
-      return (crc64 ^ wert) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, int wert)
-    {
-      return (crc64 ^ (uint)wert) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, ulong wert)
-    {
-      return (((crc64 ^ (uint)wert) * Mul) ^ (wert >> 32)) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, long wert)
-    {
-      return (((crc64 ^ (uint)(ulong)wert) * Mul) ^ ((ulong)wert >> 32)) * Mul;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static unsafe ulong Crc64Update(this ulong crc64, float wert)
+    private static unsafe ulong Crc64Update(this ulong crc64, float wert)
     {
       return (crc64 ^ *(uint*)&wert) * Mul;
     }
@@ -150,7 +54,7 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static unsafe ulong Crc64Update(this ulong crc64, double wert)
+    private static unsafe ulong Crc64Update(this ulong crc64, double wert)
     {
       ulong l = *(ulong*)&wert;
       return (((crc64 ^ (uint)l) * Mul) ^ (l >> 32)) * Mul;
@@ -162,28 +66,11 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, byte[] wert)
+    private static ulong Crc64Update(this ulong crc64, byte[] wert)
     {
-      for (int i = 0; i < wert.Length; i++)
+      foreach (byte b in wert)
       {
-        crc64 = (crc64 ^ wert[i]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <param name="offset">Startposition im Array</param>
-    /// <param name="length">Länge der Daten</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, byte[] wert, int offset, int length)
-    {
-      for (int i = 0; i < length; i++)
-      {
-        crc64 = (crc64 ^ wert[offset++]) * Mul;
+        crc64 = (crc64 ^ b) * Mul;
       }
       return crc64;
     }
@@ -194,28 +81,11 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, char[] wert)
+    private static ulong Crc64Update(this ulong crc64, char[] wert)
     {
-      for (int i = 0; i < wert.Length; i++)
+      foreach (char w in wert)
       {
-        crc64 = (crc64 ^ wert[i]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <param name="offset">Startposition im Array</param>
-    /// <param name="length">Länge der Daten</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, char[] wert, int offset, int length)
-    {
-      for (int i = 0; i < length; i++)
-      {
-        crc64 = (crc64 ^ wert[offset++]) * Mul;
+        crc64 = (crc64 ^ w) * Mul;
       }
       return crc64;
     }
@@ -226,18 +96,18 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static unsafe ulong Crc64Update(this ulong crc64, string wert)
+    private static unsafe ulong Crc64Update(this ulong crc64, string wert)
     {
-      ulong _crc64 = crc64;
+      ulong crc64B = crc64;
       int len = wert.Length;
-      fixed (char* _wert = wert)
+      fixed (char* c = wert)
       {
         for (int i = 0; i < len; i++)
         {
-          _crc64 = (_crc64 ^ _wert[i]) * Mul;
+          crc64B = (crc64B ^ c[i]) * Mul;
         }
       }
-      return _crc64;
+      return crc64B;
     }
 
     /// <summary>
@@ -246,7 +116,7 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, StringBuilder wert)
+    private static ulong Crc64Update(this ulong crc64, StringBuilder wert)
     {
       for (int i = 0; i < wert.Length; i++)
       {
@@ -262,16 +132,16 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenarray, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, Array wert)
+    private static ulong Crc64Update(this ulong crc64, Array wert)
     {
       if (wert.Length == 0) return crc64;
 
-      Func<ulong, object, ulong> Funktion;
-      if (crc64Dict.TryGetValue(wert.GetType().GetElementType(), out Funktion))
+      Func<ulong, object, ulong> funktion;
+      if (crc64Dict.TryGetValue(wert.GetType().GetElementType(), out funktion))
       {
         for (int i = 0; i < wert.Length; i++)
         {
-          crc64 = Funktion(crc64, wert.GetValue(i));
+          crc64 = funktion(crc64, wert.GetValue(i));
         }
       }
       else
@@ -301,18 +171,7 @@ namespace Sokosolver
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="wert">Datenwert, welcher das Interface ICrc64 unterstützt</param>
     /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, ICrc64 wert)
-    {
-      return wert.GetCrc64(crc64);
-    }
-
-    /// <summary>
-    /// aktualisiert die Prüfsumme
-    /// </summary>
-    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
-    /// <param name="wert">Datenwert, welcher das Interface ICrc64 unterstützt</param>
-    /// <returns>neuer Crc64-Wert</returns>
-    public static ulong Crc64Update(this ulong crc64, IEnumerable wert)
+    private static ulong Crc64Update(this ulong crc64, IEnumerable wert)
     {
       var t = wert.GetType();
       if (t.IsArray)
@@ -325,12 +184,12 @@ namespace Sokosolver
         if (args.Length == 1)
         {
           var t2 = args[0];
-          Func<ulong, object, ulong> Funktion;
-          if (crc64Dict.TryGetValue(t2, out Funktion))
+          Func<ulong, object, ulong> funktion;
+          if (crc64Dict.TryGetValue(t2, out funktion))
           {
             foreach (var w in wert)
             {
-              crc64 = Funktion(crc64, w);
+              crc64 = funktion(crc64, w);
             }
           }
           else
@@ -391,10 +250,10 @@ namespace Sokosolver
       {
         foreach (var w in wert)
         {
-          Func<ulong, object, ulong> Funktion;
-          if (crc64Dict.TryGetValue(w.GetType(), out Funktion))
+          Func<ulong, object, ulong> funktion;
+          if (crc64Dict.TryGetValue(w.GetType(), out funktion))
           {
-            crc64 = Funktion(crc64, w);
+            crc64 = funktion(crc64, w);
           }
           else
           {
@@ -423,7 +282,7 @@ namespace Sokosolver
     /// <summary>
     /// internes
     /// </summary>
-    static Dictionary<Type, Func<ulong, object, ulong>> crc64Dict = new Dictionary<Type, Func<ulong, object, ulong>>
+    static readonly Dictionary<Type, Func<ulong, object, ulong>> crc64Dict = new Dictionary<Type, Func<ulong, object, ulong>>
     {
       { typeof(byte), (crc64, wert) => (crc64 ^ (ulong)(byte)wert) * Mul },
       { typeof(sbyte), (crc64, wert) => (crc64 ^ (ulong)(byte)(sbyte)wert) * Mul },
@@ -438,7 +297,7 @@ namespace Sokosolver
       { typeof(string), (crc64, wert) => crc64.Crc64Update((string)wert) },
       { typeof(float), (crc64, wert) => crc64.Crc64Update((float)wert) },
       { typeof(double), (crc64, wert) => crc64.Crc64Update((double)wert) },
-      { typeof(StringBuilder), (crc64, wert) => crc64.Crc64Update((StringBuilder)wert) },
+      { typeof(StringBuilder), (crc64, wert) => crc64.Crc64Update((StringBuilder)wert) }
     };
 
     /// <summary>
@@ -451,10 +310,10 @@ namespace Sokosolver
     {
       foreach (var wert in werte)
       {
-        Func<ulong, object, ulong> Funktion;
-        if (crc64Dict.TryGetValue(wert.GetType(), out Funktion))
+        Func<ulong, object, ulong> funktion;
+        if (crc64Dict.TryGetValue(wert.GetType(), out funktion))
         {
-          crc64 = Funktion(crc64, wert);
+          crc64 = funktion(crc64, wert);
         }
         else
         {
@@ -476,7 +335,7 @@ namespace Sokosolver
               }
               else
               {
-                if (wert.GetType().GetGenericTypeDefinition().Name.StartsWith("Tuple`"))
+                if (wert.GetType().GetGenericTypeDefinition().Name.StartsWith("Tuple`", StringComparison.Ordinal))
                 {
                   foreach (var pro in wert.GetType().GetProperties())
                   {
@@ -494,123 +353,6 @@ namespace Sokosolver
       }
 
       return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this byte[] wert)
-    {
-      ulong crc64 = Start;
-      for (int i = 0; i < wert.Length; i++)
-      {
-        crc64 = (crc64 ^ wert[i]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <param name="offset">Startposition im Array</param>
-    /// <param name="length">Länge der Daten</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this byte[] wert, int offset, int length)
-    {
-      ulong crc64 = Start;
-      for (int i = 0; i < length; i++)
-      {
-        crc64 = (crc64 ^ wert[offset++]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this char[] wert)
-    {
-      ulong crc64 = Start;
-      for (int i = 0; i < wert.Length; i++)
-      {
-        crc64 = (crc64 ^ wert[i]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <param name="offset">Startposition im Array</param>
-    /// <param name="length">Länge der Daten</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this char[] wert, int offset, int length)
-    {
-      ulong crc64 = Start;
-      for (int i = 0; i < length; i++)
-      {
-        crc64 = (crc64 ^ wert[offset++]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public unsafe static ulong GetCrc64(this string wert)
-    {
-      ulong crc64 = Start;
-      fixed (char* _wert = wert)
-      {
-        for (int i = 0; i < wert.Length; i++)
-        {
-          crc64 = (crc64 ^ _wert[i]) * Mul;
-        }
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher einberechnet werden soll</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this StringBuilder wert)
-    {
-      ulong crc64 = Start;
-      for (int i = 0; i < wert.Length; i++)
-      {
-        crc64 = (crc64 ^ wert[i]) * Mul;
-      }
-      return crc64;
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenarray, welcher einberechnet werden soll</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this Array wert)
-    {
-      return Start.Crc64Update(wert);
-    }
-
-    /// <summary>
-    /// erstellt eine Crc64-Prüfsumme
-    /// </summary>
-    /// <param name="wert">Datenwert, welcher das Interface ICrc64 unterstützt</param>
-    /// <returns>berechneter Crc64-Wert</returns>
-    public static ulong GetCrc64(this ICrc64 wert)
-    {
-      return wert.GetCrc64(Start);
     }
   }
 }
