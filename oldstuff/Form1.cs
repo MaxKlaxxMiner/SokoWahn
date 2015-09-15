@@ -171,7 +171,7 @@ namespace Sokosolver
 # @.  #   
 # #.#$#   
 #  .  #   
-#######";
+#######   ";
 
 //      textBox4.Text = "216";
 
