@@ -1,102 +1,83 @@
 ﻿#region using *.*
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using Sokosolver.SokowahnTools;
+
 #endregion
 
 namespace Sokosolver
 {
-  public class SokoWahn_3rd_List2 : SokoWahnInterface
+  // ReSharper disable once InconsistentNaming
+  internal sealed class SokoWahn_3rd_List2 : SokoWahnInterface
   {
     #region # // --- allgemeine statische Variablen ---
     /// <summary>
     /// merkt sich das eigentliche komplette Spielfeld (mit Spieler und allen Steinen)
     /// </summary>
-    char[] feldData;
+    readonly char[] feldData;
 
     /// <summary>
     /// merkt sich das Spielfeld, jedoch ohne Spieler und ohne Kisten (nur Struktur und Zielfelder vorhanden)
     /// </summary>
-    char[] feldLeer;
+    readonly char[] feldLeer;
 
     /// <summary>
     /// merkt sich die Breite des Spielfeldes
     /// </summary>
-    int feldBreite;
+    readonly int feldBreite;
 
     /// <summary>
     /// merkt sich die Höhe des Spielfeldes
     /// </summary>
-    int feldHöhe;
+    readonly int feldHöhe;
 
     /// <summary>
     /// Startposition des Spielers
     /// </summary>
-    int startSpielerPos;
+    readonly int startSpielerPos;
 
     /// <summary>
     /// Anzahl der SokowahnRaum-Felder
     /// </summary>
-    int raumAnzahl;
+    readonly int raumAnzahl;
 
     /// <summary>
     /// merkt sich nur die begehbaren Felder und zeigt auf die realen Spielfelder
     /// </summary>
-    int[] raumZuFeld;
+    readonly int[] raumZuFeld;
 
     /// <summary>
     /// zeigt direkt auf die Index-Positionen, -1 = wenn davon kein Index-Eintrag vorhanden ist
     /// </summary>
-    int[] feldZuRaum;
+    readonly int[] feldZuRaum;
 
     /// <summary>
     /// zeigt auf das linke benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist)
     /// </summary>
-    int[] raumLinks;
+    readonly int[] raumLinks;
 
     /// <summary>
     /// zeigt auf das rechts benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist)
     /// </summary>
-    int[] raumRechts;
+    readonly int[] raumRechts;
 
     /// <summary>
     /// zeigt auf das obere benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist)
     /// </summary>
-    int[] raumOben;
+    readonly int[] raumOben;
 
     /// <summary>
     /// zeigt auf das untere benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist)
     /// </summary>
-    int[] raumUnten;
-
-    /// <summary>
-    /// zeigt auf das zweite linke benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist oder nicht erreicht werden konnte)
-    /// </summary>
-    int[] raumLinks2;
-
-    /// <summary>
-    /// zeigt auf das zweite rechte benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist oder nicht erreicht werden konnte)
-    /// </summary>
-    int[] raumRechts2;
-
-    /// <summary>
-    /// zeigt auf das zweite obere benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist oder nicht erreicht werden konnte)
-    /// </summary>
-    int[] raumOben2;
-
-    /// <summary>
-    /// zeigt auf das zweite untere benachbarte SokowahnRaum-Feld (-1 = wenn das Feld nicht begehbar ist oder nicht erreicht werden konnte)
-    /// </summary>
-    int[] raumUnten2;
+    readonly int[] raumUnten;
 
     /// <summary>
     /// gibt an, ob das Feld ein Zeilfeld für Kisten ist (1 = ja, 0 = nein)
     /// </summary>
-    int[] raumZiel;
+    readonly int[] raumZiel;
 
     /// <summary>
     /// Anzahl der vorhandenen Kisten
@@ -113,43 +94,39 @@ namespace Sokosolver
       /// <summary>
       /// unbekannter Modus (nur am Anfang)
       /// </summary>
-      unbekannt,
+      Unbekannt,
 
       /// <summary>
       /// initialisiert und startet den End-Steiner (nur für eine bestimmte Steinanzahl)
       /// </summary>
-      steinerInit,
+      SteinerInit,
       /// <summary>
       /// ermittelt alle erreichbaren Stellungen für den End-Steiner
       /// </summary>
-      steinerVarianten,
+      SteinerVarianten,
       /// <summary>
       /// prüft alle Varianten und entfernt alle Stellungen, welche lösbar sind
       /// </summary>
-      steinerLösen,
-      /// <summary>
-      /// erstellt aus den nicht lösbaren Stellungen eine Blocker-Liste, wo bestimmte Steine nicht stehen dürfen bzw. deren Kombinationen nicht erlaubt ist
-      /// </summary>
-      steinerAbschluss,
+      SteinerLösen,
 
       /// <summary>
       /// gibt an, dass der eigentliche Suchmodus initialisiert werden soll
       /// </summary>
-      sucheInit,
+      SucheInit,
       /// <summary>
       /// gibt an, ob der Suchmodus gerade aktiv arbeitet
       /// </summary>
-      sucheRechne,
+      SucheRechne,
       /// <summary>
       /// gibt an, ob das Ziel bereits gefunden wurde und der Lösungsweg bereit steht
       /// </summary>
-      sucheGefunden,
+      SucheGefunden
     }
 
     /// <summary>
     /// merkt sich den aktuellen Modus, was momentan genau gemacht wird
     /// </summary>
-    Modus modus = Modus.unbekannt;
+    Modus modus = Modus.Unbekannt;
 
     /// <summary>
     /// gibt an, ob sich auf dem SokowahnRaum-Feld momentan eine Kiste befindet (-1 = keine Kiste, sonst Index auf die entsprechende Kiste)
@@ -201,7 +178,7 @@ namespace Sokosolver
     {
       SokowahnStaticTools.SpielfeldEinlesen(spielFeld, out feldBreite, out feldHöhe, out startSpielerPos, out feldData, out feldLeer);
 
-      bool[] spielerRaum = SokowahnStaticTools.SpielfeldRaumScan(feldData, feldBreite);
+      var spielerRaum = SokowahnStaticTools.SpielfeldRaumScan(feldData, feldBreite);
 
       #region # // --- SokowahnRaum-Indexe und deren Felder erstellen ---
       raumAnzahl = spielerRaum.Where(x => x).Count(); // Anzahl der SokowahnRaum-Felder zählen (Felder, welche theoretisch begehbar sind)
@@ -212,11 +189,6 @@ namespace Sokosolver
       raumRechts = raumZuFeld.Select(i => spielerRaum[i + 1] ? raumZuFeld.ToList().IndexOf(i + 1) : -1).ToArray();
       raumOben = raumZuFeld.Select(i => spielerRaum[i - feldBreite] ? raumZuFeld.ToList().IndexOf(i - feldBreite) : -1).ToArray();
       raumUnten = raumZuFeld.Select(i => spielerRaum[i + feldBreite] ? raumZuFeld.ToList().IndexOf(i + feldBreite) : -1).ToArray();
-
-      raumLinks2 = raumLinks.Select(x => x >= 0 ? raumLinks[x] : -1).ToArray();
-      raumRechts2 = raumRechts.Select(x => x >= 0 ? raumRechts[x] : -1).ToArray();
-      raumOben2 = raumOben.Select(x => x >= 0 ? raumOben[x] : -1).ToArray();
-      raumUnten2 = raumUnten.Select(x => x >= 0 ? raumUnten[x] : -1).ToArray();
 
       feldZuRaum = Enumerable.Range(0, feldBreite * feldHöhe).Select(i => spielerRaum[i] ? raumZuFeld.ToList().IndexOf(i) : -1).ToArray();
 
@@ -234,7 +206,7 @@ namespace Sokosolver
     /// <returns>nicht lesbare Zeichenkette mit Länge = kistenAnzahl + 1</returns>
     ushort[] GetStellung()
     {
-      ushort[] ausgabe = new ushort[kistenAnzahl + 1];
+      var ausgabe = new ushort[kistenAnzahl + 1];
       for (int i = 0; i < kistenAnzahl; i++) ausgabe[i] = (ushort)kistenZuRaum[i];
       ausgabe[kistenAnzahl] = (ushort)raumSpielerPos;
       return ausgabe;
@@ -255,14 +227,14 @@ namespace Sokosolver
       kistenMitZiel = 0;
       for (int i = 0; i < kistenAnzahl; i++)
       {
-        int p = (int)stellung[i];
+        int p = stellung[i];
         kistenZuRaum[i] = p;
         kistenMitZiel += raumZiel[p];
         raumZuKiste[p] = i;
       }
 
       // neue Spielerposition setzen
-      raumSpielerPos = (int)stellung[kistenAnzahl];
+      raumSpielerPos = stellung[kistenAnzahl];
     }
     #endregion
 
@@ -309,9 +281,9 @@ namespace Sokosolver
       // temporäre Werte speichern
       int checkRaumVon = 0;
       int checkRaumBis = 0;
-      int[] checkRaumPosis = new int[raumAnzahl];
-      int[] checkRaumTiefe = new int[raumAnzahl];
-      bool[] raumGecheckt = new bool[raumAnzahl];
+      var checkRaumPosis = new int[raumAnzahl];
+      var checkRaumTiefe = new int[raumAnzahl];
+      var raumGecheckt = new bool[raumAnzahl];
 
       // erste Spielerposition hinzufügen
       raumGecheckt[raumSpielerPos] = true;
@@ -338,7 +310,7 @@ namespace Sokosolver
               raumSpielerPos = p;                                                       // Spieler nach links bewegen
 
               #region # // Stellung auslesen und wenn gültig zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               int bekannt = StellungBekannt(stellungCrc);
               if ((bekannt < 0 || bekannt > pTiefe) && !IstBlocker()) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
@@ -369,7 +341,7 @@ namespace Sokosolver
               raumSpielerPos = p;                                                       // Spieler nach rechts bewegen
 
               #region # // Stellung auslesen und wenn gültig zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               int bekannt = StellungBekannt(stellungCrc);
               if ((bekannt < 0 || bekannt > pTiefe) && !IstBlocker()) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
@@ -409,7 +381,7 @@ namespace Sokosolver
               #endregion
 
               #region # // Stellung auslesen und wenn gültig zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               int bekannt = StellungBekannt(stellungCrc);
               if ((bekannt < 0 || bekannt > pTiefe) && !IstBlocker()) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
@@ -458,7 +430,7 @@ namespace Sokosolver
               #endregion
 
               #region # // Stellung auslesen und wenn gültig zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               int bekannt = StellungBekannt(stellungCrc);
               if ((bekannt < 0 || bekannt > pTiefe) && !IstBlocker()) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
@@ -491,8 +463,6 @@ namespace Sokosolver
       }
 
       raumSpielerPos = checkRaumPosis[0]; // alte Spielerposition wieder herstellen
-
-      yield break;
     }
     #endregion
 
@@ -506,8 +476,8 @@ namespace Sokosolver
       // temporäre Werte speichern
       int checkRaumVon = 0;
       int checkRaumBis = 0;
-      int[] checkRaumPosis = new int[raumAnzahl];
-      bool[] raumGecheckt = new bool[raumAnzahl];
+      var checkRaumPosis = new int[raumAnzahl];
+      var raumGecheckt = new bool[raumAnzahl];
 
       // erste Spielerposition hinzufügen
       raumGecheckt[raumSpielerPos] = true;
@@ -534,7 +504,7 @@ namespace Sokosolver
               #region # // Stellung auslesen und wenn gültig zurück senden
               if (!IstBlocker())
               {
-                ushort[] stellung = GetStellung();
+                var stellung = GetStellung();
                 ulong stellungCrc = StellungCrc(stellung);
                 if (hashStellungen.Get(stellungCrc) == 65535) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = 1 };
               }
@@ -566,7 +536,7 @@ namespace Sokosolver
               #region # // Stellung auslesen und wenn gültig zurück senden
               if (!IstBlocker())
               {
-                ushort[] stellung = GetStellung();
+                var stellung = GetStellung();
                 ulong stellungCrc = StellungCrc(stellung);
                 if (hashStellungen.Get(stellungCrc) == 65535) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = 1 };
               }
@@ -607,7 +577,7 @@ namespace Sokosolver
               #region # // Stellung auslesen und wenn gültig zurück senden
               if (!IstBlocker())
               {
-                ushort[] stellung = GetStellung();
+                var stellung = GetStellung();
                 ulong stellungCrc = StellungCrc(stellung);
                 if (hashStellungen.Get(stellungCrc) == 65535) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = 1 };
               }
@@ -657,7 +627,7 @@ namespace Sokosolver
               #region # // Stellung auslesen und wenn gültig zurück senden
               if (!IstBlocker())
               {
-                ushort[] stellung = GetStellung();
+                var stellung = GetStellung();
                 ulong stellungCrc = StellungCrc(stellung);
                 if (hashStellungen.Get(stellungCrc) == 65535) yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = 1 };
               }
@@ -689,8 +659,6 @@ namespace Sokosolver
       }
 
       raumSpielerPos = checkRaumPosis[0]; // alte Spielerposition wieder herstellen
-
-      yield break;
     }
     #endregion
 
@@ -704,9 +672,9 @@ namespace Sokosolver
       // temporäre Werte speichern
       int checkRaumVon = 0;
       int checkRaumBis = 0;
-      int[] checkRaumPosis = new int[raumAnzahl];
-      int[] checkRaumTiefe = new int[raumAnzahl];
-      bool[] raumGecheckt = new bool[raumAnzahl];
+      var checkRaumPosis = new int[raumAnzahl];
+      var checkRaumTiefe = new int[raumAnzahl];
+      var raumGecheckt = new bool[raumAnzahl];
 
       // erste Spielerposition hinzufügen
       raumGecheckt[raumSpielerPos] = true;
@@ -731,7 +699,7 @@ namespace Sokosolver
             if ((p2 = raumRechts[raumSpielerPos]) >= 0 && raumZuKiste[p2] < 0)
             {
               // erreichbare Stellung auslesen und zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
             }
@@ -754,7 +722,7 @@ namespace Sokosolver
             if ((p2 = raumLinks[raumSpielerPos]) >= 0 && raumZuKiste[p2] < 0)
             {
               // erreichbare Stellung auslesen und zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
             }
@@ -777,7 +745,7 @@ namespace Sokosolver
             if ((p2 = raumUnten[raumSpielerPos]) >= 0 && raumZuKiste[p2] < 0)
             {
               // erreichbare Stellung auslesen und zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
             }
@@ -800,7 +768,7 @@ namespace Sokosolver
             if ((p2 = raumOben[raumSpielerPos]) >= 0 && raumZuKiste[p2] < 0)
             {
               // erreichbare Stellung auslesen und zurück senden
-              ushort[] stellung = GetStellung();
+              var stellung = GetStellung();
               ulong stellungCrc = StellungCrc(stellung);
               yield return new Variante { stellung = stellung, stellungCrc = stellungCrc, tiefe = pTiefe };
             }
@@ -921,8 +889,6 @@ namespace Sokosolver
         #endregion
       }
       #endregion
-
-      yield break;
     }
     #endregion
     #endregion
@@ -931,7 +897,7 @@ namespace Sokosolver
     /// <summary>
     /// gibt den temporären Ordner zurück
     /// </summary>
-    string TempOrdner
+    static string TempOrdner
     {
       get
       {
@@ -962,11 +928,11 @@ namespace Sokosolver
     /// <summary>
     /// Größe des momentanen Archives in Datensätzen
     /// </summary>
-    int archivGro = 0;
+    int archivGro;
     /// <summary>
     /// enthält alle ArchivDaten
     /// </summary>
-    StellungsSatz[] archivData = null;
+    StellungsSatz[] archivData;
     /// <summary>
     /// Speichert eine breits sortierte Liste ins Archiv, um insgesamt Platz zu sparen
     /// </summary>
@@ -1031,15 +997,14 @@ namespace Sokosolver
 
       int von = 0;
       int bis = archivGro;
-      int mit = 0;
 
       do
       {
-        mit = (von + bis) >> 1;
+        var mit = (von + bis) >> 1;
         if (archivData[mit].stellung > stellungCrc) bis = mit; else von = mit;
       } while (bis - von > 1);
 
-      if (archivData[von].stellung == stellungCrc) return (int)archivData[von].tiefe;
+      if (archivData[von].stellung == stellungCrc) return archivData[von].tiefe;
 
       return -1;
     }
@@ -1051,7 +1016,7 @@ namespace Sokosolver
     /// </summary>
     /// <param name="stellung">Stellung, wovon der CRC Schlüssel berechnet werden soll</param>
     /// <returns>fertig berechneter CRC Schlüssel</returns>
-    ulong StellungCrc(ushort[] stellung)
+    static ulong StellungCrc(ushort[] stellung)
     {
       ulong ergebnis = 0xcbf29ce484222325u; //init prime
       int hashSatzGro = stellung.Length;
@@ -1081,18 +1046,17 @@ namespace Sokosolver
     /// <summary>
     /// merkt sich die aktuell prüfenden Kistenpositionen (länge = kistenAnzahl)
     /// </summary>
-    int[] steinerCheckKisten = null;
+    int[] steinerCheckKisten;
 
     /// <summary>
     /// merkt sich alle Kistenpositionen im SokowahnRaum
     /// </summary>
-    int[] steinerCheckKistenRaum = null;
+    int[] steinerCheckKistenRaum;
 
     /// <summary>
     /// initialisiert die ersten Steiner-Kisten
     /// </summary>
-    /// <param name="maxKisten">maximale Anzahl der Kisten</param>
-    void KistenSteinerInit(int maxKisten)
+    void KistenSteinerInit()
     {
       raumZuKiste = raumZuFeld.Select(i => -1).ToArray();
       kistenZuRaum = new int[kistenAnzahl];
@@ -1108,18 +1072,18 @@ namespace Sokosolver
     /// <summary>
     /// merkt sich die Stellungen, welche noch geprüft werden müssen
     /// </summary>
-    List<Variante> steinerPrüfStellungen = null;
+    List<Variante> steinerPrüfStellungen;
 
     /// <summary>
     /// momentane Leseposition in den Prüfstellungen
     /// </summary>
-    int steinerPrüfstellungenPos = 0;
+    int steinerPrüfstellungenPos;
 
 
     /// <summary>
     /// merkt sich alle bösen Stellungen
     /// </summary>
-    Variante[] steinerBöseStellungen = null;
+    Variante[] steinerBöseStellungen;
 
     /// <summary>
     /// setzt alle Kisten auf die nächste Stellung (nur Kisten-Startpositionen werden verwendet und der Spieler auch auf das Startfeld gesetzt
@@ -1339,7 +1303,7 @@ namespace Sokosolver
       // Start-Spielerposition setzen
       raumSpielerPos = feldZuRaum[startSpielerPos];
 
-      ushort[] stellung = GetStellung();
+      var stellung = GetStellung();
       ulong stellungCrc = StellungCrc(stellung);
 
       if (hashStellungen.Get(stellungCrc) < 65535) return true;
@@ -1356,7 +1320,7 @@ namespace Sokosolver
     /// <summary>
     /// merkt sich alle Blocker-Stellungen
     /// </summary>
-    Blocker[] raumBlocker = null;
+    Blocker[] raumBlocker;
 
     /// <summary>
     /// Struktur eines Blocker-Feldes
@@ -1366,7 +1330,7 @@ namespace Sokosolver
       /// <summary>
       /// Anzahl der Kisten für diesen Blocker
       /// </summary>
-      public int anzahlKisten;
+      private int anzahlKisten;
       /// <summary>
       /// Anzahl der bekannten Blocker-Einträge
       /// </summary>
@@ -1374,17 +1338,17 @@ namespace Sokosolver
       /// <summary>
       /// eigentliche Blockerdaten (Länge: anzahlKisten * anzahlBlocker)
       /// </summary>
-      public int[] blockerRaumKisten;
+      private int[] blockerRaumKisten;
       /// <summary>
       /// Feld zum zusätzlichen merken der Stellungen, welche diesen Blocker erstellt haben (zum nachprüfen)
       /// </summary>
-      public string[] blockerStellungen;
+      private string[] blockerStellungen;
 
       /// <summary>
       /// fügt einen neuen Blocker in die Liste hinzu
       /// </summary>
       /// <param name="neuKisten">Kisten (mit SokowahnRaum-Positionen), welche hinzugefügt werden sollen</param>
-      /// <param name="stellung">zusätzlicher Stellungsaufbau (zum späteren nachprüfen)</param>
+      /// <param name="ustellung">zusätzlicher Stellungsaufbau (zum späteren nachprüfen)</param>
       public void Dazu(int[] neuKisten, ushort[] ustellung)
       {
         string stellung = new string(ustellung.Select(c => (char)c).ToArray());
@@ -1484,25 +1448,25 @@ namespace Sokosolver
       switch (modus)
       {
         #region # case Modus.unbekannt:
-        case Modus.unbekannt:
+        case Modus.Unbekannt:
         {
           if (limit > 0)
           {
-            modus = Modus.sucheInit; // Initialisierung für die Suche direkt starten
+            modus = Modus.SucheInit; // Initialisierung für die Suche direkt starten
           }
           else
           {
-            modus = Modus.steinerInit; // Initialisierung der Vorbereitung starten
+            modus = Modus.SteinerInit; // Initialisierung der Vorbereitung starten
           }
           return true;
         }
         #endregion
         #region # case Modus.steinerInit:
-        case Modus.steinerInit:
+        case Modus.SteinerInit:
         {
           if (limit > 0)
           {
-            modus = Modus.sucheInit; // Vorbereitung abbrechen und Suche direkt starten
+            modus = Modus.SucheInit; // Vorbereitung abbrechen und Suche direkt starten
             return true;
           }
 
@@ -1515,9 +1479,9 @@ namespace Sokosolver
             return false; // Maximale Kistenanzahl erreicht, weitere Berechnungen sind nicht mehr möglich
           }
 
-          modus = Modus.steinerVarianten; // neue Aufgabe: alle Varianten ermitteln
+          modus = Modus.SteinerVarianten; // neue Aufgabe: alle Varianten ermitteln
 
-          KistenSteinerInit(maxKisten);
+          KistenSteinerInit();
           steinerPrüfStellungen = new List<Variante>();
           steinerPrüfstellungenPos = 0;
 
@@ -1525,11 +1489,11 @@ namespace Sokosolver
         }
         #endregion
         #region # case Modus.steinerVarianten:
-        case Modus.steinerVarianten:
+        case Modus.SteinerVarianten:
         {
           if (limit > 0)
           {
-            modus = Modus.sucheInit; // Vorbereitung abbrechen und Suche direkt starten
+            modus = Modus.SucheInit; // Vorbereitung abbrechen und Suche direkt starten
             return true;
           }
 
@@ -1542,7 +1506,7 @@ namespace Sokosolver
               limit--;
               if (!KistenSteinerNext())
               {
-                modus = Modus.steinerLösen;
+                modus = Modus.SteinerLösen;
                 steinerBöseStellungen = steinerPrüfStellungen.Where(x => hashStellungen.Get(x.stellungCrc) == 1).ToArray();
                 steinerPrüfStellungen = steinerPrüfStellungen.Where(x => hashStellungen.Get(x.stellungCrc) == 2).ToList();
                 var old = hashStellungen;
@@ -1554,11 +1518,10 @@ namespace Sokosolver
                 steinerPrüfstellungenPos = 0;
                 return true;
               }
-              continue;
             }
             else
             {
-              Variante prüf = steinerPrüfStellungen[steinerPrüfstellungenPos++];
+              var prüf = steinerPrüfStellungen[steinerPrüfstellungenPos++];
               LadeStellung(prüf.stellung); limit--;
               if (kistenMitZiel == kistenAnzahl)
               {
@@ -1576,11 +1539,11 @@ namespace Sokosolver
         }
         #endregion
         #region # case Modus.steinerLösen:
-        case Modus.steinerLösen:
+        case Modus.SteinerLösen:
         {
           if (limit > 0)
           {
-            modus = Modus.sucheInit; // Vorbereitung abbrechen und Suche direkt starten
+            modus = Modus.SucheInit; // Vorbereitung abbrechen und Suche direkt starten
             return true;
           }
 
@@ -1597,20 +1560,20 @@ namespace Sokosolver
                 SteinerBlockerDazu(satz.stellung);
               }
 
-              modus = Modus.steinerInit;
+              modus = Modus.SteinerInit;
 
               return true;
             }
 
-            Variante prüf = steinerPrüfStellungen[steinerPrüfstellungenPos++];
+            var prüf = steinerPrüfStellungen[steinerPrüfstellungenPos++];
             LadeStellung(prüf.stellung); limit--;
             suchTiefe = 99999;
 
-            Variante[] vorgänger = SucheVariantenVorgänger().ToArray();
+            var vorgänger = SucheVariantenVorgänger().ToArray();
 
             if (vorgänger.Length > 0)
             {
-              foreach (Variante check in vorgänger)
+              foreach (var check in vorgänger)
               {
                 if (hashStellungen.Get(check.stellungCrc) < 65535)
                 {
@@ -1633,7 +1596,7 @@ namespace Sokosolver
         }
         #endregion
         #region # case Modus.sucheInit:
-        case Modus.sucheInit:
+        case Modus.SucheInit:
         {
           raumSpielerPos = feldZuRaum[startSpielerPos];
 
@@ -1643,35 +1606,33 @@ namespace Sokosolver
 
           suchTiefe = 0;
           SuchListeInsert(GetStellung(), suchTiefe);
-          
+
           hashStellungen = new SokowahnHash_Index24Multi();
           hashStellungen.Add(StellungCrc(GetStellung()), 0);
 
-          modus = Modus.sucheRechne;
+          modus = Modus.SucheRechne;
           return true;
         }
         #endregion
         #region # case Modus.sucheRechne:
-        case Modus.sucheRechne:
+        case Modus.SucheRechne:
         {
           var listeAuswahl = suchListe[suchTiefe];
-          limit = (int)Math.Min((long)limit, listeAuswahl.SatzAnzahl);
+          limit = (int)Math.Min(limit, listeAuswahl.SatzAnzahl);
           for (int listenPos = 0; listenPos < limit; listenPos++)
           {
             LadeStellung(listeAuswahl.Pop());
             if (kistenMitZiel == kistenAnzahl)
             {
-              modus = Modus.sucheGefunden;
+              modus = Modus.SucheGefunden;
               return false;
             }
 
             if (StellungBekannt(StellungCrc(GetStellung())) < suchTiefe) continue; // zu prüfende Stellung wurde schon früher (mit weniger Tiefe) berechnet
 
-            int tmpTiefe = 0;
-
-            foreach (Variante variante in SucheVariantenHashcheck())
+            foreach (var variante in SucheVariantenHashcheck())
             {
-              tmpTiefe = StellungBekannt(variante.stellungCrc);
+              var tmpTiefe = StellungBekannt(variante.stellungCrc);
               if (tmpTiefe >= 0)
               {
                 if (tmpTiefe <= variante.tiefe) continue; // Vorschlag ignorieren
@@ -1689,7 +1650,7 @@ namespace Sokosolver
           return true;
         }
         #endregion
-        case Modus.sucheGefunden: return false; // Ergebnis gefunden, keine weiteren Berechnungen notwendig
+        case Modus.SucheGefunden: return false; // Ergebnis gefunden, keine weiteren Berechnungen notwendig
         default: throw new Exception("? " + modus);
       }
 
@@ -1701,7 +1662,7 @@ namespace Sokosolver
     /// speichert die Struktur eines Hash-Datensatzes
     /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct StellungsSatz
+    private struct StellungsSatz
     {
       /// <summary>
       /// Stellung als Crc64 gespeichert
@@ -1732,7 +1693,7 @@ namespace Sokosolver
       // --- hash aufräumen ---
       var old = hashStellungen;
       hashStellungen = new SokowahnHash_Index24Multi();
-      List<StellungsSatz> übertrag = new List<StellungsSatz>();
+      var übertrag = new List<StellungsSatz>();
 
       foreach (var satz in old.GetAll())
       {
@@ -1750,7 +1711,7 @@ namespace Sokosolver
 
       ArchivEintrag(übertrag);
 
-      return (long)archivGro + (long)48000000;
+      return archivGro + (long)48000000;
     }
     #endregion
 
@@ -1763,16 +1724,16 @@ namespace Sokosolver
     {
       switch (modus)
       {
-        case Modus.sucheRechne:
+        case Modus.SucheRechne:
         {
           for (int i = 0; i < suchTiefe; i++) yield return "dummy" + i;
           yield return ToString();
           yield break;
         }
-        case Modus.sucheGefunden:
+        case Modus.SucheGefunden:
         {
           int tmpTiefe = suchTiefe;
-          ushort[] tmpStellung = GetStellung();
+          var tmpStellung = GetStellung();
           while (suchTiefe > 0)
           {
             yield return ToString();
@@ -1805,7 +1766,7 @@ namespace Sokosolver
     {
       get
       {
-        return modus == Modus.sucheRechne ? suchTiefe : GetLösungsweg().Count() - 1;
+        return modus == Modus.SucheRechne ? suchTiefe : GetLösungsweg().Count() - 1;
       }
     }
     #endregion
@@ -1820,9 +1781,9 @@ namespace Sokosolver
       {
         switch (modus)
         {
-          case Modus.sucheRechne: return hashStellungen.HashAnzahl + (long)archivGro;
-          case Modus.steinerVarianten: return hashStellungen.HashAnzahl;
-          case Modus.steinerLösen: return hashStellungen.HashAnzahl;
+          case Modus.SucheRechne: return hashStellungen.HashAnzahl + archivGro;
+          case Modus.SteinerVarianten: return hashStellungen.HashAnzahl;
+          case Modus.SteinerLösen: return hashStellungen.HashAnzahl;
           default: return 0;
         }
       }
@@ -1840,9 +1801,9 @@ namespace Sokosolver
       {
         switch (modus)
         {
-          case Modus.sucheRechne: return suchListe.Sum(x => x.SatzAnzahl);
-          case Modus.steinerVarianten: return (long)(steinerPrüfStellungen.Count - steinerPrüfstellungenPos);
-          case Modus.steinerLösen: return (long)(steinerPrüfStellungen.Count - steinerPrüfstellungenPos);
+          case Modus.SucheRechne: return suchListe.Sum(x => x.SatzAnzahl);
+          case Modus.SteinerVarianten: return steinerPrüfStellungen.Count - steinerPrüfstellungenPos;
+          case Modus.SteinerLösen: return steinerPrüfStellungen.Count - steinerPrüfstellungenPos;
           default: return 0;
         }
       }
@@ -1855,6 +1816,7 @@ namespace Sokosolver
     /// </summary>
     /// <param name="stellung">Stellung, welche geladen werden soll</param>
     /// <returns>fertig sichtbare Stellung</returns>
+    // ReSharper disable once UnusedMember.Local
     string ToString(ushort[] stellung)
     {
       LadeStellung(stellung);
@@ -1876,11 +1838,11 @@ namespace Sokosolver
     {
       switch (modus)
       {
-        case Modus.unbekannt: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x => feldData[x + y * feldBreite]).ToArray()) + "\r\n"));
+        case Modus.Unbekannt: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x => feldData[x + y * feldBreite]).ToArray()) + "\r\n"));
 
-        case Modus.sucheInit: goto case Modus.unbekannt;
+        case Modus.SucheInit: goto case Modus.Unbekannt;
 
-        case Modus.sucheRechne: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x =>
+        case Modus.SucheRechne: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x =>
         {
           int p = feldZuRaum[x + y * feldBreite];
           if (p < 0) return feldLeer[x + y * feldBreite];
@@ -1889,7 +1851,7 @@ namespace Sokosolver
           return raumZiel[p] == 1 ? '.' : ' ';
         }).ToArray()) + "\r\n")) + "\r\n" + string.Concat(Enumerable.Range(0, suchListe.Length).Where(i => suchListe[i].SatzAnzahl > 0).Select(i => i + ": " + suchListe[i].SatzAnzahl.ToString("#,##0") + "\r\n"));
 
-        case Modus.sucheGefunden: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x =>
+        case Modus.SucheGefunden: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x =>
         {
           int p = feldZuRaum[x + y * feldBreite];
           if (p < 0) return feldLeer[x + y * feldBreite];
@@ -1898,10 +1860,10 @@ namespace Sokosolver
           return raumZiel[p] == 1 ? '.' : ' ';
         }).ToArray()) + "\r\n"));
 
-        case Modus.steinerInit: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x => feldData[x + y * feldBreite]).ToArray()) + "\r\n"));
-        case Modus.steinerVarianten:
+        case Modus.SteinerInit: return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x => feldData[x + y * feldBreite]).ToArray()) + "\r\n"));
+        case Modus.SteinerVarianten:
         {
-          if (steinerPrüfStellungen.Count == 0) goto case Modus.unbekannt;
+          if (steinerPrüfStellungen.Count == 0) goto case Modus.Unbekannt;
           return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x =>
           {
             int p = feldZuRaum[x + y * feldBreite];
@@ -1911,7 +1873,7 @@ namespace Sokosolver
             return raumZiel[p] == 1 ? '.' : ' ';
           }).ToArray()) + "\r\n")) + "\r\n" + string.Concat(Enumerable.Range(1, kistenAnzahl - 1).Select(k => k + "-Steiner: " + Enumerable.Range(raumAnzahl * (k - 1), raumAnzahl).Select(i => i < raumBlocker.Length ? raumBlocker[i].anzahlBlocker : 0).Sum().ToString("#,##0") + "\r\n")) + kistenAnzahl + "-Steiner: suche...";
         }
-        case Modus.steinerLösen: goto case Modus.steinerVarianten;
+        case Modus.SteinerLösen: goto case Modus.SteinerVarianten;
 
         default: return "";
       }
