@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SokoWahnCore", "SokoWahnCor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SokoWahnCore.Test", "SokoWahnCore.Test\SokoWahnCore.Test.csproj", "{CF129994-4744-4099-8E19-E7DB3C650BD4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SokoWahnCore.SpeedTest", "SokoWahnCore.SpeedTest\SokoWahnCore.SpeedTest.csproj", "{D84364B3-42E1-453B-8F5B-7A535173E4B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{CF129994-4744-4099-8E19-E7DB3C650BD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF129994-4744-4099-8E19-E7DB3C650BD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF129994-4744-4099-8E19-E7DB3C650BD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D84364B3-42E1-453B-8F5B-7A535173E4B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D84364B3-42E1-453B-8F5B-7A535173E4B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D84364B3-42E1-453B-8F5B-7A535173E4B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D84364B3-42E1-453B-8F5B-7A535173E4B5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
