@@ -20,36 +20,39 @@ namespace SokoWahnCore.SpeedTest
       Console.WriteLine(" --- CrcTest() ---");
       Console.WriteLine();
 
-      var rnd = new Random(12345);
-      var buffer = new byte[1048576 * 16];
-      rnd.NextBytes(buffer);
+      int loop = 100;
 
-      #region # // --- GetHashCode() ---
-      Test("GetHashCode() - LINQ   ", () => buffer.Sum(b => b.GetHashCode()), 2139378576);
+      var buffer = new ulong[1048576 * 4];
+      var rndBuffer = new byte[buffer.Length * sizeof(ulong)];
 
-      Test("GetHashCode() - LINQ-P ", () => buffer.AsParallel().Sum(b => b.GetHashCode()), 2139378576);
+      new Random(12345).NextBytes(rndBuffer);
+      Buffer.BlockCopy(rndBuffer, 0, buffer, 0, buffer.Length);
 
       Test("GetHashCode() - ForEach", () =>
       {
         int result = 0;
-        foreach (byte b in buffer)
+        for (int l = 0; l < loop; l++)
         {
-          result += b.GetHashCode();
+          foreach (var b in buffer)
+          {
+            result += b.GetHashCode();
+          }
         }
         return result;
-      }, 2139378576);
+      }, 67378320);
 
       Test("GetHashCode() - For(i) ", () =>
       {
         int result = 0;
-        for (int i = 0; i < buffer.Length; i++)
+        for (int l = 0; l < loop; l++)
         {
-          result += buffer[i].GetHashCode();
+          for (int i = 0; i < buffer.Length; i++)
+          {
+            result += buffer[i].GetHashCode();
+          }
         }
         return result;
-      }, 2139378576);
-      #endregion
-
+      }, 67378320);
     }
     #endregion
 
@@ -79,7 +82,7 @@ namespace SokoWahnCore.SpeedTest
           Console.ForegroundColor = ConsoleColor.Red;
           Console.Write("[error] ");
           Console.ForegroundColor = ConsoleColor.Yellow;
-          Console.Write("{0} != {1}", result, targetResult);
+          Console.Write("{0} != {1}", targetResult, result);
         }
         Console.ForegroundColor = ConsoleColor.White;
         Console.WriteLine(", {0} ms", stop.ElapsedMilliseconds.ToString("#,##0"));
