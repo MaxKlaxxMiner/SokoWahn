@@ -2,16 +2,17 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq;
+using SokoWahnCore.CoreTools;
+
 // ReSharper disable ForCanBeConvertedToForeach
 
 #endregion
 
 namespace SokoWahnCore.SpeedTest
 {
-  static class Program
+  static unsafe class Program
   {
-    const int Repeats = 5;
+    const int Repeats = 3;
 
     #region # // --- CrcTest() ---
     static void CrcTest()
@@ -20,39 +21,105 @@ namespace SokoWahnCore.SpeedTest
       Console.WriteLine(" --- CrcTest() ---");
       Console.WriteLine();
 
-      int loop = 100;
+      const int Div = 1048576;
 
-      var buffer = new ulong[1048576 * 4];
-      var rndBuffer = new byte[buffer.Length * sizeof(ulong)];
+      const int LoopCount = 100 * Div;
+
+      var buffer = new ushort[1048576 * 4 / Div];
+      var rndBuffer = new byte[buffer.Length * sizeof(ushort)];
 
       new Random(12345).NextBytes(rndBuffer);
       Buffer.BlockCopy(rndBuffer, 0, buffer, 0, buffer.Length);
 
-      Test("GetHashCode() - ForEach", () =>
+      Test("Crc64 Default              ", () =>
       {
-        int result = 0;
-        for (int l = 0; l < loop; l++)
+        ulong result = 0;
+        for (int l = 0; l < LoopCount; l++)
         {
-          foreach (var b in buffer)
-          {
-            result += b.GetHashCode();
-          }
-        }
-        return result;
-      }, 67378320);
-
-      Test("GetHashCode() - For(i) ", () =>
-      {
-        int result = 0;
-        for (int l = 0; l < loop; l++)
-        {
+          result = Crc64.Start;
           for (int i = 0; i < buffer.Length; i++)
           {
-            result += buffer[i].GetHashCode();
+            result = result.Crc64Update(buffer[i]);
           }
         }
-        return result;
-      }, 67378320);
+        return (int)(uint)result;
+      }, -1695961532);
+
+      Test("Crc64 Inline               ", () =>
+      {
+        ulong result = 0;
+        for (int l = 0; l < LoopCount; l++)
+        {
+          result = Crc64.Start;
+          for (int i = 0; i < buffer.Length; i++)
+          {
+            result = (result ^ buffer[i]) * Crc64.Mul;
+          }
+        }
+        return (int)(uint)result;
+      }, -1695961532);
+
+      Test("Crc64 Unsafe               ", () =>
+      {
+        ulong result = 0;
+        for (int l = 0; l < LoopCount; l++)
+        {
+          fixed (ushort* buf = &buffer[0])
+          {
+            int len = buffer.Length;
+            result = Crc64.Start;
+            for (int i = 0; i < len; i++)
+            {
+              result = (result ^ buf[i]) * Crc64.Mul;
+            }
+          }
+        }
+        return (int)(uint)result;
+      }, -1695961532);
+
+      Test("Crc64 Re-Order             ", () =>
+      {
+        ulong result = 0;
+        for (int l = 0; l < LoopCount; l++)
+        {
+          result = Crc64.Start ^ buffer[0];
+          for (int i = 1; i < buffer.Length; i++)
+          {
+            result = result * Crc64.Mul ^ buffer[i];
+          }
+          result *= Crc64.Mul;
+        }
+        return (int)(uint)result;
+      }, -1695961532);
+
+      Test("Crc64 Re-Order Unsafe      ", () =>
+      {
+        ulong result = 0;
+        for (int l = 0; l < LoopCount; l++)
+        {
+          fixed (ushort* buf = &buffer[0])
+          {
+            int len = buffer.Length;
+            result = Crc64.Start ^ buf[0];
+            for (int i = 1; i < len; i++)
+            {
+              result = result * Crc64.Mul ^ buf[i];
+            }
+            result *= Crc64.Mul;
+          }
+        }
+        return (int)(uint)result;
+      }, -1695961532);
+
+      Test("Crc64 Final (Best)         ", () =>
+      {
+        ulong result = 0;
+        for (int l = 0; l < LoopCount; l++)
+        {
+          result = Crc64.Start.Crc64Update(buffer, 0, buffer.Length);
+        }
+        return (int)(uint)result;
+      }, -1695961532);
     }
     #endregion
 
