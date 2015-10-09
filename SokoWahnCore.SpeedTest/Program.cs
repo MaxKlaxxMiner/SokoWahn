@@ -14,6 +14,42 @@ namespace SokoWahnCore.SpeedTest
   {
     const int Repeats = 3;
 
+    #region # // --- Test(...) - Base ---
+    /// <summary>
+    /// Hilfsmethode zum testen der Gewindigkeit
+    /// </summary>
+    /// <param name="name">Name des Tests</param>
+    /// <param name="testMethod">Methode, welche den Test durchführt (sendet einen eindeutigen Rückgabe-Wert zurück)</param>
+    /// <param name="targetResult">Rückgabe-Wert, welcher erwartet wird</param>
+    static void Test(string name, Func<int> testMethod, int targetResult)
+    {
+      var stop = new Stopwatch();
+      for (int r = 0; r < Repeats; r++)
+      {
+        Console.Write(" ({0} / {1}) {2}: ", (r + 1), Repeats, name);
+        stop.Restart();
+        long result = testMethod();
+        stop.Stop();
+        if (result == targetResult)
+        {
+          Console.ForegroundColor = ConsoleColor.Green;
+          Console.Write("[ok]");
+        }
+        else
+        {
+          Console.ForegroundColor = ConsoleColor.Red;
+          Console.Write("[error] ");
+          Console.ForegroundColor = ConsoleColor.Yellow;
+          Console.Write("{0} != {1}", targetResult, result);
+        }
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.WriteLine(", {0} ms", stop.ElapsedMilliseconds.ToString("#,##0"));
+        Console.ForegroundColor = ConsoleColor.Gray;
+      }
+      Console.WriteLine();
+    }
+    #endregion
+
     #region # // --- CrcTest() ---
     static void CrcTest()
     {
@@ -123,51 +159,37 @@ namespace SokoWahnCore.SpeedTest
     }
     #endregion
 
-    #region # // --- Test(...) ---
-    /// <summary>
-    /// Hilfsmethode zum testen der Gewindigkeit
-    /// </summary>
-    /// <param name="name">Name des Tests</param>
-    /// <param name="testMethod">Methode, welche den Test durchführt (sendet einen eindeutigen Rückgabe-Wert zurück)</param>
-    /// <param name="targetResult">Rückgabe-Wert, welcher erwartet wird</param>
-    static void Test(string name, Func<int> testMethod, int targetResult)
+    const string TestLevel =
+      "        ######## \n" +
+      "        #     @# \n" +
+      "        # $#$ ## \n" +
+      "        # $  $#  \n" +
+      "        ##$ $ #  \n" +
+      "######### $ # ###\n" +
+      "#....  ## $  $  #\n" +
+      "##...    $  $   #\n" +
+      "#....  ##########\n" +
+      "########         \n";
+
+    #region # // --- WalkTest() ---
+    static void WalkTest(string level)
     {
-      var stop = new Stopwatch();
-      for (int r = 0; r < Repeats; r++)
-      {
-        Console.Write(" ({0} / {1}) {2}: ", (r + 1), Repeats, name);
-        stop.Restart();
-        long result = testMethod();
-        stop.Stop();
-        if (result == targetResult)
-        {
-          Console.ForegroundColor = ConsoleColor.Green;
-          Console.Write("[ok]");
-        }
-        else
-        {
-          Console.ForegroundColor = ConsoleColor.Red;
-          Console.Write("[error] ");
-          Console.ForegroundColor = ConsoleColor.Yellow;
-          Console.Write("{0} != {1}", targetResult, result);
-        }
-        Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine(", {0} ms", stop.ElapsedMilliseconds.ToString("#,##0"));
-        Console.ForegroundColor = ConsoleColor.Gray;
-      }
-      Console.WriteLine();
+      level = level.Replace('.', ' ').Replace('$', ' ').Replace('*', ' ').Replace('+', '@');
     }
     #endregion
 
+
     static void Main(string[] args)
     {
-      if (args.Length == 0) args = new[] { "crc" };
+      if (args.Length == 0) args = new[] { "walk" };
 
       foreach (var speedTest in args)
       {
         switch (speedTest.ToLower())
         {
           case "crc": CrcTest(); break;
+          case "walk": WalkTest(TestLevel); break;
+
           default: throw new Exception("Speed-Test unknown: \"" + speedTest + "\"");
         }
       }
