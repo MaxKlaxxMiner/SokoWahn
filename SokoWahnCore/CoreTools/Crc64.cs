@@ -1,6 +1,8 @@
-﻿
-using System.Diagnostics.Contracts;
+﻿#region # using *.*
+
 using System.Runtime.CompilerServices;
+
+#endregion
 
 namespace SokoWahnCore.CoreTools
 {
