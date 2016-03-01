@@ -1,7 +1,9 @@
 ﻿#region # using *.*
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using SokoWahnCore.CoreTools;
 
 // ReSharper disable ForCanBeConvertedToForeach
@@ -174,7 +176,39 @@ namespace SokoWahnCore.SpeedTest
     #region # // --- WalkTest() ---
     static void WalkTest(string level)
     {
-      level = level.Replace('.', ' ').Replace('$', ' ').Replace('*', ' ').Replace('+', '@');
+      // --- basis-feld einlesen ---
+      int width = TestLevel.IndexOf('\n');
+      int height = TestLevel.Count(c => c == '\n');
+      var fieldsBase = TestLevel.Where(c => c != '\n').ToArray();
+      if (fieldsBase.Length != width * height) throw new ArgumentException("level size");
+      var fieldsFree = new bool[fieldsBase.Length];
+
+      // --- spieler suchen ---
+      var posis = fieldsBase.WhereGetIndices(c => c == '@' || c == '+').ToArray();
+
+      if (posis.Length < 1) throw new ArgumentException("player not found");
+      if (posis.Length > 1) throw new ArgumentException("duplicate players");
+
+      int playerStart = posis[0];
+
+      // --- begehbare bereiche suchen ---
+      var search = new Stack<int>();
+      search.Push(playerStart);
+      while (search.Count > 0)
+      {
+        int next = search.Pop();
+        if (fieldsBase[next] == '#' || fieldsFree[next]) continue;
+        fieldsFree[next] = true;
+
+        if (next % width > 0) search.Push(next - 1);                     // links
+        if (next % width < width - 1) search.Push(next + 1);             // rechts
+        if (next - width >= 0) search.Push(next - width);                // hoch
+        if (next + width < fieldsBase.Length) search.Push(next + width); // runter
+      }
+
+      var testPosis = fieldsFree.WhereGetIndices(b => b).ToArray();
+
+      // todo
     }
     #endregion
 
