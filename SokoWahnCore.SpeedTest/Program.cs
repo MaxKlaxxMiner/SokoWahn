@@ -176,14 +176,14 @@ namespace SokoWahnCore.SpeedTest
     #region # // --- WalkTest() ---
     static void WalkTest(string level)
     {
-      // --- basis-feld einlesen ---
+      // --- Basis-Feld einlesen ---
       int width = TestLevel.IndexOf('\n');
       int height = TestLevel.Count(c => c == '\n');
       var fieldsBase = TestLevel.Where(c => c != '\n').ToArray();
       if (fieldsBase.Length != width * height) throw new ArgumentException("level size");
       var fieldsFree = new bool[fieldsBase.Length];
 
-      // --- spieler suchen ---
+      // --- Spieler suchen ---
       var posis = fieldsBase.WhereGetIndices(c => c == '@' || c == '+').ToArray();
 
       if (posis.Length < 1) throw new ArgumentException("player not found");
@@ -191,7 +191,7 @@ namespace SokoWahnCore.SpeedTest
 
       int playerStart = posis[0];
 
-      // --- begehbare bereiche suchen ---
+      // --- begehbare Bereiche suchen ---
       var search = new Stack<int>();
       search.Push(playerStart);
       while (search.Count > 0)
@@ -207,6 +207,8 @@ namespace SokoWahnCore.SpeedTest
       }
 
       var testPosis = fieldsFree.WhereGetIndices(b => b).ToArray();
+
+
 
       // todo
     }

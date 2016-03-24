@@ -8,8 +8,18 @@ using System.Collections.Generic;
 
 namespace SokoWahnCore.CoreTools
 {
+  /// <summary>
+  /// eigene Linq-Erweiterungen
+  /// </summary>
   public static class LinqExtensions
   {
+    /// <summary>
+    /// fragt wie "Where" mehrere Felder ab, gibt aber statt den Datensätzen nur die entsprechenden Index-Positionen zurück
+    /// </summary>
+    /// <typeparam name="T">Typ des Datensatzes</typeparam>
+    /// <param name="query">Enumerable mit den zu überprüfenden Elementen</param>
+    /// <param name="compare">Abfrage-Methode</param>
+    /// <returns>Enumerable mit den entsprechenden Index-Positionen</returns>
     public static IEnumerable<int> WhereGetIndices<T>(this IEnumerable<T> query, Func<T, bool> compare)
     {
       var array = query as T[];
