@@ -18,7 +18,7 @@ namespace SokoWahnCore.SpeedTest
 
     #region # // --- Test(...) - Base ---
     /// <summary>
-    /// Hilfsmethode zum testen der Gewindigkeit
+    /// Hilfsmethode zum testen der Geschwindigkeit
     /// </summary>
     /// <param name="name">Name des Tests</param>
     /// <param name="testMethod">Methode, welche den Test durchführt (sendet einen eindeutigen Rückgabe-Wert zurück)</param>
@@ -45,7 +45,7 @@ namespace SokoWahnCore.SpeedTest
           Console.Write("{0} != {1}", targetResult, result);
         }
         Console.ForegroundColor = ConsoleColor.White;
-        Console.WriteLine(", {0} ms", stop.ElapsedMilliseconds.ToString("#,##0"));
+        Console.WriteLine(", {0} ms", stop.ElapsedMilliseconds.ToString("N0"));
         Console.ForegroundColor = ConsoleColor.Gray;
       }
       Console.WriteLine();
@@ -210,7 +210,6 @@ namespace SokoWahnCore.SpeedTest
 
 
 
-      // todo
     }
     #endregion
 

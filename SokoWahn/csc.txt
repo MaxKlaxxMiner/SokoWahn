@@ -1,0 +1,85 @@
+"C:\Program Files (x86)\MSBuild\12.0\Bin\csc" -?
+
+Microsoft (R) Visual C# Compiler version 12.0.31101.0
+for C# 5
+Copyright (C) Microsoft Corporation. Alle Rechte vorbehalten.
+
+                        Visual C# Compiler-Optionen
+
+                        - AUSGABEDATEIEN -
+/out:<Datei>                   Ausgabedateinamen angeben (Standard: Basisname der Datei mit der Hauptklasse oder erste Datei)
+/target:exe                    Ausführbare Konsolendatei erstellen (Standard) (Kurzform: /t:exe)
+/target:winexe                 Ausführbare Windows-Datei erstellen (Kurzform: /t:winexe)
+/target:library                Bibliothek erstellen (Kurzform: /t:library)
+/target:module                 Modul erstellen, das einer anderen Assembly hinzugefügt werden kann (Kurzform: /t:module)
+/target:appcontainerexe        Erstellen Sie eine ausführbare Appcontainer-Datei (Kurzform: /t:appcontainerexe)
+/target:winmdobj               Erstellen Sie eine Windows-Runtime-Zwischendatei, die von WinMDExp genutzt wird. (Kurzform: /t:winmdobj)
+/doc:<Datei>                   Zu generierende XML-Dokumentationsdatei
+/platform:<Zeichenfolge>       Legen Sie eine Beschränkung dafür fest, auf welchen Plattformen dieser Code ausgeführt werden kann: 'x86', 'Itanium', 'x64', 'arm', 'anycpu32bitpreferred' oder 'anycpu'. Der Standard ist
+                               'anycpu'.
+
+                        - EINGABEDATEIEN -
+/recurse:<Platzhalter>         Alle Dateien im aktuellen Verzeichnis und dessen Unterverzeichnissen den Platzhalterspezifikationen entsprechend einschließen
+/reference:<Alias>=<Datei>     Mithilfe des Alias aus der angegebenen Assemblydatei auf Metadaten verweisen (Kurzform: /r)
+/reference:<Dateiliste>        Auf Metadaten aus den angegebenen Assemblydateien verweisen (Kurzform: /r)
+/addmodule:<Dateiliste>        Angegebene Module mit dieser Assembly verknüpfen
+/link:<Dateiliste>             Metadaten aus den angegebenen Interopassemblydateien einbetten (Kurzform: /l)
+
+                        - RESSOURCEN -
+/win32res:<Datei>              Win32-Ressourcendatei (.res) angeben
+/win32icon:<Datei>             Dieses Symbol für die Ausgabe verwenden
+/win32manifest:<Datei>         Geben Sie eine Win32-Manifestdatei (.xml) an.
+/nowin32manifest               Schließen Sie das Win32-Standardmanifest nicht ein.
+/resource:<Resinfo>            Angegebene Ressource einbetten (Kurzform: /res)
+/linkresource:<Resinfo>        Angegebene Ressource mit dieser Assembly verknüpfen (Kurzform: /linkres)
+                               Resinfo-Format: <Datei>[,<Zeichenfolgenname>[,public|private]]
+
+                        - CODEGENERIERUNG -
+/debug[+|-]                    Debuginformationen ausgeben
+/debug:{full|pdbonly}          Debugtyp angeben ('full' ist Standard und erlaubt das Anhängen eines Debuggers an ein ausgeführtes Programm)
+/optimize[+|-]                 Optimierungen aktivieren (Kurzform: /o)
+
+                        - FEHLER UND WARNUNGEN -
+/warnaserror[+|-]              Alle Warnungen als Fehler melden
+/warnaserror[+|-]:<Warnungsliste>
+                               Bestimmte Warnungen als Fehler melden
+/warn:<n>                      Warnstufe (0-4) bestimmen (Kurzform: /w)
+/nowarn:<Warnungsliste>        Bestimmte Warnmeldungen deaktivieren
+
+                        - SPRACHE -
+/checked[+|-]                  Überlaufprüfungen generieren
+/unsafe[+|-]                   Unsicheren Code zulassen
+/define:<Symbolliste>          Symbole für bedingte Kompilierung definieren (Kurzform: /d)
+/langversion:<Zeichenfolge>    Sprachversionsmodus angeben: 'ISO-1', 'ISO-2', '3', '4', '5' oder 'Default'
+
+                        - SICHERHEIT -
+/delaysign[+|-]                Assembly nur mit dem öffentlichen Teil des Schlüssels für einen starken Namen verzögert signieren
+/keyfile:<Datei>               Datei mit einem Schlüssel für einen starken Namen angeben
+/keycontainer:<Zeichenfolge>   Container mit einem Schlüssel für einen starken Namen angeben
+/highentropyva[+|-]            ASLR mit hoher Entropie aktivieren
+
+                        - VERSCHIEDENES -
+@<Datei>                       Antwortdatei mit weiteren Optionen lesen
+/help                          Diesen Hilfetext anzeigen (Kurzform: /?)
+/nologo                        Compiler-Copyrightmeldung unterdrücken
+/noconfig                      CSC.RSP-Datei nicht automatisch einbeziehen
+
+                        - ERWEITERT -
+/baseaddress:<Adresse>         Basisadresse für die zu erstellende Bibliothek
+/bugreport:<Datei>             Problemberichtsdatei erstellen
+/codepage:<n>                  Beim Öffnen der Quelldateien zu verwendende Codepage angeben
+/utf8output                    Compilermeldungen in UTF-8-Codierung ausgeben
+/main:<Typ>                    Typ angeben, der den Einstiegspunkt enthält (alle anderen möglichen Einstiegspunkte ignorieren) (Kurzform: /m)
+/fullpaths                     Compiler generiert vollqualifizierte Pfade
+/filealign:<n>                 Für die Ausgabedateiabschnitte verwendete Ausrichtung angeben
+/pdb:<Datei>                   Namen für Debuginformationsdatei angeben (Standard: Ausgabedateiname mit .pdb-Erweiterung)
+/errorendlocation              Ausgabezeile und -spalte des Zielstandorts jedes Fehlers
+/preferreduilang               Geben Sie den Namen der bevorzugten Ausgabesprache an.
+/nostdlib[+|-]                 Nicht auf Standardbibliothek ('mscorlib.dll') verweisen
+/subsystemversion:<Zeichenfolge>
+                               Subsystemversion für diese Assembly festlegen
+/lib:<Dateiliste>              Zusätzliche Verzeichnisse für die Verweissuche angeben
+/errorreport:<Zeichenfolge>    Behandlung interner Compilerfehler angeben: 'prompt', 'send', 'queue' oder 'none'. Standard ist 'queue'.
+/appconfig:<Datei>             Geben Sie eine Anwendungskonfigurationsdatei mit den Assemblybindungseinstellungen an.
+/moduleassemblyname:<Zeichenfolge>
+                               Der Name der Assembly, zu der dieses Modul gehören wird.
