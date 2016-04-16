@@ -150,27 +150,70 @@ namespace SokoWahn
     /// <summary>
     /// bewegt den Spieler in eine bestimmte Richtung
     /// </summary>
-    /// <param name="moveOffset">Richtung, in welcher der Spieler bewegt werden soll (-1 = links, +1 = rechts, -width = hoch, +width = runter)</param>
+    /// <param name="moveDirection">Richtung, in welcher der Spieler bewegt werden soll (-1 = links, +1 = rechts, -width = hoch, +width = runter)</param>
     /// <returns>true, wenn der Schritt erfolgreich war</returns>
-    internal bool MovePlayer(int moveOffset)
+    internal bool MovePlayer(int moveDirection)
     {
-      int playerPos = posis[0];
-      switch (fieldData[playerPos + moveOffset])
+      int oldPlayerPos = posis[0];
+      int newPlayerPos = oldPlayerPos + moveDirection;
+      switch (fieldData[newPlayerPos])
       {
+        // --- keine Box verschieben ---
         case ' ':
         case '.':
         {
-          fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
-          playerPos += moveOffset;
-          fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
-          posis[0] = (ushort)playerPos;
+          fieldData[oldPlayerPos] = fieldData[oldPlayerPos] == '+' ? '.' : ' ';
+          fieldData[newPlayerPos] = fieldData[newPlayerPos] == '.' ? '+' : '@';
+          posis[0] = (ushort)newPlayerPos;
         } return true;
 
+        // --- mit Box verschieben
         case '$':
         case '*':
         {
-          // todo
-        } return false;
+          int newBoxPos = newPlayerPos + moveDirection;
+          if (fieldData[newBoxPos] != ' ' && fieldData[newBoxPos] != '.') return false; // Weg blockiert
+
+          // --- alte Box entfernen und Spieler setzen ---
+          fieldData[oldPlayerPos] = fieldData[oldPlayerPos] == '+' ? '.' : ' ';
+          if (fieldData[newPlayerPos] == '*')
+          {
+            fieldData[newPlayerPos] = '+';
+            boxesRemain++;
+          }
+          else
+          {
+            fieldData[newPlayerPos] = '@';
+          }
+
+          // --- neue Box setzen ---
+          if (fieldData[newBoxPos] == '.')
+          {
+            fieldData[newBoxPos] = '*';
+            boxesRemain--;
+          }
+          else
+          {
+            fieldData[newBoxPos] = '$';
+          }
+
+          // --- Index korrigieren ---
+          posis[0] = (ushort)newPlayerPos;
+          for (int i = 1; i < posis.Length; i++)
+          {
+            if (posis[i] != newPlayerPos) continue;
+            if (moveDirection < 0)
+            {
+              while (i > 1 && posis[i - 1] > newBoxPos) i--;
+            }
+            else
+            {
+              while (i < posis.Length - 1 && posis[i + 1] < newBoxPos) i++;
+            }
+            posis[i] = (ushort)newBoxPos;
+            break;
+          }
+        } return true;
 
         default: return false;
       }

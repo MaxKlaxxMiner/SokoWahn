@@ -97,6 +97,10 @@ namespace SokoWahn
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.Write(output.Remove(0, playerChar + 1));
 
+        Console.WriteLine();
+        Console.WriteLine();
+        Console.WriteLine("Remain: " + game.boxesRemain);
+
         if (game.boxesRemain == 0) return;
 
         switch (Console.ReadKey(true).Key)
