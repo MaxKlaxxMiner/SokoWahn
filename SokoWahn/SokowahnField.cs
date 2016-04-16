@@ -2,7 +2,10 @@
 
 using System;
 using System.Linq;
+// ReSharper disable UnusedMember.Global
+// ReSharper disable MemberCanBeInternal
 // ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable UnusedMethodReturnValue.Global
 
 #endregion
 
@@ -11,7 +14,7 @@ namespace SokoWahn
   /// <summary>
   /// Klasse zum einlesen und verarbeiten von Spielfeldern
   /// </summary>
-  internal unsafe sealed class SokowahnField
+  public unsafe sealed class SokowahnField
   {
     #region # // --- Statische Werte ---
     /// <summary>
@@ -25,11 +28,6 @@ namespace SokoWahn
     public readonly int height;
 
     /// <summary>
-    /// merkt sich die gesamte Länge des Spielfeldes
-    /// </summary>
-    public readonly int fieldLength;
-
-    /// <summary>
     /// merkt sich das eigentliche Spielfeld
     /// </summary>
     public readonly char[] fieldData;
@@ -40,16 +38,16 @@ namespace SokoWahn
     public readonly int boxesCount;
     #endregion
 
-    #region # // --- private Status-Variablen ---
+    #region # // --- interne Status-Variablen ---
     /// <summary>
     /// merkt sich die aktuelle Position vom Spieler (posis[0]) und die Positionen aller Boxen
     /// </summary>
-    ushort[] posis;
+    internal ushort[] posis;
 
     /// <summary>
     /// merkt sich die Anzahl der Boxen, welche sich noch nicht auf einem Zielfeld befinden
     /// </summary>
-    int boxesRemain;
+    internal int boxesRemain;
     #endregion
 
     #region # // --- Konstruktor ---
@@ -68,7 +66,7 @@ namespace SokoWahn
       // --- Spielfeld zuordnen ---
       width = lines.First().Length;
       height = lines.Length;
-      fieldLength = width * height;
+      int fieldLength = width * height;
       if (fieldLength > ushort.MaxValue) throw new IndexOutOfRangeException("Spielfeld ist zu größ");
 
       fieldData = string.Concat(lines).ToCharArray();
@@ -82,7 +80,140 @@ namespace SokoWahn
       // --- Spielfeld-Logik prüft um eine Reihe von möglichen Fehlern zu erkennen
       ValidateFieldLogic();
     }
+
+    /// <summary>
+    /// Konstruktor
+    /// </summary>
+    /// <param name="sokowahnField">vorhandenes Sokowahn-Spielfeld, kopiert werden soll</param>
+    /// <param name="gameStatus">optionaler Spielstatus, welcher stattdessen verwendet werden soll</param>
+    public SokowahnField(SokowahnField sokowahnField, ushort[] gameStatus = null)
+    {
+      width = sokowahnField.width;
+      height = sokowahnField.height;
+      fieldData = sokowahnField.fieldData.ToArray();
+      boxesCount = sokowahnField.boxesCount;
+
+      boxesRemain = sokowahnField.boxesRemain;
+      posis = sokowahnField.posis.ToArray();
+
+      if (gameStatus != null) SetGameStatus(gameStatus);
+    }
     #endregion
+
+    #region # // --- public Methoden ---
+    /// <summary>
+    /// gibt den aktuellen Spielstatus mit allen Positionen zurück
+    /// </summary>
+    /// <returns>Spielstatus</returns>
+    public ushort[] GetGameStatus()
+    {
+      return posis;
+    }
+
+    /// <summary>
+    /// setzt einen bestimmten Spielstatus
+    /// </summary>
+    /// <param name="gameStatus">Spielstatus mit allen Positionen, welcher gesetzt werden soll</param>
+    public void SetGameStatus(ushort[] gameStatus)
+    {
+      if (gameStatus.Length != posis.Length) throw new ArgumentException("ungültiger Spielstatus");
+
+      // --- altes Spiefeld räumen ---
+      int playerPos = posis[0];
+      fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
+      for (int box = 1; box < posis.Length; box++)
+      {
+        int boxPos = posis[box];
+        fieldData[boxPos] = fieldData[boxPos] == '*' ? '.' : ' ';
+      }
+
+      // --- neues Spielfeld setzen ---
+      playerPos = gameStatus[0];
+      fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
+      int newRemain = 0;
+      for (int box = 1; box < gameStatus.Length; box++)
+      {
+        int boxPos = gameStatus[box];
+        if (fieldData[boxPos] == '.')
+        {
+          fieldData[boxPos] = '*';
+        }
+        else
+        {
+          fieldData[boxPos] = '$';
+          newRemain++;
+        }
+      }
+      boxesRemain = newRemain;
+    }
+
+    /// <summary>
+    /// bewegt den Spieler in eine bestimmte Richtung
+    /// </summary>
+    /// <param name="moveOffset">Richtung, in welcher der Spieler bewegt werden soll (-1 = links, +1 = rechts, -width = hoch, +width = runter)</param>
+    /// <returns>true, wenn der Schritt erfolgreich war</returns>
+    internal bool MovePlayer(int moveOffset)
+    {
+      int playerPos = posis[0];
+      switch (fieldData[playerPos + moveOffset])
+      {
+        case ' ':
+        case '.':
+        {
+          fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
+          playerPos += moveOffset;
+          fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
+          posis[0] = (ushort)playerPos;
+        } return true;
+
+        case '$':
+        case '*':
+        {
+          // todo
+        } return false;
+
+        default: return false;
+      }
+    }
+
+    /// <summary>
+    /// bewegt den Spieler um eins nach links
+    /// </summary>
+    /// <returns>true, wenn der Schritt erfolgreich war</returns>
+    public bool MoveLeft()
+    {
+      return MovePlayer(-1);
+    }
+
+    /// <summary>
+    /// bewegt den Spieler um eins nach rechts
+    /// </summary>
+    /// <returns>true, wenn der Schritt erfolgreich war</returns>
+    public bool MoveRight()
+    {
+      return MovePlayer(+1);
+    }
+
+    /// <summary>
+    /// bewegt den Spieler um eins nach oben
+    /// </summary>
+    /// <returns>true, wenn der Schritt erfolgreich war</returns>
+    public bool MoveUp()
+    {
+      return MovePlayer(-width);
+    }
+
+    /// <summary>
+    /// bewegt den Spieler um eins nach oben
+    /// </summary>
+    /// <returns>true, wenn der Schritt erfolgreich war</returns>
+    public bool MoveDown()
+    {
+      return MovePlayer(+width);
+    }
+    #endregion
+
+    #region # // --- private Methoden ---
 
     #region # void ScanGameStatus() // scannt das Spielfeld und merkt sich die Positionen der Boxen und die Position vom Spieler
     /// <summary>
@@ -198,6 +329,8 @@ namespace SokoWahn
 
       return tmp;
     }
+    #endregion
+
     #endregion
 
     #region # public override string ToString() // gibt den Inhalt des gesamten Spielfeldes aus

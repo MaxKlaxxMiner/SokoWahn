@@ -74,12 +74,61 @@ namespace SokoWahn
     }
     #endregion
 
+    /// <summary>
+    /// startet eine kleine spielbare Konsolen-Version eines Spielfeldes
+    /// </summary>
+    /// <param name="field">Spielfeld, welches benutzt werden soll</param>
+    static void MiniGame(SokowahnField field)
+    {
+      var game = new SokowahnField(field);
+
+      for (; ; )
+      {
+        string output = game.ToString();
+        int playerChar = output.IndexOfAny(new[] { '@', '+' });
+
+        Console.Clear();
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.Write(output.Substring(0, playerChar));
+
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.Write(output[playerChar]);
+
+        Console.ForegroundColor = ConsoleColor.Gray;
+        Console.Write(output.Remove(0, playerChar + 1));
+
+        if (game.boxesRemain == 0) return;
+
+        switch (Console.ReadKey(true).Key)
+        {
+          case ConsoleKey.Escape: return;
+
+          case ConsoleKey.A:
+          case ConsoleKey.NumPad4:
+          case ConsoleKey.LeftArrow: game.MoveLeft(); break;
+
+          case ConsoleKey.D:
+          case ConsoleKey.NumPad6:
+          case ConsoleKey.RightArrow: game.MoveRight(); break;
+
+          case ConsoleKey.W:
+          case ConsoleKey.NumPad8:
+          case ConsoleKey.UpArrow: game.MoveUp(); break;
+
+          case ConsoleKey.S:
+          case ConsoleKey.NumPad2:
+          case ConsoleKey.DownArrow: game.MoveDown(); break;
+
+          default: continue;
+        }
+      }
+    }
+
     static void Main(string[] args)
     {
       var scan = new SokowahnField(TestLevel);
 
-      Console.WriteLine(scan.ToString());
-      Console.ReadLine();
+      MiniGame(scan);
 
       // CreateProject();
     }
