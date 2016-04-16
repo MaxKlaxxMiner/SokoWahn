@@ -81,6 +81,7 @@ namespace SokoWahn
     static void MiniGame(SokowahnField field)
     {
       var game = new SokowahnField(field);
+      var steps = new Stack<ushort[]>();
 
       for (; ; )
       {
@@ -97,11 +98,15 @@ namespace SokoWahn
         Console.ForegroundColor = ConsoleColor.Gray;
         Console.Write(output.Remove(0, playerChar + 1));
 
-        Console.WriteLine();
+        Console.WriteLine(); Console.WriteLine();
+        Console.WriteLine("Steps:  " + steps.Count.ToString("N0"));
         Console.WriteLine();
         Console.WriteLine("Remain: " + game.boxesRemain);
 
         if (game.boxesRemain == 0) return;
+
+        bool step = false;
+        var oldState = game.GetGameState();
 
         switch (Console.ReadKey(true).Key)
         {
@@ -109,21 +114,32 @@ namespace SokoWahn
 
           case ConsoleKey.A:
           case ConsoleKey.NumPad4:
-          case ConsoleKey.LeftArrow: game.MoveLeft(); break;
+          case ConsoleKey.LeftArrow: step = game.MoveLeft(); break;
 
           case ConsoleKey.D:
           case ConsoleKey.NumPad6:
-          case ConsoleKey.RightArrow: game.MoveRight(); break;
+          case ConsoleKey.RightArrow: step = game.MoveRight(); break;
 
           case ConsoleKey.W:
           case ConsoleKey.NumPad8:
-          case ConsoleKey.UpArrow: game.MoveUp(); break;
+          case ConsoleKey.UpArrow: step = game.MoveUp(); break;
 
           case ConsoleKey.S:
           case ConsoleKey.NumPad2:
-          case ConsoleKey.DownArrow: game.MoveDown(); break;
+          case ConsoleKey.DownArrow: step = game.MoveDown(); break;
+
+          case ConsoleKey.Backspace:
+          {
+            if (steps.Count == 0) break;
+            game.SetGameState(steps.Pop());
+          } break;
 
           default: continue;
+        }
+
+        if (step)
+        {
+          steps.Push(oldState);
         }
       }
     }

@@ -75,7 +75,7 @@ namespace SokoWahn
       boxesCount = fieldData.Count(c => c == '$' || c == '*');
 
       // --- Spielstatus scannen ---
-      ScanGameStatus();
+      ScanGameState();
 
       // --- Spielfeld-Logik prüft um eine Reihe von möglichen Fehlern zu erkennen
       ValidateFieldLogic();
@@ -85,8 +85,8 @@ namespace SokoWahn
     /// Konstruktor
     /// </summary>
     /// <param name="sokowahnField">vorhandenes Sokowahn-Spielfeld, kopiert werden soll</param>
-    /// <param name="gameStatus">optionaler Spielstatus, welcher stattdessen verwendet werden soll</param>
-    public SokowahnField(SokowahnField sokowahnField, ushort[] gameStatus = null)
+    /// <param name="gameState">optionaler Spielstatus, welcher stattdessen verwendet werden soll</param>
+    public SokowahnField(SokowahnField sokowahnField, ushort[] gameState = null)
     {
       width = sokowahnField.width;
       height = sokowahnField.height;
@@ -96,7 +96,7 @@ namespace SokoWahn
       boxesRemain = sokowahnField.boxesRemain;
       posis = sokowahnField.posis.ToArray();
 
-      if (gameStatus != null) SetGameStatus(gameStatus);
+      if (gameState != null) SetGameState(gameState);
     }
     #endregion
 
@@ -104,19 +104,20 @@ namespace SokoWahn
     /// <summary>
     /// gibt den aktuellen Spielstatus mit allen Positionen zurück
     /// </summary>
+    /// <param name="clone">gibt an, ob die Werte im neuen Array kopiert werden sollen, sonst wird nur die Referenz weiter gegeben (default: true)</param>
     /// <returns>Spielstatus</returns>
-    public ushort[] GetGameStatus()
+    public ushort[] GetGameState(bool clone = true)
     {
-      return posis;
+      return clone ? posis.ToArray() : posis;
     }
 
     /// <summary>
     /// setzt einen bestimmten Spielstatus
     /// </summary>
-    /// <param name="gameStatus">Spielstatus mit allen Positionen, welcher gesetzt werden soll</param>
-    public void SetGameStatus(ushort[] gameStatus)
+    /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden soll</param>
+    public void SetGameState(ushort[] gameState)
     {
-      if (gameStatus.Length != posis.Length) throw new ArgumentException("ungültiger Spielstatus");
+      if (gameState.Length != posis.Length) throw new ArgumentException("ungültiger Spielstatus");
 
       // --- altes Spiefeld räumen ---
       int playerPos = posis[0];
@@ -128,12 +129,12 @@ namespace SokoWahn
       }
 
       // --- neues Spielfeld setzen ---
-      playerPos = gameStatus[0];
+      playerPos = gameState[0];
       fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
       int newRemain = 0;
-      for (int box = 1; box < gameStatus.Length; box++)
+      for (int box = 1; box < gameState.Length; box++)
       {
-        int boxPos = gameStatus[box];
+        int boxPos = gameState[box];
         if (fieldData[boxPos] == '.')
         {
           fieldData[boxPos] = '*';
@@ -145,6 +146,8 @@ namespace SokoWahn
         }
       }
       boxesRemain = newRemain;
+
+      Array.Copy(gameState, posis, posis.Length);
     }
 
     /// <summary>
@@ -204,11 +207,19 @@ namespace SokoWahn
             if (posis[i] != newPlayerPos) continue;
             if (moveDirection < 0)
             {
-              while (i > 1 && posis[i - 1] > newBoxPos) i--;
+              while (i > 1 && posis[i - 1] > newBoxPos)
+              {
+                posis[i] = posis[i - 1];
+                i--;
+              }
             }
             else
             {
-              while (i < posis.Length - 1 && posis[i + 1] < newBoxPos) i++;
+              while (i < posis.Length - 1 && posis[i + 1] < newBoxPos)
+              {
+                posis[i] = posis[i + 1];
+                i++;
+              }
             }
             posis[i] = (ushort)newBoxPos;
             break;
@@ -262,7 +273,7 @@ namespace SokoWahn
     /// <summary>
     /// scannt das Spielfeld und merkt sich die Positionen der Boxen und die Position vom Spieler
     /// </summary>
-    void ScanGameStatus()
+    void ScanGameState()
     {
       boxesRemain = fieldData.Count(c => c == '$');
       int freeFields = fieldData.Count(c => c == '.' || c == '+');
