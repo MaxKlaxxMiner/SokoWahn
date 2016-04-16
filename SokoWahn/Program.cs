@@ -74,6 +74,7 @@ namespace SokoWahn
     }
     #endregion
 
+    #region # static void MiniGame(SokowahnField field) // startet eine kleine spielbare Konsolen-Version eines Spielfeldes
     /// <summary>
     /// startet eine kleine spielbare Konsolen-Version eines Spielfeldes
     /// </summary>
@@ -143,6 +144,7 @@ namespace SokoWahn
         }
       }
     }
+    #endregion
 
     static void Main(string[] args)
     {
