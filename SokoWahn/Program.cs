@@ -20,18 +20,22 @@ namespace SokoWahn
     const string PathData = "../../../Data/";
     const string PathTest = PathData + "Test/";
 
-    const string TestLevel = "      ###      \n"
-                           + "      #.#      \n"
-                           + "  #####.#####  \n"
-                           + " ##         ## \n"
-                           + "##  # # # #  ##\n"
-                           + "#  ##     ##  #\n"
-                           + "# ##  # #  ## #\n"
-                           + "#     $@$     #\n"
-                           + "####  ###  ####\n"
-                           + "   #### ####   \n";
+    const string TestLevel = "       ###  ^_^  \n"
+                           + "       #.#       \n"
+                           + "   #####.#####   \n"
+                           + "  ##         ##  \n"
+                           + " ##  # # # #  ## \n"
+                           + " #  ##     ##  # \n"
+                           + " # ##  # #  ## #     \n"
+                           + " #     $@$     # \n"
+                           + " ####  ###  #### \n"
+                           + "    #### #### :) \n";
 
-    static void Main(string[] args)
+    #region # static void CreateProject() // erstellt das Projekt mit allen Dateien
+    /// <summary>
+    /// erstellt das Projekt mit allen Dateien
+    /// </summary>
+    static void CreateProject()
     {
       Directory.CreateDirectory(PathData);
       Directory.CreateDirectory(PathTest);
@@ -67,6 +71,17 @@ namespace SokoWahn
 
       var solutionFile = CsProject.CreateSolutionFile(solutionGuid, projectGuid, "Sokowahn", ProjectFile);
       solutionFile.SaveToFile(PathTest + SolutionFile);
+    }
+    #endregion
+
+    static void Main(string[] args)
+    {
+      var scan = new SokowahnField(TestLevel);
+
+      Console.WriteLine(scan.ToString());
+      Console.ReadLine();
+
+      // CreateProject();
     }
   }
 }
