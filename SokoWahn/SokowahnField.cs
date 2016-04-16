@@ -13,7 +13,7 @@ namespace SokoWahn
   /// </summary>
   internal unsafe sealed class SokowahnField
   {
-    #region # // --- Variablen ---
+    #region # // --- Statische Werte ---
     /// <summary>
     /// gibt die Breite des Spielfeldes an
     /// </summary>
@@ -33,6 +33,23 @@ namespace SokoWahn
     /// merkt sich das eigentliche Spielfeld
     /// </summary>
     public readonly char[] fieldData;
+
+    /// <summary>
+    /// gibt die Anzahl der vorhandenen Boxen an
+    /// </summary>
+    public readonly int boxesCount;
+    #endregion
+
+    #region # // --- private Status-Variablen ---
+    /// <summary>
+    /// merkt sich die aktuelle Position vom Spieler (posis[0]) und die Positionen aller Boxen
+    /// </summary>
+    ushort[] posis;
+
+    /// <summary>
+    /// merkt sich die Anzahl der Boxen, welche sich noch nicht auf einem Zielfeld befinden
+    /// </summary>
+    int boxesRemain;
     #endregion
 
     #region # // --- Konstruktor ---
@@ -48,11 +65,68 @@ namespace SokoWahn
       lines = NormalizeLines(lines);
       if (lines.Length < 3) throw new ArgumentException("kein sinnvolles Spielfeld gefunden");
 
+      // --- Spielfeld zuordnen ---
       width = lines.First().Length;
       height = lines.Length;
       fieldLength = width * height;
+      if (fieldLength > ushort.MaxValue) throw new IndexOutOfRangeException("Spielfeld ist zu größ");
+
       fieldData = string.Concat(lines).ToCharArray();
       if (fieldData.Length != fieldLength) throw new InvalidOperationException();
+
+      boxesCount = fieldData.Count(c => c == '$' || c == '*');
+
+      // --- Spielstatus scannen ---
+      ScanGameStatus();
+
+      // --- Spielfeld-Logik prüft um eine Reihe von möglichen Fehlern zu erkennen
+      ValidateFieldLogic();
+    }
+    #endregion
+
+    #region # void ScanGameStatus() // scannt das Spielfeld und merkt sich die Positionen der Boxen und die Position vom Spieler
+    /// <summary>
+    /// scannt das Spielfeld und merkt sich die Positionen der Boxen und die Position vom Spieler
+    /// </summary>
+    void ScanGameStatus()
+    {
+      boxesRemain = fieldData.Count(c => c == '$');
+      int freeFields = fieldData.Count(c => c == '.' || c == '+');
+      if (boxesRemain != freeFields) throw new ArgumentException("Anzahl der Boxen stimmt nicht mit der Anzahl der Spielfelder überein");
+
+      // --- Spieler suchen ---
+      int playerPos = -1;
+      for (int i = 0; i < fieldData.Length; i++)
+      {
+        if (fieldData[i] != '@' && fieldData[i] != '+') continue;
+        if (playerPos >= 0) throw new ArgumentException("Mehr als ein Spieler auf dem Spielfeld vorhanden");
+        playerPos = i;
+      }
+      if (playerPos < 0) throw new ArgumentException("Spieler wurde nicht gefunden");
+
+      // --- Boxen-Positionen ermitteln ---
+      posis = new ushort[1 + boxesCount];
+      posis[0] = (ushort)playerPos;
+
+      int posOffset = 1;
+      for (int i = 0; i < fieldData.Length; i++)
+      {
+        if (fieldData[i] == '$' || fieldData[i] == '*')
+        {
+          posis[posOffset++] = (ushort)i;
+        }
+      }
+      if (posOffset != posis.Length) throw new InvalidOperationException();
+    }
+    #endregion
+
+    #region # void ValidateFieldLogic() // prüft, ob das Spielfeld gültig ist und (theoretisch) gelöst werden kann
+    /// <summary>
+    /// prüft, ob das Spielfeld gültig ist und (theoretisch) gelöst werden kann
+    /// </summary>
+    static void ValidateFieldLogic()
+    {
+      // todo
     }
     #endregion
 
