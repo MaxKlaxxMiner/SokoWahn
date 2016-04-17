@@ -335,11 +335,12 @@ namespace SokoWahn
 
     static void Main(string[] args)
     {
-      var scan = new SokowahnField(TestLevel4);
+      MiniGame(new SokowahnField(TestLevel));
+      MiniGame(new SokowahnField(TestLevel3));
+      MiniGame(new SokowahnField(TestLevel4));
+      MiniGame(new SokowahnField(TestLevel2));
 
-      // MiniGame(scan);
-
-      MiniSolver(scan);
+      // MiniSolver(new SokowahnField(TestLevel4));
 
       // CreateProject();
     }
