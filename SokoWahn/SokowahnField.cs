@@ -100,6 +100,14 @@ namespace SokoWahn
     }
     #endregion
 
+    #region # // --- public Properties ---
+    /// <summary>
+    /// gibt die aktuelle Spielerposition zurück
+    /// </summary>
+    /// <returns>Spieler Position</returns>
+    public int PlayerPos { get { return posis[0]; } }
+    #endregion
+
     #region # // --- public Methoden ---
     /// <summary>
     /// gibt den aktuellen Spielstatus mit allen Positionen zurück
@@ -112,13 +120,135 @@ namespace SokoWahn
     }
 
     /// <summary>
+    /// scannt nach allen Zugmöglichkeiten und gibt diese zurück
+    /// </summary>
+    /// <param name="output">Ausgabe Buffer für alle Zugmöglichkeiten</param>
+    /// <returns>Anzahl der erkannten Zugmöglichkeiten</returns>
+    public int ScanMoves(ushort[] output)
+    {
+      var stateBackup = GetGameState();
+      int outputCount = 0;
+
+      bool* scannedFields = stackalloc bool[fieldData.Length];
+      ushort* scanTodo = stackalloc ushort[fieldData.Length];
+
+      int scanTodoPos = 0;
+      int scanTodoLen = 0;
+      scanTodo[scanTodoLen++] = stateBackup[0];
+      scannedFields[stateBackup[0]] = true;
+
+      while (scanTodoPos < scanTodoLen)
+      {
+        int scan = scanTodo[scanTodoPos++];
+
+        // --- links ---
+        switch (fieldData[scan - 1])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan - 1]) { scannedFields[scan - 1] = true; scanTodo[scanTodoLen++] = (ushort)(scan - 1); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MovePlayer(-1))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+
+        // --- rechts ---
+        switch (fieldData[scan + 1])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan + 1]) { scannedFields[scan + 1] = true; scanTodo[scanTodoLen++] = (ushort)(scan + 1); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MovePlayer(+1))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+
+        // --- oben ---
+        switch (fieldData[scan - width])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan - width]) { scannedFields[scan - width] = true; scanTodo[scanTodoLen++] = (ushort)(scan - width); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MovePlayer(-width))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+
+        // --- unten ---
+        switch (fieldData[scan + width])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan + width]) { scannedFields[scan + width] = true; scanTodo[scanTodoLen++] = (ushort)(scan + width); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MovePlayer(+width))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+      }
+
+      return outputCount;
+    }
+
+    /// <summary>
+    /// setzt die Spielerposition
+    /// </summary>
+    /// <param name="newPlayerPos">neue Spielerposition</param>
+    public void SetPlayerPos(int newPlayerPos)
+    {
+      int oldPlayerPos = posis[0];
+      if (oldPlayerPos == newPlayerPos) return;
+      fieldData[oldPlayerPos] = fieldData[oldPlayerPos] == '+' ? '.' : ' ';
+      fieldData[newPlayerPos] = fieldData[newPlayerPos] == '.' ? '+' : '@';
+      posis[0] = (ushort)newPlayerPos;
+    }
+
+    /// <summary>
     /// setzt einen bestimmten Spielstatus
     /// </summary>
     /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden soll</param>
-    public void SetGameState(ushort[] gameState)
+    /// <param name="ofs">optionaler Offset</param>
+    public void SetGameState(ushort[] gameState, int ofs = 0)
     {
-      if (gameState.Length != posis.Length) throw new ArgumentException("ungültiger Spielstatus");
-
       // --- altes Spiefeld räumen ---
       int playerPos = posis[0];
       fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
@@ -129,12 +259,12 @@ namespace SokoWahn
       }
 
       // --- neues Spielfeld setzen ---
-      playerPos = gameState[0];
+      playerPos = gameState[ofs];
       fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
       int newRemain = 0;
-      for (int box = 1; box < gameState.Length; box++)
+      for (int box = 1; box < posis.Length; box++)
       {
-        int boxPos = gameState[box];
+        int boxPos = gameState[ofs + box];
         if (fieldData[boxPos] == '.')
         {
           fieldData[boxPos] = '*';
@@ -147,7 +277,7 @@ namespace SokoWahn
       }
       boxesRemain = newRemain;
 
-      Array.Copy(gameState, posis, posis.Length);
+      Array.Copy(gameState, ofs, posis, 0, posis.Length);
     }
 
     /// <summary>

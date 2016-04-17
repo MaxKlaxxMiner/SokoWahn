@@ -57,6 +57,12 @@
   <ItemGroup>
     <Content Include="csc.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SokoWahnCore\SokoWahnCore.csproj">
+      <Project>{EB78DA0D-5790-4772-AD38-16028C5E1606}</Project>
+      <Name>SokoWahnCore</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
