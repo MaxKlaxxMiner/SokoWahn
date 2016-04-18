@@ -165,6 +165,8 @@ namespace SokoWahn
           case ConsoleKey.NumPad2:
           case ConsoleKey.DownArrow: step = game.MoveDown(); break;
 
+          case ConsoleKey.Z:
+          case ConsoleKey.Delete:
           case ConsoleKey.Backspace:
           {
             if (steps.Count == 0) break;
