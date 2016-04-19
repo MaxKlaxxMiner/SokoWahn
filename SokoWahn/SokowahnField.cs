@@ -281,6 +281,42 @@ namespace SokoWahn
     }
 
     /// <summary>
+    /// ändert die Kisten-Positionen und kann ebenfalls die Anzahl der Kisten ändern
+    /// </summary>
+    public void SetBoxes(ushort[] newBoxes)
+    {
+      // --- alte Kisten entfernen ---
+      for (int box = 1; box < posis.Length; box++)
+      {
+        int boxPos = posis[box];
+        fieldData[boxPos] = fieldData[boxPos] == '*' ? '.' : ' ';
+      }
+
+      if (newBoxes.Length != posis.Length - 1) // Anzahl der Kisten hat sich geändert
+      {
+        if (newBoxes.Length > boxesCount) throw new ArgumentException("zuviele Kisten");
+        Array.Resize(ref posis, newBoxes.Length + 1);
+      }
+
+      int newRemain = 0;
+      for (int box = 0; box < newBoxes.Length; box++)
+      {
+        ushort boxPos = newBoxes[box];
+        posis[box + 1] = boxPos;
+        if (fieldData[boxPos] == '.')
+        {
+          fieldData[boxPos] = '*';
+        }
+        else
+        {
+          fieldData[boxPos] = '$';
+          newRemain++;
+        }
+      }
+      boxesRemain = newRemain;
+    }
+
+    /// <summary>
     /// bewegt den Spieler in eine bestimmte Richtung
     /// </summary>
     /// <param name="moveDirection">Richtung, in welcher der Spieler bewegt werden soll (-1 = links, +1 = rechts, -width = hoch, +width = runter)</param>

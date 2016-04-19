@@ -327,10 +327,11 @@ namespace SokoWahn
     static void MiniSolver2(SokowahnField field)
     {
       var scanner = new SokowahnField(field);
+      scanner.SetBoxes(new ushort[0]);
 
       Console.WriteLine(scanner.ToString());
 
-      int stateLen = scanner.posis.Length;
+
 
       Console.ReadLine();
     }
