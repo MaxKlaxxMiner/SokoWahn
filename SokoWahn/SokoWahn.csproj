@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="csc.txt" />
+    <Content Include="infos.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SokoWahnCore\SokoWahnCore.csproj">

@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using SokoWahnCore.CoreTools;
 // ReSharper disable UnusedMember.Local
-
 // ReSharper disable UnusedMember.Global
 // ReSharper disable TailRecursiveCall
 // ReSharper disable ConvertToLambdaExpressionWhenPossible
@@ -18,7 +17,7 @@ using SokoWahnCore.CoreTools;
 
 namespace SokoWahn
 {
-  unsafe class Program
+  static class Program
   {
     const string PathData = "../../../Data/";
     const string PathTest = PathData + "Test/";
@@ -184,6 +183,7 @@ namespace SokoWahn
     }
     #endregion
 
+    #region # static int ScanTopLeftPos(SokowahnField field) // sucht die oberste und am weitestende linke Position, welche vom Spieler noch erreichbar ist
     /// <summary>
     /// sucht die oberste und am weitestende linke Position, welche vom Spieler noch erreichbar ist
     /// </summary>
@@ -222,7 +222,16 @@ namespace SokoWahn
 
       return bestPos;
     }
+    #endregion
 
+    #region # static bool EdgeBoxCheck(char[] data, int pos, int w) // prüft, ob eine Kiste sich in einer nicht mehr lösbaren Position befindet
+    /// <summary>
+    /// prüft, ob eine Kiste sich in einer nicht mehr lösbaren Position befindet
+    /// </summary>
+    /// <param name="data">Daten des Spielfeldes</param>
+    /// <param name="pos">die Position der zu prüfenden Kiste</param>
+    /// <param name="w">breite des Spielfeldes</param>
+    /// <returns>true, wenn eine ungültige Stellung erkannt wurde</returns>
     static bool EdgeBoxCheck(char[] data, int pos, int w)
     {
       if (data[pos] != '$') return false;
@@ -239,7 +248,8 @@ namespace SokoWahn
 
       return false;
     }
-
+    #endregion
+    #region # static bool EdgeFailCheck(SokowahnField field) // prüft, ob der Spieler gerade eine Kiste in die Ecke geschoben hat
     /// <summary>
     /// prüft, ob der Spieler gerade eine Kiste in die Ecke geschoben hat
     /// </summary>
@@ -257,7 +267,9 @@ namespace SokoWahn
 
       return false;
     }
+    #endregion
 
+    #region # static void MiniSolver(SokowahnField field) // einfaches Tool zum finden irgendeiner Lösung eines Spielfeldes
     /// <summary>
     /// einfaches Tool zum finden irgendeiner Lösung eines Spielfeldes
     /// </summary>
@@ -290,30 +302,6 @@ namespace SokoWahn
           Console.WriteLine("Hash: " + hashCrcs.Count.ToString("N0") + " (" + (100.0 / 48000000 * hashCrcs.Count).ToString("N1") + " %)");
         }
 
-        // --- TestLevel ---
-        // Old-: 1.838
-        // New-:   628
-        // Old+: 1.052
-        // New+:   315
-
-        // --- TestLevel2 ---
-        // Old-: 34.412
-        // New-: 10.871
-        // Old+:  5.037
-        // New+:  1.930
-
-        // --- TestLevel3 ---
-        // Old-: 23.755.496
-        // New-:  6.199.895
-        // Old+:  4.055.816
-        // New+:  1.078.131
-
-        // --- TestLevel4 ---
-        // Old-: 1.764.759
-        // New-: 424.860
-        // Old+: 494.683
-        // New+: 123.487
-
         if (EdgeFailCheck(scanner)) continue;
         scanner.SetPlayerPos(ScanTopLeftPos(scanner));
 
@@ -334,15 +322,28 @@ namespace SokoWahn
       }
       Console.ReadLine();
     }
+    #endregion
 
-    static void Main(string[] args)
+    static void MiniSolver2(SokowahnField field)
     {
-      MiniGame(new SokowahnField(TestLevel));
-      MiniGame(new SokowahnField(TestLevel3));
-      MiniGame(new SokowahnField(TestLevel4));
-      MiniGame(new SokowahnField(TestLevel2));
+      var scanner = new SokowahnField(field);
 
-      // MiniSolver(new SokowahnField(TestLevel4));
+      Console.WriteLine(scanner.ToString());
+
+      int stateLen = scanner.posis.Length;
+
+      Console.ReadLine();
+    }
+
+    static void Main()
+    {
+      //MiniGame(new SokowahnField(TestLevel));
+      //MiniGame(new SokowahnField(TestLevel3));
+      //MiniGame(new SokowahnField(TestLevel4));
+      //MiniGame(new SokowahnField(TestLevel2));
+
+      //MiniSolver(new SokowahnField(TestLevel));
+      MiniSolver2(new SokowahnField(TestLevel3));
 
       // CreateProject();
     }
