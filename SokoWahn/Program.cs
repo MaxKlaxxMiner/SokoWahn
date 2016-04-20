@@ -326,6 +326,8 @@ namespace SokoWahn
     static void MiniSolver2(SokowahnField field)
     {
       var scanner = new SokowahnField(field);
+      Console.WriteLine(scanner.ToString());
+
       int startPlayer = scanner.PlayerPos;
       var startBoxes = scanner.GetGameState(false).Skip(1).ToArray();
 
@@ -335,8 +337,9 @@ namespace SokoWahn
       var boxes = new ushort[boxesCount];
       int stateLen = 1 + boxes.Length;
       var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];
-      int todoPos = 0;
-      int todoLen = 0;
+      int todoPos = 0, todoLen = 0;
+      var killBuf = new ushort[1048576 / stateLen * stateLen];
+      int killLen = 0;
       var hash = new Dictionary<ulong, ushort>();
       var nextBuf = new ushort[stateLen * boxesCount * 4];
       scanner.SetPlayerPos(startPlayer);
@@ -360,9 +363,14 @@ namespace SokoWahn
         if (hash.ContainsKey(crc)) continue; // Variante bereits bekannt
 
         // --- neue Varianten hinzufügen ---
-        hash.Add(crc, deep);
         int nextCount = scanner.ScanMoves(nextBuf);
-        deep++;
+        if (nextCount == 0 && scanner.boxesRemain > 0) // unlösbare Stellung gefunden?
+        {
+          hash.Add(crc, ushort.MaxValue);
+          killLen += scanner.GetGameState(killBuf, killLen); // unlösbare Stellung merken
+          continue;
+        }
+        hash.Add(crc, deep++);
         for (int next = 0; next < nextCount; next++)
         {
           todoBuf[todoLen++] = deep;
