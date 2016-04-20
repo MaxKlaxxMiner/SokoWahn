@@ -305,8 +305,7 @@ namespace SokoWahn
         if (EdgeFailCheck(scanner)) continue;
         scanner.SetPlayerPos(ScanTopLeftPos(scanner));
 
-        var state = scanner.GetGameState(false);
-        var crc = Crc64.Start.Crc64Update(state, 0, state.Length);
+        var crc = scanner.GetGameStateCrc();
         if (hashCrcs.Contains(crc)) continue;
         hashCrcs.Add(crc);
 
@@ -327,11 +326,35 @@ namespace SokoWahn
     static void MiniSolver2(SokowahnField field)
     {
       var scanner = new SokowahnField(field);
-      scanner.SetBoxes(new ushort[0]);
+      int startPlayer = scanner.PlayerPos;
+      var startBoxes = scanner.GetGameState(false).Skip(1).ToArray();
 
-      Console.WriteLine(scanner.ToString());
+      int boxesCount = 1;
+      var boxes = new ushort[boxesCount];
+      int todoSize = 1 + 1 + boxes.Length;
+      var todoBuf = new ushort[16777216 / todoSize * todoSize];
+      int todoPos = 0;
+      int todoLen = 0;
+      var hash = new Dictionary<ulong, ushort>();
 
+      foreach (var startBox in startBoxes)
+      {
+        boxes[0] = startBox;
+        scanner.SetBoxes(boxes);
+        scanner.SetPlayerPos(startPlayer);
+        scanner.SetPlayerPos(ScanTopLeftPos(scanner));
 
+        ulong crc = scanner.GetGameStateCrc();
+        if (!hash.ContainsKey(crc))
+        {
+          hash.Add(crc, 0); // 0 = Zugtiefe am Start
+          todoLen += scanner.GetGameState(todoBuf, todoLen);
+          todoBuf[todoLen++] = 0; // Zugtiefe
+        }
+
+        Console.WriteLine(scanner.ToString());
+        Console.WriteLine();
+      }
 
       Console.ReadLine();
     }

@@ -2,6 +2,8 @@
 
 using System;
 using System.Linq;
+using SokoWahnCore.CoreTools;
+
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBeInternal
 // ReSharper disable MemberCanBePrivate.Global
@@ -117,6 +119,30 @@ namespace SokoWahn
     public ushort[] GetGameState(bool clone = true)
     {
       return clone ? posis.ToArray() : posis;
+    }
+
+    /// <summary>
+    /// gibt den Spielstatus zurück, speichert diesen in ein Array und gibt die Anzahl der gespeicherten Elemente zurück
+    /// </summary>
+    /// <param name="destBuffer">Buffer, wohin der Spielstatus geschrieben werden</param>
+    /// <param name="index">Startposition im Array, wohin der Spielstatus geschrieben werden soll</param>
+    /// <returns>Anzahl der geschriebenen Elemente</returns>
+    public int GetGameState(ushort[] destBuffer, int index)
+    {
+      for (int i = 0; i < posis.Length; i++)
+      {
+        destBuffer[index + i] = posis[i];
+      }
+      return posis.Length;
+    }
+
+    /// <summary>
+    /// berechnet die Crc64-Prüfsumme vom Spielstatus
+    /// </summary>
+    /// <returns>berechneter Crc64-Wert</returns>
+    public ulong GetGameStateCrc()
+    {
+      return Crc64.Start.Crc64Update(posis, 0, posis.Length);
     }
 
     /// <summary>
@@ -292,12 +318,13 @@ namespace SokoWahn
         fieldData[boxPos] = fieldData[boxPos] == '*' ? '.' : ' ';
       }
 
-      if (newBoxes.Length != posis.Length - 1) // Anzahl der Kisten hat sich geändert
+      if (newBoxes.Length != posis.Length - 1) // Anzahl der Kisten hat sich geändert?
       {
         if (newBoxes.Length > boxesCount) throw new ArgumentException("zuviele Kisten");
         Array.Resize(ref posis, newBoxes.Length + 1);
       }
 
+      // --- neue Kisten setzen ---
       int newRemain = 0;
       for (int box = 0; box < newBoxes.Length; box++)
       {
