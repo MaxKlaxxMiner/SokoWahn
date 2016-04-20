@@ -330,30 +330,45 @@ namespace SokoWahn
       var startBoxes = scanner.GetGameState(false).Skip(1).ToArray();
 
       int boxesCount = 1;
+
+      // --- Variablen initialisieren ---
       var boxes = new ushort[boxesCount];
-      int todoSize = 1 + 1 + boxes.Length;
-      var todoBuf = new ushort[16777216 / todoSize * todoSize];
+      int stateLen = 1 + boxes.Length;
+      var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];
       int todoPos = 0;
       int todoLen = 0;
       var hash = new Dictionary<ulong, ushort>();
+      var nextBuf = new ushort[stateLen * boxesCount * 4];
+      scanner.SetPlayerPos(startPlayer);
 
+      // --- Start-Kisten und erste Aufgaben setzen ---
       foreach (var startBox in startBoxes)
       {
         boxes[0] = startBox;
         scanner.SetBoxes(boxes);
-        scanner.SetPlayerPos(startPlayer);
+        todoBuf[todoLen++] = 0; // Zugtiefe am Start
+        todoLen += scanner.GetGameState(todoBuf, todoLen); // Status hinzufügen
+      }
+
+      // --- Aufgaben abarbeiten ---
+      while (todoPos < todoLen)
+      {
+        var deep = todoBuf[todoPos++]; // aktuelle Zugtiefe einlesen
+        scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
         scanner.SetPlayerPos(ScanTopLeftPos(scanner));
-
         ulong crc = scanner.GetGameStateCrc();
-        if (!hash.ContainsKey(crc))
-        {
-          hash.Add(crc, 0); // 0 = Zugtiefe am Start
-          todoLen += scanner.GetGameState(todoBuf, todoLen);
-          todoBuf[todoLen++] = 0; // Zugtiefe
-        }
+        if (hash.ContainsKey(crc)) continue; // Variante bereits bekannt
 
-        Console.WriteLine(scanner.ToString());
-        Console.WriteLine();
+        // --- neue Varianten hinzufügen ---
+        hash.Add(crc, deep);
+        int nextCount = scanner.ScanMoves(nextBuf);
+        deep++;
+        for (int next = 0; next < nextCount; next++)
+        {
+          todoBuf[todoLen++] = deep;
+          int ofs = next * stateLen;
+          for (int i = 0; i < stateLen; i++) todoBuf[todoLen++] = nextBuf[ofs + i];
+        }
       }
 
       Console.ReadLine();
