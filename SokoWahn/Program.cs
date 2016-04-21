@@ -328,8 +328,7 @@ namespace SokoWahn
       var scanner = new SokowahnField(field);
       Console.WriteLine(scanner.ToString());
 
-      int startPlayer = scanner.PlayerPos;
-      var startBoxes = scanner.GetGameState(false).Skip(1).ToArray();
+      var targetFields = scanner.fieldData.Select((c, i) => new { c, i }).Where(f => f.c == '.' || f.c == '*').Select(f => (ushort)f.i).ToArray();
 
       int boxesCount = 1;
 
@@ -338,46 +337,10 @@ namespace SokoWahn
       int stateLen = 1 + boxes.Length;
       var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];
       int todoPos = 0, todoLen = 0;
-      var killBuf = new ushort[1048576 / stateLen * stateLen];
-      int killLen = 0;
       var hash = new Dictionary<ulong, ushort>();
       var nextBuf = new ushort[stateLen * boxesCount * 4];
-      scanner.SetPlayerPos(startPlayer);
 
-      // --- Start-Kisten und erste Aufgaben setzen ---
-      foreach (var startBox in startBoxes)
-      {
-        boxes[0] = startBox;
-        scanner.SetBoxes(boxes);
-        todoBuf[todoLen++] = 0; // Zugtiefe am Start
-        todoLen += scanner.GetGameState(todoBuf, todoLen); // Status hinzufügen
-      }
-
-      // --- Aufgaben abarbeiten ---
-      while (todoPos < todoLen)
-      {
-        var deep = todoBuf[todoPos++]; // aktuelle Zugtiefe einlesen
-        scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
-        scanner.SetPlayerPos(ScanTopLeftPos(scanner));
-        ulong crc = scanner.GetGameStateCrc();
-        if (hash.ContainsKey(crc)) continue; // Variante bereits bekannt
-
-        // --- neue Varianten hinzufügen ---
-        int nextCount = scanner.ScanMoves(nextBuf);
-        if (nextCount == 0 && scanner.boxesRemain > 0) // unlösbare Stellung gefunden?
-        {
-          hash.Add(crc, ushort.MaxValue);
-          killLen += scanner.GetGameState(killBuf, killLen); // unlösbare Stellung merken
-          continue;
-        }
-        hash.Add(crc, deep++);
-        for (int next = 0; next < nextCount; next++)
-        {
-          todoBuf[todoLen++] = deep;
-          int ofs = next * stateLen;
-          for (int i = 0; i < stateLen; i++) todoBuf[todoLen++] = nextBuf[ofs + i];
-        }
-      }
+      // todo
 
       Console.ReadLine();
     }
@@ -390,7 +353,7 @@ namespace SokoWahn
       //MiniGame(new SokowahnField(TestLevel2));
 
       //MiniSolver(new SokowahnField(TestLevel));
-      MiniSolver2(new SokowahnField(TestLevel3));
+      MiniSolver2(new SokowahnField(TestLevel4));
 
       // CreateProject();
     }
