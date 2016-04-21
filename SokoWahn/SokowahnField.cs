@@ -167,7 +167,7 @@ namespace SokoWahn
       {
         int scan = scanTodo[scanTodoPos++];
 
-        // --- links ---
+        #region # // --- links ---
         switch (fieldData[scan - 1])
         {
           case ' ':
@@ -187,8 +187,9 @@ namespace SokoWahn
             else SetPlayerPos(stateBackup[0]);
           } break;
         }
+        #endregion
 
-        // --- rechts ---
+        #region # // --- rechts ---
         switch (fieldData[scan + 1])
         {
           case ' ':
@@ -208,8 +209,9 @@ namespace SokoWahn
             else SetPlayerPos(stateBackup[0]);
           } break;
         }
+        #endregion
 
-        // --- oben ---
+        #region # // --- oben ---
         switch (fieldData[scan - width])
         {
           case ' ':
@@ -229,8 +231,9 @@ namespace SokoWahn
             else SetPlayerPos(stateBackup[0]);
           } break;
         }
+        #endregion
 
-        // --- unten ---
+        #region # // --- unten ---
         switch (fieldData[scan + width])
         {
           case ' ':
@@ -250,6 +253,121 @@ namespace SokoWahn
             else SetPlayerPos(stateBackup[0]);
           } break;
         }
+        #endregion
+      }
+
+      return outputCount;
+    }
+
+    /// <summary>
+    /// scannt nach allen Rückwärts-Zugmöglichkeiten und gibt diese zurück
+    /// </summary>
+    /// <param name="output">Ausgabe Buffer für alle Zugmöglichkeiten</param>
+    /// <returns>Anzahl der erkannten Zugmöglichkeiten</returns>
+    public int ScanReverseMoves(ushort[] output)
+    {
+      var stateBackup = GetGameState();
+      int outputCount = 0;
+
+      bool* scannedFields = stackalloc bool[fieldData.Length];
+      ushort* scanTodo = stackalloc ushort[fieldData.Length];
+
+      int scanTodoPos = 0;
+      int scanTodoLen = 0;
+      scanTodo[scanTodoLen++] = stateBackup[0];
+      scannedFields[stateBackup[0]] = true;
+
+      while (scanTodoPos < scanTodoLen)
+      {
+        int scan = scanTodo[scanTodoPos++];
+
+        #region # // --- links (zurück nach rechts) ---
+        switch (fieldData[scan - 1])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan - 1]) { scannedFields[scan - 1] = true; scanTodo[scanTodoLen++] = (ushort)(scan - 1); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MoveReversePlayer(-1, true))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+        #endregion
+
+        #region # // --- rechts (zurück nach links) ---
+        switch (fieldData[scan + 1])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan + 1]) { scannedFields[scan + 1] = true; scanTodo[scanTodoLen++] = (ushort)(scan + 1); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MoveReversePlayer(+1, true))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+        #endregion
+
+        #region # // --- oben (zurück nach unten) ---
+        switch (fieldData[scan - width])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan - width]) { scannedFields[scan - width] = true; scanTodo[scanTodoLen++] = (ushort)(scan - width); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MoveReversePlayer(-width, true))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+        #endregion
+
+        #region # // --- unten (zurück nach oben) ---
+        switch (fieldData[scan + width])
+        {
+          case ' ':
+          case '.': if (!scannedFields[scan + width]) { scannedFields[scan + width] = true; scanTodo[scanTodoLen++] = (ushort)(scan + width); } break;
+
+          case '$':
+          case '*':
+          {
+            SetPlayerPos(scan);
+            if (MoveReversePlayer(+width, true))
+            {
+              int outputOffset = outputCount * posis.Length;
+              for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
+              outputCount++;
+              SetGameState(stateBackup);
+            }
+            else SetPlayerPos(stateBackup[0]);
+          } break;
+        }
+        #endregion
       }
 
       return outputCount;
@@ -370,7 +488,7 @@ namespace SokoWahn
           int newBoxPos = newPlayerPos + moveDirection;
           if (fieldData[newBoxPos] != ' ' && fieldData[newBoxPos] != '.') return false; // Weg blockiert
 
-          // --- alte Box entfernen und Spieler setzen ---
+          #region # // --- alte Kiste entfernen und Spieler setzen ---
           fieldData[oldPlayerPos] = fieldData[oldPlayerPos] == '+' ? '.' : ' ';
           if (fieldData[newPlayerPos] == '*')
           {
@@ -381,8 +499,9 @@ namespace SokoWahn
           {
             fieldData[newPlayerPos] = '@';
           }
+          #endregion
 
-          // --- neue Box setzen ---
+          #region # // --- neue Kiste setzen ---
           if (fieldData[newBoxPos] == '.')
           {
             fieldData[newBoxPos] = '*';
@@ -392,8 +511,9 @@ namespace SokoWahn
           {
             fieldData[newBoxPos] = '$';
           }
+          #endregion
 
-          // --- Index korrigieren ---
+          #region # // --- Index korrigieren ---
           posis[0] = (ushort)newPlayerPos;
           for (int i = 1; i < posis.Length; i++)
           {
@@ -417,6 +537,90 @@ namespace SokoWahn
             posis[i] = (ushort)newBoxPos;
             break;
           }
+          #endregion
+        } return true;
+
+        default: return false;
+      }
+    }
+
+    /// <summary>
+    /// bewegt den Spieler wieder einen Schritt rückwärts
+    /// </summary>
+    /// <param name="moveDirection">Richtung, in welcher der Spieler vorher bewegt wurde (-1 = links, +1 = rechts, -width = hoch, +width = runter)</param>
+    /// <param name="moveBox">gibt an, ob eine Box ebenfalls zurück "gezogen" werden soll</param>
+    /// <returns>true, wenn der Schritt erfolgreich war</returns>
+    internal bool MoveReversePlayer(int moveDirection, bool moveBox)
+    {
+      int oldPlayerPos = posis[0];
+      int newPlayerPos = oldPlayerPos - moveDirection;
+
+      switch (fieldData[newPlayerPos])
+      {
+        // --- freier Platz ---
+        case ' ':
+        case '.':
+        {
+          if (moveBox)
+          {
+            int oldBoxPos = oldPlayerPos + moveDirection;
+
+            #region # // --- Kiste vom alten Feld weg ziehen ---
+            if (fieldData[oldBoxPos] == '$')
+            {
+              fieldData[oldBoxPos] = ' ';
+            }
+            else if (fieldData[oldBoxPos] == '*')
+            {
+              fieldData[oldBoxPos] = '.';
+              boxesRemain++;
+            }
+            else return false; // kein gültiger Rückwärts-Zug
+            #endregion
+
+            #region # // --- Spieler weg ziehen und Kiste dort hin platzieren ---
+            if (fieldData[oldPlayerPos] == '+')
+            {
+              fieldData[oldPlayerPos] = '*';
+              boxesRemain--;
+            }
+            else
+            {
+              fieldData[oldPlayerPos] = '$';
+            }
+            #endregion
+
+            #region # // --- Index korrigieren ---
+            for (int i = 1; i < posis.Length; i++)
+            {
+              if (posis[i] != oldBoxPos) continue;
+              if (moveDirection > 0)
+              {
+                while (i > 1 && posis[i - 1] > oldPlayerPos)
+                {
+                  posis[i] = posis[i - 1];
+                  i--;
+                }
+              }
+              else
+              {
+                while (i < posis.Length - 1 && posis[i + 1] < oldPlayerPos)
+                {
+                  posis[i] = posis[i + 1];
+                  i++;
+                }
+              }
+              posis[i] = (ushort)oldPlayerPos;
+              break;
+            }
+            #endregion
+          }
+          else
+          {
+            fieldData[oldPlayerPos] = fieldData[oldPlayerPos] == '+' ? '.' : ' ';
+          }
+          fieldData[newPlayerPos] = fieldData[newPlayerPos] == '.' ? '+' : '@';
+          posis[0] = (ushort)newPlayerPos;
         } return true;
 
         default: return false;
