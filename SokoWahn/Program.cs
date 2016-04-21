@@ -340,7 +340,10 @@ namespace SokoWahn
       var hash = new Dictionary<ulong, ushort>();
       var nextBuf = new ushort[stateLen * boxesCount * 4];
 
-      // todo
+      foreach (var boxesVariant in SokoTools.FieldBoxesVariants(targetFields.Length, boxesCount, false).Select(v => v.SelectArray(f => targetFields[f])))
+      {
+        // todo
+      }
 
       Console.ReadLine();
     }
