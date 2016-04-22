@@ -339,10 +339,30 @@ namespace SokoWahn
       int todoPos = 0, todoLen = 0;
       var hash = new Dictionary<ulong, ushort>();
       var nextBuf = new ushort[stateLen * boxesCount * 4];
+      int emptyPlayerPos = scanner.fieldData.ToList().IndexOf(' ');
+      int[] playerDirections = { -1, +1, -scanner.width, +scanner.width };
 
       foreach (var boxesVariant in SokoTools.FieldBoxesVariants(targetFields.Length, boxesCount, false).Select(v => v.SelectArray(f => targetFields[f])))
       {
-        // todo
+        scanner.SetPlayerPos(emptyPlayerPos);
+        scanner.SetBoxes(boxesVariant);
+        var fieldData = scanner.fieldData;
+        foreach (ushort box in boxesVariant)
+        {
+          foreach (int playerDir in playerDirections)
+          {
+            int playerPos = box - playerDir;
+            if (fieldData[playerPos] == '#' || fieldData[playerPos] == '$' || fieldData[playerPos] == '*') continue;
+            int revPos = playerPos - playerDir;
+            if (fieldData[revPos] == '#' || fieldData[revPos] == '$' || fieldData[revPos] == '*') continue;
+            scanner.SetPlayerPos(playerPos);
+            scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+            ulong crc = scanner.GetGameStateCrc();
+            if (hash.ContainsKey(crc)) continue;
+
+            int foundNewPos = 0; // todo
+          }
+        }
       }
 
       Console.ReadLine();
