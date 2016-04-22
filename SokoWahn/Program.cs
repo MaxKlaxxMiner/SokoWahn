@@ -327,45 +327,91 @@ namespace SokoWahn
     {
       var scanner = new SokowahnField(field);
       Console.WriteLine(scanner.ToString());
+      Console.WriteLine();
 
       var targetFields = scanner.fieldData.Select((c, i) => new { c, i }).Where(f => f.c == '.' || f.c == '*').Select(f => (ushort)f.i).ToArray();
 
-      int boxesCount = 1;
-
-      // --- Variablen initialisieren ---
-      var boxes = new ushort[boxesCount];
-      int stateLen = 1 + boxes.Length;
-      var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];
-      int todoPos = 0, todoLen = 0;
-      var hash = new Dictionary<ulong, ushort>();
-      var nextBuf = new ushort[stateLen * boxesCount * 4];
-      int emptyPlayerPos = scanner.fieldData.ToList().IndexOf(' ');
-      int[] playerDirections = { -1, +1, -scanner.width, +scanner.width };
-
-      foreach (var boxesVariant in SokoTools.FieldBoxesVariants(targetFields.Length, boxesCount, false).Select(v => v.SelectArray(f => targetFields[f])))
+      for (int boxesCount = 1; boxesCount <= targetFields.Length; boxesCount++)
       {
-        scanner.SetPlayerPos(emptyPlayerPos);
-        scanner.SetBoxes(boxesVariant);
-        var fieldData = scanner.fieldData;
-        foreach (ushort box in boxesVariant)
-        {
-          foreach (int playerDir in playerDirections)
-          {
-            int playerPos = box - playerDir;
-            if (fieldData[playerPos] == '#' || fieldData[playerPos] == '$' || fieldData[playerPos] == '*') continue;
-            int revPos = playerPos - playerDir;
-            if (fieldData[revPos] == '#' || fieldData[revPos] == '$' || fieldData[revPos] == '*') continue;
-            scanner.SetPlayerPos(playerPos);
-            scanner.SetPlayerPos(ScanTopLeftPos(scanner));
-            ulong crc = scanner.GetGameStateCrc();
-            if (hash.ContainsKey(crc)) continue;
 
-            int foundNewPos = 0; // todo
+        // --- Variablen initialisieren ---
+        var boxes = new ushort[boxesCount];
+        int stateLen = 1 + boxes.Length;
+        var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];
+        int todoPos = 0, todoLen = 0;
+
+        // --- Startaufgaben scannen und setzen ---
+        {
+          int emptyPlayerPos = scanner.fieldData.ToList().IndexOf(' ');
+          int[] playerDirections = { -1, +1, -scanner.width, +scanner.width };
+          var checkDuplicates = new HashSet<ulong>();
+
+          foreach (var boxesVariant in SokoTools.FieldBoxesVariants(targetFields.Length, boxesCount, false).Select(v => v.SelectArray(f => targetFields[f])))
+          {
+            scanner.SetPlayerPos(emptyPlayerPos);
+            scanner.SetBoxes(boxesVariant);
+            var fieldData = scanner.fieldData;
+            foreach (ushort box in boxesVariant)
+            {
+              foreach (int playerDir in playerDirections)
+              {
+                int playerPos = box - playerDir;
+                if (fieldData[playerPos] == '#' || fieldData[playerPos] == '$' || fieldData[playerPos] == '*') continue;
+                int revPos = playerPos - playerDir;
+                if (fieldData[revPos] == '#' || fieldData[revPos] == '$' || fieldData[revPos] == '*') continue;
+
+                scanner.SetPlayerPos(playerPos);
+                scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+
+                ulong crc = scanner.GetGameStateCrc();
+                if (checkDuplicates.Contains(crc)) continue;
+                checkDuplicates.Add(crc);
+
+                todoBuf[todoLen++] = 0;
+                todoLen += scanner.GetGameState(todoBuf, todoLen);
+              }
+            }
           }
         }
-      }
 
-      Console.ReadLine();
+        // --- Aufgaben weiter rückwärts gerichtet abarbeiten ---
+        {
+          var hash = new Dictionary<ulong, ushort>();
+          var nextBuf = new ushort[stateLen * boxesCount * 4];
+
+          while (todoPos < todoLen)
+          {
+            ushort depth = todoBuf[todoPos++];
+            scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
+            scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+
+            ulong crc = scanner.GetGameStateCrc();
+            if (hash.ContainsKey(crc)) continue;
+            hash.Add(crc, depth);
+
+            if ((hash.Count & 0xffff) == 0) Console.WriteLine("[" + boxesCount + "] (" + depth + ") " + ((todoLen - todoPos) / (stateLen + 1)).ToString("N0") + " / " + hash.Count.ToString("N0"));
+
+            depth++;
+            int nextLength = scanner.ScanReverseMoves(nextBuf) * stateLen;
+            for (int next = 0; next < nextLength; next += stateLen)
+            {
+              todoBuf[todoLen++] = depth;
+              for (int i = 0; i < stateLen; i++) todoBuf[todoLen++] = nextBuf[next + i];
+            }
+            if (todoBuf.Length - todoLen < nextLength * 2)
+            {
+              Array.Copy(todoBuf, todoPos, todoBuf, 0, todoLen - todoPos);
+              todoLen -= todoPos;
+              todoPos = 0;
+            }
+          }
+          Console.WriteLine();
+          Console.ForegroundColor = ConsoleColor.Yellow;
+          Console.WriteLine("[" + boxesCount + "] ok. Hash: " + hash.Count.ToString("N0"));
+          Console.ForegroundColor = ConsoleColor.Gray;
+          Console.WriteLine();
+        }
+      }
     }
 
     static void Main()
@@ -376,7 +422,7 @@ namespace SokoWahn
       //MiniGame(new SokowahnField(TestLevel2));
 
       //MiniSolver(new SokowahnField(TestLevel));
-      MiniSolver2(new SokowahnField(TestLevel4));
+      MiniSolver2(new SokowahnField(TestLevel3));
 
       // CreateProject();
     }
