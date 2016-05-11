@@ -6,9 +6,9 @@ using System.Linq;
 
 #endregion
 
-namespace SokoWahn
+namespace SokoWahnCore
 {
-  internal static partial class LinqToolsExtensions
+  public static partial class LinqToolsExtensions
   {
     /// <summary>
     /// vergleichbar mit ".Select().ToArray()", jedoch schneller

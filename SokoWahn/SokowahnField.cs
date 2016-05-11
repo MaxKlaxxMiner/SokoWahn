@@ -2,8 +2,7 @@
 
 using System;
 using System.Linq;
-using SokoWahnCore.CoreTools;
-
+using SokoWahnCore;
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBeInternal
 // ReSharper disable MemberCanBePrivate.Global
@@ -143,6 +142,15 @@ namespace SokoWahn
     public ulong GetGameStateCrc()
     {
       return Crc64.Start.Crc64Update(posis, 0, posis.Length);
+    }
+
+    /// <summary>
+    /// gibt eine für dieses Level eindeutige Identifikation zurück
+    /// </summary>
+    /// <returns>berechneter eindeutiger ID-Code</returns>
+    public string GetLevelId()
+    {
+      return "B" + boxesCount + "_W" + width + "_H" + height + "_0x" + Crc64.Start.Crc64Update(fieldData, 0, fieldData.Length).ToString("x").PadLeft(16);
     }
 
     /// <summary>

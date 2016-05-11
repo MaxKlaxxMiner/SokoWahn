@@ -39,8 +39,10 @@
     <!-- A reference to the entire .NET Framework is automatically included -->
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CoreTools\Crc64.cs" />
-    <Compile Include="CoreTools\LinqExtensions.cs" />
+    <Compile Include="LinqTools\Crc64.cs" />
+    <Compile Include="LinqTools\LinqExtensions.cs" />
+    <Compile Include="LinqTools\SelectArray.cs" />
+    <Compile Include="SokoTools\FieldBoxesVariants.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\Portable\$(TargetFrameworkVersion)\Microsoft.Portable.CSharp.targets" />

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 #endregion
 
-namespace SokoWahnCore.CoreTools
+namespace SokoWahnCore
 {
   /// <summary>
   /// eigene Linq-Erweiterungen

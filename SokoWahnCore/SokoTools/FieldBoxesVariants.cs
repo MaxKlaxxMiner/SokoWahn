@@ -8,9 +8,9 @@ using System.Linq;
 
 #endregion
 
-namespace SokoWahn
+namespace SokoWahnCore
 {
-  internal static partial class SokoTools
+  public static partial class SokoTools
   {
     /// <summary>
     /// berechnet alle Varianten, wie Kisten auf mehreren Felder verteilt liegen können

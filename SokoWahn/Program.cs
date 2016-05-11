@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using SokoWahnCore.CoreTools;
+using SokoWahnCore;
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
 // ReSharper disable TailRecursiveCall
@@ -22,16 +22,16 @@ namespace SokoWahn
     const string PathData = "../../../Data/";
     const string PathTest = PathData + "Test/";
 
-    const string TestLevel = "       ###  ^_^  \n"
-                           + "       #.#       \n"
-                           + "   #####.#####   \n"
-                           + "  ##         ##  \n"
-                           + " ##  # # # #  ## \n"
-                           + " #  ##     ##  # \n"
-                           + " # ##  # #  ## #     \n"
-                           + " #     $@$     # \n"
-                           + " ####  ###  #### \n"
-                           + "    #### #### :) \n";
+    const string TestLevel1 = "       ###  ^_^  \n"
+                            + "       #.#       \n"
+                            + "   #####.#####   \n"
+                            + "  ##         ##  \n"
+                            + " ##  # # # #  ## \n"
+                            + " #  ##     ##  # \n"
+                            + " # ##  # #  ## #     \n"
+                            + " #     $@$     # \n"
+                            + " ####  ###  #### \n"
+                            + "    #### #### :) \n";
 
     const string TestLevel2 = "  ####\n"
                             + "### @#\n"
@@ -65,6 +65,23 @@ namespace SokoWahn
                             + "# $ $ # $ #\n"
                             + "#   #@  ###\n"
                             + "#########\n";
+
+    const string TestLevel5 = "   #####\n"
+                            + "   #   #\n"
+                            + "   # # ##########\n"
+                            + "#### #  #   #   #\n"
+                            + "#       # $   $ #####\n"
+                            + "# ## #$ #   #   #   #\n"
+                            + "# $  #  ## ## $   $ #\n"
+                            + "# ## #####  #   #   #\n"
+                            + "# $   #  #  ###### ##\n"
+                            + "### $    @  ...# # #\n"
+                            + "  #   #     ...# # #\n"
+                            + "  #####  ###...# # ###\n"
+                            + "      #### ##### #   #\n"
+                            + "                 # $ #\n"
+                            + "                 #   #\n"
+                            + "                 #####\n";
 
     #region # static void CreateProject() // erstellt das Projekt mit allen Dateien
     /// <summary>
@@ -323,7 +340,11 @@ namespace SokoWahn
     }
     #endregion
 
-    static void MiniSolver2(SokowahnField field)
+    /// <summary>
+    /// analysiert alle möglichen Kistenstellungen mit einfachen (langsamen) Methoden
+    /// </summary>
+    /// <param name="field">Feld, welches durchsucht werden soll</param>
+    static void MiniSolverHashBuilder(SokowahnField field)
     {
       var scanner = new SokowahnField(field);
       Console.WriteLine(scanner.ToString());
@@ -414,15 +435,35 @@ namespace SokoWahn
       }
     }
 
+    /// <summary>
+    /// analysiert alle möglichen Kistenstellungen mit spezialkompilierten Hochleistungs-Methoden
+    /// </summary>
+    /// <param name="field">Feld, welches durchsucht werden soll</param>
+    static void MiniSolverHashBuilder2(SokowahnField field)
+    {
+      var scanner = new SokowahnField(field);
+      Console.WriteLine(scanner.ToString());
+      Console.WriteLine();
+
+
+      string levelId = scanner.GetLevelId();
+
+
+    }
+
     static void Main()
     {
-      //MiniGame(new SokowahnField(TestLevel));
+      //MiniGame(new SokowahnField(TestLevel1));
       //MiniGame(new SokowahnField(TestLevel3));
       //MiniGame(new SokowahnField(TestLevel4));
       //MiniGame(new SokowahnField(TestLevel2));
 
       //MiniSolver(new SokowahnField(TestLevel));
-      MiniSolver2(new SokowahnField(TestLevel3));
+
+      //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
+      MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+
+      Console.ReadLine();
 
       // CreateProject();
     }
