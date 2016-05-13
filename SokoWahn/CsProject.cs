@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 
 #endregion
 
@@ -128,6 +130,16 @@ namespace SokoWahn
       sol.Write("EndGlobal");
 
       return sol;
+    }
+
+    /// <summary>
+    /// erstellt eine Guid anhand eines bestimmten Begriffes (gleicher Begriff = gleiche Guid)
+    /// </summary>
+    /// <param name="passPhrase">Begriff, welcher verwendnet werden soll</param>
+    /// <returns>fertig erstellte GUID</returns>
+    public static Guid NewGuid(string passPhrase)
+    {
+      return new Guid(new MD5CryptoServiceProvider().ComputeHash(Encoding.UTF8.GetBytes(passPhrase)));
     }
   }
 }

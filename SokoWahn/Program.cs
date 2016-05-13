@@ -94,11 +94,11 @@ namespace SokoWahn
 
       var solutionGuid = Guid.NewGuid();
       var projectGuid = Guid.NewGuid();
+
       const string ProjectName = "Sokowahn";
       const string ProjectFile = ProjectName + ".csproj";
       const string SolutionFile = ProjectName + ".sln";
       const string CsFile = ProjectName + ".cs";
-
 
       var csFile = new CsFile(true);
       csFile.Write();
@@ -448,7 +448,64 @@ namespace SokoWahn
 
       string levelId = scanner.GetLevelId();
 
+      var solutionGuid = CsProject.NewGuid("S" + levelId);
+      var projectGuid = CsProject.NewGuid("P" + levelId);
 
+      string projectName = "Sokowahn_HashBuilder_" + levelId;
+
+      var csFile = new CsFile(true);
+
+      #region # // --- Hauptkommentar inkl. Level erstellen ---
+      int commentWidth = Math.Max(scanner.width + 2, 35);
+      commentWidth = (commentWidth + 1) / 2 * 2 + scanner.width % 2;
+      string emptyLine = " *" + new string(' ', commentWidth - 2) + "*";
+      csFile.Write();
+      csFile.Write();
+      csFile.Write("/" + new string('*', commentWidth));
+      csFile.Write(emptyLine);
+      csFile.Write((" *  " + new string(' ', (commentWidth - 26) / 2) + "--- Hash Builder ---").PadRight(commentWidth, ' ') + "*");
+      csFile.Write(emptyLine);
+      csFile.Write(" " + new string('*', commentWidth));
+      csFile.Write(emptyLine);
+      csFile.Write((" *  Level-Hash: " + levelId.Remove(0, levelId.LastIndexOf('_') + 1)).PadRight(commentWidth, ' ') + "*");
+      csFile.Write(emptyLine);
+      csFile.Write((" *  Size      : " + scanner.width + " x " + scanner.height + " (" + (scanner.width * scanner.height).ToString("N0") + ")").PadRight(commentWidth, ' ') + "*");
+      csFile.Write((" *  Boxes     : " + scanner.boxesCount).PadRight(commentWidth, ' ') + "*");
+      csFile.Write(emptyLine);
+      string centerChars = new string(' ', (commentWidth - scanner.width - 2) / 2);
+      csFile.Write(scanner.ToString().Replace("\r", "").Split('\n').Select(x => " *" + centerChars + x + centerChars + "*"));
+      csFile.Write(emptyLine);
+      csFile.Write(" " + new string('*', commentWidth) + "/");
+      csFile.Write();
+      csFile.Write();
+      #endregion
+
+      csFile.Write("#region # using *.*");
+      csFile.Write();
+      csFile.Write("using System;");
+      csFile.Write();
+      csFile.Write("#endregion");
+      csFile.Write();
+      csFile.Write();
+      csFile.Write("namespace " + projectName, ns =>
+      {
+        ns.Write("static class Program", cl =>
+        {
+          cl.Write("static void Main()", main =>
+          {
+            main.Write("Console.WriteLine('Hello World!');");
+            main.Write("Console.ReadLine();");
+          });
+        });
+      });
+
+      csFile.SaveToFile(PathTest + "Program.cs");
+
+      var projectFile = CsProject.CreateCsProjectFile(projectGuid, projectName, new[] { "System" }, new[] { "Program.cs" });
+      projectFile.SaveToFile(PathTest + projectName + ".csproj");
+
+      var solutionFile = CsProject.CreateSolutionFile(solutionGuid, projectGuid, "Sokowahn", projectName + ".csproj");
+      solutionFile.SaveToFile(PathTest + projectName + ".sln");
     }
 
     static void Main()
@@ -463,7 +520,7 @@ namespace SokoWahn
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
 
-      Console.ReadLine();
+      //Console.ReadLine();
 
       // CreateProject();
     }

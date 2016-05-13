@@ -209,6 +209,10 @@ namespace SokoWahn
     /// <param name="filename"></param>
     public void SaveToFile(string filename)
     {
+      var fi = new FileInfo(filename);
+      if (fi.Exists && File.ReadAllText(filename) == data.ToString()) return;
+
+      fi.Directory.Create();
       File.WriteAllText(filename, data.ToString());
     }
 
