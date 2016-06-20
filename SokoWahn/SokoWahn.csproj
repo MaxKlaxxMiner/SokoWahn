@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CsCompiler.cs" />
     <Compile Include="CsFile.cs" />
     <Compile Include="CsProject.cs" />
     <Compile Include="Program.cs" />

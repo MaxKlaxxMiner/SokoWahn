@@ -506,6 +506,8 @@ namespace SokoWahn
 
       var solutionFile = CsProject.CreateSolutionFile(solutionGuid, projectGuid, "Sokowahn", projectName + ".csproj");
       solutionFile.SaveToFile(PathTest + projectName + ".sln");
+
+      CsCompiler.Compile(PathTest + projectName + ".sln");
     }
 
     static void Main()
