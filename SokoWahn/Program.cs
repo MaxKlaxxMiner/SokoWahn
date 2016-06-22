@@ -83,6 +83,19 @@ namespace SokoWahn
                             + "                 #   #\n"
                             + "                 #####\n";
 
+    const string TestLevel6 = "           #######\n"
+                            + "      ######    .#\n"
+                            + "    ###      ###.#\n"
+                            + "   ##     #  #@#.#\n"
+                            + "  ##  $# #     #.#\n"
+                            + " ##  $$  #   # #.#\n"
+                            + "##  $$  #   ## #.#\n"
+                            + "#  $$  ##   #  #.#\n"
+                            + "# $$  ##       #.#\n"
+                            + "##   ###    #   .#\n"
+                            + " ##### ####   #  #\n"
+                            + "          ########\n";
+
     #region # static void CreateProject() // erstellt das Projekt mit allen Dateien
     /// <summary>
     /// erstellt das Projekt mit allen Dateien
@@ -498,6 +511,8 @@ namespace SokoWahn
       csFile.Write("using System.Linq;");
       csFile.Write("using System.Collections.Generic;");
       csFile.Write();
+      csFile.Write("// ReSharper disable UnusedMember.Local");
+      csFile.Write();
       csFile.Write("#endregion");
       csFile.Write();
       csFile.Write();
@@ -510,9 +525,9 @@ namespace SokoWahn
         ns.Write("static class Program", cl =>
         {
           #region # // --- static readonly char[] FieldData = ... ---
-          cl.Write("const int FieldWidth = " + fWidth + "; // real: " + scanner.width);
+          cl.Write("const int FieldWidth = " + fWidth + "; // extended from: " + scanner.width);
           cl.Write("const int FieldHeight = " + scanner.height + ";");
-          cl.Write("static readonly int[] PlayerDirections = { -1, +1, -FieldWidth, +FieldWidth };");
+          cl.Write();
           cl.Write("static readonly char[] FieldData =", f =>
           {
             var zeile = new StringBuilder();
@@ -550,6 +565,8 @@ namespace SokoWahn
           #endregion
 
           #region # // --- static int ScanTopLeftPos(int startPos) ---
+          cl.Write("static readonly int[] PlayerDirections = { -1, +1, -FieldWidth, +FieldWidth };");
+          cl.Write();
           cl.Write("static int ScanTopLeftPos(int startPos)", sc =>
           {
             sc.Write("int bestPos = int.MaxValue;");
@@ -575,13 +592,13 @@ namespace SokoWahn
           {
             main.Write("for (int boxesCount = 1; boxesCount <= TargetPosis.Length; boxesCount++)", bx =>
             {
-              bx.Write("var boxes = new ushort[boxesCount];");
               bx.Write("int stateLen = boxesCount + 1;");
               bx.Write("var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];");
-              bx.Write("int todoPos = 0, todoLen = 0;");
+              bx.Write("int todoLen = 0;");
+              bx.Write();
 
               #region # // --- Suche End-Varianten ---
-              bx.Write("", sc =>
+              bx.Write("#region # // --- search all finish-positions -> put into \"todoBuf\" ---", sc =>
               {
                 sc.Write("var checkDuplicates = new HashSet<ulong>();");
                 sc.Write();
@@ -622,40 +639,46 @@ namespace SokoWahn
                   fe.Write("foreach (var box in boxesVariant) FieldData[box] = ' ';");
                 });
               });
+              bx.Write("#endregion");
               bx.Write();
               #endregion
 
-              //  // --- Aufgaben weiter rückwärts gerichtet abarbeiten ---
-              //  {
-              //    var hash = new Dictionary<ulong, ushort>();
-              //    var nextBuf = new ushort[stateLen * boxesCount * 4];
+              #region # // --- Durchsuche Rückwärts alle Möglichkeiten ---
+              bx.Write("#region # // --- search all possible positions (bruteforce-reverse) ---", sc =>
+              {
+                sc.Write("var hash = new Dictionary<ulong, ushort>();");
+                sc.Write("var nextBuf = new ushort[stateLen * boxesCount * 4];");
+                sc.Write();
+                sc.Write("int todoPos = 0;");
+                sc.Write("while (todoPos < todoLen)", wh =>
+                {
+                  wh.Write("ushort depth = todoBuf[todoPos++];");
+                  //      scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
+                  //      scanner.SetPlayerPos(ScanTopLeftPos(scanner));
 
-              //    while (todoPos < todoLen)
-              //    {
-              //      ushort depth = todoBuf[todoPos++];
-              //      scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
-              //      scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+                  //      ulong crc = scanner.GetGameStateCrc();
+                  //      if (hash.ContainsKey(crc)) continue;
+                  //      hash.Add(crc, depth);
 
-              //      ulong crc = scanner.GetGameStateCrc();
-              //      if (hash.ContainsKey(crc)) continue;
-              //      hash.Add(crc, depth);
+                  //      if ((hash.Count & 0xffff) == 0) Console.WriteLine("[" + boxesCount + "] (" + depth + ") " + ((todoLen - todoPos) / (stateLen + 1)).ToString("N0") + " / " + hash.Count.ToString("N0"));
 
-              //      if ((hash.Count & 0xffff) == 0) Console.WriteLine("[" + boxesCount + "] (" + depth + ") " + ((todoLen - todoPos) / (stateLen + 1)).ToString("N0") + " / " + hash.Count.ToString("N0"));
-
-              //      depth++;
-              //      int nextLength = scanner.ScanReverseMoves(nextBuf) * stateLen;
-              //      for (int next = 0; next < nextLength; next += stateLen)
-              //      {
-              //        todoBuf[todoLen++] = depth;
-              //        for (int i = 0; i < stateLen; i++) todoBuf[todoLen++] = nextBuf[next + i];
-              //      }
-              //      if (todoBuf.Length - todoLen < nextLength * 2)
-              //      {
-              //        Array.Copy(todoBuf, todoPos, todoBuf, 0, todoLen - todoPos);
-              //        todoLen -= todoPos;
-              //        todoPos = 0;
-              //      }
-              //    }
+                  //      depth++;
+                  //      int nextLength = scanner.ScanReverseMoves(nextBuf) * stateLen;
+                  //      for (int next = 0; next < nextLength; next += stateLen)
+                  //      {
+                  //        todoBuf[todoLen++] = depth;
+                  //        for (int i = 0; i < stateLen; i++) todoBuf[todoLen++] = nextBuf[next + i];
+                  //      }
+                  //      if (todoBuf.Length - todoLen < nextLength * 2)
+                  //      {
+                  //        Array.Copy(todoBuf, todoPos, todoBuf, 0, todoLen - todoPos);
+                  //        todoLen -= todoPos;
+                  //        todoPos = 0;
+                  //      }
+                });
+              });
+              bx.Write("#endregion");
+              #endregion
               //    Console.WriteLine();
               //    Console.ForegroundColor = ConsoleColor.Yellow;
               //    Console.WriteLine("[" + boxesCount + "] ok. Hash: " + hash.Count.ToString("N0"));

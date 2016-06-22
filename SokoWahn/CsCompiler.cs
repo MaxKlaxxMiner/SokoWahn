@@ -25,8 +25,9 @@ namespace SokoWahn
       {
         string[] searchPaths =
         {
-          @"C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild.exe",
-          @"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe"
+          @"C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild.exe", // fastest compiler - ships with Visual Studio 2013
+          @"C:\Program Files (x86)\MSBuild\14.0\Bin\MSBuild.exe", // alternate compiler - ships with Visual Studio 2015
+          @"C:\Windows\Microsoft.NET\Framework\v4.0.30319\MSBuild.exe" // older compiler - .Net 4 compatible
         };
 
         foreach (var path in searchPaths.Where(File.Exists))
