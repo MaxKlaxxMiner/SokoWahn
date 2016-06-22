@@ -436,6 +436,18 @@ namespace SokoWahn
     }
 
     /// <summary>
+    /// rundet den Wert auf einer Zweier-Potenz auf (z.B.: 6 = 8, 7 = 8, 8 = 8, 9 = 16, 10 = 16 usw...)
+    /// </summary>
+    /// <param name="value">Wert, welcher aufgerundet werden soll</param>
+    /// <returns>fertig aufgerundeter Wert</returns>
+    static int RoundUpP2(int value)
+    {
+      int multi = 1;
+      while (multi < value) multi += multi;
+      return multi;
+    }
+
+    /// <summary>
     /// analysiert alle möglichen Kistenstellungen mit spezialkompilierten Hochleistungs-Methoden
     /// </summary>
     /// <param name="field">Feld, welches durchsucht werden soll</param>
@@ -480,28 +492,193 @@ namespace SokoWahn
       csFile.Write();
       #endregion
 
+      #region # // --- using *.* ---
       csFile.Write("#region # using *.*");
       csFile.Write();
-      csFile.Write("using System;");
+      csFile.Write("using System.Linq;");
+      csFile.Write("using System.Collections.Generic;");
       csFile.Write();
       csFile.Write("#endregion");
       csFile.Write();
       csFile.Write();
+      #endregion
+
       csFile.Write("namespace " + projectName, ns =>
       {
+        int fWidth = RoundUpP2(scanner.width);
+        var fChars = new char[fWidth * scanner.height];
         ns.Write("static class Program", cl =>
         {
+          #region # // --- static readonly char[] FieldData = ... ---
+          cl.Write("const int FieldWidth = " + fWidth + "; // real: " + scanner.width);
+          cl.Write("const int FieldHeight = " + scanner.height + ";");
+          cl.Write("static readonly char[] FieldData =", f =>
+          {
+            var zeile = new StringBuilder();
+            for (int y = 0; y < scanner.height; y++)
+            {
+              zeile.Clear();
+              zeile.Append("/* " + (y * fWidth).ToString("N0").PadLeft(((scanner.height - 1) * fWidth).ToString("N0").Length) + " */ ");
+              for (int x = 0; x < fWidth; x++)
+              {
+                char c;
+                if (x < scanner.width)
+                {
+                  c = scanner.fieldData[x + y * scanner.width];
+                }
+                else
+                {
+                  if (x == scanner.width) zeile.Append("  ");
+                  c = ' ';
+                }
+                fChars[x + y * fWidth] = c;
+                if (c != '#') c = ' ';
+                zeile.Append('´').Append(c).Append("´,");
+              }
+              if (y == scanner.height - 1) zeile.Remove(zeile.Length - 1, 1);
+              f.Write(zeile.ToString());
+            }
+          });
+          cl.WriteV(";\r\n\r\n");
+          #endregion
+
+          #region # // --- static readonly ushort[] TargetFields ---
+          var targetFields = fChars.Select((c, i) => new { c, i }).Where(f => f.c == '.' || f.c == '*').Select(f => (ushort)f.i).ToArray();
+          cl.Write("static readonly ushort[] TargetPosis = { " + string.Join(", ", targetFields) + " };");
+          cl.Write();
+          #endregion
+
           cl.Write("static void Main()", main =>
           {
-            main.Write("Console.WriteLine('Hello World!');");
-            main.Write("Console.ReadLine();");
+            main.Write("for (int boxesCount = 1; boxesCount <= TargetPosis.Length; boxesCount++)", bx =>
+            {
+              bx.Write("var boxes = new ushort[boxesCount];");
+              bx.Write("int stateLen = 1 + boxes.Length;");
+              bx.Write("var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];");
+              bx.Write("int todoPos = 0, todoLen = 0;");
+
+              bx.Write("", sc =>
+              {
+                sc.Write("int emptyPlayerPos = FieldData.ToList().IndexOf(´ ´);");
+                sc.Write("int[] playerDirections = { -1, +1, -FieldWidth, +FieldWidth };");
+                sc.Write("var checkDuplicates = new HashSet<ulong>();");
+                sc.Write();
+                sc.Write("foreach (var boxesVariant in SokoTools.FieldBoxesVariants(TargetPosis.Length, boxesCount).Select(v => v.Select(f => TargetPosis[f]).ToArray()))", fe =>
+                {
+                  //      scanner.SetPlayerPos(emptyPlayerPos);
+                  //scanner.SetBoxes(boxesVariant);
+                  //      var fieldData = scanner.fieldData;
+                  //      foreach (ushort box in boxesVariant)
+                  //      {
+                  //        foreach (int playerDir in playerDirections)
+                  //        {
+                  //          int playerPos = box - playerDir;
+                  //          if (fieldData[playerPos] == '#' || fieldData[playerPos] == '$' || fieldData[playerPos] == '*') continue;
+                  //          int revPos = playerPos - playerDir;
+                  //          if (fieldData[revPos] == '#' || fieldData[revPos] == '$' || fieldData[revPos] == '*') continue;
+
+                  //          scanner.SetPlayerPos(playerPos);
+                  //          scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+
+                  //          ulong crc = scanner.GetGameStateCrc();
+                  //          if (checkDuplicates.Contains(crc)) continue;
+                  //          checkDuplicates.Add(crc);
+
+                  //          todoBuf[todoLen++] = 0;
+                  //          todoLen += scanner.GetGameState(todoBuf, todoLen);
+                  //        }
+                  //      }
+                });
+              });
+
+              //  // --- Aufgaben weiter rückwärts gerichtet abarbeiten ---
+              //  {
+              //    var hash = new Dictionary<ulong, ushort>();
+              //    var nextBuf = new ushort[stateLen * boxesCount * 4];
+
+              //    while (todoPos < todoLen)
+              //    {
+              //      ushort depth = todoBuf[todoPos++];
+              //      scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
+              //      scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+
+              //      ulong crc = scanner.GetGameStateCrc();
+              //      if (hash.ContainsKey(crc)) continue;
+              //      hash.Add(crc, depth);
+
+              //      if ((hash.Count & 0xffff) == 0) Console.WriteLine("[" + boxesCount + "] (" + depth + ") " + ((todoLen - todoPos) / (stateLen + 1)).ToString("N0") + " / " + hash.Count.ToString("N0"));
+
+              //      depth++;
+              //      int nextLength = scanner.ScanReverseMoves(nextBuf) * stateLen;
+              //      for (int next = 0; next < nextLength; next += stateLen)
+              //      {
+              //        todoBuf[todoLen++] = depth;
+              //        for (int i = 0; i < stateLen; i++) todoBuf[todoLen++] = nextBuf[next + i];
+              //      }
+              //      if (todoBuf.Length - todoLen < nextLength * 2)
+              //      {
+              //        Array.Copy(todoBuf, todoPos, todoBuf, 0, todoLen - todoPos);
+              //        todoLen -= todoPos;
+              //        todoPos = 0;
+              //      }
+              //    }
+              //    Console.WriteLine();
+              //    Console.ForegroundColor = ConsoleColor.Yellow;
+              //    Console.WriteLine("[" + boxesCount + "] ok. Hash: " + hash.Count.ToString("N0"));
+              //    Console.ForegroundColor = ConsoleColor.Gray;
+              //    Console.WriteLine();
+              //  }
+              //}
+            });
+
           });
         });
       });
 
       csFile.SaveToFile(PathTest + "Program.cs");
 
-      var projectFile = CsProject.CreateCsProjectFile(projectGuid, projectName, new[] { "System" }, new[] { "Program.cs" });
+      #region # // --- SokoTools.cs ---
+      var csSokoTools = new CsFile(true);
+
+      #region # // --- using *.* ---
+      csSokoTools.Write();
+      csSokoTools.Write();
+      csSokoTools.Write("#region # using *.*");
+      csSokoTools.Write();
+      csSokoTools.Write("using System.Collections.Generic;");
+      csSokoTools.Write();
+      csSokoTools.Write("#endregion");
+      csSokoTools.Write();
+      csSokoTools.Write();
+      #endregion
+
+      csSokoTools.Write("namespace " + projectName, ns =>
+      {
+        ns.Write("static class SokoTools", cl =>
+        {
+          #region # // --- IEnumerable<int[]> FieldBoxesVariants(int fieldCount, int boxesCount) ---
+          cl.Write("public static IEnumerable<int[]> FieldBoxesVariants(int fieldCount, int boxesCount)", m =>
+          {
+            m.Write("int dif = fieldCount - boxesCount;");
+            m.Write("int end = boxesCount - 1;");
+            m.Write();
+            m.Write("var boxesVariant = new int[boxesCount];");
+            m.Write();
+            m.Write("for (int box = 0; ; )", f =>
+            {
+              f.Write("while (box < end) boxesVariant[box + 1] = boxesVariant[box++] + 1;");
+              f.Write("yield return boxesVariant;");
+              f.Write("while (boxesVariant[box]++ == box + dif) if (--box < 0) yield break;");
+            });
+          });
+          #endregion
+        });
+      });
+
+      csSokoTools.SaveToFile(PathTest + "SokoTools.cs");
+      #endregion
+
+      var projectFile = CsProject.CreateCsProjectFile(projectGuid, projectName, new[] { "System" }, new[] { "Program.cs", "SokoTools.cs" });
       projectFile.SaveToFile(PathTest + projectName + ".csproj");
 
       var solutionFile = CsProject.CreateSolutionFile(solutionGuid, projectGuid, "Sokowahn", projectName + ".csproj");
