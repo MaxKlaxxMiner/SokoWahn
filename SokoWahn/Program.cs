@@ -465,7 +465,7 @@ namespace SokoWahn
 
       string projectName = "Sokowahn_HashBuilder_" + levelId;
 
-      var csFile = new CsFile(true);
+      var csFile = new CsFile();
 
       #region # // --- Hauptkommentar inkl. Level erstellen ---
       int commentWidth = Math.Max(scanner.width + 2, 35);
@@ -512,6 +512,7 @@ namespace SokoWahn
           #region # // --- static readonly char[] FieldData = ... ---
           cl.Write("const int FieldWidth = " + fWidth + "; // real: " + scanner.width);
           cl.Write("const int FieldHeight = " + scanner.height + ";");
+          cl.Write("static readonly int[] PlayerDirections = { -1, +1, -FieldWidth, +FieldWidth };");
           cl.Write("static readonly char[] FieldData =", f =>
           {
             var zeile = new StringBuilder();
@@ -533,7 +534,7 @@ namespace SokoWahn
                 }
                 fChars[x + y * fWidth] = c;
                 if (c != '#') c = ' ';
-                zeile.Append('´').Append(c).Append("´,");
+                zeile.Append('\'').Append(c).Append("',");
               }
               if (y == scanner.height - 1) zeile.Remove(zeile.Length - 1, 1);
               f.Write(zeile.ToString());
@@ -548,48 +549,81 @@ namespace SokoWahn
           cl.Write();
           #endregion
 
+          #region # // --- static int ScanTopLeftPos(int startPos) ---
+          cl.Write("static int ScanTopLeftPos(int startPos)", sc =>
+          {
+            sc.Write("int bestPos = int.MaxValue;");
+            sc.Write("var scanned = new bool[FieldData.Length];");
+            sc.Write("var next = new Stack<int>();");
+            sc.Write("next.Push(startPos);");
+            sc.Write("while (next.Count > 0)", wh =>
+            {
+              wh.Write("int checkPos = next.Pop();");
+              wh.Write("if (checkPos < bestPos) bestPos = checkPos;");
+              wh.Write("scanned[checkPos] = true;");
+              wh.Write("if (!scanned[checkPos - 1] && FieldData[checkPos - 1] == ' ') next.Push(checkPos - 1);");
+              wh.Write("if (!scanned[checkPos + 1] && FieldData[checkPos + 1] == ' ') next.Push(checkPos + 1);");
+              wh.Write("if (!scanned[checkPos - FieldWidth] && FieldData[checkPos - FieldWidth] == ' ') next.Push(checkPos - FieldWidth);");
+              wh.Write("if (!scanned[checkPos + FieldWidth] && FieldData[checkPos + FieldWidth] == ' ') next.Push(checkPos + FieldWidth);");
+            });
+            sc.Write("return bestPos;");
+          });
+          cl.Write();
+          #endregion
+
           cl.Write("static void Main()", main =>
           {
             main.Write("for (int boxesCount = 1; boxesCount <= TargetPosis.Length; boxesCount++)", bx =>
             {
               bx.Write("var boxes = new ushort[boxesCount];");
-              bx.Write("int stateLen = 1 + boxes.Length;");
+              bx.Write("int stateLen = boxesCount + 1;");
               bx.Write("var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];");
               bx.Write("int todoPos = 0, todoLen = 0;");
 
+              #region # // --- Suche End-Varianten ---
               bx.Write("", sc =>
               {
-                sc.Write("int emptyPlayerPos = FieldData.ToList().IndexOf(´ ´);");
-                sc.Write("int[] playerDirections = { -1, +1, -FieldWidth, +FieldWidth };");
                 sc.Write("var checkDuplicates = new HashSet<ulong>();");
                 sc.Write();
                 sc.Write("foreach (var boxesVariant in SokoTools.FieldBoxesVariants(TargetPosis.Length, boxesCount).Select(v => v.Select(f => TargetPosis[f]).ToArray()))", fe =>
                 {
-                  //      scanner.SetPlayerPos(emptyPlayerPos);
-                  //scanner.SetBoxes(boxesVariant);
-                  //      var fieldData = scanner.fieldData;
-                  //      foreach (ushort box in boxesVariant)
-                  //      {
-                  //        foreach (int playerDir in playerDirections)
-                  //        {
-                  //          int playerPos = box - playerDir;
-                  //          if (fieldData[playerPos] == '#' || fieldData[playerPos] == '$' || fieldData[playerPos] == '*') continue;
-                  //          int revPos = playerPos - playerDir;
-                  //          if (fieldData[revPos] == '#' || fieldData[revPos] == '$' || fieldData[revPos] == '*') continue;
-
-                  //          scanner.SetPlayerPos(playerPos);
-                  //          scanner.SetPlayerPos(ScanTopLeftPos(scanner));
-
-                  //          ulong crc = scanner.GetGameStateCrc();
-                  //          if (checkDuplicates.Contains(crc)) continue;
-                  //          checkDuplicates.Add(crc);
-
-                  //          todoBuf[todoLen++] = 0;
-                  //          todoLen += scanner.GetGameState(todoBuf, todoLen);
-                  //        }
-                  //      }
+                  fe.Write("foreach (var box in boxesVariant) FieldData[box] = '$';");
+                  fe.Write();
+                  fe.Write("ulong boxCrc = SokoTools.CrcCompute(SokoTools.CrcStart, boxesVariant, 0, boxesVariant.Length);");
+                  fe.Write();
+                  fe.Write("foreach (var box in boxesVariant)", feb =>
+                  {
+                    feb.Write("foreach (int playerDir in PlayerDirections)", febs =>
+                    {
+                      febs.Write("int playerPos = box - playerDir;");
+                      febs.Write("if (FieldData[playerPos] != ' ') continue;");
+                      febs.Write("if (FieldData[playerPos - playerDir] != ' ') continue;");
+                      febs.Write();
+                      febs.Write("ulong crc = SokoTools.CrcCompute(boxCrc, playerPos);");
+                      febs.Write("if (checkDuplicates.Contains(crc)) continue;");
+                      febs.Write("checkDuplicates.Add(crc);");
+                      febs.Write();
+                      febs.Write("int topPlayerPos = ScanTopLeftPos(playerPos);");
+                      febs.Write();
+                      febs.Write("if (topPlayerPos != playerPos)", febst =>
+                      {
+                        febst.Write("crc = SokoTools.CrcCompute(boxCrc, topPlayerPos);");
+                        febst.Write("if (checkDuplicates.Contains(crc)) continue;");
+                        febst.Write("checkDuplicates.Add(crc);");
+                      });
+                      febs.Write();
+                      febs.Write("todoBuf[todoLen++] = 0;");
+                      febs.Write("for(int i = 0; i < boxesVariant.Length; i++) todoBuf[todoLen + i] = boxesVariant[i];");
+                      febs.Write("todoBuf[todoLen + boxesVariant.Length] = (ushort)topPlayerPos;");
+                      febs.Write("todoLen += stateLen;");
+                    });
+                  });
+                  fe.Write();
+                  fe.Write("foreach (var box in boxesVariant) FieldData[box] = ' ';");
                 });
               });
+              bx.Write();
+              #endregion
 
               //  // --- Aufgaben weiter rückwärts gerichtet abarbeiten ---
               //  {
@@ -638,7 +672,7 @@ namespace SokoWahn
       csFile.SaveToFile(PathTest + "Program.cs");
 
       #region # // --- SokoTools.cs ---
-      var csSokoTools = new CsFile(true);
+      var csSokoTools = new CsFile();
 
       #region # // --- using *.* ---
       csSokoTools.Write();
@@ -646,6 +680,7 @@ namespace SokoWahn
       csSokoTools.Write("#region # using *.*");
       csSokoTools.Write();
       csSokoTools.Write("using System.Collections.Generic;");
+      csSokoTools.Write("using System.Runtime.CompilerServices;");
       csSokoTools.Write();
       csSokoTools.Write("#endregion");
       csSokoTools.Write();
@@ -671,7 +706,29 @@ namespace SokoWahn
               f.Write("while (boxesVariant[box]++ == box + dif) if (--box < 0) yield break;");
             });
           });
+          cl.Write();
           #endregion
+
+          #region # // --- Crc64-Tools ---
+          cl.Write("public const ulong CrcStart = 0xcbf29ce484222325u;");
+          cl.Write("public const ulong CrcMul = 0x100000001b3;");
+          cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+          cl.Write("public static ulong CrcCompute(ulong crc64, int value)", crcf =>
+          {
+            cl.Write("return (crc64 ^ (uint)value) * CrcMul;");
+          });
+          cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
+          cl.Write("public static ulong CrcCompute(ulong crc64, ushort[] buffer, int ofs, int len)", crcf =>
+          {
+            crcf.Write("crc64 ^= buffer[ofs];");
+            crcf.Write("for (int i = 1; i < len; i++) crc64 = crc64 * CrcMul ^ buffer[i + ofs];");
+            crcf.Write("return crc64 * CrcMul;");
+          });
+          cl.Write();
+          #endregion
+
         });
       });
 
