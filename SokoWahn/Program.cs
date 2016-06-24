@@ -583,24 +583,28 @@ namespace SokoWahn
           #region # // --- static int ScanTopLeftPos(int startPos) ---
           cl.Write("static readonly int[] PlayerDirections = { -1, +1, -FieldWidth, +FieldWidth };");
           cl.Write();
+          cl.Write("static readonly int[] ScanTmp = new int[FieldCount];");
+          cl.Write();
           cl.Write("static int ScanTopLeftPos(int startPos)", sc =>
           {
-            sc.Write("int bestPos = int.MaxValue;");
-            sc.Write("bool* scanned = stackalloc bool[FieldCount];");
-            sc.Write("int* next = stackalloc int[FieldCount];");
-            sc.Write("int nextPos = 0;");
-            sc.Write("next[nextPos++] = startPos;");
-            sc.Write("while (nextPos > 0)", wh =>
+            sc.Write("fixed (int* next = ScanTmp)", f =>
             {
-              wh.Write("int checkPos = next[--nextPos];");
-              wh.Write("if (checkPos < bestPos) bestPos = checkPos;");
-              wh.Write("scanned[checkPos] = true;");
-              wh.Write("if (!scanned[checkPos - 1] && FieldData[checkPos - 1] == ' ') next[nextPos++] = checkPos - 1;");
-              wh.Write("if (!scanned[checkPos + 1] && FieldData[checkPos + 1] == ' ') next[nextPos++] = checkPos + 1;");
-              wh.Write("if (!scanned[checkPos - FieldWidth] && FieldData[checkPos - FieldWidth] == ' ') next[nextPos++] = checkPos - FieldWidth;");
-              wh.Write("if (!scanned[checkPos + FieldWidth] && FieldData[checkPos + FieldWidth] == ' ') next[nextPos++] = checkPos + FieldWidth;");
+              f.Write("int bestPos = int.MaxValue;");
+              f.Write("bool* scanned = stackalloc bool[FieldCount];");
+              f.Write("int nextPos = 0;");
+              f.Write("next[nextPos++] = startPos;");
+              f.Write("while (nextPos > 0)", wh =>
+              {
+                wh.Write("int checkPos = next[--nextPos];");
+                wh.Write("if (checkPos < bestPos) bestPos = checkPos;");
+                wh.Write("scanned[checkPos] = true;");
+                wh.Write("if (!scanned[checkPos - 1] && FieldData[checkPos - 1] == ' ') next[nextPos++] = checkPos - 1;");
+                wh.Write("if (!scanned[checkPos + 1] && FieldData[checkPos + 1] == ' ') next[nextPos++] = checkPos + 1;");
+                wh.Write("if (!scanned[checkPos - FieldWidth] && FieldData[checkPos - FieldWidth] == ' ') next[nextPos++] = checkPos - FieldWidth;");
+                wh.Write("if (!scanned[checkPos + FieldWidth] && FieldData[checkPos + FieldWidth] == ' ') next[nextPos++] = checkPos + FieldWidth;");
+              });
+              sc.Write("return bestPos;");
             });
-            sc.Write("return bestPos;");
           });
           cl.Write();
           #endregion
