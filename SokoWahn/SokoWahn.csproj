@@ -45,9 +45,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CsCompiler.cs" />
-    <Compile Include="CsFile.cs" />
-    <Compile Include="CsProject.cs" />
+    <Compile Include="Compiler\CsCompiler.cs" />
+    <Compile Include="Compiler\CsFile.cs" />
+    <Compile Include="Compiler\CsProject.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SokowahnField.cs" />
@@ -64,6 +64,9 @@
       <Project>{EB78DA0D-5790-4772-AD38-16028C5E1606}</Project>
       <Name>SokoWahnCore</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="HashGenerator\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
