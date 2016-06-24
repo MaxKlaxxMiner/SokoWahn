@@ -587,17 +587,18 @@ namespace SokoWahn
           {
             sc.Write("int bestPos = int.MaxValue;");
             sc.Write("var scanned = new bool[FieldData.Length];");
-            sc.Write("var next = new Stack<int>();");
-            sc.Write("next.Push(startPos);");
-            sc.Write("while (next.Count > 0)", wh =>
+            sc.Write("var next = new int[FieldData.Length];");
+            sc.Write("int nextPos = 0;");
+            sc.Write("next[nextPos++] = startPos;");
+            sc.Write("while (nextPos > 0)", wh =>
             {
-              wh.Write("int checkPos = next.Pop();");
+              wh.Write("int checkPos = next[--nextPos];");
               wh.Write("if (checkPos < bestPos) bestPos = checkPos;");
               wh.Write("scanned[checkPos] = true;");
-              wh.Write("if (!scanned[checkPos - 1] && FieldData[checkPos - 1] == ' ') next.Push(checkPos - 1);");
-              wh.Write("if (!scanned[checkPos + 1] && FieldData[checkPos + 1] == ' ') next.Push(checkPos + 1);");
-              wh.Write("if (!scanned[checkPos - FieldWidth] && FieldData[checkPos - FieldWidth] == ' ') next.Push(checkPos - FieldWidth);");
-              wh.Write("if (!scanned[checkPos + FieldWidth] && FieldData[checkPos + FieldWidth] == ' ') next.Push(checkPos + FieldWidth);");
+              wh.Write("if (!scanned[checkPos - 1] && FieldData[checkPos - 1] == ' ') next[nextPos++] = checkPos - 1;");
+              wh.Write("if (!scanned[checkPos + 1] && FieldData[checkPos + 1] == ' ') next[nextPos++] = checkPos + 1;");
+              wh.Write("if (!scanned[checkPos - FieldWidth] && FieldData[checkPos - FieldWidth] == ' ') next[nextPos++] = checkPos - FieldWidth;");
+              wh.Write("if (!scanned[checkPos + FieldWidth] && FieldData[checkPos + FieldWidth] == ' ') next[nextPos++] = checkPos + FieldWidth;");
             });
             sc.Write("return bestPos;");
           });
@@ -989,8 +990,8 @@ namespace SokoWahn
 
       //MiniSolver(new SokowahnField(TestLevel));
 
-      MiniSolverHashBuilder(new SokowahnField(TestLevel3));
-      //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+      //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
+      MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
 
       // --- Level 3 Hash-Stats ---
       // boxes todoLen todoLenEnd  Hashtable
