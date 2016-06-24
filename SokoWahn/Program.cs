@@ -586,8 +586,8 @@ namespace SokoWahn
           cl.Write("static int ScanTopLeftPos(int startPos)", sc =>
           {
             sc.Write("int bestPos = int.MaxValue;");
-            sc.Write("var scanned = new bool[FieldData.Length];");
-            sc.Write("var next = new int[FieldData.Length];");
+            sc.Write("bool* scanned = stackalloc bool[FieldCount];");
+            sc.Write("int* next = stackalloc int[FieldCount];");
             sc.Write("int nextPos = 0;");
             sc.Write("next[nextPos++] = startPos;");
             sc.Write("while (nextPos > 0)", wh =>
