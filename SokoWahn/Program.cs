@@ -585,25 +585,30 @@ namespace SokoWahn
           cl.Write();
           cl.Write("static readonly int[] ScanTmp = new int[FieldCount];");
           cl.Write();
+          cl.Write("static int ScanTopLeftPosIntern(int* next, bool* scanned, char* fd)", sc =>
+          {
+            sc.Write("int bestPos = int.MaxValue;");
+            sc.Write("int nextPos = 1;");
+            sc.Write("while (nextPos > 0)", wh =>
+            {
+              wh.Write("int checkPos = next[--nextPos];");
+              wh.Write("if (checkPos < bestPos) bestPos = checkPos;");
+              wh.Write("scanned[checkPos] = true;");
+              wh.Write("if (!scanned[checkPos - 1] && fd[checkPos - 1] == ' ') next[nextPos++] = checkPos - 1;");
+              wh.Write("if (!scanned[checkPos + 1] && fd[checkPos + 1] == ' ') next[nextPos++] = checkPos + 1;");
+              wh.Write("if (!scanned[checkPos - FieldWidth] && fd[checkPos - FieldWidth] == ' ') next[nextPos++] = checkPos - FieldWidth;");
+              wh.Write("if (!scanned[checkPos + FieldWidth] && fd[checkPos + FieldWidth] == ' ') next[nextPos++] = checkPos + FieldWidth;");
+            });
+            sc.Write("return bestPos;");
+          });
+          cl.Write();
           cl.Write("static int ScanTopLeftPos(int startPos)", sc =>
           {
-            sc.Write("fixed (int* next = ScanTmp)", f =>
+            sc.Write("fixed (int* next = ScanTmp) fixed (char* fd = FieldData)", f =>
             {
-              f.Write("int bestPos = int.MaxValue;");
               f.Write("bool* scanned = stackalloc bool[FieldCount];");
-              f.Write("int nextPos = 0;");
-              f.Write("next[nextPos++] = startPos;");
-              f.Write("while (nextPos > 0)", wh =>
-              {
-                wh.Write("int checkPos = next[--nextPos];");
-                wh.Write("if (checkPos < bestPos) bestPos = checkPos;");
-                wh.Write("scanned[checkPos] = true;");
-                wh.Write("if (!scanned[checkPos - 1] && FieldData[checkPos - 1] == ' ') next[nextPos++] = checkPos - 1;");
-                wh.Write("if (!scanned[checkPos + 1] && FieldData[checkPos + 1] == ' ') next[nextPos++] = checkPos + 1;");
-                wh.Write("if (!scanned[checkPos - FieldWidth] && FieldData[checkPos - FieldWidth] == ' ') next[nextPos++] = checkPos - FieldWidth;");
-                wh.Write("if (!scanned[checkPos + FieldWidth] && FieldData[checkPos + FieldWidth] == ' ') next[nextPos++] = checkPos + FieldWidth;");
-              });
-              sc.Write("return bestPos;");
+              f.Write("*next = startPos;");
+              f.Write("return ScanTopLeftPosIntern(next, scanned, fd);");
             });
           });
           cl.Write();
