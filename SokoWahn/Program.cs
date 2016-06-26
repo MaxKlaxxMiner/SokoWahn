@@ -113,6 +113,21 @@ namespace SokoWahn
                             + "##   ###    #   .#\n"
                             + " ##### ####   #  #\n"
                             + "          ########\n";
+
+    /// <summary>
+    /// 229 moves, 76 pushes - RRRUUluRRRdddLdlUUUluRllluurrDullddrRdrddrruuuuuluurDDDDDuuuurrrddlUrdddlULrUruuLLLulDrddDrrrdddLUUddLLLdlUUdlllUUUrruullDDDDldRRRRRRRlllllluuuuurruRRurDDurrrddlUruLLrrdddLLrrddddlUUUruLdddllllllluuuuurrurrurDlllddLulDDDDldRRRRRR
+    /// </summary>
+    const string TestLevel7 = "     ####   \n"
+                            + "   ###  ####\n"
+                            + " ### $ $   #\n"
+                            + " #   #..#$ #\n"
+                            + " # $$#*.#  #\n"
+                            + " #   ....$ #\n"
+                            + "## # .#.#  #\n"
+                            + "# $##$#.#$ #\n"
+                            + "# @$    .$ #\n"
+                            + "##  #  ##  #\n"
+                            + " ###########\n";
     #endregion
 
     #region # static void CreateProject() // erstellt das Projekt mit allen Dateien
