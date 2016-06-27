@@ -160,7 +160,7 @@ namespace SokoWahn
           cl.Write("public void Clear()", f =>
           {
             f.Write("if (count <= 0) return;");
-            f.Write("for (int index = 0; index < buckets.Length; ++index) buckets[index] = -1;");
+            f.Write("Array.Clear(buckets, 0, buckets.Length);");
             f.Write("Array.Clear(entries, 0, count);");
             f.Write("freeList = -1;");
             f.Write("count = 0;");
@@ -170,14 +170,14 @@ namespace SokoWahn
           cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("internal bool ContainsKey(ulong key)", f =>
           {
-            f.Write("for (int index = buckets[key & bucketsMask]; index >= 0; index = entries[index].next) if (entries[index].key == key) return true;");
+            f.Write("for (int index = buckets[key & bucketsMask]; index != 0; index = entries[index].next) if (entries[index].key == key) return true;");
             f.Write("return false;");
           });
           cl.Write();
           cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("private int FindEntry(ulong key)", f =>
           {
-            f.Write("for (int index = buckets[key & bucketsMask]; index >= 0; index = entries[index].next) if (entries[index].key == key) return index;");
+            f.Write("for (int index = buckets[key & bucketsMask]; index != 0; index = entries[index].next) if (entries[index].key == key) return index;");
             f.Write("return -1;");
           });
           cl.Write();
@@ -193,7 +193,6 @@ namespace SokoWahn
             f.Write("int prime = GetDouble(capacity);");
             f.Write("buckets = new int[prime];");
             f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
-            f.Write("for (int index = 0; index < buckets.Length; ++index) buckets[index] = -1;");
             f.Write("entries = new Entry[prime];");
             f.Write("freeList = -1;");
           });
@@ -203,7 +202,7 @@ namespace SokoWahn
           {
             f.Write("var index1 = key & bucketsMask;");
             f.Write("int num2 = 0;");
-            f.Write("for (int index2 = buckets[index1]; index2 >= 0; index2 = entries[index2].next)", fr =>
+            f.Write("for (int index2 = buckets[index1]; index2 != 0; index2 = entries[index2].next)", fr =>
             {
               fr.Write("if (entries[index2].key == key)", i =>
               {
@@ -241,7 +240,6 @@ namespace SokoWahn
           cl.Write("private void Resize(int newSize)", f =>
           {
             f.Write("var numArray = new int[newSize];");
-            f.Write("for (int index = 0; index < numArray.Length; ++index) numArray[index] = -1;");
             f.Write("var entryArray = new Entry[newSize];");
             f.Write("Array.Copy(entries, 0, entryArray, 0, count);");
             f.Write("for (int index1 = 0; index1 < count; ++index1)", fr =>
@@ -253,27 +251,6 @@ namespace SokoWahn
             f.Write("buckets = numArray;");
             f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
             f.Write("entries = entryArray;");
-          });
-          cl.Write();
-          cl.Write("public bool Remove(ulong key)", f =>
-          {
-            f.Write("var index1 = key & bucketsMask;");
-            f.Write("int index2 = -1;");
-            f.Write("for (int index3 = buckets[index1]; index3 >= 0; index3 = entries[index3].next)", fr =>
-            {
-              fr.Write("if (entries[index3].key == key)", i =>
-              {
-                i.Write("if (index2 < 0) buckets[index1] = entries[index3].next; else entries[index2].next = entries[index3].next;");
-                i.Write("entries[index3].next = freeList;");
-                i.Write("entries[index3].key = default(ulong);");
-                i.Write("entries[index3].value = default(TValue);");
-                i.Write("freeList = index3;");
-                i.Write("++freeCount;");
-                i.Write("return true;");
-              });
-              fr.Write("index2 = index3;");
-            });
-            f.Write("return false;");
           });
           cl.Write();
           cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
