@@ -122,6 +122,7 @@ namespace SokoWahn
       csDictFast.Write("#region # using *.*");
       csDictFast.Write();
       csDictFast.Write("using System;");
+      csDictFast.Write("using System.Runtime.CompilerServices;");
       csDictFast.Write();
       csDictFast.Write("// ReSharper disable UnusedMember.Global");
       csDictFast.Write();
@@ -135,6 +136,7 @@ namespace SokoWahn
         ns.Write("sealed class DictionaryFastCrc<TValue> where TValue : struct", cl =>
         {
           cl.Write("private int[] buckets = new int[1];");
+          cl.Write("private ulong bucketsMask;");
           cl.Write("private Entry[] entries = new Entry[1];");
           cl.Write("private int count;");
           cl.Write("private int freeList;");
@@ -148,7 +150,7 @@ namespace SokoWahn
               g.Write("if (entry >= 0) return entries[entry].value;");
               g.Write("throw new Exception(\"key not found\");");
             });
-            th.Write("set{ Insert(key, value, false); }");
+            th.Write("set { Insert(key, value, false); }");
           });
           cl.Write();
           cl.Write("internal DictionaryFastCrc(int capacity = 1) { Initialize(Math.Max(1, capacity)); }");
@@ -165,15 +167,17 @@ namespace SokoWahn
             f.Write("freeCount = 0;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("internal bool ContainsKey(ulong key)", f =>
           {
-            f.Write("for (int index = buckets[key & ((ulong)buckets.Length - 1)]; index >= 0; index = entries[index].next) if (entries[index].key == key) return true;");
+            f.Write("for (int index = buckets[key & bucketsMask]; index >= 0; index = entries[index].next) if (entries[index].key == key) return true;");
             f.Write("return false;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("private int FindEntry(ulong key)", f =>
           {
-            f.Write("for (int index = buckets[key & ((ulong)buckets.Length - 1)]; index >= 0; index = entries[index].next) if (entries[index].key == key) return index;");
+            f.Write("for (int index = buckets[key & bucketsMask]; index >= 0; index = entries[index].next) if (entries[index].key == key) return index;");
             f.Write("return -1;");
           });
           cl.Write();
@@ -188,14 +192,16 @@ namespace SokoWahn
           {
             f.Write("int prime = GetDouble(capacity);");
             f.Write("buckets = new int[prime];");
+            f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
             f.Write("for (int index = 0; index < buckets.Length; ++index) buckets[index] = -1;");
             f.Write("entries = new Entry[prime];");
             f.Write("freeList = -1;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("private void Insert(ulong key, TValue value, bool add)", f =>
           {
-            f.Write("var index1 = key & ((ulong)buckets.Length - 1);");
+            f.Write("var index1 = key & bucketsMask;");
             f.Write("int num2 = 0;");
             f.Write("for (int index2 = buckets[index1]; index2 >= 0; index2 = entries[index2].next)", fr =>
             {
@@ -219,7 +225,7 @@ namespace SokoWahn
               e.Write("if (count == entries.Length)", i =>
               {
                 i.Write("Resize(GetDouble(count + 1));");
-                i.Write("index1 = key & ((ulong)buckets.Length - 1);");
+                i.Write("index1 = key & bucketsMask;");
               });
               e.Write("index3 = count;");
               e.Write("++count;");
@@ -245,12 +251,13 @@ namespace SokoWahn
               fr.Write("numArray[index2] = index1;");
             });
             f.Write("buckets = numArray;");
+            f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
             f.Write("entries = entryArray;");
           });
           cl.Write();
           cl.Write("public bool Remove(ulong key)", f =>
           {
-            f.Write("var index1 = key & ((ulong)buckets.Length - 1);");
+            f.Write("var index1 = key & bucketsMask;");
             f.Write("int index2 = -1;");
             f.Write("for (int index3 = buckets[index1]; index3 >= 0; index3 = entries[index3].next)", fr =>
             {
@@ -269,6 +276,7 @@ namespace SokoWahn
             f.Write("return false;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("public bool TryGetValue(ulong key, out TValue value)", f =>
           {
             f.Write("int entry = FindEntry(key);");
@@ -283,8 +291,8 @@ namespace SokoWahn
           cl.Write();
           cl.Write("private struct Entry", f =>
           {
-            f.Write("public int next;");
             f.Write("public ulong key;");
+            f.Write("public int next;");
             f.Write("public TValue value;");
           });
         });
