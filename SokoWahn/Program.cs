@@ -497,6 +497,116 @@ namespace SokoWahn
     }
     #endregion
 
+    #region # static HashSet<int> FilterWays(int playerPos, int width, HashSet<int> baseWays, HashSet<int> blocked) // Filtert einen begehbaren Bereich und gibt alle restlichen begehbaren Felder zurück
+    /// <summary>
+    /// Filtert einen begehbaren Bereich und gibt alle restlichen begehbaren Felder zurück
+    /// </summary>
+    /// <param name="playerPos">Startposition, wo sich der Spieler befindet</param>
+    /// <param name="width">Breite des Spielfeldes</param>
+    /// <param name="baseWays">Basis-Wege welche normalerweise begehbar sind</param>
+    /// <param name="blocked">einzelne blockierte Felder, welche nicht mehr begehbar sind</param>
+    /// <returns>alle Felder, welche nach dem filtern noch begehbar sind</returns>
+    static HashSet<int> FilterWays(int playerPos, int width, HashSet<int> baseWays, HashSet<int> blocked)
+    {
+      var filteredWays = new HashSet<int>();
+
+      var todo = new Stack<int>();
+      todo.Push(playerPos);
+      while (todo.Count > 0)
+      {
+        int pos = todo.Pop();
+        if (!baseWays.Contains(pos) || blocked.Contains(pos) || filteredWays.Contains(pos)) continue;
+        filteredWays.Add(pos);
+        todo.Push(pos - 1);
+        todo.Push(pos + 1);
+        todo.Push(pos - width);
+        todo.Push(pos + width);
+      }
+
+      return filteredWays;
+    }
+    #endregion
+
+    #region # static List<int> ScanBestTopLeftWay(int playerPos, int width, HashSet<int> baseWays, HashSet<int> blocked) // sucht die am weitesten erreichbare Position links-oben und gibt den vollständigen Weg zurück
+    /// <summary>
+    /// sucht die am weitesten erreichbare Position links-oben und gibt den vollständigen Weg zurück
+    /// </summary>
+    /// <param name="playerPos">Startposition des Spielers</param>
+    /// <param name="width">Breite des Spielfeldes</param>
+    /// <param name="baseWays">Basis-Felder, welche erreichbar sind</param>
+    /// <param name="blocked">Blockierte Felder, welche nicht mehr erreichbar sind</param>
+    /// <returns>vollständiger Weg</returns>
+    static List<int> ScanBestTopLeftWay(int playerPos, int width, HashSet<int> baseWays, HashSet<int> blocked)
+    {
+      var openWays = FilterWays(playerPos, width, baseWays, blocked);
+      int bestPos = openWays.OrderBy(x => x).First();
+
+      var searched = new Dictionary<int, int>();
+      int depth = 0;
+      var search = new List<int>();
+      search.Add(bestPos);
+      while (search.Count > 0)
+      {
+        depth++;
+        var next = new List<int>();
+        foreach (int pos in search)
+        {
+          if (!openWays.Contains(pos)) continue;
+          if (searched.ContainsKey(pos)) continue;
+          searched.Add(pos, depth);
+          next.Add(pos - 1);
+          next.Add(pos + 1);
+          next.Add(pos - width);
+          next.Add(pos + width);
+        }
+        search = next;
+      }
+
+      var result = new List<int>();
+      result.Add(playerPos);
+      for (int d = searched[playerPos] - 1; d > 0; d--)
+      {
+        playerPos = result.Last();
+        if (searched.ContainsKey(playerPos - width) && searched[playerPos - width] == d)
+        {
+          result.Add(playerPos - width);
+          continue;
+        }
+        if (searched.ContainsKey(playerPos - 1) && searched[playerPos - 1] == d)
+        {
+          result.Add(playerPos - 1);
+          continue;
+        }
+        if (searched.ContainsKey(playerPos + 1) && searched[playerPos + 1] == d)
+        {
+          result.Add(playerPos + 1);
+          continue;
+        }
+        if (searched.ContainsKey(playerPos + width) && searched[playerPos + width] == d)
+        {
+          result.Add(playerPos + width);
+          continue;
+        }
+        throw new Exception("search-error");
+      }
+
+      return result;
+    }
+    #endregion
+
+    static void ScanTopLeftFields(SokowahnField field)
+    {
+      int width = field.width;
+      var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
+
+      int searchPos = field.PlayerPos;
+      int blockedMax = field.boxesCount;
+      var blocked = new HashSet<int>();
+
+      var result = ScanBestTopLeftWay(searchPos, width, ways, blocked);
+
+    }
+
     static void Main()
     {
       //MiniGame(new SokowahnField(TestLevel1));
@@ -507,7 +617,10 @@ namespace SokoWahn
       //MiniSolver(new SokowahnField(TestLevel));
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
-      MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+      //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+      ScanTopLeftFields(new SokowahnField(TestLevel3));
+
+
 
       // --- Level 3 Hash-Stats ---
       // boxes todoLen todoLenEnd  Hashtable
