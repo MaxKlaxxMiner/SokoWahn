@@ -617,8 +617,8 @@ namespace SokoWahn
       //MiniSolver(new SokowahnField(TestLevel));
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
-      //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
-      ScanTopLeftFields(new SokowahnField(TestLevel3));
+      MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+      //ScanTopLeftFields(new SokowahnField(TestLevel3));
 
 
 

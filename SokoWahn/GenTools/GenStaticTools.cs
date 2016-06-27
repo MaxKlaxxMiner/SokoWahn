@@ -122,6 +122,7 @@ namespace SokoWahn
       csDictFast.Write("#region # using *.*");
       csDictFast.Write();
       csDictFast.Write("using System;");
+      csDictFast.Write("using System.Runtime.CompilerServices;");
       csDictFast.Write();
       csDictFast.Write("// ReSharper disable UnusedMember.Global");
       csDictFast.Write();
@@ -135,6 +136,7 @@ namespace SokoWahn
         ns.Write("sealed class DictionaryFastCrc<TValue> where TValue : struct", cl =>
         {
           cl.Write("private int[] buckets = new int[1];");
+          cl.Write("private ulong bucketsMask;");
           cl.Write("private Entry[] entries = new Entry[1];");
           cl.Write("private int count;");
           cl.Write("private int freeList;");
@@ -148,7 +150,7 @@ namespace SokoWahn
               g.Write("if (entry >= 0) return entries[entry].value;");
               g.Write("throw new Exception(\"key not found\");");
             });
-            th.Write("set{ Insert(key, value, false); }");
+            th.Write("set { Insert(key, value, false); }");
           });
           cl.Write();
           cl.Write("internal DictionaryFastCrc(int capacity = 1) { Initialize(Math.Max(1, capacity)); }");
@@ -158,22 +160,24 @@ namespace SokoWahn
           cl.Write("public void Clear()", f =>
           {
             f.Write("if (count <= 0) return;");
-            f.Write("for (int index = 0; index < buckets.Length; ++index) buckets[index] = -1;");
+            f.Write("Array.Clear(buckets, 0, buckets.Length);");
             f.Write("Array.Clear(entries, 0, count);");
             f.Write("freeList = -1;");
             f.Write("count = 0;");
             f.Write("freeCount = 0;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("internal bool ContainsKey(ulong key)", f =>
           {
-            f.Write("for (int index = buckets[key & ((ulong)buckets.Length - 1)]; index >= 0; index = entries[index].next) if (entries[index].key == key) return true;");
+            f.Write("for (int index = buckets[key & bucketsMask]; index != 0; index = entries[index].next) if (entries[index].key == key) return true;");
             f.Write("return false;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("private int FindEntry(ulong key)", f =>
           {
-            f.Write("for (int index = buckets[key & ((ulong)buckets.Length - 1)]; index >= 0; index = entries[index].next) if (entries[index].key == key) return index;");
+            f.Write("for (int index = buckets[key & bucketsMask]; index != 0; index = entries[index].next) if (entries[index].key == key) return index;");
             f.Write("return -1;");
           });
           cl.Write();
@@ -188,16 +192,17 @@ namespace SokoWahn
           {
             f.Write("int prime = GetDouble(capacity);");
             f.Write("buckets = new int[prime];");
-            f.Write("for (int index = 0; index < buckets.Length; ++index) buckets[index] = -1;");
+            f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
             f.Write("entries = new Entry[prime];");
             f.Write("freeList = -1;");
           });
           cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("private void Insert(ulong key, TValue value, bool add)", f =>
           {
-            f.Write("var index1 = key & ((ulong)buckets.Length - 1);");
+            f.Write("var index1 = key & bucketsMask;");
             f.Write("int num2 = 0;");
-            f.Write("for (int index2 = buckets[index1]; index2 >= 0; index2 = entries[index2].next)", fr =>
+            f.Write("for (int index2 = buckets[index1]; index2 != 0; index2 = entries[index2].next)", fr =>
             {
               fr.Write("if (entries[index2].key == key)", i =>
               {
@@ -219,7 +224,7 @@ namespace SokoWahn
               e.Write("if (count == entries.Length)", i =>
               {
                 i.Write("Resize(GetDouble(count + 1));");
-                i.Write("index1 = key & ((ulong)buckets.Length - 1);");
+                i.Write("index1 = key & bucketsMask;");
               });
               e.Write("index3 = count;");
               e.Write("++count;");
@@ -232,43 +237,33 @@ namespace SokoWahn
             f.Write("Resize(entries.Length);");
           });
           cl.Write();
-          cl.Write("private void Resize(int newSize)", f =>
+          cl.Write("private static unsafe void ResizeConvert(int* numArray, Entry[] entryArray, int limit)", f =>
+          {
+            f.Write("ulong mask = (ulong)entryArray.Length - 1;");
+            f.Write("if (limit > entryArray.Length) throw new IndexOutOfRangeException();");
+            f.Write("for (int i = 0; i < limit; i++)", fr =>
+            {
+              fr.Write("var index2 = entryArray[i].key & mask;");
+              fr.Write("entryArray[i].next = numArray[index2];");
+              fr.Write("numArray[index2] = i;");
+            });
+          });
+          cl.Write();
+          cl.Write("private unsafe void Resize(int newSize)", f =>
           {
             f.Write("var numArray = new int[newSize];");
-            f.Write("for (int index = 0; index < numArray.Length; ++index) numArray[index] = -1;");
             f.Write("var entryArray = new Entry[newSize];");
             f.Write("Array.Copy(entries, 0, entryArray, 0, count);");
-            f.Write("for (int index1 = 0; index1 < count; ++index1)", fr =>
+            f.Write("fixed (int* numArrayP = numArray)", fr =>
             {
-              fr.Write("var index2 = entryArray[index1].key & ((ulong)newSize - 1);");
-              fr.Write("entryArray[index1].next = numArray[index2];");
-              fr.Write("numArray[index2] = index1;");
+              fr.Write("ResizeConvert(numArrayP, entryArray, count);");
             });
             f.Write("buckets = numArray;");
+            f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
             f.Write("entries = entryArray;");
           });
           cl.Write();
-          cl.Write("public bool Remove(ulong key)", f =>
-          {
-            f.Write("var index1 = key & ((ulong)buckets.Length - 1);");
-            f.Write("int index2 = -1;");
-            f.Write("for (int index3 = buckets[index1]; index3 >= 0; index3 = entries[index3].next)", fr =>
-            {
-              fr.Write("if (entries[index3].key == key)", i =>
-              {
-                i.Write("if (index2 < 0) buckets[index1] = entries[index3].next; else entries[index2].next = entries[index3].next;");
-                i.Write("entries[index3].next = freeList;");
-                i.Write("entries[index3].key = default(ulong);");
-                i.Write("entries[index3].value = default(TValue);");
-                i.Write("freeList = index3;");
-                i.Write("++freeCount;");
-                i.Write("return true;");
-              });
-              fr.Write("index2 = index3;");
-            });
-            f.Write("return false;");
-          });
-          cl.Write();
+          cl.Write("[MethodImpl(MethodImplOptions.AggressiveInlining)]");
           cl.Write("public bool TryGetValue(ulong key, out TValue value)", f =>
           {
             f.Write("int entry = FindEntry(key);");
@@ -283,8 +278,8 @@ namespace SokoWahn
           cl.Write();
           cl.Write("private struct Entry", f =>
           {
-            f.Write("public int next;");
             f.Write("public ulong key;");
+            f.Write("public int next;");
             f.Write("public TValue value;");
           });
         });
