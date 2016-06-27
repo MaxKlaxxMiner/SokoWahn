@@ -237,16 +237,26 @@ namespace SokoWahn
             f.Write("Resize(entries.Length);");
           });
           cl.Write();
-          cl.Write("private void Resize(int newSize)", f =>
+          cl.Write("private static unsafe void ResizeConvert(int* numArray, Entry[] entryArray, int limit)", f =>
+          {
+            f.Write("ulong mask = (ulong)entryArray.Length - 1;");
+            f.Write("if (limit > entryArray.Length) throw new IndexOutOfRangeException();");
+            f.Write("for (int i = 0; i < limit; i++)", fr =>
+            {
+              fr.Write("var index2 = entryArray[i].key & mask;");
+              fr.Write("entryArray[i].next = numArray[index2];");
+              fr.Write("numArray[index2] = i;");
+            });
+          });
+          cl.Write();
+          cl.Write("private unsafe void Resize(int newSize)", f =>
           {
             f.Write("var numArray = new int[newSize];");
             f.Write("var entryArray = new Entry[newSize];");
             f.Write("Array.Copy(entries, 0, entryArray, 0, count);");
-            f.Write("for (int index1 = 0; index1 < count; ++index1)", fr =>
+            f.Write("fixed (int* numArrayP = numArray)", fr =>
             {
-              fr.Write("var index2 = entryArray[index1].key & ((ulong)newSize - 1);");
-              fr.Write("entryArray[index1].next = numArray[index2];");
-              fr.Write("numArray[index2] = index1;");
+              fr.Write("ResizeConvert(numArrayP, entryArray, count);");
             });
             f.Write("buckets = numArray;");
             f.Write("bucketsMask = (ulong)(buckets.Length - 1);");
