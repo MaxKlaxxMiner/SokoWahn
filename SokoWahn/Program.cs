@@ -599,12 +599,16 @@ namespace SokoWahn
       int width = field.width;
       var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
 
-      int searchPos = field.PlayerPos;
       int blockedMax = field.boxesCount;
       var blocked = new HashSet<int>();
 
-      var result = ScanBestTopLeftWay(searchPos, width, ways, blocked);
+      foreach (int searchPos in ways.OrderBy(x => x))
+      {
+        var result = ScanBestTopLeftWay(searchPos, width, ways, blocked);
+        Console.WriteLine(searchPos + " - " + string.Join(", ", result));
+      }
 
+      Console.ReadLine();
     }
 
     static void Main()
@@ -617,8 +621,8 @@ namespace SokoWahn
       //MiniSolver(new SokowahnField(TestLevel));
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
-      MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
-      //ScanTopLeftFields(new SokowahnField(TestLevel3));
+      //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+      ScanTopLeftFields(new SokowahnField(TestLevel3));
 
 
 
