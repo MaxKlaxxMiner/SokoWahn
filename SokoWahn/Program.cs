@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using SokoWahnCore;
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
@@ -588,8 +587,7 @@ namespace SokoWahn
 
       var searched = new Dictionary<int, int>();
       int depth = 0;
-      var search = new List<int>();
-      search.Add(bestPos);
+      var search = new List<int> { bestPos };
       while (search.Count > 0)
       {
         depth++;
@@ -607,8 +605,7 @@ namespace SokoWahn
         search = next;
       }
 
-      var result = new List<int>();
-      result.Add(playerPos);
+      var result = new List<int> { playerPos };
       for (int d = searched[playerPos] - 1; d > 0; d--)
       {
         playerPos = result.Last();
@@ -639,21 +636,38 @@ namespace SokoWahn
     }
     #endregion
 
+    static void TestScan(int searchPos, int width, HashSet<int> ways, HashSet<int> blocked, SokowahnField view)
+    {
+      view.SetBoxes(blocked.OrderBy(b => b).SelectArray(b => (ushort)b));
+      view.SetPlayerPos(searchPos);
+      Console.WriteLine(view.ToString());
+      Console.WriteLine();
+
+      var result = ScanBestTopLeftWay(searchPos, width, ways, blocked);
+      Console.WriteLine(searchPos + " - " + string.Join(", ", result));
+      Console.WriteLine();
+    }
+
     static void ScanTopLeftFields(SokowahnField field)
     {
-      Console.WriteLine(field.ToString());
+      var view = new SokowahnField(field);
 
       int width = field.width;
       var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
 
-      int blockedMax = field.boxesCount;
       var blocked = new HashSet<int>();
 
-      foreach (int searchPos in ways.OrderBy(x => x))
-      {
-        var result = ScanBestTopLeftWay(searchPos, width, ways, blocked);
-        Console.WriteLine(searchPos + " - " + string.Join(", ", result));
-      }
+      int searchPos = ways.OrderBy(x => x).Skip(10).First();
+
+      TestScan(searchPos, width, ways, blocked, view);
+
+      blocked.Add(searchPos + 1);
+
+      TestScan(searchPos, width, ways, blocked, view);
+
+      blocked.Add(searchPos + 3 * width + 2);
+
+      TestScan(searchPos, width, ways, blocked, view);
 
       Console.ReadLine();
     }
@@ -669,7 +683,7 @@ namespace SokoWahn
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
-      ScanTopLeftFields(new SokowahnField(TestLevel8));
+      ScanTopLeftFields(new SokowahnField(TestLevel3));
 
 
 
