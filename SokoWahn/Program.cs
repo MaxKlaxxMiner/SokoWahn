@@ -277,7 +277,7 @@ namespace SokoWahn
           case ConsoleKey.Backspace:
           {
             if (steps.Count == 0) break;
-            game.SetGameState(steps.Pop());
+            game.SetGameState(steps.Pop(), 0);
           } break;
 
           default: continue;
@@ -636,40 +636,74 @@ namespace SokoWahn
     }
     #endregion
 
-    static void TestScan(int searchPos, int width, HashSet<int> ways, HashSet<int> blocked, SokowahnField view)
+    static List<int> TestScan(int width, HashSet<int> ways, ushort[] state, SokowahnField view)
     {
-      view.SetBoxes(blocked.OrderBy(b => b).SelectArray(b => (ushort)b));
-      view.SetPlayerPos(searchPos);
+      view.SetGameState(state);
+      Console.SetCursorPosition(0, 1);
       Console.WriteLine(view.ToString());
       Console.WriteLine();
 
-      var result = ScanBestTopLeftWay(searchPos, width, ways, blocked);
-      Console.WriteLine(searchPos + " - " + string.Join(", ", result));
-      Console.WriteLine();
+      var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<int>(state.Skip(1).Select(x => (int)x)));
+      string line = state[0] + " - " + string.Join(", ", result.Skip(1));
+      Console.WriteLine(line);
+      Console.ReadLine();
+
+      Console.SetCursorPosition(0, Math.Max(0, Console.CursorTop - 2));
+      Console.WriteLine(new string(' ', line.Length));
+
+      return result;
+    }
+
+    /// <summary>
+    /// fügt eine Box zum Spielstatus hinzu
+    /// </summary>
+    /// <param name="state">bisheriger Spielstatus</param>
+    /// <param name="newBox">Box, welche hinzugefügt werden soll</param>
+    /// <returns>neuer Spielstatus</returns>
+    static ushort[] AppendBoxes(ushort[] state, int newBox)
+    {
+      var output = new ushort[state.Length + 1];
+      Array.Copy(state, output, state.Length);
+      int p = state.Length;
+      while (p > 1 && output[p - 1] > newBox)
+      {
+        output[p] = output[p - 1];
+        p--;
+      }
+      output[p] = (ushort)newBox;
+      return output;
     }
 
     static void ScanTopLeftFields(SokowahnField field)
     {
       var view = new SokowahnField(field);
+      int maxBoxes = field.boxesCount;
 
       int width = field.width;
       var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
 
-      var blocked = new HashSet<int>();
-
       int searchPos = ways.OrderBy(x => x).Skip(10).First();
 
-      TestScan(searchPos, width, ways, blocked, view);
+      var todo = new Stack<ushort[]>();
+      todo.Push(new[] { (ushort)searchPos });
 
-      blocked.Add(searchPos + 1);
+      while (todo.Count > 0)
+      {
+        Console.Title = "remain: " + todo.Count.ToString("N0");
+        var nextState = todo.Pop();
+        var result = TestScan(width, ways, nextState, view);
 
-      TestScan(searchPos, width, ways, blocked, view);
+        if (result.Count > 1)
+        {
+          if (nextState.Length <= maxBoxes)
+          {
+            todo.Push(AppendBoxes(nextState, result[1]));
+          }
+          nextState[0] = (ushort)result[1];
+          todo.Push(nextState);
+        }
+      }
 
-      blocked.Add(searchPos + 3 * width + 2);
-
-      TestScan(searchPos, width, ways, blocked, view);
-
-      Console.ReadLine();
     }
 
     static void Main()

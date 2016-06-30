@@ -97,7 +97,7 @@ namespace SokoWahn
       boxesRemain = sokowahnField.boxesRemain;
       posis = sokowahnField.posis.ToArray();
 
-      if (gameState != null) SetGameState(gameState);
+      if (gameState != null) SetGameState(gameState, 0);
     }
     #endregion
 
@@ -190,7 +190,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -212,7 +212,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -234,7 +234,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -256,7 +256,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -304,7 +304,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -326,7 +326,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -348,7 +348,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -370,7 +370,7 @@ namespace SokoWahn
               int outputOffset = outputCount * posis.Length;
               for (int i = 0; i < posis.Length; i++) output[outputOffset + i] = posis[i];
               outputCount++;
-              SetGameState(stateBackup);
+              SetGameState(stateBackup, 0);
             }
             else SetPlayerPos(stateBackup[0]);
           } break;
@@ -397,9 +397,9 @@ namespace SokoWahn
     /// <summary>
     /// setzt einen bestimmten Spielstatus
     /// </summary>
-    /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden soll</param>
-    /// <param name="ofs">optionaler Offset</param>
-    public void SetGameState(ushort[] gameState, int ofs = 0)
+    /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden sollen</param>
+    /// <param name="ofs">Offset</param>
+    public void SetGameState(ushort[] gameState, int ofs)
     {
       // --- altes Spiefeld räumen ---
       int playerPos = posis[0];
@@ -430,6 +430,49 @@ namespace SokoWahn
       boxesRemain = newRemain;
 
       Array.Copy(gameState, ofs, posis, 0, posis.Length);
+    }
+
+    /// <summary>
+    /// setzt einen bestimmten Spielstatus (mit automatischer Längenanpassung)
+    /// </summary>
+    /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden sollen</param>
+    public void SetGameState(ushort[] gameState)
+    {
+      // --- altes Spiefeld räumen ---
+      int playerPos = posis[0];
+      fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
+      for (int box = 1; box < posis.Length; box++)
+      {
+        int boxPos = posis[box];
+        fieldData[boxPos] = fieldData[boxPos] == '*' ? '.' : ' ';
+      }
+
+      // --- neues Spielfeld setzen ---
+      playerPos = gameState[0];
+      fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
+      int newRemain = 0;
+      for (int box = 1; box < gameState.Length; box++)
+      {
+        int boxPos = gameState[box];
+        if (fieldData[boxPos] == '.')
+        {
+          fieldData[boxPos] = '*';
+        }
+        else
+        {
+          fieldData[boxPos] = '$';
+          newRemain++;
+        }
+      }
+      boxesRemain = newRemain;
+
+      // --- Größe korrigieren, falls notwendig ---
+      if (posis.Length != gameState.Length)
+      {
+        posis = new ushort[gameState.Length];
+      }
+
+      Array.Copy(gameState, 0, posis, 0, gameState.Length);
     }
 
     /// <summary>
