@@ -687,21 +687,21 @@ namespace SokoWahn
       var todo = new Stack<ushort[]>();
       todo.Push(new[] { (ushort)searchPos });
 
+      var map = new List<int>();
+
       while (todo.Count > 0)
       {
         Console.Title = "remain: " + todo.Count.ToString("N0");
         var nextState = todo.Pop();
         var result = TestScan(width, ways, nextState, view);
 
-        if (result.Count > 1)
+        map.Add(result.Count - 1);
+        for (int r = 1; r < result.Count; r++)
         {
-          if (nextState.Length <= maxBoxes)
-          {
-            todo.Push(AppendBoxes(nextState, result[1]));
-          }
-          nextState[0] = (ushort)result[1];
-          todo.Push(nextState);
+          map.Add(result[r]);
+          map.Add(0); // <- marker + todo:add
         }
+
       }
 
     }
