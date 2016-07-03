@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using SokoWahnCore;
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
@@ -550,21 +551,21 @@ namespace SokoWahn
     /// <param name="baseWays">Basis-Wege welche normalerweise begehbar sind</param>
     /// <param name="blocked">einzelne blockierte Felder, welche nicht mehr begehbar sind</param>
     /// <returns>alle Felder, welche nach dem filtern noch begehbar sind</returns>
-    static HashSet<int> FilterWays(int playerPos, int width, HashSet<int> baseWays, HashSet<int> blocked)
+    static HashSet<ushort> FilterWays(ushort playerPos, int width, HashSet<ushort> baseWays, HashSet<ushort> blocked)
     {
-      var filteredWays = new HashSet<int>();
+      var filteredWays = new HashSet<ushort>();
 
-      var todo = new Stack<int>();
+      var todo = new Stack<ushort>();
       todo.Push(playerPos);
       while (todo.Count > 0)
       {
-        int pos = todo.Pop();
+        var pos = todo.Pop();
         if (!baseWays.Contains(pos) || blocked.Contains(pos) || filteredWays.Contains(pos)) continue;
         filteredWays.Add(pos);
-        todo.Push(pos - 1);
-        todo.Push(pos + 1);
-        todo.Push(pos - width);
-        todo.Push(pos + width);
+        todo.Push((ushort)(pos - 1));
+        todo.Push((ushort)(pos + 1));
+        todo.Push((ushort)(pos - width));
+        todo.Push((ushort)(pos + width));
       }
 
       return filteredWays;
@@ -580,53 +581,53 @@ namespace SokoWahn
     /// <param name="baseWays">Basis-Felder, welche erreichbar sind</param>
     /// <param name="blocked">Blockierte Felder, welche nicht mehr erreichbar sind</param>
     /// <returns>vollständiger Weg</returns>
-    static List<int> ScanBestTopLeftWay(int playerPos, int width, HashSet<int> baseWays, HashSet<int> blocked)
+    static List<ushort> ScanBestTopLeftWay(ushort playerPos, int width, HashSet<ushort> baseWays, HashSet<ushort> blocked)
     {
       var openWays = FilterWays(playerPos, width, baseWays, blocked);
-      int bestPos = openWays.OrderBy(x => x).First();
+      var bestPos = openWays.OrderBy(x => x).First();
 
-      var searched = new Dictionary<int, int>();
-      int depth = 0;
-      var search = new List<int> { bestPos };
+      var searched = new Dictionary<ushort, ushort>();
+      ushort depth = 0;
+      var search = new List<ushort> { bestPos };
       while (search.Count > 0)
       {
         depth++;
-        var next = new List<int>();
-        foreach (int pos in search)
+        var next = new List<ushort>();
+        foreach (var pos in search)
         {
           if (!openWays.Contains(pos)) continue;
           if (searched.ContainsKey(pos)) continue;
           searched.Add(pos, depth);
-          next.Add(pos - 1);
-          next.Add(pos + 1);
-          next.Add(pos - width);
-          next.Add(pos + width);
+          next.Add((ushort)(pos - 1));
+          next.Add((ushort)(pos + 1));
+          next.Add((ushort)(pos - width));
+          next.Add((ushort)(pos + width));
         }
         search = next;
       }
 
-      var result = new List<int> { playerPos };
-      for (int d = searched[playerPos] - 1; d > 0; d--)
+      var result = new List<ushort> { playerPos };
+      for (ushort d = (ushort)(searched[playerPos] - 1); d > 0; d--)
       {
         playerPos = result.Last();
-        if (searched.ContainsKey(playerPos - width) && searched[playerPos - width] == d)
+        if (searched.ContainsKey((ushort)(playerPos - width)) && searched[(ushort)(playerPos - width)] == d)
         {
-          result.Add(playerPos - width);
+          result.Add((ushort)(playerPos - width));
           continue;
         }
-        if (searched.ContainsKey(playerPos - 1) && searched[playerPos - 1] == d)
+        if (searched.ContainsKey((ushort)(playerPos - 1)) && searched[(ushort)(playerPos - 1)] == d)
         {
-          result.Add(playerPos - 1);
+          result.Add((ushort)(playerPos - 1));
           continue;
         }
-        if (searched.ContainsKey(playerPos + 1) && searched[playerPos + 1] == d)
+        if (searched.ContainsKey((ushort)(playerPos + 1)) && searched[(ushort)(playerPos + 1)] == d)
         {
-          result.Add(playerPos + 1);
+          result.Add((ushort)(playerPos + 1));
           continue;
         }
-        if (searched.ContainsKey(playerPos + width) && searched[playerPos + width] == d)
+        if (searched.ContainsKey((ushort)(playerPos + width)) && searched[(ushort)(playerPos + width)] == d)
         {
-          result.Add(playerPos + width);
+          result.Add((ushort)(playerPos + width));
           continue;
         }
         throw new Exception("search-error");
@@ -636,7 +637,7 @@ namespace SokoWahn
     }
     #endregion
 
-    static List<int> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<int> ways, SokowahnField view, bool debug = true)
+    static List<ushort> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<ushort> ways, SokowahnField view, bool debug = true)
     {
       var state = topLeftTodo.GetState();
       view.SetGameState(state);
@@ -651,7 +652,7 @@ namespace SokoWahn
         Console.WriteLine();
       }
 
-      var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<int>(state.Skip(1).Select(x => (int)x)));
+      var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<ushort>(state.Skip(1)));
       var resultFiltered = result.Where(f => !topLeftTodo.known.Contains(f)).ToList();
       if (result.Last() != resultFiltered.LastOrDefault()) resultFiltered.Add(result.Last());
 
@@ -666,9 +667,11 @@ namespace SokoWahn
       return resultFiltered;
     }
 
+    #region # struct TopLeftTodo // Struktur einer TopLeft-Aufgabe
     /// <summary>
     /// Struktur einer TopLeft-Aufgabe
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     struct TopLeftTodo
     {
       /// <summary>
@@ -678,15 +681,15 @@ namespace SokoWahn
       /// <summary>
       /// Feld, welches noch geprüft werden muss
       /// </summary>
-      public int todoPos;
+      public ushort todoPos;
       /// <summary>
       /// Felder, welche von Kisten blockiert wurden
       /// </summary>
-      public HashSet<int> blocked;
+      public HashSet<ushort> blocked;
       /// <summary>
       /// Felder, welche bereits geprüft wurden (inkl. blocker)
       /// </summary>
-      public HashSet<int> known;
+      public HashSet<ushort> known;
 
       /// <summary>
       /// generiert die aktuellen Spielstatus
@@ -694,11 +697,12 @@ namespace SokoWahn
       /// <returns>generierter Spielstatus</returns>
       public ushort[] GetState()
       {
-        var output = new List<ushort> { (ushort)todoPos };
-        output.AddRange(blocked.OrderBy(b => b).Select(b => (ushort)b));
+        var output = new List<ushort> { todoPos };
+        output.AddRange(blocked.OrderBy(b => b));
         return output.ToArray();
       }
     }
+    #endregion
 
     static void ScanTopLeftFields(SokowahnField field)
     {
@@ -706,16 +710,15 @@ namespace SokoWahn
       int maxBoxes = field.boxesCount;
 
       int width = field.width;
-      var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
+      var ways = FilterWays((ushort)field.PlayerPos, width, new HashSet<ushort>(Enumerable.Range(0, field.fieldData.Length).Select(f => (ushort)f)), new HashSet<ushort>(field.fieldData.Select((c, i) => new { c, i = (ushort)i }).Where(x => x.c == '#').Select(x => x.i)));
 
       var todo = new Queue<TopLeftTodo>();
-      var map = new List<int>();
+      var map = new List<int> { ways.Count };
 
-      map.Add(ways.Count);
       foreach (var f in ways.OrderBy(x => x))
       {
         map.Add(0); // Index Platzhalter
-        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = f, blocked = new HashSet<int>(), known = new HashSet<int>() });
+        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = f, blocked = new HashSet<ushort>(), known = new HashSet<ushort>() });
       }
 
       int tick = 0;
@@ -724,7 +727,7 @@ namespace SokoWahn
         int t = Environment.TickCount;
         if (t > tick + 50)
         {
-          Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0") + " (" + (Process.GetCurrentProcess().WorkingSet64/1048576.0).ToString("N1") + " MB)";
+          Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0") + " (" + (Process.GetCurrentProcess().WorkingSet64 / 1048576.0).ToString("N1") + " MB)";
           tick = t;
         }
 
@@ -740,7 +743,7 @@ namespace SokoWahn
           map.Add(0);  // Index Platzhalter
           if (next.blocked.Count < maxBoxes)
           {
-            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = result[r - 1], blocked = new HashSet<int>(next.blocked) { result[r] }, known = new HashSet<int>(next.known) });
+            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = result[r - 1], blocked = new HashSet<ushort>(next.blocked) { result[r] }, known = new HashSet<ushort>(next.known) });
           }
         }
       }
@@ -762,7 +765,7 @@ namespace SokoWahn
       ScanTopLeftFields(new SokowahnField(TestLevel5));
 
       #region # --- ScanTopLeftFields ---
-      // --- base ---
+      // --- base --------------------------------------
       // Level 1:       34.194 -    20 MB
       // Level 2:       19.747 -    20 MB
       // Level 3:      672.351 -   113 MB
