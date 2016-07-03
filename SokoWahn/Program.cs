@@ -636,25 +636,32 @@ namespace SokoWahn
     }
     #endregion
 
-    static List<int> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<int> ways, SokowahnField view)
+    static List<int> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<int> ways, SokowahnField view, bool debug = true)
     {
       var state = topLeftTodo.GetState();
       view.SetGameState(state);
-      Console.SetCursorPosition(0, 1);
-      Console.WriteLine(view.ToString());
-      Console.WriteLine();
+
+      if (debug)
+      {
+        Console.SetCursorPosition(0, Math.Max(0, Console.CursorTop - 2));
+        Console.WriteLine(new string(' ', Console.WindowWidth - 1));
+
+        Console.SetCursorPosition(0, 1);
+        Console.WriteLine(view.ToString());
+        Console.WriteLine();
+      }
 
       var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<int>(state.Skip(1).Select(x => (int)x)));
       var resultFiltered = result.Where(f => !topLeftTodo.known.Contains(f)).ToList();
       if (result.Last() != resultFiltered.LastOrDefault()) resultFiltered.Add(result.Last());
 
-      string line = state[0] + " - " + string.Join(", ", result.Skip(1));
-      Console.WriteLine(line);
-      Console.WriteLine();
-  //    Console.ReadLine();
-
-      Console.SetCursorPosition(0, Math.Max(0, Console.CursorTop - 2));
-      Console.WriteLine(new string(' ', line.Length));
+      if (debug)
+      {
+        string line = state[0] + " - " + string.Join(", ", result.Skip(1));
+        Console.WriteLine(line);
+        Console.WriteLine();
+        //    Console.ReadLine();
+      }
 
       return resultFiltered;
     }
@@ -701,17 +708,28 @@ namespace SokoWahn
       int width = field.width;
       var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
 
-      int startPos = ways.OrderBy(x => x).Skip(10).First();
-
       var todo = new Queue<TopLeftTodo>();
-      var map = new List<int> { 0 }; // +Index Platzhalter
-      todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = startPos, blocked = new HashSet<int>(), known = new HashSet<int>() });
+      var map = new List<int>();
 
+      map.Add(ways.Count);
+      foreach (var f in ways.OrderBy(x => x))
+      {
+        map.Add(0); // Index Platzhalter
+        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = f, blocked = new HashSet<int>(), known = new HashSet<int>() });
+      }
+
+      int tick = 0;
       while (todo.Count > 0)
       {
-        Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0");
+        int t = Environment.TickCount;
+        if (t > tick + 50)
+        {
+          Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0") + " (" + (Process.GetCurrentProcess().WorkingSet64/1048576.0).ToString("N1") + " MB)";
+          tick = t;
+        }
+
         var next = todo.Dequeue();
-        var result = TestScan(width, next, ways, view);
+        var result = TestScan(width, next, ways, view, t == tick);
 
         map[next.mapIndex] = map.Count;
         map.Add(result.Count - 1);
@@ -725,9 +743,9 @@ namespace SokoWahn
             todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = result[r - 1], blocked = new HashSet<int>(next.blocked) { result[r] }, known = new HashSet<int>(next.known) });
           }
         }
-
       }
 
+      Console.WriteLine("Hash: " + map.Count.ToString("N0"));
     }
 
     static void Main()
@@ -741,8 +759,19 @@ namespace SokoWahn
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
-      ScanTopLeftFields(new SokowahnField(TestLevel3));
+      ScanTopLeftFields(new SokowahnField(TestLevel5));
 
+      #region # --- ScanTopLeftFields ---
+      // --- base ---
+      // Level 1:       34.194 -    20 MB
+      // Level 2:       19.747 -    20 MB
+      // Level 3:      672.351 -   113 MB
+      // Level 4:    4.090.845 -   317 MB
+      // Level 5: * 15.245.914 - 5.093 MB (4.404.002)
+      // Level 6: * 14.234.848 - 5.053 MB (5.085.224)
+      // Level 7: * 15.718.791 - 5.017 MB (5.222.287)
+      // Level 8: *  7.197.767 - 5.091 MB (3.474.847)
+      #endregion
 
 
       // --- Level 3 Hash-Stats ---
