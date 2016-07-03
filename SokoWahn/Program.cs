@@ -636,42 +636,61 @@ namespace SokoWahn
     }
     #endregion
 
-    static List<int> TestScan(int width, HashSet<int> ways, ushort[] state, SokowahnField view)
+    static List<int> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<int> ways, SokowahnField view)
     {
+      var state = topLeftTodo.GetState();
       view.SetGameState(state);
       Console.SetCursorPosition(0, 1);
       Console.WriteLine(view.ToString());
       Console.WriteLine();
 
       var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<int>(state.Skip(1).Select(x => (int)x)));
+      var resultFiltered = result.Where(f => !topLeftTodo.known.Contains(f)).ToList();
+      if (result.Last() != resultFiltered.LastOrDefault()) resultFiltered.Add(result.Last());
+
       string line = state[0] + " - " + string.Join(", ", result.Skip(1));
       Console.WriteLine(line);
-      Console.ReadLine();
+      Console.WriteLine();
+  //    Console.ReadLine();
 
       Console.SetCursorPosition(0, Math.Max(0, Console.CursorTop - 2));
       Console.WriteLine(new string(' ', line.Length));
 
-      return result;
+      return resultFiltered;
     }
 
     /// <summary>
-    /// fügt eine Box zum Spielstatus hinzu
+    /// Struktur einer TopLeft-Aufgabe
     /// </summary>
-    /// <param name="state">bisheriger Spielstatus</param>
-    /// <param name="newBox">Box, welche hinzugefügt werden soll</param>
-    /// <returns>neuer Spielstatus</returns>
-    static ushort[] AppendBoxes(ushort[] state, int newBox)
+    struct TopLeftTodo
     {
-      var output = new ushort[state.Length + 1];
-      Array.Copy(state, output, state.Length);
-      int p = state.Length;
-      while (p > 1 && output[p - 1] > newBox)
+      /// <summary>
+      /// merkt sich die Map-Position, welche auf die eigene Struktur zeigt
+      /// </summary>
+      public int mapIndex;
+      /// <summary>
+      /// Feld, welches noch geprüft werden muss
+      /// </summary>
+      public int todoPos;
+      /// <summary>
+      /// Felder, welche von Kisten blockiert wurden
+      /// </summary>
+      public HashSet<int> blocked;
+      /// <summary>
+      /// Felder, welche bereits geprüft wurden (inkl. blocker)
+      /// </summary>
+      public HashSet<int> known;
+
+      /// <summary>
+      /// generiert die aktuellen Spielstatus
+      /// </summary>
+      /// <returns>generierter Spielstatus</returns>
+      public ushort[] GetState()
       {
-        output[p] = output[p - 1];
-        p--;
+        var output = new List<ushort> { (ushort)todoPos };
+        output.AddRange(blocked.OrderBy(b => b).Select(b => (ushort)b));
+        return output.ToArray();
       }
-      output[p] = (ushort)newBox;
-      return output;
     }
 
     static void ScanTopLeftFields(SokowahnField field)
@@ -682,24 +701,29 @@ namespace SokoWahn
       int width = field.width;
       var ways = FilterWays(field.PlayerPos, width, new HashSet<int>(Enumerable.Range(0, field.fieldData.Length)), new HashSet<int>(field.fieldData.Select((c, i) => new { c, i }).Where(x => x.c == '#').Select(x => x.i)));
 
-      int searchPos = ways.OrderBy(x => x).Skip(10).First();
+      int startPos = ways.OrderBy(x => x).Skip(10).First();
 
-      var todo = new Stack<ushort[]>();
-      todo.Push(new[] { (ushort)searchPos });
-
-      var map = new List<int>();
+      var todo = new Queue<TopLeftTodo>();
+      var map = new List<int> { 0 }; // +Index Platzhalter
+      todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = startPos, blocked = new HashSet<int>(), known = new HashSet<int>() });
 
       while (todo.Count > 0)
       {
-        Console.Title = "remain: " + todo.Count.ToString("N0");
-        var nextState = todo.Pop();
-        var result = TestScan(width, ways, nextState, view);
+        Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0");
+        var next = todo.Dequeue();
+        var result = TestScan(width, next, ways, view);
 
+        map[next.mapIndex] = map.Count;
         map.Add(result.Count - 1);
         for (int r = 1; r < result.Count; r++)
         {
           map.Add(result[r]);
-          map.Add(0); // <- marker + todo:add
+          next.known.Add(result[r]);
+          map.Add(0);  // Index Platzhalter
+          if (next.blocked.Count < maxBoxes)
+          {
+            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = result[r - 1], blocked = new HashSet<int>(next.blocked) { result[r] }, known = new HashSet<int>(next.known) });
+          }
         }
 
       }
