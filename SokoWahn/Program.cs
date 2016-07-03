@@ -639,7 +639,7 @@ namespace SokoWahn
 
     static List<ushort> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<ushort> ways, SokowahnField view, bool debug = true)
     {
-      var state = topLeftTodo.GetState();
+      var state = topLeftTodo.state;
       view.SetGameState(state);
 
       if (debug)
@@ -679,28 +679,35 @@ namespace SokoWahn
       /// </summary>
       public int mapIndex;
       /// <summary>
-      /// Feld, welches noch geprüft werden muss
+      /// Spielstatus, welches noch geprüft werden muss
       /// </summary>
-      public ushort todoPos;
-      /// <summary>
-      /// Felder, welche von Kisten blockiert wurden
-      /// </summary>
-      public HashSet<ushort> blocked;
+      public ushort[] state;
       /// <summary>
       /// Felder, welche bereits geprüft wurden (inkl. blocker)
       /// </summary>
       public HashSet<ushort> known;
+    }
+    #endregion
 
-      /// <summary>
-      /// generiert die aktuellen Spielstatus
-      /// </summary>
-      /// <returns>generierter Spielstatus</returns>
-      public ushort[] GetState()
+    #region # static ushort[] AppendBoxes(ushort[] boxes, ushort newBox) // fügt eine Box zum neuen Array hinzu (sortiert)
+    /// <summary>
+    /// fügt eine Box zum Spielstatus hinzu (sortiert)
+    /// </summary>
+    /// <param name="state">bisheriger Spielstatus (sortiert)</param>
+    /// <param name="newBox">Kiste, welche hinzugefügt werden soll</param>
+    /// <returns>neuer Spielstatus</returns>
+    static ushort[] AppendBoxes(ushort[] state, ushort newBox)
+    {
+      var output = new ushort[state.Length + 1];
+      Array.Copy(state, output, state.Length);
+      int p = state.Length;
+      while (p > 1 && output[p - 1] > newBox)
       {
-        var output = new List<ushort> { todoPos };
-        output.AddRange(blocked.OrderBy(b => b));
-        return output.ToArray();
+        output[p] = output[p - 1];
+        p--;
       }
+      output[p] = newBox;
+      return output;
     }
     #endregion
 
@@ -718,7 +725,7 @@ namespace SokoWahn
       foreach (var f in ways.OrderBy(x => x))
       {
         map.Add(0); // Index Platzhalter
-        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = f, blocked = new HashSet<ushort>(), known = new HashSet<ushort>() });
+        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = new[] { f }, known = new HashSet<ushort>() });
       }
 
       int tick = 0;
@@ -741,9 +748,11 @@ namespace SokoWahn
           map.Add(result[r]);
           next.known.Add(result[r]);
           map.Add(0);  // Index Platzhalter
-          if (next.blocked.Count < maxBoxes)
+          if (next.state.Length <= maxBoxes)
           {
-            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, todoPos = result[r - 1], blocked = new HashSet<ushort>(next.blocked) { result[r] }, known = new HashSet<ushort>(next.known) });
+            var newState = AppendBoxes(next.state, result[r]);
+            newState[0] = result[r - 1];
+            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, known = new HashSet<ushort>(next.known) });
           }
         }
       }
@@ -762,7 +771,7 @@ namespace SokoWahn
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
-      ScanTopLeftFields(new SokowahnField(TestLevel5));
+      ScanTopLeftFields(new SokowahnField(TestLevel4));
 
       #region # --- ScanTopLeftFields ---
       // --- base --------------------------------------
