@@ -653,7 +653,8 @@ namespace SokoWahn
       }
 
       var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<ushort>(state.Skip(1)));
-      var resultFiltered = result.Where(f => !topLeftTodo.known.Contains(f)).ToList();
+      var known = new HashSet<ushort>(topLeftTodo.known);
+      var resultFiltered = result.Where(f => !known.Contains(f)).ToList();
       if (result.Last() != resultFiltered.LastOrDefault()) resultFiltered.Add(result.Last());
 
       if (debug)
@@ -685,7 +686,7 @@ namespace SokoWahn
       /// <summary>
       /// Felder, welche bereits geprüft wurden (inkl. blocker)
       /// </summary>
-      public HashSet<ushort> known;
+      public ushort[] known;
     }
     #endregion
 
@@ -725,7 +726,7 @@ namespace SokoWahn
       foreach (var f in ways.OrderBy(x => x))
       {
         map.Add(0); // Index Platzhalter
-        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = new[] { f }, known = new HashSet<ushort>() });
+        todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = new[] { f }, known = new ushort[0] });
       }
 
       int tick = 0;
@@ -743,16 +744,17 @@ namespace SokoWahn
 
         map[next.mapIndex] = map.Count;
         map.Add(result.Count - 1);
+        var known = new HashSet<ushort>(next.known);
         for (int r = 1; r < result.Count; r++)
         {
           map.Add(result[r]);
-          next.known.Add(result[r]);
+          known.Add(result[r]);
           map.Add(0);  // Index Platzhalter
           if (next.state.Length <= maxBoxes)
           {
             var newState = AppendBoxes(next.state, result[r]);
             newState[0] = result[r - 1];
-            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, known = new HashSet<ushort>(next.known) });
+            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, known = known.ToArray() });
           }
         }
       }
@@ -771,18 +773,18 @@ namespace SokoWahn
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
-      ScanTopLeftFields(new SokowahnField(TestLevel4));
+      ScanTopLeftFields(new SokowahnField(TestLevel5));
 
       #region # --- ScanTopLeftFields ---
-      // --- base --------------------------------------
-      // Level 1:       34.194 -    20 MB
-      // Level 2:       19.747 -    20 MB
-      // Level 3:      672.351 -   113 MB
-      // Level 4:    4.090.845 -   317 MB
-      // Level 5: * 15.245.914 - 5.093 MB (4.404.002)
-      // Level 6: * 14.234.848 - 5.053 MB (5.085.224)
-      // Level 7: * 15.718.791 - 5.017 MB (5.222.287)
-      // Level 8: *  7.197.767 - 5.091 MB (3.474.847)
+      // --- base -------------------------------------- --- ushort-optimize ---------------------
+      //  Level 1:       34.194 -    20 MB                      34.194 -    19 MB
+      //  Level 2:       19.747 -    20 MB                      19.747 -    17 MB
+      //  Level 3:      672.351 -   113 MB                     672.351 -    41 MB
+      //  Level 4:    4.090.845 -   317 MB                   4.090.845 -   133 MB
+      //  Level 5: * 15.245.914 - 5.093 MB (4.404.002)   * 111.678.536 - 5.002 MB (24.615.628)
+      //  Level 6: * 14.234.848 - 5.053 MB (5.085.224)
+      //  Level 7: * 15.718.791 - 5.017 MB (5.222.287)
+      //  Level 8: *  7.197.767 - 5.091 MB (3.474.847)
       #endregion
 
 
