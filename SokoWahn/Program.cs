@@ -561,7 +561,7 @@ namespace SokoWahn
     static Dictionary<int, HashSet<ulong>> boxesHash;
     static HashSet<ushort> invalidBoxes;
 
-    static List<ushort> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<ushort> ways, SokowahnField view, bool debug = true)
+    static ushort[] TestScan(int width, TopLeftTodo topLeftTodo, HashSet<ushort> ways, SokowahnField view, bool debug = true)
     {
       var state = topLeftTodo.state;
       view.SetGameState(state);
@@ -578,19 +578,16 @@ namespace SokoWahn
         Console.SetCursorPosition(0, 1);
         Console.WriteLine(view.ToString());
         Console.WriteLine();
+
+        string line = state[0] + " - " + string.Join(", ", result.Skip(1));
+        Console.WriteLine(line);
       }
 
       var known = new HashSet<ushort>(topLeftTodo.known);
-      var resultFiltered = result.Where(f => !known.Contains(f)).ToList();
-      if (result.Last() != resultFiltered.LastOrDefault()) resultFiltered.Add(result.Last());
 
-      if (debug)
-      {
-        string line = state[0] + " - " + string.Join(", ", result.Skip(1));
-        Console.WriteLine(line);
-        Console.WriteLine();
-        //    Console.ReadLine();
-      }
+      if (known.Contains(result[result.Count - 1])) return new[] { result[result.Count - 1] };
+
+      var resultFiltered = result.Where(f => !known.Contains(f)).ToArray();
 
       return resultFiltered;
     }
@@ -793,19 +790,26 @@ namespace SokoWahn
 
         if (result != null)
         {
-          map[next.mapIndex] = map.Count;
-          map.Add(result.Count - 1);
-          var known = new HashSet<ushort>(next.known);
-          for (int r = 1; r < result.Count; r++)
+          if (result.Length <= 1)
           {
-            map.Add(result[r]);
-            known.Add(result[r]);
-            map.Add(0);  // Index Platzhalter
-            if (next.state.Length <= maxBoxes)
+            map[next.mapIndex] = -result[0];
+          }
+          else
+          {
+            map[next.mapIndex] = map.Count;
+            map.Add(result.Length - 1);
+            var known = new HashSet<ushort>(next.known);
+            for (int r = 1; r < result.Length; r++)
             {
-              var newState = AppendBoxesNewArray(next.state, result[r]);
-              newState[0] = result[r - 1];
-              todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, lastBox = result[r], known = known.ToArray() });
+              map.Add(result[r]);
+              known.Add(result[r]);
+              map.Add(0);  // Index Platzhalter
+              if (next.state.Length <= maxBoxes)
+              {
+                var newState = AppendBoxesNewArray(next.state, result[r]);
+                newState[0] = result[r - 1];
+                todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, lastBox = result[r], known = known.ToArray() });
+              }
             }
           }
         }
@@ -820,7 +824,9 @@ namespace SokoWahn
         }
       }
 
+      Console.WriteLine();
       Console.WriteLine("Map-Size: " + map.Count.ToString("N0") + " (" + (map.Count / 262144.0).ToString("N1") + " MB)");
+      Console.WriteLine();
     }
 
     static void Main()
@@ -847,12 +853,12 @@ namespace SokoWahn
       //  Level 6: * 14.234.848 - 5.053 MB (5.085.224)
       //  Level 7: * 15.718.791 - 5.017 MB (5.222.287)
       //  Level 8: *  7.197.767 - 5.091 MB (3.474.847)
-      // --- hash-blocker ------------------------------
-      //  Level 1:       26.479 -    15 MB
-      //  Level 2:        7.554 -    15 MB
-      //  Level 3:      193.988 -   126 MB
-      //  Level 4:    1.693.282 -   119 MB
-      //  Level 5:   17.309.502 -   796 MB (4 Boxes)
+      // --- hash-blocker ------------------------------ --- stopper-optimize --------------------
+      //  Level 1:       26.479 -    15 MB                      25.862 -    15 MB
+      //  Level 2:        7.554 -    15 MB                       6.610 -    15 MB
+      //  Level 3:      193.988 -   126 MB                     154.561 -   125 MB
+      //  Level 4:    1.693.282 -   119 MB                   1.447.603 -    89 MB
+      //  Level 5:   17.309.502 -   796 MB (4 Boxes)        15.457.591 -   654 MB (4 Boxes)
       #endregion
 
 
