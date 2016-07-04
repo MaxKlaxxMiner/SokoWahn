@@ -581,6 +581,7 @@ namespace SokoWahn
 
         string line = state[0] + " - " + string.Join(", ", result.Skip(1));
         Console.WriteLine(line);
+        Console.WriteLine();
       }
 
       var known = new HashSet<ushort>(topLeftTodo.known);
@@ -776,13 +777,13 @@ namespace SokoWahn
         if (map.Count > nextTick)
         {
           int t = Environment.TickCount;
-          if (t > tick + 250)
+          if (t > tick + 100)
           {
             Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0") + " (" + (Process.GetCurrentProcess().WorkingSet64 / 1048576.0).ToString("N1") + " MB)";
             tick = t;
             dbg = true;
           }
-          nextTick += 10000;
+          nextTick += 1000;
         }
 
         var next = todo.Dequeue();
@@ -818,7 +819,7 @@ namespace SokoWahn
           map[next.mapIndex] = -1; // ungültige Position
           if (dbg)
           {
-            nextTick -= 10000;
+            nextTick -= 1000;
             tick = 0;
           }
         }
