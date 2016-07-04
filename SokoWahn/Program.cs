@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using SokoWahnCore;
@@ -175,49 +174,6 @@ namespace SokoWahn
                             + "##################################################\n";
     #endregion
 
-    #region # static void CreateProject() // erstellt das Projekt mit allen Dateien
-    /// <summary>
-    /// erstellt das Projekt mit allen Dateien
-    /// </summary>
-    static void CreateProject()
-    {
-      Directory.CreateDirectory(PathData);
-      Directory.CreateDirectory(PathTest);
-
-      var solutionGuid = Guid.NewGuid();
-      var projectGuid = Guid.NewGuid();
-
-      const string ProjectName = "Sokowahn";
-      const string ProjectFile = ProjectName + ".csproj";
-      const string SolutionFile = ProjectName + ".sln";
-      const string CsFile = ProjectName + ".cs";
-
-      var csFile = new CsFile(true);
-      csFile.Write();
-      csFile.Write("using System;");
-      csFile.Write();
-      csFile.Write("namespace " + ProjectName, ns =>
-      {
-        ns.Write("unsafe class Program", cl =>
-        {
-          cl.Write("static void Main(string[] args)", main =>
-          {
-            main.Write("Console.WriteLine('Hello World!');");
-            main.Write("Console.ReadLine();");
-          });
-        });
-      });
-
-      csFile.SaveToFile(PathTest + CsFile);
-
-      var projectFile = CsProject.CreateCsProjectFile(projectGuid, ProjectName, new[] { "System" }, new[] { CsFile });
-      projectFile.SaveToFile(PathTest + ProjectFile);
-
-      var solutionFile = CsProject.CreateSolutionFile(solutionGuid, projectGuid, "Sokowahn", ProjectFile);
-      solutionFile.SaveToFile(PathTest + SolutionFile);
-    }
-    #endregion
-
     #region # static void MiniGame(SokowahnField field) // startet eine kleine spielbare Konsolen-Version eines Spielfeldes
     /// <summary>
     /// startet eine kleine spielbare Konsolen-Version eines Spielfeldes
@@ -333,51 +289,6 @@ namespace SokoWahn
     }
     #endregion
 
-    #region # static bool EdgeBoxCheck(char[] data, int pos, int w) // prüft, ob eine Kiste sich in einer nicht mehr lösbaren Position befindet
-    /// <summary>
-    /// prüft, ob eine Kiste sich in einer nicht mehr lösbaren Position befindet
-    /// </summary>
-    /// <param name="data">Daten des Spielfeldes</param>
-    /// <param name="pos">die Position der zu prüfenden Kiste</param>
-    /// <param name="w">breite des Spielfeldes</param>
-    /// <returns>true, wenn eine ungültige Stellung erkannt wurde</returns>
-    static bool EdgeBoxCheck(char[] data, int pos, int w)
-    {
-      if (data[pos] != '$') return false;
-
-      if (data[pos - 1] == '#' && data[pos - w] == '#') return true;
-      if (data[pos + 1] == '#' && data[pos - w] == '#') return true;
-      if (data[pos - 1] == '#' && data[pos + w] == '#') return true;
-      if (data[pos + 1] == '#' && data[pos + w] == '#') return true;
-
-      if ((data[pos - 1 - w] == '#' || data[pos - 1 - w] == '$' || data[pos - 1 - w] == '*') && (data[pos - 1] == '#' || data[pos - 1] == '$' || data[pos - 1] == '*') && (data[pos - w] == '#' || data[pos - w] == '$' || data[pos - w] == '*')) return true;
-      if ((data[pos + 1 - w] == '#' || data[pos + 1 - w] == '$' || data[pos + 1 - w] == '*') && (data[pos + 1] == '#' || data[pos + 1] == '$' || data[pos + 1] == '*') && (data[pos - w] == '#' || data[pos - w] == '$' || data[pos - w] == '*')) return true;
-      if ((data[pos - 1 + w] == '#' || data[pos - 1 + w] == '$' || data[pos - 1 + w] == '*') && (data[pos - 1] == '#' || data[pos - 1] == '$' || data[pos - 1] == '*') && (data[pos + w] == '#' || data[pos + w] == '$' || data[pos + w] == '*')) return true;
-      if ((data[pos + 1 + w] == '#' || data[pos + 1 + w] == '$' || data[pos + 1 + w] == '*') && (data[pos + 1] == '#' || data[pos + 1] == '$' || data[pos + 1] == '*') && (data[pos + w] == '#' || data[pos + w] == '$' || data[pos + w] == '*')) return true;
-
-      return false;
-    }
-    #endregion
-    #region # static bool EdgeFailCheck(SokowahnField field) // prüft, ob der Spieler gerade eine Kiste in die Ecke geschoben hat
-    /// <summary>
-    /// prüft, ob der Spieler gerade eine Kiste in die Ecke geschoben hat
-    /// </summary>
-    /// <param name="field">Spielfeld, welches überprüft werden soll</param>
-    /// <returns>true, wenn eine nicht mehr Lösbare Stellung gefunden wurde</returns>
-    static bool EdgeFailCheck(SokowahnField field)
-    {
-      var data = field.fieldData;
-      int pos = field.PlayerPos;
-
-      if (EdgeBoxCheck(data, pos - 1, field.width)) return true;
-      if (EdgeBoxCheck(data, pos + 1, field.width)) return true;
-      if (EdgeBoxCheck(data, pos - field.width, field.width)) return true;
-      if (EdgeBoxCheck(data, pos + field.width, field.width)) return true;
-
-      return false;
-    }
-    #endregion
-
     #region # static void MiniSolver(SokowahnField field) // einfaches Tool zum finden irgendeiner Lösung eines Spielfeldes
     /// <summary>
     /// einfaches Tool zum finden irgendeiner Lösung eines Spielfeldes
@@ -411,7 +322,6 @@ namespace SokoWahn
           Console.WriteLine("Hash: " + hashCrcs.Count.ToString("N0") + " (" + (100.0 / 48000000 * hashCrcs.Count).ToString("N1") + " %)");
         }
 
-        if (EdgeFailCheck(scanner)) continue;
         scanner.SetPlayerPos(ScanTopLeftPos(scanner));
 
         var crc = scanner.GetGameStateCrc();
@@ -658,47 +568,7 @@ namespace SokoWahn
 
       var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<ushort>(state.Skip(1)));
 
-      int boxesCount = state.Length - 1;
-      if (boxesCount > 1)
-      {
-        HashSet<ulong> bHash;
-        if (boxesHash.TryGetValue(boxesCount, out bHash))
-        {
-          ulong crc = Crc64.Start.Crc64Update(result.Last()).Crc64Update(state, 1, boxesCount);
-          if (!bHash.Contains(crc))
-          {
-            return null;
-          }
-        }
-        else
-        {
-          // --- schnelle Vorprüfung ---
-          for (int b = 1; b < state.Length; b++)
-          {
-            if (invalidBoxes.Contains(state[b])) return null;
-          }
-
-          // --- bestmögliche Hashprüfung ---
-          int boxesCountMin = boxesHash.Count;
-          bHash = boxesHash[boxesCountMin];
-          var checkBoxes = topLeftTodo.state.Skip(1).Where(b => b != topLeftTodo.lastBox).ToArray();
-          var checkState = new ushort[1 + boxesCountMin];
-          checkState[0] = topLeftTodo.state[0];
-          foreach (var variant in SokoTools.FieldBoxesVariants(checkBoxes.Length, boxesCountMin - 1, false))
-          {
-            for (int v = 0; v < variant.Length; v++) checkState[v + 1] = checkBoxes[variant[v]];
-            AppendBoxes(checkState, topLeftTodo.lastBox);
-            view.SetGameState(checkState);
-            view.SetPlayerPos(ScanTopLeftPos(view));
-            ulong crc = view.GetGameStateCrc();
-            if (!bHash.Contains(crc))
-            {
-              return null;
-            }
-          }
-
-        }
-      }
+      if (state.Length > 1 && CheckDeadlock(topLeftTodo, view, result[result.Count - 1])) return null;
 
       if (debug)
       {
@@ -723,6 +593,48 @@ namespace SokoWahn
       }
 
       return resultFiltered;
+    }
+
+    static bool CheckDeadlock(TopLeftTodo topLeftTodo, SokowahnField view, ushort playerTopLeft)
+    {
+      HashSet<ulong> bHash;
+      int boxesCount = topLeftTodo.state.Length - 1;
+      if (boxesHash.TryGetValue(boxesCount, out bHash))
+      {
+        ulong crc = Crc64.Start.Crc64Update(playerTopLeft).Crc64Update(topLeftTodo.state, 1, boxesCount);
+        if (!bHash.Contains(crc))
+        {
+          return true;
+        }
+      }
+      else
+      {
+        // --- schnelle Vorprüfung ---
+        for (int b = 1; b < topLeftTodo.state.Length; b++)
+        {
+          if (invalidBoxes.Contains(topLeftTodo.state[b])) return true;
+        }
+
+        // --- bestmögliche Hashprüfung ---
+        int boxesCountMin = boxesHash.Count;
+        bHash = boxesHash[boxesCountMin];
+        var checkBoxes = topLeftTodo.state.Skip(1).Where(b => b != topLeftTodo.lastBox).ToArray();
+        var checkState = new ushort[1 + boxesCountMin];
+        checkState[0] = playerTopLeft;
+        foreach (var variant in SokoTools.FieldBoxesVariants(checkBoxes.Length, boxesCountMin - 1, false))
+        {
+          for (int v = 0; v < variant.Length; v++) checkState[v + 1] = checkBoxes[variant[v]];
+          AppendBoxes(checkState, topLeftTodo.lastBox);
+          view.SetGameState(checkState);
+          view.SetPlayerPos(ScanTopLeftPos(view));
+          ulong crc = view.GetGameStateCrc();
+          if (!bHash.Contains(crc))
+          {
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     #region # struct TopLeftTodo // Struktur einer TopLeft-Aufgabe
@@ -803,6 +715,7 @@ namespace SokoWahn
         time = Environment.TickCount - time;
         boxesHash.Add(b, new HashSet<ulong>(hash.First().Keys));
         if (time > 10000) break;
+        if (time > 250 && b == field.boxesCount - 1) break;
       }
       Console.Clear();
 
@@ -907,7 +820,7 @@ namespace SokoWahn
         }
       }
 
-      Console.WriteLine("Hash: " + map.Count.ToString("N0"));
+      Console.WriteLine("Map-Size: " + map.Count.ToString("N0") + " (" + (map.Count / 262144.0).ToString("N1") + " MB)");
     }
 
     static void Main()
@@ -917,12 +830,12 @@ namespace SokoWahn
       //MiniGame(new SokowahnField(TestLevel4));
       //MiniGame(new SokowahnField(TestLevel2));
 
-      //MiniSolver(new SokowahnField(TestLevel));
+      //MiniSolver(new SokowahnField(TestLevel1));
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
 
-      ScanTopLeftFields(new SokowahnField(TestLevel5));
+      ScanTopLeftFields(new SokowahnField(TestLevel3));
 
       #region # --- ScanTopLeftFields ---
       // --- base -------------------------------------- --- ushort-optimize ---------------------
@@ -937,14 +850,13 @@ namespace SokoWahn
       // --- hash-blocker ------------------------------
       //  Level 1:       26.479 -    15 MB
       //  Level 2:        7.554 -    15 MB
-      //  Level 3:      193.988 -   337 MB
-      //  Level 4:    1.693.282 -   123 MB
-      //  Level 5:   17.309.502 -   797 MB
-      //  Level 6:
+      //  Level 3:      193.988 -   126 MB
+      //  Level 4:    1.693.282 -   119 MB
+      //  Level 5:   17.309.502 -   796 MB (4 Boxes)
       #endregion
 
 
-      // --- Level 3 Hash-Stats ---
+      #region # // --- Level 3 Hash-Stats ---
       // boxes todoLen todoLenEnd  Hashtable
       //     1      18        249         47
       //     2      60     11.392      1.025
@@ -952,10 +864,9 @@ namespace SokoWahn
       //     4     102  2.865.660    127.887
       //     5      42  6.207.453    843.347
       //     6       8  5.055.224  4.021.944
+      #endregion
 
       //Console.ReadLine();
-
-      // CreateProject();
     }
   }
 }
