@@ -432,26 +432,33 @@ namespace SokoWahn
     }
     #endregion
 
-    #region # static void MiniSolverHashBuilder(SokowahnField field) // analysiert alle möglichen Kistenstellungen mit einfachen (langsamen) Methoden
+    #region # static List<Dictionary<ulong, ushort>> MiniSolverHashBuilder(SokowahnField field, int minBoxes = 1, int maxBoxes = int.MaxValue) // analysiert alle möglichen Kistenstellungen mit einfachen (langsamen) Methoden
     /// <summary>
     /// analysiert alle möglichen Kistenstellungen mit einfachen (langsamen) Methoden
     /// </summary>
     /// <param name="field">Feld, welches durchsucht werden soll</param>
-    static void MiniSolverHashBuilder(SokowahnField field)
+    /// <param name="minBoxes">minimale Anzahl der Kisten, welche berechnet werden sollen</param>
+    /// <param name="maxBoxes">maximale Anzahl der Kisten, welche berechnet werden sollen</param>
+    static List<Dictionary<ulong, ushort>> MiniSolverHashBuilder(SokowahnField field, int minBoxes = 1, int maxBoxes = int.MaxValue)
     {
       var scanner = new SokowahnField(field);
+
       Console.WriteLine(scanner.ToString());
       Console.WriteLine();
 
       var targetFields = scanner.fieldData.Select((c, i) => new { c, i }).Where(f => f.c == '.' || f.c == '*').Select(f => (ushort)f.i).ToArray();
+      if (targetFields.Length < maxBoxes) maxBoxes = targetFields.Length;
+      if (minBoxes < 1 || minBoxes > maxBoxes) throw new ArgumentException("minBoxes");
 
-      for (int boxesCount = 1; boxesCount <= targetFields.Length; boxesCount++)
+      var hashResults = new List<Dictionary<ulong, ushort>>();
+
+      for (int boxesCount = minBoxes; boxesCount <= maxBoxes; boxesCount++)
       {
 
         // --- Variablen initialisieren ---
         var boxes = new ushort[boxesCount];
         int stateLen = 1 + boxes.Length;
-        var todoBuf = new ushort[16777216 / (stateLen + 1) * (stateLen + 1)];
+        var todoBuf = new ushort[16777216 * 2 / (stateLen + 1) * (stateLen + 1)];
         int todoPos = 0, todoLen = 0;
         var stopWatch = Stopwatch.StartNew();
 
@@ -526,8 +533,12 @@ namespace SokoWahn
           Console.WriteLine("[" + boxesCount + "] ok. Hash: " + hash.Count.ToString("N0") + " (" + stopWatch.ElapsedMilliseconds.ToString("N0") + " ms)");
           Console.ForegroundColor = ConsoleColor.Gray;
           Console.WriteLine();
+
+          hashResults.Add(hash);
         }
       }
+
+      return hashResults;
     }
     #endregion
 
@@ -637,10 +648,57 @@ namespace SokoWahn
     }
     #endregion
 
+    static Dictionary<int, HashSet<ulong>> boxesHash;
+    static HashSet<ushort> invalidBoxes;
+
     static List<ushort> TestScan(int width, TopLeftTodo topLeftTodo, HashSet<ushort> ways, SokowahnField view, bool debug = true)
     {
       var state = topLeftTodo.state;
       view.SetGameState(state);
+
+      var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<ushort>(state.Skip(1)));
+
+      int boxesCount = state.Length - 1;
+      if (boxesCount > 1)
+      {
+        HashSet<ulong> bHash;
+        if (boxesHash.TryGetValue(boxesCount, out bHash))
+        {
+          ulong crc = Crc64.Start.Crc64Update(result.Last()).Crc64Update(state, 1, boxesCount);
+          if (!bHash.Contains(crc))
+          {
+            return null;
+          }
+        }
+        else
+        {
+          // --- schnelle Vorprüfung ---
+          for (int b = 1; b < state.Length; b++)
+          {
+            if (invalidBoxes.Contains(state[b])) return null;
+          }
+
+          // --- bestmögliche Hashprüfung ---
+          int boxesCountMin = boxesHash.Count;
+          bHash = boxesHash[boxesCountMin];
+          var checkBoxes = topLeftTodo.state.Skip(1).Where(b => b != topLeftTodo.lastBox).ToArray();
+          var checkState = new ushort[1 + boxesCountMin];
+          checkState[0] = topLeftTodo.state[0];
+          foreach (var variant in SokoTools.FieldBoxesVariants(checkBoxes.Length, boxesCountMin - 1, false))
+          {
+            for (int v = 0; v < variant.Length; v++) checkState[v + 1] = checkBoxes[variant[v]];
+            AppendBoxes(checkState, topLeftTodo.lastBox);
+            view.SetGameState(checkState);
+            view.SetPlayerPos(ScanTopLeftPos(view));
+            ulong crc = view.GetGameStateCrc();
+            if (!bHash.Contains(crc))
+            {
+              return null;
+            }
+          }
+
+        }
+      }
 
       if (debug)
       {
@@ -652,7 +710,6 @@ namespace SokoWahn
         Console.WriteLine();
       }
 
-      var result = ScanBestTopLeftWay(state[0], width, ways, new HashSet<ushort>(state.Skip(1)));
       var known = new HashSet<ushort>(topLeftTodo.known);
       var resultFiltered = result.Where(f => !known.Contains(f)).ToList();
       if (result.Last() != resultFiltered.LastOrDefault()) resultFiltered.Add(result.Last());
@@ -680,6 +737,10 @@ namespace SokoWahn
       /// </summary>
       public int mapIndex;
       /// <summary>
+      /// letzte Kiste, welche hinzugefügt wurde
+      /// </summary>
+      public ushort lastBox;
+      /// <summary>
       /// Spielstatus, welches noch geprüft werden muss
       /// </summary>
       public ushort[] state;
@@ -696,8 +757,24 @@ namespace SokoWahn
     /// </summary>
     /// <param name="state">bisheriger Spielstatus (sortiert)</param>
     /// <param name="newBox">Kiste, welche hinzugefügt werden soll</param>
+    static void AppendBoxes(ushort[] state, ushort newBox)
+    {
+      int p = state.Length - 1;
+      while (p > 1 && state[p - 1] > newBox)
+      {
+        state[p] = state[p - 1];
+        p--;
+      }
+      state[p] = newBox;
+    }
+
+    /// <summary>
+    /// fügt eine Box zum Spielstatus hinzu (sortiert)
+    /// </summary>
+    /// <param name="state">bisheriger Spielstatus (sortiert)</param>
+    /// <param name="newBox">Kiste, welche hinzugefügt werden soll</param>
     /// <returns>neuer Spielstatus</returns>
-    static ushort[] AppendBoxes(ushort[] state, ushort newBox)
+    static ushort[] AppendBoxesNewArray(ushort[] state, ushort newBox)
     {
       var output = new ushort[state.Length + 1];
       Array.Copy(state, output, state.Length);
@@ -714,11 +791,62 @@ namespace SokoWahn
 
     static void ScanTopLeftFields(SokowahnField field)
     {
+      boxesHash = new Dictionary<int, HashSet<ulong>>();
+      for (int b = 1; b <= field.boxesCount; b++)
+      {
+        Console.Clear();
+        Console.WriteLine();
+        Console.WriteLine(" --- Calc Boxes: " + b + " ---");
+        Console.WriteLine();
+        int time = Environment.TickCount;
+        var hash = MiniSolverHashBuilder(field, b, b);
+        time = Environment.TickCount - time;
+        boxesHash.Add(b, new HashSet<ulong>(hash.First().Keys));
+        if (time > 10000) break;
+      }
+      Console.Clear();
+
       var view = new SokowahnField(field);
       int maxBoxes = field.boxesCount;
 
       int width = field.width;
       var ways = FilterWays((ushort)field.PlayerPos, width, new HashSet<ushort>(Enumerable.Range(0, field.fieldData.Length).Select(f => (ushort)f)), new HashSet<ushort>(field.fieldData.Select((c, i) => new { c, i = (ushort)i }).Where(x => x.c == '#').Select(x => x.i)));
+
+      #region # // --- ungültige Einzel-Box Positionen suchen ---
+      invalidBoxes = new HashSet<ushort>();
+      foreach (ushort box in ways)
+      {
+        var checkCrc = new List<ulong>();
+        if (ways.Contains((ushort)(box - 1)))
+        {
+          view.SetGameState(new[] { (ushort)(box - 1), box });
+          view.SetPlayerPos(ScanTopLeftPos(view));
+          checkCrc.Add(view.GetGameStateCrc());
+        }
+        if (ways.Contains((ushort)(box + 1)))
+        {
+          view.SetGameState(new[] { (ushort)(box + 1), box });
+          view.SetPlayerPos(ScanTopLeftPos(view));
+          checkCrc.Add(view.GetGameStateCrc());
+        }
+        if (ways.Contains((ushort)(box - width)))
+        {
+          view.SetGameState(new[] { (ushort)(box - width), box });
+          view.SetPlayerPos(ScanTopLeftPos(view));
+          checkCrc.Add(view.GetGameStateCrc());
+        }
+        if (ways.Contains((ushort)(box + width)))
+        {
+          view.SetGameState(new[] { (ushort)(box + width), box });
+          view.SetPlayerPos(ScanTopLeftPos(view));
+          checkCrc.Add(view.GetGameStateCrc());
+        }
+        if (!checkCrc.Any(crc => boxesHash[1].Contains(crc)))
+        {
+          invalidBoxes.Add(box);
+        }
+      }
+      #endregion
 
       var todo = new Queue<TopLeftTodo>();
       var map = new List<int> { ways.Count };
@@ -730,31 +858,51 @@ namespace SokoWahn
       }
 
       int tick = 0;
+      int nextTick = 0;
       while (todo.Count > 0)
       {
-        int t = Environment.TickCount;
-        if (t > tick + 50)
+        bool dbg = false;
+
+        if (map.Count > nextTick)
         {
-          Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0") + " (" + (Process.GetCurrentProcess().WorkingSet64 / 1048576.0).ToString("N1") + " MB)";
-          tick = t;
+          int t = Environment.TickCount;
+          if (t > tick + 250)
+          {
+            Console.Title = "remain: " + todo.Count.ToString("N0") + " / " + map.Count.ToString("N0") + " (" + (Process.GetCurrentProcess().WorkingSet64 / 1048576.0).ToString("N1") + " MB)";
+            tick = t;
+            dbg = true;
+          }
+          nextTick += 10000;
         }
 
         var next = todo.Dequeue();
-        var result = TestScan(width, next, ways, view, t == tick);
+        var result = TestScan(width, next, ways, view, dbg);
 
-        map[next.mapIndex] = map.Count;
-        map.Add(result.Count - 1);
-        var known = new HashSet<ushort>(next.known);
-        for (int r = 1; r < result.Count; r++)
+        if (result != null)
         {
-          map.Add(result[r]);
-          known.Add(result[r]);
-          map.Add(0);  // Index Platzhalter
-          if (next.state.Length <= maxBoxes)
+          map[next.mapIndex] = map.Count;
+          map.Add(result.Count - 1);
+          var known = new HashSet<ushort>(next.known);
+          for (int r = 1; r < result.Count; r++)
           {
-            var newState = AppendBoxes(next.state, result[r]);
-            newState[0] = result[r - 1];
-            todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, known = known.ToArray() });
+            map.Add(result[r]);
+            known.Add(result[r]);
+            map.Add(0);  // Index Platzhalter
+            if (next.state.Length <= maxBoxes)
+            {
+              var newState = AppendBoxesNewArray(next.state, result[r]);
+              newState[0] = result[r - 1];
+              todo.Enqueue(new TopLeftTodo { mapIndex = map.Count - 1, state = newState, lastBox = result[r], known = known.ToArray() });
+            }
+          }
+        }
+        else
+        {
+          map[next.mapIndex] = -1; // ungültige Position
+          if (dbg)
+          {
+            nextTick -= 10000;
+            tick = 0;
           }
         }
       }
@@ -773,6 +921,7 @@ namespace SokoWahn
 
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+
       ScanTopLeftFields(new SokowahnField(TestLevel5));
 
       #region # --- ScanTopLeftFields ---
@@ -785,6 +934,13 @@ namespace SokoWahn
       //  Level 6: * 14.234.848 - 5.053 MB (5.085.224)
       //  Level 7: * 15.718.791 - 5.017 MB (5.222.287)
       //  Level 8: *  7.197.767 - 5.091 MB (3.474.847)
+      // --- hash-blocker ------------------------------
+      //  Level 1:       26.479 -    15 MB
+      //  Level 2:        7.554 -    15 MB
+      //  Level 3:      193.988 -   337 MB
+      //  Level 4:    1.693.282 -   123 MB
+      //  Level 5:   17.309.502 -   797 MB
+      //  Level 6:
       #endregion
 
 
