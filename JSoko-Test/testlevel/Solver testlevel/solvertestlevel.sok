@@ -1,0 +1,111 @@
+
+
+Solvertest - Simple 1
+
+###########
+#@$      .#
+###########
+
+
+Solvertest - Simple 2
+
+###########
+#         #
+#@$  .$  .#
+###########
+
+
+Solvertest - Simple 3
+
+########
+#  @   #
+#  $$  #
+#      #
+#      #
+#      #
+#      #
+#  ..  #
+########
+
+
+Solvertest - Parking 1
+
+##########
+#@  #   .#
+# $ $  ..#
+# $$$##..#
+#    #####
+######
+
+
+Iterationstestlevel 1 (23 Pushes)
+
+###########
+#@ #  #   #
+# $$  $  .#
+#  #  #  .#
+#  #  #  .#
+#  #  #   #
+###########
+
+Solution/Moves 54/23 (YASS 2.26)
+rDRRurDRRRurDDllulllddrUluRRRRurDllllllllddrUluRRRRRRR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+Solution 54/23 (YASS 2.26)
+rDRRurDRRRurDDllulllddrUluRRRRurDllllllllddrUluRRRRRRR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+Solution 54/23 (YASS 2.26) (2)
+rDRRurDRRRurDDllulllddrUluRRRRurDllllllllddrUluRRRRRRR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+Solution 54/23 (YASS 2.26) (3)
+rDRRurDRRRurDlllllddrUluRRRRlllllllddrUluRRRRRRurDDldR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+Solution 54/23 (YASS 2.26) (4)
+rDRRurDRRRurDlllllddrUluRRRRlllllllddrUluRRRRRRurDDldR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+Solution 54/23 (YASS 2.26) (5)
+rDRRurDRRRurDDllulllddrUluRRRRurDllllllllddrUluRRRRRRR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+Solution 54/23 (YASS 2.26) (6)
+rDRRurDRRRurDDllulllddrUluRRRRurDllllllllddrUluRRRRRRR
+
+Optimality: Push-optimal solution
+Solver: YASS 2.26
+Time: 00:00:00
+
+
+Iterationstestlevel 2 (26 Pushes) Sasquatch 11
+
+  ####
+###  ####
+#   @   ##
+# #. .#.###
+# $$$ $$$ #
+###.#.#.# #
+ ##       #
+  ####  ###
+     ####

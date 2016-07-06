@@ -1,0 +1,390 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6A038CA3-52A7-4DFD-868C-DBEF61854693}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>JSoko</RootNamespace>
+    <AssemblyName>JSoko-Test</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form1.Designer.cs">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="JSoko\Gui\SettingsFrame.form" />
+    <None Include="Level collections bundled with JSoko\Brian Damgaard\YASGen.sok" />
+    <None Include="Level collections bundled with JSoko\Crazy Monk\Disciple.sok" />
+    <None Include="Level collections bundled with JSoko\David Holland\dh5.sok" />
+    <None Include="Level collections bundled with JSoko\Dries De Clercq\696.sok" />
+    <None Include="Level collections bundled with JSoko\Dries De Clercq\Fibo.sok" />
+    <None Include="Level collections bundled with JSoko\Dries De Clercq\Parallelworlds.sok" />
+    <None Include="Level collections bundled with JSoko\Dries De Clercq\Sokodries1.sok" />
+    <None Include="Level collections bundled with JSoko\Dries De Clercq\Zone26.sok" />
+    <None Include="Level collections bundled with JSoko\Evgeny Grigoriev\GRIGoRusha.sok" />
+    <None Include="Level collections bundled with JSoko\Lee J Haywood\sokevo.sok" />
+    <None Include="Level collections bundled with JSoko\Lee J Haywood\sokhard.sok" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <None Include="resources\defaultDatabase\jsokoDB.data" />
+    <None Include="resources\defaultDatabase\jsokoDB.properties" />
+    <None Include="resources\defaultDatabase\jsokoDB.script" />
+    <None Include="resources\graphics\icons\JSoko.icns" />
+    <None Include="resources\settings.ini" />
+    <None Include="resources\skins\3D-XSB\3D-XSB.ini" />
+    <None Include="resources\skins\Alchemyst - Gerry Wiseman\Alchemyst - Gerry Wiseman.ini" />
+    <None Include="resources\skins\AntiqueDesk - Gerry Wiseman\AntiqueDesk - Gerry Wiseman.ini" />
+    <None Include="resources\skins\AntiqueDesk 2 - Gerry Wiseman\AntiqueDesk 2 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\AntiqueDesk 3 - Gerry Wiseman\AntiqueDesk 3 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\ChineseCheckers - Gerry Wiseman\ChineseCheckers - Gerry Wiseman.ini" />
+    <None Include="resources\skins\HeavyMetal - Gerry Wiseman\HeavyMetal - Gerry Wiseman.ini" />
+    <None Include="resources\skins\HeavyMetal 3 - Gerry Wiseman\HeavyMetal 3 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\Jumanji - Gerry Wiseman\Jumanji - Gerry Wiseman.ini" />
+    <None Include="resources\skins\Jumanji 2 - Gerry Wiseman\Jumanji 2 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\Jumanji 3 - Gerry Wiseman\Jumanji 3- Gerry Wiseman.ini" />
+    <None Include="resources\skins\Magneto - Gerry Wiseman\Magneto - Gerry Wiseman.ini" />
+    <None Include="resources\skins\MarbleMagic - Gerry Wiseman\MarbleMagic - Gerry Wiseman.ini" />
+    <None Include="resources\skins\Metalica 2 - Gerry Wiseman\Metalica 2 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\Metalica 3 - Gerry Wiseman\Metalica 3 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\NightShift 2 - Gerry Wiseman\NightShift 2 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\NightShift 3 - Gerry Wiseman\NightShift 3 - Gerry Wiseman.ini" />
+    <None Include="resources\skins\skn - additional Skin Settings.properties" />
+    <None Include="resources\skins\skn format\Classic.skn" />
+    <None Include="resources\skins\Skulloban - Gerry Wiseman\Skulloban - Gerry Wiseman.ini" />
+    <None Include="resources\skins\SokoGems - Gerry Wiseman\SokoGems - Gerry Wiseman.ini" />
+    <None Include="resources\Start_JSoko_Linux.sh" />
+    <None Include="resources\Start_JSoko_Windows.bat" />
+    <None Include="resources\texts\texts_de.properties" />
+    <None Include="resources\texts\texts_en.properties" />
+    <None Include="resources\texts\texts_es.properties" />
+    <None Include="resources\texts\texts_nl.properties" />
+    <None Include="resources\texts\texts_zh.properties" />
+    <None Include="testlevel\Deadlock testlevel\bipartite.sok" />
+    <None Include="testlevel\Deadlock testlevel\blocked box on goal.sok" />
+    <None Include="testlevel\Deadlock testlevel\Closed diagonal deadlocks - Endpositions further testlevel.sok" />
+    <None Include="testlevel\Deadlock testlevel\Closed diagonal deadlocks - Endpositions.sok" />
+    <None Include="testlevel\Deadlock testlevel\Closed diagonal deadlocks.sok" />
+    <None Include="testlevel\Deadlock testlevel\Corrals.sok" />
+    <None Include="testlevel\Deadlock testlevel\deadlock not recognized.sok" />
+    <None Include="testlevel\Deadlock testlevel\Freeze backwards.sok" />
+    <None Include="testlevel\Deadlock testlevel\Freeze.sok" />
+    <None Include="testlevel\Deadlock testlevel\No further push of pushed box.sok" />
+    <None Include="testlevel\Deadlock testlevel\Simple Deadlocktest.sok" />
+    <None Include="testlevel\general testlevel.sok" />
+    <None Include="testlevel\goal with three walls.sok" />
+    <None Include="testlevel\Inactive boxes and goals.sok" />
+    <None Include="testlevel\move optimization.sok" />
+    <None Include="testlevel\Optimizer Critical Points.sok" />
+    <None Include="testlevel\Optimizer test.sok" />
+    <None Include="testlevel\optimizertestlevel.sok" />
+    <None Include="testlevel\Parsing of files\email quotes test.sok" />
+    <None Include="testlevel\Parsing of files\empty.sok" />
+    <None Include="testlevel\Parsing of files\Interior empty rows.sok" />
+    <None Include="testlevel\Parsing of files\no level data.sok" />
+    <None Include="testlevel\Parsing of files\Parsing.sok" />
+    <None Include="testlevel\Parsing of files\title test.sok" />
+    <None Include="testlevel\Parsing of files\too big.sok" />
+    <None Include="testlevel\playerlinestest.sok" />
+    <None Include="testlevel\Profiling levels\profile00.xsb" />
+    <None Include="testlevel\Profiling levels\profile01.xsb" />
+    <None Include="testlevel\Profiling levels\profile20.sok" />
+    <None Include="testlevel\savegame test.sok" />
+    <None Include="testlevel\Skin testlevel.sok" />
+    <None Include="testlevel\Solver testlevel\goalroom.sok" />
+    <None Include="testlevel\Solver testlevel\I-Corraltestlevel.sok" />
+    <None Include="testlevel\Solver testlevel\Kiste sofort auf Zielfeld.sok" />
+    <None Include="testlevel\Solver testlevel\Moves Testlevel.sok" />
+    <None Include="testlevel\Solver testlevel\Penalty.sok" />
+    <None Include="testlevel\Solver testlevel\solvertestlevel.sok" />
+    <None Include="testlevel\Solver testlevel\Tunnel.sok" />
+    <None Include="testlevel\Solver testlevel\Zielfeldraumtestlevel.sok" />
+    <None Include="testlevel\which box can reach this square testlevel.sok" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="JSoko\BoardPositions\AbsoluteBoardPosition.java" />
+    <Content Include="JSoko\BoardPositions\AbsoluteBoardPositionMoves.java" />
+    <Content Include="JSoko\BoardPositions\BoardPosition.java" />
+    <Content Include="JSoko\BoardPositions\CorralBoardPosition.java" />
+    <Content Include="JSoko\BoardPositions\IBoardPosition.java" />
+    <Content Include="JSoko\BoardPositions\IBoardPositionMoves.java" />
+    <Content Include="JSoko\BoardPositions\Iterative\AbsoluteBoardPositionIterative.java" />
+    <Content Include="JSoko\BoardPositions\Iterative\AbsoluteBoardPositionMovesIterative.java" />
+    <Content Include="JSoko\BoardPositions\Iterative\IBoardPositionIterative.java" />
+    <Content Include="JSoko\BoardPositions\Iterative\IBoardPositionMovesIterative.java" />
+    <Content Include="JSoko\BoardPositions\Iterative\RelativeBoardPositionIterative.java" />
+    <Content Include="JSoko\BoardPositions\Iterative\RelativeBoardPositionMovesIterative.java" />
+    <Content Include="JSoko\BoardPositions\RelativeBoardPosition.java" />
+    <Content Include="JSoko\BoardPositions\RelativeBoardPositionGoalAreaSolver.java" />
+    <Content Include="JSoko\BoardPositions\RelativeBoardPositionMoves.java" />
+    <Content Include="JSoko\BoardPositions\SolverAnySolution\AbsoluteBoardPositionSolverAnySolution.java" />
+    <Content Include="JSoko\BoardPositions\SolverAnySolution\IBoardPositionSolverAnySolution.java" />
+    <Content Include="JSoko\BoardPositions\SolverAnySolution\RelativeBoardPositionSolverAnySolution.java" />
+    <Content Include="JSoko\Board\Board.java" />
+    <Content Include="JSoko\Board\BoxData.java" />
+    <Content Include="JSoko\Board\DirectionConstants.java" />
+    <Content Include="JSoko\Board\Directions.java" />
+    <Content Include="JSoko\DeadlockDetection\BipartiteMatchings.java" />
+    <Content Include="JSoko\DeadlockDetection\ClosedDiagonalDeadlock.java" />
+    <Content Include="JSoko\DeadlockDetection\CorralDeadlockDetection.java" />
+    <Content Include="JSoko\DeadlockDetection\DeadlockDebug.java" />
+    <Content Include="JSoko\DeadlockDetection\DeadlockDetection.java" />
+    <Content Include="JSoko\DeadlockDetection\FreezeDeadlockDetection.java" />
+    <Content Include="JSoko\Editor\Editor.java" />
+    <Content Include="JSoko\ExceptionHandler.java" />
+    <Content Include="JSoko\Gui\BoardDisplay.java" />
+    <Content Include="JSoko\Gui\ColumnVisibility.java" />
+    <Content Include="JSoko\Gui\DateTimeRenderer.java" />
+    <Content Include="JSoko\Gui\GraphicalLevelBrowser.java" />
+    <Content Include="JSoko\Gui\GUI.java" />
+    <Content Include="JSoko\Gui\JSokoAboutBox.java" />
+    <Content Include="JSoko\Gui\MainBoardDisplay.java" />
+    <Content Include="JSoko\Gui\MessageDialogs.java" />
+    <Content Include="JSoko\Gui\NumberInputTF.java" />
+    <Content Include="JSoko\Gui\SettingsFrame.java" />
+    <Content Include="JSoko\Gui\ShortCutsAccessory.java" />
+    <Content Include="JSoko\Gui\Skin.java" />
+    <Content Include="JSoko\Gui\SkinManagement.java" />
+    <Content Include="JSoko\Gui\StartStopButton.java" />
+    <Content Include="JSoko\Gui\Transformation.java" />
+    <Content Include="JSoko\JSoko.java" />
+    <Content Include="JSoko\LevelData\Author.java" />
+    <Content Include="JSoko\LevelData\Database.java" />
+    <Content Include="JSoko\LevelData\DataParser.java" />
+    <Content Include="JSoko\LevelData\FormatConverter.java" />
+    <Content Include="JSoko\LevelData\History.java" />
+    <Content Include="JSoko\LevelData\HistoryElement.java" />
+    <Content Include="JSoko\LevelData\Level.java" />
+    <Content Include="JSoko\LevelData\LevelCollection.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\AuthorsView.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\CollectionsView.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\DatabaseDataEvent.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\DatabaseEventListener.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\DatabaseGUI.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\LevelAssignmentView.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\LevelManagementView.java" />
+    <Content Include="JSoko\LevelData\LevelManagement\LevelsView.java" />
+    <Content Include="JSoko\LevelData\LevelsIO.java" />
+    <Content Include="JSoko\LevelData\RunLengthFormat.java" />
+    <Content Include="JSoko\LevelData\SelectableLevelCollectionComboBoxModel.java" />
+    <Content Include="JSoko\LevelData\Snapshot.java" />
+    <Content Include="JSoko\LevelData\Solutions\Solution.java" />
+    <Content Include="JSoko\LevelData\Solutions\SolutionEvent.java" />
+    <Content Include="JSoko\LevelData\Solutions\SolutionEventListener.java" />
+    <Content Include="JSoko\LevelData\Solutions\SolutionsGUI.java" />
+    <Content Include="JSoko\LevelData\Solutions\SolutionsManager.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\BoardPosition.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\BoardPositionPriorityQueue.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\BoardPositionPriorityQueueInts.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\BoardPositionsStorage.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\BoardPositionWithPushDirection.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\PriorityQueueOptimizer.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\PriorityQueueOptimizerLargeMetrics.java" />
+    <Content Include="JSoko\Optimizer\AllMetricsOptimizer\PriorityQueueOptimizerSmallMetricChanges.java" />
+    <Content Include="JSoko\Optimizer\BoxConfiguration.java" />
+    <Content Include="JSoko\Optimizer\BoxConfigurationGenerator.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\BitVector.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\BoardPositionQueue.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\BoxConfigurationStorageHashSet.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\BoxPositions.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\IntegerQueue.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\LongQueue.java" />
+    <Content Include="JSoko\Optimizer\DataStructures\PlayerPositionsQueue.java" />
+    <Content Include="JSoko\Optimizer\DeadlockIdentification.java" />
+    <Content Include="JSoko\Optimizer\Gui\BoardDisplayRemodelSolver.java" />
+    <Content Include="JSoko\Optimizer\Gui\OptimizerBoardDisplay.java" />
+    <Content Include="JSoko\Optimizer\Gui\OptimizerGUI.java" />
+    <Content Include="JSoko\Optimizer\Gui\OptimizerGUISuperClass.java" />
+    <Content Include="JSoko\Optimizer\Gui\RemodelSolverGUI.java" />
+    <Content Include="JSoko\Optimizer\Optimizer.java" />
+    <Content Include="JSoko\Optimizer\OptimizerBoard.java" />
+    <Content Include="JSoko\Optimizer\OptimizerSolution.java" />
+    <Content Include="JSoko\PositionStorage.java" />
+    <Content Include="JSoko\PushesLowerBoundCalculation\LowerBoundCalculation.java" />
+    <Content Include="JSoko\PushesLowerBoundCalculation\Penalty.java" />
+    <Content Include="JSoko\ResourceHandling\Settings.java" />
+    <Content Include="JSoko\ResourceHandling\Texts.java" />
+    <Content Include="JSoko\Solver\AnySolution\BoardPositionPackingSequence.java" />
+    <Content Include="JSoko\Solver\AnySolution\PackingSequenceSearch.java" />
+    <Content Include="JSoko\Solver\AnySolution\SolverAnySolution.java" />
+    <Content Include="JSoko\Solver\Influence.java" />
+    <Content Include="JSoko\Solver\Solver.java" />
+    <Content Include="JSoko\Solver\SolverAStar.java" />
+    <Content Include="JSoko\Solver\SolverAStarMovesPushes.java" />
+    <Content Include="JSoko\Solver\SolverAStarPushesMoves.java" />
+    <Content Include="JSoko\Solver\SolverBFS.java" />
+    <Content Include="JSoko\Solver\SolverEvolutionary\BoardPositions\AbsoluteBoardPositionEvolutionarySolver.java" />
+    <Content Include="JSoko\Solver\SolverEvolutionary\BoardPositions\IBoardPositionEvolutionarySolver.java" />
+    <Content Include="JSoko\Solver\SolverEvolutionary\BoardPositions\RelativeBoardPositionEvolutionarySolver.java" />
+    <Content Include="JSoko\Solver\SolverEvolutionary\SolverEvolutionary.java" />
+    <Content Include="JSoko\Solver\SolverGoalRoom.java" />
+    <Content Include="JSoko\Solver\SolverGUI.java" />
+    <Content Include="JSoko\Solver\SolverIDAStar.java" />
+    <Content Include="JSoko\Solver\SolverIDAStarPushesMoves.java" />
+    <Content Include="JSoko\Sound\Sound.java" />
+    <Content Include="JSoko\Translator\Translator.java" />
+    <Content Include="JSoko\Utilities\BASE64.java" />
+    <Content Include="JSoko\Utilities\Debug.java" />
+    <Content Include="JSoko\Utilities\Delays.java" />
+    <Content Include="JSoko\Utilities\ExternalLinkContentViewerUI.java" />
+    <Content Include="JSoko\Utilities\FileSelector.java" />
+    <Content Include="JSoko\Utilities\GraphicUtilities.java" />
+    <Content Include="JSoko\Utilities\IntStack.java" />
+    <Content Include="JSoko\Utilities\Listener\ActionListenerSet.java" />
+    <Content Include="JSoko\Utilities\Listener\Generator.java" />
+    <Content Include="JSoko\Utilities\Listener\ListenerCaller.java" />
+    <Content Include="JSoko\Utilities\Listener\ListenerSet.java" />
+    <Content Include="JSoko\Utilities\LruCache.java" />
+    <Content Include="JSoko\Utilities\OsSpecific\JScrollPaneOSSpecific.java" />
+    <Content Include="JSoko\Utilities\OsSpecific\OSSpecific.java" />
+    <Content Include="JSoko\Utilities\USpinner.java" />
+    <Content Include="JSoko\Utilities\Utilities.java" />
+    <Content Include="JSoko\WorkInProgress\ArrayWorks\ArrayHelp.java" />
+    <Content Include="JSoko\WorkInProgress\ArrayWorks\LaxByteArr.java" />
+    <Content Include="JSoko\WorkInProgress\ArrayWorks\SparseArray.java" />
+    <Content Include="JSoko\WorkInProgress\ArrayWorks\Stepper.java" />
+    <Content Include="JSoko\WorkInProgress\BoxGoalsRatio.java" />
+    <Content Include="JSoko\WorkInProgress\DuplicateCheck\DuplicateCheck.java" />
+    <Content Include="JSoko\WorkInProgress\NewSettingsPanel\FontSettingsView.java" />
+    <Content Include="JSoko\WorkInProgress\NewSettingsPanel\GeneralSettingsView.java" />
+    <Content Include="JSoko\WorkInProgress\NewSettingsPanel\SettingsFrameNew.java" />
+    <Content Include="JSoko\WorkInProgress\OptimizerDeadlocks\BitsBoxConf.java" />
+    <Content Include="JSoko\WorkInProgress\OptimizerDeadlocks\BoxConfByElem.java" />
+    <Content Include="JSoko\WorkInProgress\OptimizerDeadlocks\PoslistBoxConf.java" />
+    <Content Include="JSoko\WorkInProgress\OptimizerDeadlocks\SubsetAskable.java" />
+    <Content Include="JSoko\WorkInProgress\PlayerPathCalculation.java" />
+    <Content Include="JSoko\WorkInProgress\Settings\GeneralSettingsView.java" />
+    <Content Include="JSoko\WorkInProgress\Settings\SettingsFrameNew.java" />
+    <Content Include="resources\graphics\backgroundImages\Cyprus.jpeg" />
+    <Content Include="resources\graphics\backgroundImages\Drops.jpeg" />
+    <Content Include="resources\graphics\backgroundImages\Orion Nebula cut.jpeg" />
+    <Content Include="resources\graphics\backgroundImages\Sky.jpeg" />
+    <Content Include="resources\graphics\icons\1rightarrow %28oxygen%29.png" />
+    <Content Include="resources\graphics\icons\apply %28oxygen%29.png" />
+    <Content Include="resources\graphics\icons\arrow left %28own%29.png" />
+    <Content Include="resources\graphics\icons\arrow right %28own%29.png" />
+    <Content Include="resources\graphics\icons\document-open.png" />
+    <Content Include="resources\graphics\icons\drive_harddisk %28oxygen%29.png" />
+    <Content Include="resources\graphics\icons\edit-copy.png" />
+    <Content Include="resources\graphics\icons\edit-delete.png" />
+    <Content Include="resources\graphics\icons\edit-paste.png" />
+    <Content Include="resources\graphics\icons\edit-redo-all.png" />
+    <Content Include="resources\graphics\icons\edit-redo.png" />
+    <Content Include="resources\graphics\icons\edit-undo-all.png" />
+    <Content Include="resources\graphics\icons\edit-undo.png" />
+    <Content Include="resources\graphics\icons\find %28oxygen%29.png" />
+    <Content Include="resources\graphics\icons\go-next.png" />
+    <Content Include="resources\graphics\icons\go-previous.png" />
+    <Content Include="resources\graphics\icons\historybrowser.png" />
+    <Content Include="resources\graphics\icons\jsoko dock icon.png" />
+    <Content Include="resources\graphics\icons\jsoko file association.ico" />
+    <Content Include="resources\graphics\icons\jsoko-icon 32x32.png" />
+    <Content Include="resources\graphics\icons\jsoko-icon 48x48.png" />
+    <Content Include="resources\graphics\icons\JSoko-Icon.png" />
+    <Content Include="resources\graphics\icons\jsoko-icon_16x16.png" />
+    <Content Include="resources\graphics\icons\list-add.png" />
+    <Content Include="resources\graphics\icons\list-remove.png" />
+    <Content Include="resources\graphics\icons\pin %28oxygen%29.png" />
+    <Content Include="resources\graphics\icons\process-stop selected.png" />
+    <Content Include="resources\graphics\icons\process-stop.png" />
+    <Content Include="resources\graphics\icons\Sean Poon - Database-3-icon.png" />
+    <Content Include="resources\graphics\icons\system-search.png" />
+    <Content Include="resources\graphics\icons\tranformation icon.png" />
+    <Content Include="resources\graphics\icons\transformation status %28own%29.png" />
+    <Content Include="resources\License JSoko.txt" />
+    <Content Include="resources\License of commons-io-2.4.jar.txt" />
+    <Content Include="resources\License of HSQLDB.txt" />
+    <Content Include="resources\License of JIDE Common Layer.txt" />
+    <Content Include="resources\readme.txt" />
+    <Content Include="resources\readme_dev.txt" />
+    <Content Include="resources\skins\3D-XSB\3D-XSB.png" />
+    <Content Include="resources\skins\Alchemyst - Gerry Wiseman\Alchemyst - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\AntiqueDesk - Gerry Wiseman\AntiqueDesk - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\AntiqueDesk 2 - Gerry Wiseman\AntiqueDesk 2 - Gerry Wiseman.jpeg" />
+    <Content Include="resources\skins\AntiqueDesk 3 - Gerry Wiseman\AntiqueDesk 3 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\ChineseCheckers - Gerry Wiseman\ChineseCheckers - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\HeavyMetal - Gerry Wiseman\HeavyMetal - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\HeavyMetal 3 - Gerry Wiseman\HeavyMetal 3 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Jumanji - Gerry Wiseman\Jumanji - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Jumanji 2 - Gerry Wiseman\Jumanji 2 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Jumanji 3 - Gerry Wiseman\Jumanji 3 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Magneto - Gerry Wiseman\Magneto - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\MarbleMagic - Gerry Wiseman\MarbleMagic - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Metalica 2 - Gerry Wiseman\Metalica 2 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Metalica 3 - Gerry Wiseman\Metalica 3 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\NightShift 2 - Gerry Wiseman\NightShift 2 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\NightShift 3 - Gerry Wiseman\NightShift 3 - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\Skulloban - Gerry Wiseman\Skulloban - Gerry Wiseman.bmp" />
+    <Content Include="resources\skins\SokoGems - Gerry Wiseman\SokoGems - Gerry Wiseman.bmp" />
+    <Content Include="resources\sounds\goal CLOSE3.wav" />
+    <Content Include="resources\sounds\move CLICK.WAV" />
+    <Content Include="resources\sounds\push DEEK.WAV" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

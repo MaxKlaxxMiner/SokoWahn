@@ -1,0 +1,130 @@
+
+
+Pushes vs. moves 1
+
+#########
+#   #####
+#    $ .#
+#   ### #
+#       #
+# #######
+#    ####
+#    $@.#
+#   ### #
+#       #
+#########
+
+Best Solution 36/4/2/2/2/8
+rddlllllluuuuuuurrrRRllllldddddrrrRR
+
+Solution 52/8/3/2/3/14
+rddlllllluuuuuuurrrRRllllldddddddrrrrrruulLLulldRRRR
+
+
+Pathfinding 1
+
+#####
+#  .###
+#   $@#
+### ###
+ #  #
+ #  #
+ #  #
+ ####
+
+Kiste dreimal über gleiches Feld
+
+
+Optimal solution 1 - feature: push the box and let the player be at a specific place
+
+
+Level
+
+ ###
+ #.#
+##$####
+#  .  #
+#  #  #
+##@$ ##
+ #   #
+ #####
+
+Spieler muss angeboten werden, wo der Spieler nach dem Zug stehen soll,
+um optimale Lösung zu finden.
+
+
+Simple Deadlocktest 1
+
+#########
+#       #
+# ##@## #
+#       #
+# . $   #
+#########
+
+
+Mehr als 32
+
+###############
+#.............#
+#$$$$$$$$$$$$$#
+#             #
+#...........  #
+#$$$$$$$$$$$  #
+#             #
+#             #
+# $+          #
+#             #
+#             #
+#$$$$$$$$$$$$$#
+#.............#
+###############
+
+
+Lowerboundtestlevel 1
+
+##########
+#.   $   #
+#.$     .#
+#    @  $#
+#$       #
+#        #
+#       .#
+##########
+
+
+Blockierte Kiste verhintert Zugang zu anderer Kiste
+
+#######
+#.$@$.####
+##### *  #
+    ######
+
+
+Lowerboundfail 1 - Rolling Stone
+
+####
+#  #
+#$ ####
+#   #.#
+#.$ # #
+# .## #
+##@$  #
+ #    #
+ ######
+
+
+Kistendistanzentestlevel 1
+
+   #####
+   #.  ####
+   #   #  #
+   #  #   #
+   # $    #
+##### #####
+#      #  #
+#      @  #
+#  # ##   #
+#### ######
+ #   #
+ #####

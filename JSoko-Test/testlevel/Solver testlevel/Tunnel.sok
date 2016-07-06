@@ -1,0 +1,377 @@
+Solvertest - Tunnels 1 (54pushes)
+
+  #####
+###   ###
+#@  #.. #
+# $$# $.#
+#   #  .#
+### #   #
+  # ## ##
+  # ## #
+  # ## #
+ ## ## #
+ #  ## #
+ # $   #
+ #     #
+ #######
+
+
+Solvertest - Tunnels 2 (71 pushes)
+
+  #####
+### $.###
+#@  #...#
+# $$#.$.#
+#   #  .#
+### #   #
+  # ## ##
+  # ##$#
+  # ## #
+ ## ## #
+ #  ## #
+ # $ $ #
+ #     #
+ #######
+
+
+Solvertest - Tunnels 3
+
+######
+#    ######
+# ## ##   #
+# @$     .#
+#######   #
+      #####
+
+Tunnel, bei dem die Kiste nur von einer Seite geschoben werden kann
+
+
+Solvertest - Tunnels 4
+
+######
+#    ######
+# ## ##   #
+# @$     .#
+# #####   #
+#       ###
+#########
+
+
+Solvertest - Tunnels 5
+
+  ###     
+  #.######
+### ##   #
+#@$     .#
+# # #    #
+# # ######
+#   #     
+## $#     
+ #  #     
+ ####   
+
+
+Solvertest - Tunnels 5 nicht erkannt
+
+######
+#  # # ####
+# #  ###  #
+#  @$    .#
+# ## ###  #
+#     #####
+#######
+
+
+Solvertest - Tunnels 6 - nicht erkannt2
+
+######
+#   ## ####
+# #  ###  #
+#  @$    .#
+# ## ###  #
+#        ##
+##########
+
+
+Testlevel Tunnel 7
+
+################
+#              #
+#     $  .     #
+# $    ######  #
+#   ## ##  .#  #
+#.   @$    .#$ #
+#$  ## ##  .#  #
+#         ###  #
+#       ###    #
+#  $ .         #
+################
+
+
+Testlevel Tunnel 8
+
+  #########
+  #.   $ .#
+  #$.$.$  #
+### ##$$ .#
+# # ##.# ##
+# #  # #.##
+# #@$   $.#
+# ## ###  #
+#        ##
+##########
+
+
+Testlevel Tunnel 9 - Kein Tunnel
+
+      ####
+   ####  #
+  ##  #  #
+###  *#$ #
+#   # #.##
+#  @*  * #
+#   # #  #
+###  $  .#
+  ########
+
+
+Testlevel Tunnel 10
+
+     ####
+  ####  #
+  #.$ * #
+  ####  #
+######  #
+#  ### ##
+#@$   * #
+# .###  #
+#       #
+#########
+
+
+Testlevel Tunnel 11 - Kein Tunnel
+
+      ####
+   ####  #
+  ##  #  #
+###  *#  #
+#   # #####
+#  @*  *  #
+#   # #   #
+###      #
+  ########
+
+
+Tunnel 12
+
+########
+# #   ##
+# #    #
+#  #   #
+#  #$  #
+#..@$  #
+# #  # #
+########
+
+
+Tunnel 13
+
+########
+# #   ##
+# #    #
+#  # $ #
+#  #   #
+#..@$  #
+# #  # #
+########
+
+
+Tunnel 14
+
+ ########
+ # #   ##
+ # #    #
+## @#.  #
+#  $#$  #
+# $..$  #
+# .#  # #
+#########
+
+
+Tunnel 15
+
+     ######
+#######.  #
+#.@$   $  #
+# #####   #
+#$ #    ###
+#. #  ###
+#   $.#
+#######
+
+
+Tunnel 16
+
+######
+#  ### ####
+# ## ###  #
+#  @$    .#
+# ## ###  #
+#        ##
+##########
+
+
+Tunnel 17 - Kein Tunnel
+
+ ######
+ #    # ####
+ # ## ###  #
+ #   $@   .#
+## ######  #
+#.$       ##
+###########
+
+Der Tunnel kann als wirklicher Tunnel angesehen werden (als wenn über der Kiste auch noch eine Mauer wäre. Es muss daher weiter nach links geschoben werden. Das Zielfeld könnte ja auch links von der Kiste sein ...
+Der Lowerbound verhindert höchstens ein Schieben in der aktuellen Iteration.
+Der Fehler lag daran, die Kiste überhaupt erst in den Tunnel zu schieben. Wenn sie aber erst mal drin ist, dann muss sich auch weitergeschoben werden.
+
+
+Tunnel 18 - Kein Tunnel
+
+################
+#              #
+#              #
+#.$   * #####  #
+#   ## ##   #  #
+#    @$     #  #
+#   ##.##   #  #
+#         ###  #
+#       ###    #
+#              #
+################
+
+
+Tunnel 19
+
+ ###
+ #@###
+##$$.#
+#.  ##
+#####
+
+Auch wenn eine Kiste nur noch auf Corralfelder geschoben werden kann ist sie nicht automatisch in einem Tunnel! Sie muss diesen Push auch sofort durchführen können!
+
+
+Tunnel 20 - Tunnel, obwohl auf Zielfeld
+    
+######
+#.# .#
+#.#  #
+#$##.#
+#  $*#
+#@$$ #
+#    #
+######
+
+Eine Kiste in einem Tunnel kann sofort weitergeschoben werden, falls "hinter" dem Tunnel oder in dem Tunnel selbst noch ein weiteres Zielfeld liegt.
+
+
+Tunnel 21 - nicht erkannt, da kein Blockersetzen
+
+######
+#..  #
+#    #
+#** ##
+#** #
+#.  #
+# $$#
+# $ #
+#@  #
+#####
+
+Geblockte Kisten zählen als Mauern.
+Dies wird allerdings nicht erkannt, da im Solver der Freezetest erst später aufgerufen wird und deshalb nicht auf geblockte Kisten abgefragt werden kann.
+
+
+Tunnel 22 - 17 Pushes
+#######
+###  .#
+# $$# #
+# @$. #
+#. $# #
+#   . #
+#######
+
+
+Tunnel durch Freeze (PI-Corral erkennt das)
+
+  ### 
+  #.# 
+  # # 
+### ##
+#.$  #
+#  $ #
+#.$@ #
+######
+
+
+Push down results in a tunnel
+
+#######
+#  @  #
+#$#$# #
+#.#   #
+#.    #
+#######
+
+Reicht es aus die Kiste einfach sofort noch einmal nach unten zu veschieben oder muss auch der
+Push nach oben geprüft werden in solchen Fällen ?
+
+
+Push down doesn't result in a tunnel
+
+#####
+#   ###
+# $  +#
+## # $#
+ #  # #
+ ##  .#
+  ###$#
+    #.#
+    ###
+
+
+Push of box to the left isn't a tunnel
+
+    #####
+    #.  #
+    #.# #
+#####*# #
+#  $@$  #
+#      ##
+########
+
+After the push to the left the right box can be pushed one square to the left, too.
+Hence, a push to the left in the current position doesn't result in a tunnel.
+
+
+Tunnel after push to the left ?!
+
+    ########
+#####      #
+#       $  #
+#.   $@ $  #
+##  #$##.###
+ ####.##.#
+    ######
+
+
+Distance to the box reduces => no tunnel. (infinite to 0)
+
+  ###
+  #.#
+  # #
+### #
+#.$$#
+###@#
+  ###
