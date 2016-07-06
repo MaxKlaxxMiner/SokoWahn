@@ -19,19 +19,21 @@
  */
 
 #region # using *.*
+
+using JSoko.Board;
+
 #endregion
 
 namespace JSoko
 {
-  /**
-   * This is the main class holding all references of this program. Every
-   * important object in this program holds a reference to this object in order to
-   * have access to every other object in the game. In this class all important
-   * actions are handled.
-   */
-  public class JSoko
+  /// <summary>
+  ///   This is the main class holding all references of this program. Every
+  ///   important object in this program holds a reference to this object in order to
+  ///   have access to every other object in the game. In this class all important
+  ///   actions are handled.
+  /// </summary>
+  public class JSoko : DirectionConstants
   {
-//@SuppressWarnings("serial")
 //public class JSoko extends JFrame implements DirectionConstants, ActionListener, SolutionEventListener, ChangeListener {
 
 //  private enum GameMode {
