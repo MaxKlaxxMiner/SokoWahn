@@ -21,7 +21,10 @@
 #region # using *.*
 
 using JSoko.Board;
+using JSoko.java.awt.event_;
 using JSoko.javax.swing;
+
+#pragma warning disable 169
 
 #endregion
 
@@ -33,7 +36,8 @@ namespace JSoko
   /// </summary>
   public class JSoko : JFrame
   {
-    //public class JSoko extends JFrame implements DirectionConstants, ActionListener, SolutionEventListener, ChangeListener {
+    ActionListener actionListener = null;
+    // SolutionEventListener, ChangeListener {
 
     //  private enum GameMode {
     //    /** Play mode -> the user can play the game. 								 */  PLAY,

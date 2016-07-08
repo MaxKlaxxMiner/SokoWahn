@@ -7,6 +7,7 @@ JSoko.JSoko
 --- bekannte imports ---
 
 de.sokoban_online.jsoko.board.DirectionConstants;
+java.awt.event.ActionListener;
 javax.swing.JFrame;
 
 
@@ -26,7 +27,6 @@ java.awt.datatransfer.Transferable;
 java.awt.dnd.DnDConstants;
 java.awt.dnd.DropTargetDropEvent;
 java.awt.event.ActionEvent;
-java.awt.event.ActionListener;
 java.awt.event.KeyEvent;
 java.awt.event.MouseEvent;
 java.awt.event.WindowAdapter;
