@@ -23,6 +23,7 @@
 using JSoko.Board;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
+using JSoko.javax.swing.event_;
 using JSoko.Leveldata.Solutions;
 
 #pragma warning disable 169
@@ -39,7 +40,7 @@ namespace JSoko
   {
     ActionListener actionListener = null;
     SolutionEventListener solutionEventListener = null;
-    // ChangeListener {
+    ChangeListener changeListener = null;
 
     //  private enum GameMode {
     //    /** Play mode -> the user can play the game. 								 */  PLAY,
@@ -5394,6 +5395,5 @@ namespace JSoko
     //    // This is important for displaying the "level solved" mark in the list.
     //    applicationGUI.repaint();
     //  }
-    //}
   }
 }

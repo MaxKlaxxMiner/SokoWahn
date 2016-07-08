@@ -9,6 +9,7 @@ Jsoko.Leveldata.Solutions.SolutionEventListener
 de.sokoban_online.jsoko.board.DirectionConstants;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
 java.awt.event.ActionListener;
+javax.swing.event.ChangeListener;
 javax.swing.JFrame;
 
 
@@ -68,7 +69,6 @@ javax.swing.SwingUtilities;
 javax.swing.SwingWorker;
 javax.swing.WindowConstants;
 javax.swing.event.ChangeEvent;
-javax.swing.event.ChangeListener;
 javax.swing.filechooser.FileFilter;
 com.jidesoft.dialog.ButtonPanel;
 com.jidesoft.dialog.StandardDialog;
