@@ -107,8 +107,10 @@ namespace JSoko
     /// </summary>
     public History movesHistory;
 
-    //  /** Object holding all level data. Public for easier access. */
-    //  public LevelsIO levelIO;
+    /// <summary>
+    /// Object holding all level data. Public for easier access.
+    /// </summary>
+    public LevelsIo levelIo;
 
     //  /**
     //   * Object holding the collection data -> all levels that are currently ready
