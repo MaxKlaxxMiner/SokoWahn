@@ -27,6 +27,8 @@ using JSoko.java.awt.event_;
 using JSoko.javax.swing;
 using JSoko.javax.swing.event_;
 using JSoko.Leveldata.Solutions;
+using JSoko.PushesLowerBoundCalculation;
+
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
 
@@ -94,8 +96,10 @@ namespace JSoko
     /// </summary>
     private DeadlockDetection deadlockDetection;
 
-    //  /** Calculates the lower bound of pushes to solve a board. */
-    //  private LowerBoundCalculation lowerBoundCalculation;
+    /// <summary>
+    /// Calculates the lower bound of pushes to solve a board.
+    /// </summary>
+    private LowerBoundCalculation lowerBoundCalculation;
 
     //  /**
     //   * Object storing all changes of the board for supporting a history
