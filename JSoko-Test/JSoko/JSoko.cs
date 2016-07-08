@@ -117,8 +117,10 @@ namespace JSoko
     /// </summary>
     public LevelCollection currentLevelCollection;
 
-    //  /** Object holding the data of the current level. Public for easier access. */
-    //  public Level currentLevel;
+    /// <summary>
+    /// Object holding the data of the current level. Public for easier access.
+    /// </summary>
+    public Level currentLevel;
 
     //  /** Object implementing the editor functionality. Public for easier access. */
     //  public Editor editor;

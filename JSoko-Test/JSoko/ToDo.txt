@@ -6,6 +6,7 @@ JSoko.Board_.Board
 JSoko.DeadlockDetection_.DeadlockDetection
 JSoko.Gui_.Gui
 JSoko.Leveldata.History
+JSoko.Leveldata.Level
 JSoko.Leveldata.LevelCollection
 JSoko.Leveldata.LevelsIo
 JSoko.Leveldata.Solutions.SolutionEventListener
@@ -18,6 +19,7 @@ de.sokoban_online.jsoko.board.DirectionConstants;
 de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
 de.sokoban_online.jsoko.gui.GUI;
 de.sokoban_online.jsoko.leveldata.History;
+de.sokoban_online.jsoko.leveldata.Level;
 de.sokoban_online.jsoko.leveldata.LevelCollection;
 de.sokoban_online.jsoko.leveldata.LevelsIO;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
@@ -105,7 +107,6 @@ de.sokoban_online.jsoko.gui.Transformation;
 de.sokoban_online.jsoko.leveldata.Author;
 de.sokoban_online.jsoko.leveldata.Database;
 de.sokoban_online.jsoko.leveldata.HistoryElement;
-de.sokoban_online.jsoko.leveldata.Level;
 de.sokoban_online.jsoko.leveldata.RunLengthFormat;
 de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel;
 de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
