@@ -26,6 +26,7 @@ using JSoko.Gui_;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
 using JSoko.javax.swing.event_;
+using JSoko.Leveldata;
 using JSoko.Leveldata.Solutions;
 using JSoko.PushesLowerBoundCalculation;
 
@@ -101,11 +102,10 @@ namespace JSoko
     /// </summary>
     private LowerBoundCalculation lowerBoundCalculation;
 
-    //  /**
-    //   * Object storing all changes of the board for supporting a history
-    //   * functionality. Public for easier access.
-    //   */
-    //  public History movesHistory;
+    /// <summary>
+    /// Object storing all changes of the board for supporting a history functionality. Public for easier access.
+    /// </summary>
+    public History movesHistory;
 
     //  /** Object holding all level data. Public for easier access. */
     //  public LevelsIO levelIO;

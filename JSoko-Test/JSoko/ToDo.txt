@@ -5,6 +5,7 @@ JSoko.JSoko
 JSoko.Board_.Board
 JSoko.DeadlockDetection_.DeadlockDetection
 JSoko.Gui_.Gui
+JSoko.Leveldata.History
 JSoko.Leveldata.Solutions.SolutionEventListener
 JSoko.PushesLowerBoundCalculation.LowerBoundCalculation
 
@@ -14,6 +15,7 @@ de.sokoban_online.jsoko.board.Board;
 de.sokoban_online.jsoko.board.DirectionConstants;
 de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
 de.sokoban_online.jsoko.gui.GUI;
+de.sokoban_online.jsoko.leveldata.History;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
 de.sokoban_online.jsoko.pushesLowerBoundCalculation.LowerBoundCalculation;
 java.awt.event.ActionListener;
@@ -98,7 +100,6 @@ de.sokoban_online.jsoko.gui.MessageDialogs;
 de.sokoban_online.jsoko.gui.Transformation;
 de.sokoban_online.jsoko.leveldata.Author;
 de.sokoban_online.jsoko.leveldata.Database;
-de.sokoban_online.jsoko.leveldata.History;
 de.sokoban_online.jsoko.leveldata.HistoryElement;
 de.sokoban_online.jsoko.leveldata.Level;
 de.sokoban_online.jsoko.leveldata.LevelCollection;
