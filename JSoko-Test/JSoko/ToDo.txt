@@ -2,11 +2,13 @@
 --- abzuarbeitende Klassen ---
 
 JSoko.JSoko
+JSoko.Gui_.Gui
 Jsoko.Leveldata.Solutions.SolutionEventListener
 
 --- bekannte imports ---
 
 de.sokoban_online.jsoko.board.DirectionConstants;
+de.sokoban_online.jsoko.gui.GUI;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
 java.awt.event.ActionListener;
 javax.swing.event.ChangeListener;
@@ -85,7 +87,6 @@ de.sokoban_online.jsoko.deadlockdetection.ClosedDiagonalDeadlock;
 de.sokoban_online.jsoko.deadlockdetection.DeadlockDebug;
 de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
 de.sokoban_online.jsoko.editor.Editor;
-de.sokoban_online.jsoko.gui.GUI;
 de.sokoban_online.jsoko.gui.GraphicalLevelBrowser;
 de.sokoban_online.jsoko.gui.JSokoAboutBox;
 de.sokoban_online.jsoko.gui.MainBoardDisplay;

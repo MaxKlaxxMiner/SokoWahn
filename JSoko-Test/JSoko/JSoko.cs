@@ -21,10 +21,13 @@
 #region # using *.*
 
 using JSoko.Board;
+using JSoko.Gui_;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
 using JSoko.javax.swing.event_;
 using JSoko.Leveldata.Solutions;
+// ReSharper disable UnusedMember.Local
+// ReSharper disable UnusedMember.Global
 
 #pragma warning disable 169
 
@@ -42,24 +45,43 @@ namespace JSoko
     SolutionEventListener solutionEventListener = null;
     ChangeListener changeListener = null;
 
-    //  private enum GameMode {
-    //    /** Play mode -> the user can play the game. 								 */  PLAY,
-    //    /** Editor mode -> the user can use the editor but can't play. 				 */  EDITOR,
-    //    /** Invalid level mode -> the user can just see the level but can't play it. */  INVALID_LEVEL
-    //  }
+    private enum GameMode
+    {
+      /// <summary>
+      /// Play mode -> the user can play the game.
+      /// </summary>
+      Play,
 
-    //  // Current modus of the game (editor mode, play mode, invalid level mode).
-    //  private GameMode gameMode = GameMode.PLAY;
+      /// <summary>
+      /// Editor mode -> the user can use the editor but can't play.
+      /// </summary>
+      Editor,
 
-    //  // Status of the display of the deadlock squares before the editor is
-    //  // activated. After the editor has been left this status must be set again.
-    //  private boolean isShowDeadlocksActivatedWhenEnteringEditor = false;
+      /// <summary>
+      /// Invalid level mode -> the user can just see the level but can't play it.
+      /// </summary>
+      InvalidLevel
+    }
 
-    //  /** The transformation set when the editor is activated. */
-    //  private String transformationStringWhenEditorIsActivated;
+    /// <summary>
+    /// Current modus of the game (editor mode, play mode, invalid level mode).
+    /// </summary>
+    private GameMode gameMode = GameMode.Play;
 
-    //  /** The GUI of this program. Public for easier access. */
-    //  public GUI applicationGUI;
+    /// <summary>
+    /// Status of the display of the deadlock squares before the editor is activated. After the editor has been left this status must be set again.
+    /// </summary>
+    private bool isShowDeadlocksActivatedWhenEnteringEditor = false;
+
+    /// <summary>
+    /// The transformation set when the editor is activated.
+    /// </summary>
+    private string transformationStringWhenEditorIsActivated;
+
+    /// <summary>
+    /// The GUI of this program. Public for easier access.
+    /// </summary>
+    public Gui applicationGui;
 
     //  /** Object managing the board of this program. Public for easier access. */
     //  public Board board;

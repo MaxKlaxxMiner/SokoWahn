@@ -51,10 +51,12 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="JSoko\Board\DirectionConstants.cs" />
+    <Compile Include="JSoko\Gui_\Gui.cs" />
     <Compile Include="JSoko\JSoko.cs" />
     <Compile Include="JSoko\Leveldata\Solutions\SolutionEventListener.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WorkAround\javax\swing\event_\ChangeListener.cs" />
     <Compile Include="WorkAround\javax\swing\JFrame.cs" />
     <Compile Include="WorkAround\java\awt\event_\ActionListener.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
