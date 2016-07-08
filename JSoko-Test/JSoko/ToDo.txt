@@ -3,6 +3,7 @@
 
 JSoko.JSoko
 JSoko.Board_.Board
+JSoko.DeadlockDetection_.DeadlockDetection
 JSoko.Gui_.Gui
 JSoko.Leveldata.Solutions.SolutionEventListener
 
@@ -11,6 +12,7 @@ JSoko.Leveldata.Solutions.SolutionEventListener
 
 de.sokoban_online.jsoko.board.Board;
 de.sokoban_online.jsoko.board.DirectionConstants;
+de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
 de.sokoban_online.jsoko.gui.GUI;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
 java.awt.event.ActionListener;
@@ -87,7 +89,6 @@ de.sokoban_online.jsoko.board.Directions;
 de.sokoban_online.jsoko.boardpositions.AbsoluteBoardPositionMoves;
 de.sokoban_online.jsoko.deadlockdetection.ClosedDiagonalDeadlock;
 de.sokoban_online.jsoko.deadlockdetection.DeadlockDebug;
-de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
 de.sokoban_online.jsoko.editor.Editor;
 de.sokoban_online.jsoko.gui.GraphicalLevelBrowser;
 de.sokoban_online.jsoko.gui.JSokoAboutBox;

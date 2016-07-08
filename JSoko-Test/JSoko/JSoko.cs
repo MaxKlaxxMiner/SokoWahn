@@ -21,6 +21,7 @@
 #region # using *.*
 
 using JSoko.Board_;
+using JSoko.DeadlockDetection_;
 using JSoko.Gui_;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
@@ -88,8 +89,10 @@ namespace JSoko
     /// </summary>
     public Board board;
 
-    //  /** Object for deadlock detection. */
-    //  private DeadlockDetection deadlockDetection;
+    /// <summary>
+    /// Object for deadlock detection.
+    /// </summary>
+    private DeadlockDetection deadlockDetection;
 
     //  /** Calculates the lower bound of pushes to solve a board. */
     //  private LowerBoundCalculation lowerBoundCalculation;
