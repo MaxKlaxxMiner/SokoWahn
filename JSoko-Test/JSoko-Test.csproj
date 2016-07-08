@@ -53,6 +53,7 @@
     <Compile Include="JSoko\Board_\Board.cs" />
     <Compile Include="JSoko\Board_\DirectionConstants.cs" />
     <Compile Include="JSoko\DeadlockDetection_\DeadlockDetection.cs" />
+    <Compile Include="JSoko\Editor_\Editor.cs" />
     <Compile Include="JSoko\Gui_\Gui.cs" />
     <Compile Include="JSoko\JSoko.cs" />
     <Compile Include="JSoko\Leveldata\Level.cs" />

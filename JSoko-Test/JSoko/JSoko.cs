@@ -22,6 +22,7 @@
 
 using JSoko.Board_;
 using JSoko.DeadlockDetection_;
+using JSoko.Editor_;
 using JSoko.Gui_;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
@@ -122,8 +123,10 @@ namespace JSoko
     /// </summary>
     public Level currentLevel;
 
-    //  /** Object implementing the editor functionality. Public for easier access. */
-    //  public Editor editor;
+    /// <summary>
+    /// Object implementing the editor functionality. Public for easier access.
+    /// </summary>
+    public Editor editor;
 
     //  /** The currently used solver GUI. */
     //  public SolverGUI solverGUI;
