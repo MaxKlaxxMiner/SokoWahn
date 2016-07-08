@@ -20,11 +20,7 @@
 
 #region # using *.*
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using JSoko.javax.swing;
 
 #endregion
 
@@ -34,7 +30,7 @@ namespace JSoko
   /// This is the main class holding all references of this program. Every important object in this program holds a reference to this object in order to have access to every other object in the game.
   /// In this class all important actions are handled.
   /// </summary>
-  public class JSoko
+  public class JSoko : JFrame
   {
 //public class JSoko extends JFrame implements DirectionConstants, ActionListener, SolutionEventListener, ChangeListener {
 

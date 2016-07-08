@@ -4,6 +4,11 @@
 JSoko.JSoko
 
 
+--- bekannte imports ---
+
+javax.swing.JFrame;
+
+
 --- offene imports ---
 
 java.awt.BorderLayout;
@@ -50,7 +55,6 @@ javax.swing.JButton;
 javax.swing.JCheckBoxMenuItem;
 javax.swing.JComponent;
 javax.swing.JDialog;
-javax.swing.JFrame;
 javax.swing.JList;
 javax.swing.JOptionPane;
 javax.swing.JPanel;
