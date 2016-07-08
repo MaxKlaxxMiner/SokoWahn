@@ -112,11 +112,10 @@ namespace JSoko
     /// </summary>
     public LevelsIo levelIo;
 
-    //  /**
-    //   * Object holding the collection data -> all levels that are currently ready
-    //   * for playing. Public for easier access.
-    //   */
-    //  public LevelCollection currentLevelCollection;
+    /// <summary>
+    /// Object holding the collection data -> all levels that are currently ready for playing. Public for easier access.
+    /// </summary>
+    public LevelCollection currentLevelCollection;
 
     //  /** Object holding the data of the current level. Public for easier access. */
     //  public Level currentLevel;
