@@ -2,11 +2,14 @@
 --- abzuarbeitende Klassen ---
 
 JSoko.JSoko
+JSoko.Board_.Board
 JSoko.Gui_.Gui
-Jsoko.Leveldata.Solutions.SolutionEventListener
+JSoko.Leveldata.Solutions.SolutionEventListener
+
 
 --- bekannte imports ---
 
+de.sokoban_online.jsoko.board.Board;
 de.sokoban_online.jsoko.board.DirectionConstants;
 de.sokoban_online.jsoko.gui.GUI;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
@@ -80,7 +83,6 @@ com.jidesoft.swing.JideTitledBorder;
 com.jidesoft.swing.PartialEtchedBorder;
 com.jidesoft.swing.PartialSide;
 com.jidesoft.swing.StyleRange;
-de.sokoban_online.jsoko.board.Board;
 de.sokoban_online.jsoko.board.Directions;
 de.sokoban_online.jsoko.boardpositions.AbsoluteBoardPositionMoves;
 de.sokoban_online.jsoko.deadlockdetection.ClosedDiagonalDeadlock;

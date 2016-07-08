@@ -18,7 +18,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace JSoko.Board
+namespace JSoko.Board_
 {
   /// <summary>
   /// Here we define numeric constants for the directions, that make up the geometry of a de.sokoban_online.jsoko board.

@@ -20,7 +20,7 @@
 
 #region # using *.*
 
-using JSoko.Board;
+using JSoko.Board_;
 using JSoko.Gui_;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
@@ -83,8 +83,10 @@ namespace JSoko
     /// </summary>
     public Gui applicationGui;
 
-    //  /** Object managing the board of this program. Public for easier access. */
-    //  public Board board;
+    /// <summary>
+    /// Object managing the board of this program. Public for easier access.
+    /// </summary>
+    public Board board;
 
     //  /** Object for deadlock detection. */
     //  private DeadlockDetection deadlockDetection;
