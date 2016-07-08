@@ -191,7 +191,6 @@
     <Content Include="JSokoOriginal\BoardPositions\SolverAnySolution\RelativeBoardPositionSolverAnySolution.java" />
     <Content Include="JSokoOriginal\Board\Board.java" />
     <Content Include="JSokoOriginal\Board\BoxData.java" />
-    <Content Include="JSokoOriginal\Board\DirectionConstants.java" />
     <Content Include="JSokoOriginal\Board\Directions.java" />
     <Content Include="JSokoOriginal\DeadlockDetection\BipartiteMatchings.java" />
     <Content Include="JSokoOriginal\DeadlockDetection\ClosedDiagonalDeadlock.java" />
