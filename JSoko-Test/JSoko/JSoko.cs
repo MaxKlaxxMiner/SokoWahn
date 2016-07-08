@@ -1,158 +1,41 @@
-﻿using System;
+﻿/**
+ *  JSoko - A Java implementation of the game of Sokoban
+ *  Copyright (c) 2012 by Matthias Meger, Germany
+ *
+ *  This file is part of JSoko.
+ *
+ *	JSoko is free software; you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License as published by
+ *	the Free Software Foundation; either version 2 of the License, or
+ *	(at your option) any later version.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#region # using *.*
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JSoko.JSoko
+#endregion
+
+namespace JSoko
 {
-  class JSoko
+  /// <summary>
+  /// This is the main class holding all references of this program. Every important object in this program holds a reference to this object in order to have access to every other object in the game.
+  /// In this class all important actions are handled.
+  /// </summary>
+  public class JSoko
   {
-///**
-// *  JSoko - A Java implementation of the game of Sokoban
-// *  Copyright (c) 2012 by Matthias Meger, Germany
-// *
-// *  This file is part of JSoko.
-// *
-// *	JSoko is free software; you can redistribute it and/or modify
-// *	it under the terms of the GNU General Public License as published by
-// *	the Free Software Foundation; either version 2 of the License, or
-// *	(at your option) any later version.
-// *
-// *	This program is distributed in the hope that it will be useful,
-// *  but WITHOUT ANY WARRANTY; without even the implied warranty of
-// *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// *  GNU General Public License for more details.
-// *
-// *  You should have received a copy of the GNU General Public License
-// *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-// */
-//package de.sokoban_online.jsoko;
-
-//import java.awt.BorderLayout;
-//import java.awt.Cursor;
-//import java.awt.Desktop;
-//import java.awt.Dimension;
-//import java.awt.Font;
-//import java.awt.GraphicsEnvironment;
-//import java.awt.Point;
-//import java.awt.Rectangle;
-//import java.awt.Toolkit;
-//import java.awt.datatransfer.DataFlavor;
-//import java.awt.datatransfer.Transferable;
-//import java.awt.dnd.DnDConstants;
-//import java.awt.dnd.DropTargetDropEvent;
-//import java.awt.event.ActionEvent;
-//import java.awt.event.ActionListener;
-//import java.awt.event.KeyEvent;
-//import java.awt.event.MouseEvent;
-//import java.awt.event.WindowAdapter;
-//import java.awt.event.WindowEvent;
-//import java.io.File;
-//import java.io.FileNotFoundException;
-//import java.io.IOException;
-//import java.lang.reflect.InvocationTargetException;
-//import java.net.URI;
-//import java.net.URL;
-//import java.util.ArrayList;
-//import java.util.Collections;
-//import java.util.Comparator;
-//import java.util.EventObject;
-//import java.util.HashSet;
-//import java.util.Iterator;
-//import java.util.LinkedHashSet;
-//import java.util.List;
-//import java.util.Scanner;
-//import java.util.concurrent.atomic.AtomicBoolean;
-
-//import javax.help.CSH;
-//import javax.swing.AbstractAction;
-//import javax.swing.AbstractButton;
-//import javax.swing.BorderFactory;
-//import javax.swing.DefaultListModel;
-//import javax.swing.JButton;
-//import javax.swing.JCheckBoxMenuItem;
-//import javax.swing.JComponent;
-//import javax.swing.JDialog;
-//import javax.swing.JFrame;
-//import javax.swing.JList;
-//import javax.swing.JOptionPane;
-//import javax.swing.JPanel;
-//import javax.swing.JScrollPane;
-//import javax.swing.JSlider;
-//import javax.swing.JTextField;
-//import javax.swing.SwingConstants;
-//import javax.swing.SwingUtilities;
-//import javax.swing.SwingWorker;
-//import javax.swing.WindowConstants;
-//import javax.swing.event.ChangeEvent;
-//import javax.swing.event.ChangeListener;
-//import javax.swing.filechooser.FileFilter;
-
-//import com.jidesoft.dialog.ButtonPanel;
-//import com.jidesoft.dialog.StandardDialog;
-//import com.jidesoft.list.StyledListCellRenderer;
-//import com.jidesoft.plaf.UIDefaultsLookup;
-//import com.jidesoft.swing.JideTitledBorder;
-//import com.jidesoft.swing.PartialEtchedBorder;
-//import com.jidesoft.swing.PartialSide;
-//import com.jidesoft.swing.StyleRange;
-
-//import de.sokoban_online.jsoko.board.Board;
-//import de.sokoban_online.jsoko.board.DirectionConstants;
-//import de.sokoban_online.jsoko.board.Directions;
-//import de.sokoban_online.jsoko.boardpositions.AbsoluteBoardPositionMoves;
-//import de.sokoban_online.jsoko.deadlockdetection.ClosedDiagonalDeadlock;
-//import de.sokoban_online.jsoko.deadlockdetection.DeadlockDebug;
-//import de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
-//import de.sokoban_online.jsoko.editor.Editor;
-//import de.sokoban_online.jsoko.gui.GUI;
-//import de.sokoban_online.jsoko.gui.GraphicalLevelBrowser;
-//import de.sokoban_online.jsoko.gui.JSokoAboutBox;
-//import de.sokoban_online.jsoko.gui.MainBoardDisplay;
-//import de.sokoban_online.jsoko.gui.MessageDialogs;
-//import de.sokoban_online.jsoko.gui.Transformation;
-//import de.sokoban_online.jsoko.leveldata.Author;
-//import de.sokoban_online.jsoko.leveldata.Database;
-//import de.sokoban_online.jsoko.leveldata.History;
-//import de.sokoban_online.jsoko.leveldata.HistoryElement;
-//import de.sokoban_online.jsoko.leveldata.Level;
-//import de.sokoban_online.jsoko.leveldata.LevelCollection;
-//import de.sokoban_online.jsoko.leveldata.LevelsIO;
-//import de.sokoban_online.jsoko.leveldata.RunLengthFormat;
-//import de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel;
-//import de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
-//import de.sokoban_online.jsoko.leveldata.Snapshot;
-//import de.sokoban_online.jsoko.leveldata.levelmanagement.DatabaseDataEvent;
-//import de.sokoban_online.jsoko.leveldata.levelmanagement.DatabaseEventListener;
-//import de.sokoban_online.jsoko.leveldata.levelmanagement.DatabaseGUI;
-//import de.sokoban_online.jsoko.leveldata.solutions.Solution;
-//import de.sokoban_online.jsoko.leveldata.solutions.SolutionEvent;
-//import de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
-//import de.sokoban_online.jsoko.leveldata.solutions.SolutionsManager;
-//import de.sokoban_online.jsoko.optimizer.GUI.OptimizerGUI;
-//import de.sokoban_online.jsoko.pushesLowerBoundCalculation.LowerBoundCalculation;
-//import de.sokoban_online.jsoko.pushesLowerBoundCalculation.Penalty;
-//import de.sokoban_online.jsoko.resourceHandling.Settings;
-//import de.sokoban_online.jsoko.resourceHandling.Texts;
-//import de.sokoban_online.jsoko.solver.Solver;
-//import de.sokoban_online.jsoko.solver.SolverAStar;
-//import de.sokoban_online.jsoko.solver.SolverGUI;
-//import de.sokoban_online.jsoko.solver.SolverIDAStarPushesMoves;
-//import de.sokoban_online.jsoko.sound.Sound;
-//import de.sokoban_online.jsoko.utilities.Debug;
-//import de.sokoban_online.jsoko.utilities.Delays;
-//import de.sokoban_online.jsoko.utilities.FileSelector;
-//import de.sokoban_online.jsoko.utilities.Utilities;
-
-
-///**
-// * This is the main class holding all references of this program. Every
-// * important object in this program holds a reference to this object in order to
-// * have access to every other object in the game. In this class all important
-// * actions are handled.
-// */
-//@SuppressWarnings("serial")
 //public class JSoko extends JFrame implements DirectionConstants, ActionListener, SolutionEventListener, ChangeListener {
 
 //  private enum GameMode {

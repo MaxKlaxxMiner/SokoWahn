@@ -50,7 +50,6 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
-    <Compile Include="JSoko\Board\DirectionConstants.cs" />
     <Compile Include="JSoko\JSoko.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -283,6 +282,7 @@
     <Content Include="JSoko\Solver\SolverIDAStar.java" />
     <Content Include="JSoko\Solver\SolverIDAStarPushesMoves.java" />
     <Content Include="JSoko\Sound\Sound.java" />
+    <Content Include="JSoko\ToDo.txt" />
     <Content Include="JSoko\Translator\Translator.java" />
     <Content Include="JSoko\Utilities\BASE64.java" />
     <Content Include="JSoko\Utilities\Debug.java" />
@@ -380,6 +380,9 @@
     <Content Include="resources\sounds\goal CLOSE3.wav" />
     <Content Include="resources\sounds\move CLICK.WAV" />
     <Content Include="resources\sounds\push DEEK.WAV" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="WorkAround\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
