@@ -52,6 +52,7 @@
     </Compile>
     <Compile Include="JSoko\Board\DirectionConstants.cs" />
     <Compile Include="JSoko\JSoko.cs" />
+    <Compile Include="JSoko\Leveldata\Solutions\SolutionEventListener.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WorkAround\javax\swing\JFrame.cs" />

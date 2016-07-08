@@ -23,6 +23,7 @@
 using JSoko.Board;
 using JSoko.java.awt.event_;
 using JSoko.javax.swing;
+using JSoko.Leveldata.Solutions;
 
 #pragma warning disable 169
 
@@ -37,7 +38,8 @@ namespace JSoko
   public class JSoko : JFrame
   {
     ActionListener actionListener = null;
-    // SolutionEventListener, ChangeListener {
+    SolutionEventListener solutionEventListener = null;
+    // ChangeListener {
 
     //  private enum GameMode {
     //    /** Play mode -> the user can play the game. 								 */  PLAY,
