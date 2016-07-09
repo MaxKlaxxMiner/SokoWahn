@@ -30,6 +30,7 @@ using JSoko.javax.swing.event_;
 using JSoko.Leveldata;
 using JSoko.Leveldata.Solutions;
 using JSoko.PushesLowerBoundCalculation;
+using JSoko.ResourceHandling;
 using JSoko.Solver;
 using JSoko.Utilities;
 
@@ -209,15 +210,8 @@ namespace JSoko
     /// </summary>
     private void StartProgram()
     {
-
-      //    // All uncaught exceptions / errors are to be handled by the method uncaughtException.
-      //    Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler.INSTANCE);
-
-      //    // For debug purposes all classes can access this JSoko object using this reference.
-      //    Debug.debugApplication = this;
-
-      //    // Load settings.
-      //    Settings.loadSettings(this);
+      // Load settings.
+      Settings.LoadSettings(this);
 
       //    GUI.setLookAndFeel();
 
