@@ -33,7 +33,7 @@ using JSoko.Leveldata.Solutions;
 using JSoko.PushesLowerBoundCalculation;
 using JSoko.ResourceHandling;
 using JSoko.Solver;
-using JSoko.Utilities;
+using JSoko.Utilities_;
 
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
@@ -225,6 +225,7 @@ namespace JSoko
       // Set the title of the game.
       SetTitle("JSoko");
 
+      //Utilities.GetJSokoIcon();
       //    // Add the JSoko icon to the frame.
       //    setIconImage(Utilities.getJSokoIcon());
 

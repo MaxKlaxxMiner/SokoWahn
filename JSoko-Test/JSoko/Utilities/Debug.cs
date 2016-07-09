@@ -5,7 +5,7 @@ using System;
 
 #endregion
 
-namespace JSoko.Utilities
+namespace JSoko.Utilities_
 {
   public class Debug
   {

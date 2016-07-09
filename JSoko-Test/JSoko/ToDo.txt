@@ -16,7 +16,8 @@ JSoko.PushesLowerBoundCalculation.LowerBoundCalculation
 JSoko.ResourceHandling.Settings;
 JSoko.ResourceHandling.Texts;
 JSoko.Solver.SolverGui
-JSoko.Utilities.Debug
+JSoko.Utilities_.Debug
+JSoko.Utilities_.Utilities;
 
 
 --- bekannte imports ---
@@ -37,6 +38,7 @@ de.sokoban_online.jsoko.resourceHandling.Settings;
 de.sokoban_online.jsoko.resourceHandling.Texts;
 de.sokoban_online.jsoko.solver.SolverGUI;
 de.sokoban_online.jsoko.utilities.Debug;
+de.sokoban_online.jsoko.utilities.Utilities;
 java.awt.event.ActionListener;
 javax.swing.event.ChangeListener;
 javax.swing.JFrame;
@@ -136,4 +138,3 @@ de.sokoban_online.jsoko.solver.SolverIDAStarPushesMoves;
 de.sokoban_online.jsoko.sound.Sound;
 de.sokoban_online.jsoko.utilities.Delays;
 de.sokoban_online.jsoko.utilities.FileSelector;
-de.sokoban_online.jsoko.utilities.Utilities;
