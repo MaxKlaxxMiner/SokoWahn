@@ -64,6 +64,7 @@
     <Compile Include="JSoko\Leveldata\Solutions\SolutionEventListener.cs" />
     <Compile Include="JSoko\PushesLowerBoundCalculation\LowerBoundCalculation.cs" />
     <Compile Include="JSoko\ResourceHandling\Settings.cs" />
+    <Compile Include="JSoko\ResourceHandling\Texts.cs" />
     <Compile Include="JSoko\Solver\SolverGui.cs" />
     <Compile Include="JSoko\Utilities\Debug.cs" />
     <Compile Include="Program.cs" />

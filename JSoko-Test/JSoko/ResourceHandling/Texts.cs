@@ -5,11 +5,11 @@ using System;
 
 #endregion
 
-namespace JSoko.Gui_
+namespace JSoko.ResourceHandling
 {
-  public class Gui
+  public class Texts
   {
-    public static void SetLookAndFeel()
+    public static void LoadAndSetTexts()
     {
       throw new NotImplementedException();
     }

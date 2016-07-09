@@ -14,6 +14,7 @@ JSoko.Leveldata.SelectableLevelCollectionComboBoxModel;
 JSoko.Leveldata.Solutions.SolutionEventListener
 JSoko.PushesLowerBoundCalculation.LowerBoundCalculation
 JSoko.ResourceHandling.Settings;
+JSoko.ResourceHandling.Texts;
 JSoko.Solver.SolverGui
 JSoko.Utilities.Debug
 
@@ -33,6 +34,7 @@ de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
 de.sokoban_online.jsoko.pushesLowerBoundCalculation.LowerBoundCalculation;
 de.sokoban_online.jsoko.resourceHandling.Settings;
+de.sokoban_online.jsoko.resourceHandling.Texts;
 de.sokoban_online.jsoko.solver.SolverGUI;
 de.sokoban_online.jsoko.utilities.Debug;
 java.awt.event.ActionListener;
@@ -128,7 +130,6 @@ de.sokoban_online.jsoko.leveldata.solutions.SolutionEvent;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionsManager;
 de.sokoban_online.jsoko.optimizer.GUI.OptimizerGUI;
 de.sokoban_online.jsoko.pushesLowerBoundCalculation.Penalty;
-de.sokoban_online.jsoko.resourceHandling.Texts;
 de.sokoban_online.jsoko.solver.Solver;
 de.sokoban_online.jsoko.solver.SolverAStar;
 de.sokoban_online.jsoko.solver.SolverIDAStarPushesMoves;

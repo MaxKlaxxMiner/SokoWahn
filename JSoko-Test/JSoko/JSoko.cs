@@ -213,10 +213,10 @@ namespace JSoko
       // Load settings.
       Settings.LoadSettings(this);
 
-      //    GUI.setLookAndFeel();
+      Gui.SetLookAndFeel();
 
-      //    // Load language texts.
-      //    Texts.loadAndSetTexts();
+      // Load language texts.
+      Texts.LoadAndSetTexts();
 
       //    // Create object for the level management in an extra thread for better performance because the DB is opened in LevelsIO.
       //    Thread levelsIOThread = new Thread(new Runnable() {
