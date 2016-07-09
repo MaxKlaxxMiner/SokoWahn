@@ -69,6 +69,7 @@
     <Compile Include="WorkAround\javax\swing\event_\ChangeListener.cs" />
     <Compile Include="WorkAround\javax\swing\JFrame.cs" />
     <Compile Include="WorkAround\java\awt\event_\ActionListener.cs" />
+    <Compile Include="WorkAround\JsThread.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>

@@ -154,17 +154,15 @@ namespace JSoko
     /// </summary>
     private SelectableLevelCollectionComboBoxModel levelCollectionsList = new SelectableLevelCollectionComboBoxModel(5);
 
-    //  /**
-    //   * Own thread that moves the player in order to avoid blocking the event
-    //   * dispatcher thread for doing this.
-    //   */
-    //  Thread movePlayerThread;
+    /// <summary>
+    /// Own thread that moves the player in order to avoid blocking the event dispatcher thread for doing this.
+    /// </summary>
+    JsThread movePlayerThread;
 
-    //  /**
-    //   * Flag indicating whether the slider for browsing the movement history is
-    //   * shown.
-    //   */
-    //  boolean isMovementHistorySliderActivated = false;
+    /// <summary>
+    /// Flag indicating whether the slider for browsing the movement history is shown.
+    /// </summary>
+    bool isMovementHistorySliderActivated = false;
 
     //  /**
     //   * Initial player position of the level. This is needed, because there is no
