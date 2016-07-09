@@ -134,17 +134,25 @@ namespace JSoko
     /// </summary>
     public SolverGui solverGui;
 
-    //  /** Indicates whether a box has been selected for pushing. */
-    //  boolean isABoxSelected = false;
+    /// <summary>
+    /// Indicates whether a box has been selected for pushing.
+    /// </summary>
+    bool isABoxSelected = false;
 
-    //  /** The position of the box the user has selected. */
-    //  int selectedBoxPosition = 0;
+    /// <summary>
+    /// The position of the box the user has selected.
+    /// </summary>
+    int selectedBoxPosition = 0;
 
-    //  /** Indicates whether the reachable squares of the player have to be highlighted. */
-    //  private boolean isHighLightOfPlayerSquaresActivated;
+    /// <summary>
+    /// Indicates whether the reachable squares of the player have to be highlighted.
+    /// </summary>
+    private bool isHighLightOfPlayerSquaresActivated;
 
-    //  /** All collections the user can select for playing. */
-    //  private SelectableLevelCollectionComboBoxModel levelCollectionsList = new SelectableLevelCollectionComboBoxModel(5);
+    /// <summary>
+    /// All collections the user can select for playing.
+    /// </summary>
+    private SelectableLevelCollectionComboBoxModel levelCollectionsList = new SelectableLevelCollectionComboBoxModel(5);
 
     //  /**
     //   * Own thread that moves the player in order to avoid blocking the event

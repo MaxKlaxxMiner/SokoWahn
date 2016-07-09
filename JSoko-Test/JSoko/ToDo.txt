@@ -10,9 +10,11 @@ JSoko.Leveldata.History
 JSoko.Leveldata.Level
 JSoko.Leveldata.LevelCollection
 JSoko.Leveldata.LevelsIo
+JSoko.Leveldata.SelectableLevelCollectionComboBoxModel;
 JSoko.Leveldata.Solutions.SolutionEventListener
 JSoko.PushesLowerBoundCalculation.LowerBoundCalculation
 JSoko.Solver.SolverGui
+
 
 --- bekannte imports ---
 
@@ -25,6 +27,7 @@ de.sokoban_online.jsoko.leveldata.History;
 de.sokoban_online.jsoko.leveldata.Level;
 de.sokoban_online.jsoko.leveldata.LevelCollection;
 de.sokoban_online.jsoko.leveldata.LevelsIO;
+de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel;
 de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
 de.sokoban_online.jsoko.pushesLowerBoundCalculation.LowerBoundCalculation;
 de.sokoban_online.jsoko.solver.SolverGUI;
@@ -111,7 +114,6 @@ de.sokoban_online.jsoko.leveldata.Author;
 de.sokoban_online.jsoko.leveldata.Database;
 de.sokoban_online.jsoko.leveldata.HistoryElement;
 de.sokoban_online.jsoko.leveldata.RunLengthFormat;
-de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel;
 de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
 de.sokoban_online.jsoko.leveldata.Snapshot;
 de.sokoban_online.jsoko.leveldata.levelmanagement.DatabaseDataEvent;
