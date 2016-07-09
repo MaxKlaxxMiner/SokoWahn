@@ -31,6 +31,7 @@ using JSoko.Leveldata;
 using JSoko.Leveldata.Solutions;
 using JSoko.PushesLowerBoundCalculation;
 using JSoko.Solver;
+using JSoko.Utilities;
 
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
@@ -164,171 +165,166 @@ namespace JSoko
     /// </summary>
     bool isMovementHistorySliderActivated = false;
 
-    //  /**
-    //   * Initial player position of the level. This is needed, because there is no
-    //   * push before the first moves, so playerPositionAfterLastPush has to be set
-    //   * to his position.
-    //   */
-    //  private int initialPlayerPosition = 0;
+    /// <summary>
+    /// Initial player position of the level. This is needed, because there is no push before the first moves, so playerPositionAfterLastPush has to be set to his position.
+    /// </summary>
+    private int initialPlayerPosition = 0;
 
-    //  /**
-    //   * This value is used in the BFS-Solver. This value is added to the number
-    //   * of the forward board positions. Hence, a high value will result in a
-    //   * preference of the backward search. => This value determines which search
-    //   * direction is used. 0 = both search directions.
-    //   */
-    //  public int preferredSearchDirection = 0;
+    /// <summary>
+    /// This value is used in the BFS-Solver. This value is added to the number of the forward board positions. Hence, a high value will result in a preference of the backward search. 
+    /// => This value determines which search direction is used. 0 = both search directions.
+    /// </summary>
+    public int preferredSearchDirection = 0;
 
-    //  /** Counter: How many boxes are located on a goal. Public for easier access. */
-    //  int boxesOnGoalsCount = 0;
+    /// <summary>
+    /// Counter: How many boxes are located on a goal. Public for easier access.
+    /// </summary>
+    int boxesOnGoalsCount = 0;
 
-    //  /** Counter of moves. Public for easier access. */
-    //  public int movesCount = 0;
+    /// <summary>
+    /// Counter of moves. Public for easier access.
+    /// </summary>
+    public int movesCount = 0;
 
-    //  /** Counter of pushes. Public for easier access. */
-    //  public int pushesCount = 0;
+    /// <summary>
+    /// Counter of pushes. Public for easier access.
+    /// </summary>
+    public int pushesCount = 0;
 
 
-    //  /**
-    //   * The main method of this application.
-    //   * <p>
-    //   *
-    //   * @param argv passed parameters
-    //   */
-    //  static public void main(String[] argv) {
+    /// <summary>
+    /// The main method of this application.
+    /// </summary>
+    /// <param name="argv">passed parameters</param>
+    public static void Main_(string[] argv)
+    {
+      // Check for debug parameters.
+      Debug.CheckParameters(argv);
 
-    //    // Check for debug parameters.
-    //    Debug.checkParameters(argv);
+      new JSoko().StartProgram();
+    }
 
-    //    SwingUtilities.invokeLater(new Runnable() {
-    //      @Override
-    //      public void run() {
-    //        new JSoko().startProgram();
-    //      }
-    //    });
-    //  }
+    /// <summary>
+    /// Starts this program.
+    /// </summary>
+    private void StartProgram()
+    {
 
-    //  /**
-    //   * Starts this program.
-    //   */
+      //    // All uncaught exceptions / errors are to be handled by the method uncaughtException.
+      //    Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler.INSTANCE);
 
-    //  private void startProgram() {
+      //    // For debug purposes all classes can access this JSoko object using this reference.
+      //    Debug.debugApplication = this;
 
-    //    // All uncaught exceptions / errors are to be handled by the method uncaughtException.
-    //    Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler.INSTANCE);
+      //    // Load settings.
+      //    Settings.loadSettings(this);
 
-    //    // For debug purposes all classes can access this JSoko object using this reference.
-    //    Debug.debugApplication = this;
+      //    GUI.setLookAndFeel();
 
-    //    // Load settings.
-    //    Settings.loadSettings(this);
+      //    // Load language texts.
+      //    Texts.loadAndSetTexts();
 
-    //    GUI.setLookAndFeel();
+      //    // Create object for the level management in an extra thread for better performance because the DB is opened in LevelsIO.
+      //    Thread levelsIOThread = new Thread(new Runnable() {
+      //      @Override
+      //      public void run() {
+      //        levelIO = new LevelsIO(JSoko.this);
+      //      }
+      //    });levelsIOThread.start();
 
-    //    // Load language texts.
-    //    Texts.loadAndSetTexts();
+      //    // Set the title of the game.
+      //    setTitle("JSoko");
 
-    //    // Create object for the level management in an extra thread for better performance because the DB is opened in LevelsIO.
-    //    Thread levelsIOThread = new Thread(new Runnable() {
-    //      @Override
-    //      public void run() {
-    //        levelIO = new LevelsIO(JSoko.this);
-    //      }
-    //    });levelsIOThread.start();
+      //    // Add the JSoko icon to the frame.
+      //    setIconImage(Utilities.getJSokoIcon());
 
-    //    // Set the title of the game.
-    //    setTitle("JSoko");
+      //    // Set bounds of this program.
+      //    setBounds( Settings.getInt("applicationXCoordinate", 0),
+      //           Settings.getInt("applicationYCoordinate", 0),
+      //           Settings.getInt("applicationWidth",  1024),
+      //           Settings.getInt("applicationHeight",  800)   );
 
-    //    // Add the JSoko icon to the frame.
-    //    setIconImage(Utilities.getJSokoIcon());
+      //    // Add a WindowListener.
+      //    setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+      //    addWindowListener(new WindowAdapter() {
+      //      @Override
+      //      public void windowClosing(WindowEvent event) {
+      //        actionPerformed(new ActionEvent(event.getSource(), event.getID(), "programClosing"));
+      //      }
+      //    });
 
-    //    // Set bounds of this program.
-    //    setBounds( Settings.getInt("applicationXCoordinate", 0),
-    //           Settings.getInt("applicationYCoordinate", 0),
-    //           Settings.getInt("applicationWidth",  1024),
-    //           Settings.getInt("applicationHeight",  800)   );
+      //    // Set the reference to this object in the static class object
+      //    // "transformation"
+      //    Transformation.setApplication(this);
+      //    Transformation.addChangeEventListener(this);
 
-    //    // Add a WindowListener.
-    //    setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-    //    addWindowListener(new WindowAdapter() {
-    //      @Override
-    //      public void windowClosing(WindowEvent event) {
-    //        actionPerformed(new ActionEvent(event.getSource(), event.getID(), "programClosing"));
-    //      }
-    //    });
+      //    // Create the object holding all board data.
+      //    board = new Board();
 
-    //    // Set the reference to this object in the static class object
-    //    // "transformation"
-    //    Transformation.setApplication(this);
-    //    Transformation.addChangeEventListener(this);
+      //    // Create the panel which displays the graphical output of this program.
+      //    // (uses internally the board reference. Hence, "board" must already been referencing to the board!)
+      //    applicationGUI = new GUI(this);
 
-    //    // Create the object holding all board data.
-    //    board = new Board();
+      //    // Add the GUI of the program.
+      //    add(applicationGUI);
+      //    applicationGUI.addActionListener(this);
 
-    //    // Create the panel which displays the graphical output of this program.
-    //    // (uses internally the board reference. Hence, "board" must already been referencing to the board!)
-    //    applicationGUI = new GUI(this);
+      //    // Ensure that no parts of the program will be off-screen and the program is displayed centered.
+      //    // Get the maximum size available for the program.
+      //    Rectangle maximumWindowBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
 
-    //    // Add the GUI of the program.
-    //    add(applicationGUI);
-    //    applicationGUI.addActionListener(this);
+      //    // If the current windows is larger than the maximum available size then
+      //    // shrink it to the maximum size.
+      //    if (getSize().width > maximumWindowBounds.width || getSize().height > maximumWindowBounds.height) {
+      //      setSize(maximumWindowBounds.width, maximumWindowBounds.height);
+      //    }
 
-    //    // Ensure that no parts of the program will be off-screen and the program is displayed centered.
-    //    // Get the maximum size available for the program.
-    //    Rectangle maximumWindowBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+      //    // If the position is currently -1 this means there aren't any user settings, yet.
+      //    // The new position should be in the higher middle of the screen:
+      //    if (getBounds().x == -1 && getBounds().y == -1) {
+      //      int xCoord = (maximumWindowBounds.width / 2 - getSize().width / 2);
+      //      int yCoord = (maximumWindowBounds.height / 4 - getSize().height / 4);
+      //      setLocation(xCoord, yCoord);
+      //    }
 
-    //    // If the current windows is larger than the maximum available size then
-    //    // shrink it to the maximum size.
-    //    if (getSize().width > maximumWindowBounds.width || getSize().height > maximumWindowBounds.height) {
-    //      setSize(maximumWindowBounds.width, maximumWindowBounds.height);
-    //    }
+      //    // Pre-load the sounds.
+      //    Sound.Effects.loadSounds();
 
-    //    // If the position is currently -1 this means there aren't any user settings, yet.
-    //    // The new position should be in the higher middle of the screen:
-    //    if (getBounds().x == -1 && getBounds().y == -1) {
-    //      int xCoord = (maximumWindowBounds.width / 2 - getSize().width / 2);
-    //      int yCoord = (maximumWindowBounds.height / 4 - getSize().height / 4);
-    //      setLocation(xCoord, yCoord);
-    //    }
+      //    // Wait until the database has been connected before loading the start level.
+      //    try { levelsIOThread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
 
-    //    // Pre-load the sounds.
-    //    Sound.Effects.loadSounds();
+      //    loadStartLevel();
 
-    //    // Wait until the database has been connected before loading the start level.
-    //    try { levelsIOThread.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+      //    // Display the Frame.
+      //    setVisible(true);
 
-    //    loadStartLevel();
+      //    // Load the available collections.
+      //    levelCollectionsList.updateAvailableCollections(levelIO.database);
 
-    //    // Display the Frame.
-    //    setVisible(true);
+      //    // Set the same bounds for the Java help as the program but a little
+      //    // bit smaller size so the user can see that the program has opened
+      //    // behind the help.
+      //    Texts.helpBroker.setSize(new Dimension(getSize().width - 40, getSize().height - 40));
+      //    Texts.helpBroker.setLocation(new Point(getLocation().x + 20, getLocation().y + 20));
 
-    //    // Load the available collections.
-    //    levelCollectionsList.updateAvailableCollections(levelIO.database);
+      //    // Show the help if this is the first start of the program.
+      //    if(Settings.getBool("showHelp") == true && Debug.isDebugModeActivated == false) {
 
-    //    // Set the same bounds for the Java help as the program but a little
-    //    // bit smaller size so the user can see that the program has opened
-    //    // behind the help.
-    //    Texts.helpBroker.setSize(new Dimension(getSize().width - 40, getSize().height - 40));
-    //    Texts.helpBroker.setLocation(new Point(getLocation().x + 20, getLocation().y + 20));
+      //      // The next time the program is opened the help shouldn't be displayed again.
+      //      Settings.set("showHelp", Boolean.FALSE.toString());
 
-    //    // Show the help if this is the first start of the program.
-    //    if(Settings.getBool("showHelp") == true && Debug.isDebugModeActivated == false) {
+      //      // Show the help.
+      //      new CSH.DisplayHelpFromSource(Texts.helpBroker).actionPerformed(new ActionEvent(this, 0, null));
+      //    }
 
-    //      // The next time the program is opened the help shouldn't be displayed again.
-    //      Settings.set("showHelp", Boolean.FALSE.toString());
+      //    // The main board display should have the focus for catching key and mouse events.
+      //    applicationGUI.mainBoardDisplay.requestFocusInWindow();
 
-    //      // Show the help.
-    //      new CSH.DisplayHelpFromSource(Texts.helpBroker).actionPerformed(new ActionEvent(this, 0, null));
-    //    }
-
-    //    // The main board display should have the focus for catching key and mouse events.
-    //    applicationGUI.mainBoardDisplay.requestFocusInWindow();
-
-    //    // Check for updates if requested.
-    //    if(Settings.getBool("automaticUpdateCheck")) {
-    //      checkForUpdates();
-    //    }
-    //  }
+      //    // Check for updates if requested.
+      //    if(Settings.getBool("automaticUpdateCheck")) {
+      //      checkForUpdates();
+      //    }
+    }
 
     //  /**
     //   * Loads the last loaded collection and sets the start level for the game.
