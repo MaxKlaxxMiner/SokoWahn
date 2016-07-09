@@ -20,6 +20,7 @@
 
 #region # using *.*
 
+using System.Threading;
 using JSoko.Board_;
 using JSoko.DeadlockDetection_;
 using JSoko.Editor_;
@@ -197,12 +198,12 @@ namespace JSoko
     /// The main method of this application.
     /// </summary>
     /// <param name="argv">passed parameters</param>
-    public static void Main_(string[] argv)
+    public JSoko(string[] argv)
     {
       // Check for debug parameters.
       Debug.CheckParameters(argv);
 
-      new JSoko().StartProgram();
+      StartProgram();
     }
 
     /// <summary>
@@ -218,16 +219,11 @@ namespace JSoko
       // Load language texts.
       Texts.LoadAndSetTexts();
 
-      //    // Create object for the level management in an extra thread for better performance because the DB is opened in LevelsIO.
-      //    Thread levelsIOThread = new Thread(new Runnable() {
-      //      @Override
-      //      public void run() {
-      //        levelIO = new LevelsIO(JSoko.this);
-      //      }
-      //    });levelsIOThread.start();
+      // Create object for the level management in an extra thread for better performance because the DB is opened in LevelsIO.
+      var levelsIoThread = new Thread(() => levelIo = new LevelsIo(this)); levelsIoThread.Start();
 
-      //    // Set the title of the game.
-      //    setTitle("JSoko");
+      // Set the title of the game.
+      SetTitle("JSoko");
 
       //    // Add the JSoko icon to the frame.
       //    setIconImage(Utilities.getJSokoIcon());

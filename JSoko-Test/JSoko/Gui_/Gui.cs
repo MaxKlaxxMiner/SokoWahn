@@ -11,7 +11,7 @@ namespace JSoko.Gui_
   {
     public static void SetLookAndFeel()
     {
-      throw new NotImplementedException();
+      // todo: throw new NotImplementedException();
     }
   }
 }

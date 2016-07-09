@@ -11,7 +11,7 @@ namespace JSoko.ResourceHandling
   {
     public static void LoadAndSetTexts()
     {
-      throw new NotImplementedException();
+      // todo: throw new NotImplementedException();
     }
   }
 }

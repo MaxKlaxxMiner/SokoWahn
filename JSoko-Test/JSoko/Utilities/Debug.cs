@@ -11,7 +11,7 @@ namespace JSoko.Utilities
   {
     public static void CheckParameters(string[] argv)
     {
-      throw new NotImplementedException(string.Join(" ", argv));
+      // todo: throw new NotImplementedException(string.Join(" ", argv));
     }
   }
 }

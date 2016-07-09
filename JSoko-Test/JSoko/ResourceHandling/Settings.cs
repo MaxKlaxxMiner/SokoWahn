@@ -11,7 +11,7 @@ namespace JSoko.ResourceHandling
   {
     public static void LoadSettings(JSoko jSoko)
     {
-      throw new NotImplementedException();
+      // todo: throw new NotImplementedException();
     }
   }
 }

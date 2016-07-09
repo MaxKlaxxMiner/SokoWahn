@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
+#region # using *.*
+
+using System;
 using System.Windows.Forms;
 
-namespace JSoko_Test
+#endregion
+
+namespace JSoko
 {
   public partial class Form1 : Form
   {
-    public Form1()
+    protected Form1()
     {
       InitializeComponent();
     }
