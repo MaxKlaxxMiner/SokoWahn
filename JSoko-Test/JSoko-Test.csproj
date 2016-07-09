@@ -68,8 +68,8 @@
     <Compile Include="JSoko\ResourceHandling\Settings.cs" />
     <Compile Include="JSoko\ResourceHandling\Texts.cs" />
     <Compile Include="JSoko\Solver\SolverGui.cs" />
-    <Compile Include="JSoko\Utilities\Utilities.cs" />
-    <Compile Include="JSoko\Utilities\Debug.cs" />
+    <Compile Include="JSoko\Utilities_\Utilities.cs" />
+    <Compile Include="JSoko\Utilities_\Debug.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WorkAround\javax\swing\event_\ChangeListener.cs" />
