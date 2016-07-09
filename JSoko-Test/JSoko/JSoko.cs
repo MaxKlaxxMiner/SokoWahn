@@ -30,6 +30,7 @@ using JSoko.javax.swing.event_;
 using JSoko.Leveldata;
 using JSoko.Leveldata.Solutions;
 using JSoko.PushesLowerBoundCalculation;
+using JSoko.Solver;
 
 // ReSharper disable UnusedMember.Local
 // ReSharper disable UnusedMember.Global
@@ -128,8 +129,10 @@ namespace JSoko
     /// </summary>
     public Editor editor;
 
-    //  /** The currently used solver GUI. */
-    //  public SolverGUI solverGUI;
+    /// <summary>
+    /// The currently used solver GUI.
+    /// </summary>
+    public SolverGui solverGui;
 
     //  /** Indicates whether a box has been selected for pushing. */
     //  boolean isABoxSelected = false;
