@@ -202,14 +202,12 @@ namespace JSoko
     {
       // Check for debug parameters.
       Debug.CheckParameters(argv);
-
-      StartProgram();
     }
 
     /// <summary>
     /// Starts this program.
     /// </summary>
-    private void StartProgram()
+    public void StartProgram()
     {
       // Load settings.
       Settings.LoadSettings(this);
@@ -228,11 +226,11 @@ namespace JSoko
       // Add the JSoko icon to the frame.
       SetIconImage(Utilities.GetJSokoIcon());
 
-      //    // Set bounds of this program.
-      //    setBounds( Settings.getInt("applicationXCoordinate", 0),
-      //           Settings.getInt("applicationYCoordinate", 0),
-      //           Settings.getInt("applicationWidth",  1024),
-      //           Settings.getInt("applicationHeight",  800)   );
+      // Set bounds of this program.
+      SetBounds(Settings.GetInt("applicationXCoordinate", 0),
+                Settings.GetInt("applicationYCoordinate", 0),
+                Settings.GetInt("applicationWidth", 1024),
+                Settings.GetInt("applicationHeight", 800));
 
       //    // Add a WindowListener.
       //    setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);

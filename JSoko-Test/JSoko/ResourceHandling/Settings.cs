@@ -13,5 +13,18 @@ namespace JSoko.ResourceHandling
     {
       // todo: throw new NotImplementedException();
     }
+
+    public static int GetInt(string name, int alternate)
+    {
+      // todo
+      return alternate;
+    }
+
+    public static string Get(string name)
+    {
+      if (name == "iconFolder") return "resources/graphics/icons/";
+
+      return null;
+    }
   }
 }

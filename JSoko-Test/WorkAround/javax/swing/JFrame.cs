@@ -1,5 +1,9 @@
 ﻿
+#region # using *.*
+
 using System.Drawing;
+
+#endregion
 
 namespace JSoko.javax.swing
 {

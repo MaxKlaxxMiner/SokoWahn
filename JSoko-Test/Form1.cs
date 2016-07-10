@@ -14,5 +14,11 @@ namespace JSoko
     {
       InitializeComponent();
     }
+
+    private void Form1_Load(object sender, EventArgs e)
+    {
+      var jsoko = this as JSoko;
+      if (jsoko != null) jsoko.StartProgram();
+    }
   }
 }

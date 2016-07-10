@@ -18,7 +18,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+using System;
 using System.Drawing;
+using System.IO;
+using JSoko.ResourceHandling;
 
 namespace JSoko.Utilities_
 {
@@ -592,23 +595,20 @@ namespace JSoko.Utilities_
     //    return files;
     //  }
 
-    //  /**
-    //   * Returns the "JSoko icon".
-    //   *
-    //   * @return the icon of JSoko
-    //   */
-    //  public static BufferedImage GetJSokoIcon() {
-    //    try {
-    //      return loadBufferedImage(Settings.get("iconFolder")+"JSoko-Icon.png");
-    //    } catch (FileNotFoundException e) {
-    //      return null;
-    //    }
-    //  }
+    /// <summary>
+    /// Returns the "JSoko icon".
+    /// </summary>
+    /// <returns>the icon of JSoko</returns>
     public static Bitmap GetJSokoIcon()
     {
-      // todo
-      //new Bitmap(@"C:\Users\MaxKlaxx\Desktop\Prog\Spiele\SokoWahn\JSoko-Test\bin\Debug\resources\graphics\icons\JSoko-Icon.png")
-      return null;
+      try
+      {
+        return new Bitmap(Settings.Get("iconFolder") + "JSoko-Icon.png");
+      }
+      catch
+      {
+        return null;
+      }
     }
 
 
