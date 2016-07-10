@@ -18,30 +18,7 @@ JSoko.ResourceHandling.Texts;
 JSoko.Solver.SolverGui
 JSoko.Utilities_.Debug
 JSoko.Utilities_.Utilities;
-
-
---- bekannte imports ---
-
-de.sokoban_online.jsoko.board.Board;
-de.sokoban_online.jsoko.board.DirectionConstants;
-de.sokoban_online.jsoko.deadlockdetection.DeadlockDetection;
-de.sokoban_online.jsoko.editor.Editor;
-de.sokoban_online.jsoko.gui.GUI;
-de.sokoban_online.jsoko.leveldata.History;
-de.sokoban_online.jsoko.leveldata.Level;
-de.sokoban_online.jsoko.leveldata.LevelCollection;
-de.sokoban_online.jsoko.leveldata.LevelsIO;
-de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel;
-de.sokoban_online.jsoko.leveldata.solutions.SolutionEventListener;
-de.sokoban_online.jsoko.pushesLowerBoundCalculation.LowerBoundCalculation;
-de.sokoban_online.jsoko.resourceHandling.Settings;
-de.sokoban_online.jsoko.resourceHandling.Texts;
-de.sokoban_online.jsoko.solver.SolverGUI;
-de.sokoban_online.jsoko.utilities.Debug;
-de.sokoban_online.jsoko.utilities.Utilities;
-java.awt.event.ActionListener;
-javax.swing.event.ChangeListener;
-javax.swing.JFrame;
+JSoko.Utilities_.OSSpecific_.OSSpecific;
 
 
 --- offene imports ---
@@ -232,4 +209,3 @@ import de.sokoban_online.jsoko.optimizer.Optimizer.OptimizationMethod;
 import de.sokoban_online.jsoko.translator.Translator;
 import de.sokoban_online.jsoko.utilities.Debug;
 import de.sokoban_online.jsoko.utilities.Utilities;
-import de.sokoban_online.jsoko.utilities.OSSpecific.OSSpecific;

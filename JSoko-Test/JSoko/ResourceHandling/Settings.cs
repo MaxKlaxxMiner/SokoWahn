@@ -21,6 +21,7 @@
 #region # using *.*
 
 using System;
+using JSoko.OsSpecific_;
 
 #endregion
 
@@ -37,25 +38,6 @@ namespace JSoko.ResourceHandling
   /// </summary>
   public static class Settings
   {
-    public static void LoadSettings(JSoko jSoko)
-    {
-      // todo: throw new NotImplementedException();
-    }
-
-    public static int GetInt(string name, int alternate)
-    {
-      // todo
-      return alternate;
-    }
-
-    public static string Get(string name)
-    {
-      // todo
-      if (name == "iconFolder") return "resources/graphics/icons/";
-
-      return null;
-    }
-
     //  /**
     //   * File name of the program settings (skeleton). Set up in {@link #loadSettings(JSoko)}.
     //   */
@@ -320,96 +302,104 @@ namespace JSoko.ResourceHandling
     //    throw new CloneNotSupportedException();
     //  }
 
-    //  /**
-    //   * Load the settings from the hard disk.
-    //   *
-    //   * @param application
-    //   *            reference to the main object
-    //   */
-    //  public static final void loadSettings(JSoko application) {
+    /// <summary>
+    /// Load the settings from the hard disk.
+    /// </summary>
+    /// <param name="application">reference to the main object</param>
+    public static void LoadSettings(JSoko application)
+    {
+      // todo
 
-    //    // First set os specific settings like the directories to load/save data from.
-    //    OSSpecific.setOSSpecificSettings(application);
+      // First set os specific settings like the directories to load/save data from.
+      OsSpecific.SetOsSpecificSettings(application);
 
-    //    // The default settings of JSoko.
-    //    defaultSettingsFilename = "/settings.ini";
+      //    // The default settings of JSoko.
+      //    defaultSettingsFilename = "/settings.ini";
 
-    //    // Settings file for the user specific settings.
-    //    String userSettingsFilename = OSSpecific.getPreferencesDirectory()+"settings.ini";
-    //    if(!new File(userSettingsFilename).exists()) {
-    //      userSettingsFilename = Utilities.getBaseFolder() + "user_settings.ini"; // versions < 1.74 stored the file in the base folder
-    //    }
+      //    // Settings file for the user specific settings.
+      //    String userSettingsFilename = OSSpecific.getPreferencesDirectory()+"settings.ini";
+      //    if(!new File(userSettingsFilename).exists()) {
+      //      userSettingsFilename = Utilities.getBaseFolder() + "user_settings.ini"; // versions < 1.74 stored the file in the base folder
+      //    }
 
-    //    // The properties of this program (from skeleton).
-    //    defaultSettings = new Properties();
+      //    // The properties of this program (from skeleton).
+      //    defaultSettings = new Properties();
 
-    //    /**
-    //     * Load the default settings file.
-    //     */
-    //    BufferedReader propertyInputStream = Utilities.getBufferedReader(defaultSettingsFilename);
-    //    if (propertyInputStream == null) {
+      //    /**
+      //     * Load the default settings file.
+      //     */
+      //    BufferedReader propertyInputStream = Utilities.getBufferedReader(defaultSettingsFilename);
+      //    if (propertyInputStream == null) {
 
-    //      // Load language texts.
-    //      Texts.loadAndSetTexts();
+      //      // Load language texts.
+      //      Texts.loadAndSetTexts();
 
-    //      MessageDialogs.showErrorString(application, Texts.getText("message.fileMissing", "settings.ini"));
-    //      System.exit(-1);
-    //    }
+      //      MessageDialogs.showErrorString(application, Texts.getText("message.fileMissing", "settings.ini"));
+      //      System.exit(-1);
+      //    }
 
-    //    try {
-    //      defaultSettings.load(propertyInputStream);
-    //    } catch (IOException e) {
-    //      // Load language texts.
-    //      Texts.loadAndSetTexts();
+      //    try {
+      //      defaultSettings.load(propertyInputStream);
+      //    } catch (IOException e) {
+      //      // Load language texts.
+      //      Texts.loadAndSetTexts();
 
-    //      MessageDialogs.showErrorString(application, Texts.getText("message.fileMissing", "settings.ini"));
-    //      System.exit(-1);
-    //    }
+      //      MessageDialogs.showErrorString(application, Texts.getText("message.fileMissing", "settings.ini"));
+      //      System.exit(-1);
+      //    }
 
-    //    try {
-    //      if (propertyInputStream != null) {
-    //        propertyInputStream.close();
-    //      }
-    //    } catch (IOException e) {
-    //    }
+      //    try {
+      //      if (propertyInputStream != null) {
+      //        propertyInputStream.close();
+      //      }
+      //    } catch (IOException e) {
+      //    }
 
-    //    /**
-    //     * Load the user specific settings file.
-    //     */
-    //    settings = new Properties();
+      //    /**
+      //     * Load the user specific settings file.
+      //     */
+      //    settings = new Properties();
 
-    //    // The default settings are taken as initial content.
-    //    settings.putAll(defaultSettings);
+      //    // The default settings are taken as initial content.
+      //    settings.putAll(defaultSettings);
 
-    //    // The program version is always read from the default settings file.
-    //    PROGRAM_VERSION = getString("version", "");
+      //    // The program version is always read from the default settings file.
+      //    PROGRAM_VERSION = getString("version", "");
 
-    //    // Load the user settings.
-    //    BufferedReader in = null;
-    //    try {
-    //      in = Utilities.getBufferedReader(userSettingsFilename);
-    //      settings.load(in);
-    //      in.close();
-    //      in = null; // we are completely done with it
-    //    } catch (Exception e) {
-    //      /* Program starts with default settings. */
-    //    } finally {
-    //      if (in != null) {
-    //        try {
-    //          in.close();
-    //        } catch (IOException e) {
-    //        }
-    //      }
-    //    }
+      //    // Load the user settings.
+      //    BufferedReader in = null;
+      //    try {
+      //      in = Utilities.getBufferedReader(userSettingsFilename);
+      //      settings.load(in);
+      //      in.close();
+      //      in = null; // we are completely done with it
+      //    } catch (Exception e) {
+      //      /* Program starts with default settings. */
+      //    } finally {
+      //      if (in != null) {
+      //        try {
+      //          in.close();
+      //        } catch (IOException e) {
+      //        }
+      //      }
+      //    }
 
-    //    // Some Settings must always be set to the default value.
-    //    /* empty */
+      //    // Some Settings must always be set to the default value.
+      //    /* empty */
 
-    //    // Set the program variables corresponding to the loaded settings.
-    //    // Name changes for properties are also handled there.
-    //    setProgramVariablesFromSettings();
-    //  }
+      //    // Set the program variables corresponding to the loaded settings.
+      //    // Name changes for properties are also handled there.
+      //    setProgramVariablesFromSettings();
+    }
 
+
+    public static string Get(string name)
+    {
+      // todo
+      if (name == "iconFolder") return "resources/graphics/icons/";
+
+      return null;
+    }
     //  /**
     //   * Returns the value of the setting parameter corresponding to the passed parameter key.
     //   * <p>
@@ -925,6 +915,11 @@ namespace JSoko.ResourceHandling
     //    return propertyValue;
     //  }
 
+    public static int GetInt(string name, int alternate)
+    {
+      // todo
+      return alternate;
+    }
     //  /**
     //   * Returns the value of the property corresponding to the passed name as an "int".
     //   *
