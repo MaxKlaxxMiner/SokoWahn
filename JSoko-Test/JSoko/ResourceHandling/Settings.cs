@@ -152,17 +152,20 @@ namespace JSoko.ResourceHandling
      * old user settings file, we should detect that early, i.e. during the initial loading from file.
      */
 
-    //  /**
-    //   * Time delay in milliseconds between the movements on the board.
-    //   */
-    //  @Settings.SettingsVar
-    //  public static short delayValue = 55;
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)] // , AllowMultiple = true
+    sealed class SettingsVar : Attribute { }
 
-    //  /**
-    //   * Time delay in milliseconds between the undo/redo movements on the board.
-    //   */
-    //  @Settings.SettingsVar
-    //  public static short delayValueUndoRedo = 35;
+    /// <summary>
+    /// Time delay in milliseconds between the movements on the board.
+    /// </summary>
+    [SettingsVar]
+    public static short delayValue = 55;
+
+    /// <summary>
+    /// Time delay in milliseconds between the undo/redo movements on the board.
+    /// </summary>
+    [SettingsVar]
+    public static short delayValueUndoRedo = 35;
 
     //  /**
     //   * Flag specifying whether the single step undo/redo is activated.
