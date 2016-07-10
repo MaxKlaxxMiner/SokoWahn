@@ -63,8 +63,11 @@
     <Compile Include="JSoko\Leveldata\LevelCollection.cs" />
     <Compile Include="JSoko\Leveldata\LevelsIo.cs" />
     <Compile Include="JSoko\Leveldata\History.cs" />
+    <Compile Include="JSoko\Leveldata\SelectableLevelCollection.cs" />
     <Compile Include="JSoko\Leveldata\SelectableLevelCollectionComboBoxModel.cs" />
     <Compile Include="JSoko\Leveldata\Solutions\SolutionEventListener.cs" />
+    <Compile Include="JSoko\Optimizer_\OptimizationMethod.cs" />
+    <Compile Include="JSoko\Optimizer_\Optimizer.cs" />
     <Compile Include="JSoko\OsSpecific_\OsSpecific.cs" />
     <Compile Include="JSoko\PushesLowerBoundCalculation\LowerBoundCalculation.cs" />
     <Compile Include="JSoko\ResourceHandling\Settings.cs" />

@@ -18,14 +18,15 @@ JSoko.Leveldata.Level
 JSoko.Leveldata.LevelCollection
 JSoko.Leveldata.LevelsIo
 JSoko.Leveldata.SelectableLevelCollectionComboBoxModel;
+JSoko.Leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
 JSoko.Leveldata.Solutions.SolutionEventListener
+JSoko.Optimizer_.OptimizationMethod;
 JSoko.PushesLowerBoundCalculation.LowerBoundCalculation
 JSoko.Solver.SolverGui
 JSoko.Utilities_.Debug
 
 
---- offene imports ---
-
+--- JSoko ---
 java.awt.BorderLayout;
 java.awt.Cursor;
 java.awt.Desktop;
@@ -101,7 +102,6 @@ de.sokoban_online.jsoko.leveldata.Author;
 de.sokoban_online.jsoko.leveldata.Database;
 de.sokoban_online.jsoko.leveldata.HistoryElement;
 de.sokoban_online.jsoko.leveldata.RunLengthFormat;
-de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
 de.sokoban_online.jsoko.leveldata.Snapshot;
 de.sokoban_online.jsoko.leveldata.levelmanagement.DatabaseDataEvent;
 de.sokoban_online.jsoko.leveldata.levelmanagement.DatabaseEventListener;
@@ -206,7 +206,47 @@ import de.sokoban_online.jsoko.JSoko;
 import de.sokoban_online.jsoko.gui.MessageDialogs;
 import de.sokoban_online.jsoko.leveldata.Database;
 import de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
-import de.sokoban_online.jsoko.optimizer.Optimizer.OptimizationMethod;
 import de.sokoban_online.jsoko.translator.Translator;
+import de.sokoban_online.jsoko.utilities.Debug;
+import de.sokoban_online.jsoko.utilities.Utilities;
+
+--- Optimizer ---
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import de.sokoban_online.jsoko.board.Board;
+import de.sokoban_online.jsoko.board.DirectionConstants;
+import de.sokoban_online.jsoko.board.Directions;
+import de.sokoban_online.jsoko.optimizer.AllMetricsOptimizer.BoardPosition;
+import de.sokoban_online.jsoko.optimizer.AllMetricsOptimizer.BoardPositionWithPushDirection;
+import de.sokoban_online.jsoko.optimizer.AllMetricsOptimizer.BoardPositionsStorage;
+import de.sokoban_online.jsoko.optimizer.AllMetricsOptimizer.BoardPositionsStorage.Statistics;
+import de.sokoban_online.jsoko.optimizer.AllMetricsOptimizer.BoardPositionsStorage.StorageBoardPosition;
+import de.sokoban_online.jsoko.optimizer.AllMetricsOptimizer.PriorityQueueOptimizer;
+import de.sokoban_online.jsoko.optimizer.GUI.OptimizerGUISuperClass;
+import de.sokoban_online.jsoko.optimizer.dataStructures.BitVector;
+import de.sokoban_online.jsoko.optimizer.dataStructures.BoardPositionQueue;
+import de.sokoban_online.jsoko.optimizer.dataStructures.BoxConfigurationStorageHashSet;
+import de.sokoban_online.jsoko.optimizer.dataStructures.BoxPositions;
+import de.sokoban_online.jsoko.optimizer.dataStructures.PlayerPositionsQueue;
+import de.sokoban_online.jsoko.resourceHandling.Settings.SearchDirection;
+import de.sokoban_online.jsoko.resourceHandling.Texts;
 import de.sokoban_online.jsoko.utilities.Debug;
 import de.sokoban_online.jsoko.utilities.Utilities;

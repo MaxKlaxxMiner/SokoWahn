@@ -21,9 +21,13 @@
 #region # using *.*
 
 using System;
+using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using JSoko.Gui_;
 using JSoko.java.util;
+using JSoko.Leveldata;
+using JSoko.Optimizer_;
 using JSoko.OsSpecific_;
 using JSoko.Utilities_;
 // ReSharper disable NotAccessedField.Local
@@ -153,7 +157,10 @@ namespace JSoko.ResourceHandling
      */
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)] // , AllowMultiple = true
-    sealed class SettingsVar : Attribute { }
+    sealed class SettingsVar : Attribute
+    {
+      public string propertyName;
+    }
 
     /// <summary>
     /// Time delay in milliseconds between the movements on the board.
@@ -260,111 +267,103 @@ namespace JSoko.ResourceHandling
      * The initial value <code>30000</code> is a kind of small infinity, and gives much more weight to the pushes, so we optimize for pushes, initially.
      */
     [SettingsVar]
-    public static float movesVsPushes = 30000f;
+    // ReSharper disable once InconsistentNaming
+    public static float movesVSPushes = 30000f;
 
-    //  /**
-    //   * Whether solution comparison (ordering) includes the minor metrics.
-    //   */
-    //  @Settings.SettingsVar(propertyName = "checkAll5Metrics")
-    //  public static boolean checkAllMinorMetrics = true;
+    /// <summary>
+    /// Whether solution comparison (ordering) includes the minor metrics.
+    /// </summary>
+    [SettingsVar(propertyName = "checkAll5Metrics")]
+    public static bool checkAllMinorMetrics = true;
 
-    //  /**
-    //   * Last file path. This path is used to set useful default values for the next file dialog.
-    //   */
-    //  public static String lastFilePath;
+    /// <summary>
+    /// Last file path. This path is used to set useful default values for the next file dialog.
+    /// </summary>
+    public static string lastFilePath;
 
-    //  /** Last played level number . This level number is set as start level at the start of the program. */
-    //  @Settings.SettingsVar
-    //  public static int lastPlayedLevelNumber;
+    /// <summary>
+    /// Last played level number . This level number is set as start level at the start of the program.
+    /// </summary>
+    [SettingsVar]
+    public static int lastPlayedLevelNumber;
 
-    //  /** Last played collections. */
-    //  public static ArrayList<SelectableLevelCollection> lastPlayedCollections = new ArrayList<SelectableLevelCollection>();
+    /// <summary>
+    /// Last played collections.
+    /// </summary>
+    public static List<SelectableLevelCollection> lastPlayedCollections = new List<SelectableLevelCollection>();
 
-    //  /** Optimizer settings */
-    //  @Settings.SettingsVar
-    //  public static int vicinitySquaresBox1 = 50;
-    //  @Settings.SettingsVar
-    //  public static int vicinitySquaresBox2 = 10;
-    //  @Settings.SettingsVar
-    //  public static int vicinitySquaresBox3 = 10;
-    //  @Settings.SettingsVar
-    //  public static int vicinitySquaresBox4 = 10;
-    //  @Settings.SettingsVar
-    //  public static boolean vicinitySquaresBox1Enabled = true;
-    //  @Settings.SettingsVar
-    //  public static boolean vicinitySquaresBox2Enabled = false;
-    //  @Settings.SettingsVar
-    //  public static boolean vicinitySquaresBox3Enabled = false;
-    //  @Settings.SettingsVar
-    //  public static boolean vicinitySquaresBox4Enabled = false;
-    //  @Settings.SettingsVar
-    //  public static boolean isIteratingEnabled = true;
-    //  @Settings.SettingsVar
-    //  public static boolean isOnlyLastSolutionToBeSaved = false;
-    //  @Settings.SettingsVar
-    //  public static int CPUCoresToUse = Runtime.getRuntime().availableProcessors();
-    //  @Settings.SettingsVar
-    //  public static int optimizerXCoordinate = -1;
-    //  @Settings.SettingsVar
-    //  public static int optimizerYCoordinate = -1;
-    //  @Settings.SettingsVar
-    //  public static int optimizerWidth		= 1024;
-    //  @Settings.SettingsVar
-    //  public static int optimizerHeight		= 800;
-    //  @Settings.SettingsVar
-    //  public static int optimizationMethod 	= OptimizationMethod.MOVES_PUSHES.ordinal();
+    // --- Optimizer settings ---
+    [SettingsVar]
+    public static int vicinitySquaresBox1 = 50;
+    [SettingsVar]
+    public static int vicinitySquaresBox2 = 10;
+    [SettingsVar]
+    public static int vicinitySquaresBox3 = 10;
+    [SettingsVar]
+    public static int vicinitySquaresBox4 = 10;
+    [SettingsVar]
+    public static bool vicinitySquaresBox1Enabled = true;
+    [SettingsVar]
+    public static bool vicinitySquaresBox2Enabled = false;
+    [SettingsVar]
+    public static bool vicinitySquaresBox3Enabled = false;
+    [SettingsVar]
+    public static bool vicinitySquaresBox4Enabled = false;
+    [SettingsVar]
+    public static bool isIteratingEnabled = true;
+    [SettingsVar]
+    public static bool isOnlyLastSolutionToBeSaved = false;
+    [SettingsVar]
+    // ReSharper disable once InconsistentNaming
+    public static int CPUCoresToUse = Environment.ProcessorCount;
+    [SettingsVar]
+    public static int optimizerXCoordinate = -1;
+    [SettingsVar]
+    public static int optimizerYCoordinate = -1;
+    [SettingsVar]
+    public static int optimizerWidth		= 1024;
+    [SettingsVar]
+    public static int optimizerHeight		= 800;
+    [SettingsVar]
+    public static int optimizationMethod 	= (int)OptimizationMethod.MovesPushes;
 
+    // --- Solver settings ---
 
-    //  /** Solver settings */
+    /// <summary>
+    /// Whether the solver shall obey a time limit.
+    /// 
+    /// @see #solverTimeLimitInSeconds
+    /// </summary>
+    [SettingsVar]
+    public static bool isSolverTimeLimited = true;
 
-    //  /**
-    //   * Whether the solver shall obey a time limit.
-    //   *
-    //   * @see #solverTimeLimitInSeconds
-    //   */
-    //  @Settings.SettingsVar
-    //  public static boolean isSolverTimeLimited = true;
+    /// <summary>
+    /// The numerical value of the solvers time limit.
+    /// 
+    /// @see #isSolverTimeLimited
+    /// </summary>
+    [SettingsVar]
+    public static int solverTimeLimitInSeconds = 600;
 
-    //  /**
-    //   * The numerical value of the solvers time limit.
-    //   *
-    //   * @see #isSolverTimeLimited
-    //   */
-    //  @Settings.SettingsVar
-    //  public static int solverTimeLimitInSeconds = 600;
+    /// <summary>
+    /// Whether the solver shall display solutions.
+    /// </summary>
+    [SettingsVar]
+    public static bool isDisplaySolutionsEnabled = false;
 
-    //  /**
-    //   * Whether the solver shall display solutions.
-    //   */
-    //  @Settings.SettingsVar
-    //  public static boolean isDisplaySolutionsEnabled = false;
+    /// <summary>
+    /// Coordinates and size of the application window.
+    /// </summary>
+    public static Rectangle applicationBounds = new Rectangle(0, 0, 1024, 800);
 
-    //  /** Coordinates and size of the application window. */
-    //  public static Rectangle applicationBounds = new Rectangle(0, 0, 1024, 800);
+    // [SettingsVar]
+    // public static bool testVarBool = true;
+    // [SettingsVar(oldNames = { "testVarOldInt", "testVarVeryOldInt" } )]
+    // public static int testVarInt = 88;
+    // [SettingsVar]
+    // public static String testVarStr = "heiner";
 
-    //  // @SettingsVar
-    //  // public static boolean testVarBool = true;
-    //  // @SettingsVar( oldNames={"testVarOldInt", "testVarVeryOldInt"} )
-    //  // public static int testVarInt = 88;
-    //  // @SettingsVar
-    //  // public static String testVarStr = "heiner";
-
-    //  // =======================================================================
-
-
-    //  private Settings() {
-
-    //  }
-
-    //  /**
-    //   * Avoid cloning: unconditionally throws {@code CloneNotSupportedException}.
-    //   *
-    //   * @return never anything
-    //   */
-    //  @Override
-    //  public Object clone() throws CloneNotSupportedException {
-    //    throw new CloneNotSupportedException();
-    //  }
+    // =======================================================================
 
     /// <summary>
     /// Load the settings from the hard disk.
