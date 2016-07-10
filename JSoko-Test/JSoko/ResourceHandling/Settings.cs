@@ -28,6 +28,8 @@ using JSoko.OsSpecific_;
 using JSoko.Utilities_;
 // ReSharper disable NotAccessedField.Local
 // ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable UnusedMember.Global
+// ReSharper disable NotAccessedField.Global
 #pragma warning disable 414
 
 #endregion
@@ -63,60 +65,92 @@ namespace JSoko.ResourceHandling
     /// </summary>
     private static Properties_ defaultSettings;
 
-    //  /** Direction of the solver search. */
-    //  public enum SearchDirection {
-    //    /** Forward search */   		  FORWARD,
-    //    /** Backward search */            BACKWARD,
-    //    /** Backward goal room search */  BACKWARD_GOAL_ROOM,
-    //    /** Unknown search direction */   UNKNOWN
-    //  }
+    /// <summary>
+    /// Direction of the solver search.
+    /// </summary>
+    public enum SearchDirection
+    {
+      /// <summary>
+      /// Forward search
+      /// </summary>
+      Forward,
+
+      /// <summary>
+      /// Backward search
+      /// </summary>
+      Backward,
+
+      /// <summary>
+      /// Backward goal room search
+      /// </summary>
+      BackwardGoalRoom,
+
+      /// <summary>
+      /// Unknown search direction
+      /// </summary>
+      Unknown
+    }
 
     /// <summary>
     /// Version of this program automatically set by the build file. Do not annotate it, it is handled specially.
     /// </summary>
     public static string programVersion;
 
-    //  /** Constant for the line separator. */
-    //  public static final String LINE_SEPARATOR = System.getProperty("line.separator");
+    /// <summary>
+    /// Constant for the line separator.
+    /// </summary>
+    public static readonly string LineSeparator = Environment.NewLine;
 
-    //  /** x offset of the board elements shown in the editor at the left side */
-    //  public static final int OBJECT_XOFFSET = 10;
+    /// <summary>
+    /// x offset of the board elements shown in the editor at the left side
+    /// </summary>
+    public const int ObjectXoffset = 10;
 
-    //  /** y offset of the first board element shown in the editor at the left side */
-    //  public static final int FIRST_OBJECT_YOFFSET = 60;
+    /// <summary>
+    /// y offset of the first board element shown in the editor at the left side
+    /// </summary>
+    public const int FirstObjectYoffset = 60;
 
-    //  /** y distance between the board elements shown in the editor at the left side */
-    //  public static final int OBJECTS_YDISTANCE = 10;
+    /// <summary>
+    /// y distance between the board elements shown in the editor at the left side
+    /// </summary>
+    public const int ObjectsYdistance = 10;
 
-    //  /** Number of pixel the board is shifted right to make way for the editor elements. */
-    //  public static final int X_OFFSET_EDITORELEMENTS = 50;
+    /// <summary>
+    /// Number of pixel the board is shifted right to make way for the editor elements.
+    /// </summary>
+    public const int XOffsetEditorelements = 50;
 
-    //  /** Number of pixels the board is displayed away from the left border of the panel. */
-    //  public static final int X_BORDER_OFFSET = 20;
+    /// <summary>
+    /// Number of pixels the board is displayed away from the left border of the panel.
+    /// </summary>
+    public const int XBorderOffset = 20;
 
-    //  /** Maximum size of a level (maximum rows / columns) (gross) */
-    //  public static final int MAXIMUM_BOARDSIZE = 70;
+    /// <summary>
+    /// Maximum size of a level (maximum rows / columns) (gross)
+    /// </summary>
+    public const int MaximumBoardsize = 70;
 
-    //  /*
-    //   * Variables that are saved in the settings file of the user. These variables should always correspond to those in the methods
-    //   * "setSettingsFromProgramVariables" and "setProgramVariablesFromSettings"! Except those annotated with @SettingsVar
-    //   *
-    //   * ----------------------------------------------------------------------- Name changing thoughts ...
-    //   *
-    //   * Fixing the property name and changing the name of the program variable is not really a problem. But what about changing the property name?
-    //   *
-    //   * That would result in - a skeleton file with the new name, and - a user file with the old name. - after loading properties we have them both (in-core)
-    //   *
-    //   * Now we would like to detect that condition, and - transfer the user value from the old name - to the property with the new name - and delete the
-    //   * (transfered) property with the old name
-    //   *
-    //   * Then, when saving our properties, and scanning along the skeleton with the new name, we save it normally for that (new) name, and since we deleted the
-    //   * old name from the in-core properties, we do NOT try to save the old named property as if it were new.
-    //   *
-    //   * Well, when and how can we detect that? - We may use our annotation to state a renaming. That makes candidates for this operation. - Either during loading
-    //   * or during restore we would like to check candidates. Since we expect the program itself to rather use the new name, and the old name to occur just in the
-    //   * old user settings file, we should detect that early, i.e. during the initial loading from file.
-    //   */
+    /*
+     * Variables that are saved in the settings file of the user. These variables should always correspond to those in the methods
+     * "setSettingsFromProgramVariables" and "setProgramVariablesFromSettings"! Except those annotated with @SettingsVar
+     *
+     * ----------------------------------------------------------------------- Name changing thoughts ...
+     *
+     * Fixing the property name and changing the name of the program variable is not really a problem. But what about changing the property name?
+     *
+     * That would result in - a skeleton file with the new name, and - a user file with the old name. - after loading properties we have them both (in-core)
+     *
+     * Now we would like to detect that condition, and - transfer the user value from the old name - to the property with the new name - and delete the
+     * (transfered) property with the old name
+     *
+     * Then, when saving our properties, and scanning along the skeleton with the new name, we save it normally for that (new) name, and since we deleted the
+     * old name from the in-core properties, we do NOT try to save the old named property as if it were new.
+     *
+     * Well, when and how can we detect that? - We may use our annotation to state a renaming. That makes candidates for this operation. - Either during loading
+     * or during restore we would like to check candidates. Since we expect the program itself to rather use the new name, and the old name to occur just in the
+     * old user settings file, we should detect that early, i.e. during the initial loading from file.
+     */
 
     //  /**
     //   * Time delay in milliseconds between the movements on the board.
