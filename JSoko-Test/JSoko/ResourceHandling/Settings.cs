@@ -167,76 +167,100 @@ namespace JSoko.ResourceHandling
     [SettingsVar]
     public static short delayValueUndoRedo = 35;
 
-    //  /**
-    //   * Flag specifying whether the single step undo/redo is activated.
-    //   */
-    //  @Settings.SettingsVar
-    //  public static boolean singleStepUndoRedo = false;
+    /// <summary>
+    /// Flag specifying whether the single step undo/redo is activated.
+    /// </summary>
+    [SettingsVar]
+    public static bool singleStepUndoRedo = false;
 
-    //  /**
-    //   * Flag specifying whether the reachable squares of a box are to be highlighted.
-    //   */
-    //  @Settings.SettingsVar
-    //  public static boolean showReachableBoxPositions = true;
+    /// <summary>
+    /// Flag specifying whether the reachable squares of a box are to be highlighted.
+    /// </summary>
+    [SettingsVar]
+    public static bool showReachableBoxPositions = true;
 
-    //  /** Flag specifying whether sound effects are to be played. */
-    //  @Settings.SettingsVar
-    //  public static boolean soundEffectsEnabled = true;
+    /// <summary>
+    /// Flag specifying whether sound effects are to be played.
+    /// </summary>
+    [SettingsVar]
+    public static bool soundEffectsEnabled = true;
 
-    //  /** Path to the settings file of the currently set skin. */
-    //  public static String currentSkin;
+    /// <summary>
+    /// Path to the settings file of the currently set skin.
+    /// </summary>
+    public static string currentSkin;
 
-    //  /** Current Look&Feel */
-    //  public static String currentLookAndFeel = "";
+    /// <summary>
+    /// Current Look &amp; Feel
+    /// </summary>
+    public static string currentLookAndFeel = "";
 
-    //  /** Flag specifying whether the simple deadlock squares are to be highlighted. */
-    //  @Settings.SettingsVar
-    //  public static boolean showDeadlockFields = false;
+    /// <summary>
+    /// Flag specifying whether the simple deadlock squares are to be highlighted.
+    /// </summary>
+    [SettingsVar]
+    public static bool showDeadlockFields = false;
 
-    //  /** Flag specifying whether the minimum solution length is to be displayed. */
-    //  @Settings.SettingsVar
-    //  public static boolean showMinimumSolutionLength = false;
+    /// <summary>
+    /// Flag specifying whether the minimum solution length is to be displayed.
+    /// </summary>
+    [SettingsVar]
+    public static bool showMinimumSolutionLength = false;
 
-    //  /** Flag specifying whether reversely played moves should be treated as undo. */
-    //  @Settings.SettingsVar
-    //  public static boolean treatReverseMovesAsUndo = true;
+    /// <summary>
+    /// Flag specifying whether reversely played moves should be treated as undo.
+    /// </summary>
+    [SettingsVar]
+    public static bool treatReverseMovesAsUndo = true;
 
-    //  /** Flag specifying whether moves between pushes should be optimized automatically. */
-    //  @Settings.SettingsVar
-    //  public static boolean optimizeMovesBetweenPushes = true;
+    /// <summary>
+    /// Flag specifying whether moves between pushes should be optimized automatically.
+    /// </summary>
+    [SettingsVar]
+    public static bool optimizeMovesBetweenPushes = true;
 
-    //  /** Flag specifying whether the simple deadlock detection is activated. */
-    //  @Settings.SettingsVar
-    //  public static boolean detectSimpleDeadlocks = true;
+    /// <summary>
+    /// Flag specifying whether the simple deadlock detection is activated.
+    /// </summary>
+    [SettingsVar]
+    public static bool detectSimpleDeadlocks = true;
 
-    //  /** Flag specifying whether the freeze deadlock detection is activated. */
-    //  @Settings.SettingsVar
-    //  public static boolean detectFreezeDeadlocks = true;
+    /// <summary>
+    /// Flag specifying whether the freeze deadlock detection is activated.
+    /// </summary>
+    [SettingsVar]
+    public static bool detectFreezeDeadlocks = true;
 
-    //  /** Flag specifying whether the corral deadlock detection is activated. */
-    //  @Settings.SettingsVar
-    //  public static boolean detectCorralDeadlocks = true;
+    /// <summary>
+    /// Flag specifying whether the corral deadlock detection is activated.
+    /// </summary>
+    [SettingsVar]
+    public static bool detectCorralDeadlocks = true;
 
-    //  /** Flag specifying whether the bipartite deadlock detection is activated. */
-    //  @Settings.SettingsVar
-    //  public static boolean detectBipartiteDeadlocks = true;
+    /// <summary>
+    /// Flag specifying whether the bipartite deadlock detection is activated.
+    /// </summary>
+    [SettingsVar]
+    public static bool detectBipartiteDeadlocks = true;
 
-    //  /** Flag specifying whether the bipartite deadlock detection is activated. */
-    //  @Settings.SettingsVar
-    //  public static boolean detectClosedDiagonalDeadlocks = true;
+    /// <summary>
+    /// Flag specifying whether the bipartite deadlock detection is activated.
+    /// </summary>
+    [SettingsVar]
+    public static bool detectClosedDiagonalDeadlocks = true;
 
-    //  /**
-    //   * This factor defines, how many moves (of the player) outweigh a push (box move). This factor makes a difference when a target square (for a box) is
-    //   * reachable on multiple different paths. Example: <br>
-    //   * Solution 1: 12 player moves and 2 box pushes <br>
-    //   * Solution 2: 8 player moves and 4 box pushes <br>
-    //   * With a value <code>1</code> for <code>movesVSpushes</code> we would prefer solution 2, since <code>12 + 2 * movesVSPushes = 14</code>, but
-    //   * <code>8 + 4 * movesVSPushes = 12</code> (and the smaller result wins).
-    //   * <p>
-    //   * The initial value <code>30000</code> is a kind of small infinity, and gives much more weight to the pushes, so we optimize for pushes, initially.
-    //   */
-    //  @Settings.SettingsVar
-    //  public static float movesVSPushes = 30000f;
+    /**
+     * This factor defines, how many moves (of the player) outweigh a push (box move). This factor makes a difference when a target square (for a box) is
+     * reachable on multiple different paths. Example: <br>
+     * Solution 1: 12 player moves and 2 box pushes <br>
+     * Solution 2: 8 player moves and 4 box pushes <br>
+     * With a value <code>1</code> for <code>movesVSpushes</code> we would prefer solution 2, since <code>12 + 2 * movesVSPushes = 14</code>, but
+     * <code>8 + 4 * movesVSPushes = 12</code> (and the smaller result wins).
+     * <p>
+     * The initial value <code>30000</code> is a kind of small infinity, and gives much more weight to the pushes, so we optimize for pushes, initially.
+     */
+    [SettingsVar]
+    public static float movesVsPushes = 30000f;
 
     //  /**
     //   * Whether solution comparison (ordering) includes the minor metrics.
