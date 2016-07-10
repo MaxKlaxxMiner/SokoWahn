@@ -18,6 +18,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+using System.Drawing;
+
 namespace JSoko.Utilities_
 {
   /// <summary>
@@ -25,12 +27,6 @@ namespace JSoko.Utilities_
   /// </summary>
   public class Utilities
   {
-    public static string GetJSokoIcon()
-    {
-      // todo
-      return "";
-    }
-
     //  /** A table of hex digits (with upper case letters) */
     //  public static final char[] hexDigit = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
@@ -601,13 +597,20 @@ namespace JSoko.Utilities_
     //   *
     //   * @return the icon of JSoko
     //   */
-    //  public static BufferedImage getJSokoIcon() {
+    //  public static BufferedImage GetJSokoIcon() {
     //    try {
     //      return loadBufferedImage(Settings.get("iconFolder")+"JSoko-Icon.png");
     //    } catch (FileNotFoundException e) {
     //      return null;
     //    }
     //  }
+    public static Bitmap GetJSokoIcon()
+    {
+      // todo
+      //new Bitmap(@"C:\Users\MaxKlaxx\Desktop\Prog\Spiele\SokoWahn\JSoko-Test\bin\Debug\resources\graphics\icons\JSoko-Icon.png")
+      return null;
+    }
+
 
     //  /**
     //   * Debug method: Displays the class path.

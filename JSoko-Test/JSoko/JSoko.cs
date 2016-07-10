@@ -225,9 +225,8 @@ namespace JSoko
       // Set the title of the game.
       SetTitle("JSoko");
 
-      //Utilities.GetJSokoIcon();
-      //    // Add the JSoko icon to the frame.
-      //    setIconImage(Utilities.getJSokoIcon());
+      // Add the JSoko icon to the frame.
+      SetIconImage(Utilities.GetJSokoIcon());
 
       //    // Set bounds of this program.
       //    setBounds( Settings.getInt("applicationXCoordinate", 0),
