@@ -55,6 +55,7 @@
     <Compile Include="JSoko\DeadlockDetection_\DeadlockDetection.cs" />
     <Compile Include="JSoko\Editor_\Editor.cs" />
     <Compile Include="JSoko\Gui_\Gui.cs" />
+    <Compile Include="JSoko\Gui_\MessageDialogs.cs" />
     <Compile Include="JSoko\JSoko.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -78,6 +79,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="WorkAround\java\awt\event_\ActionListener.cs" />
+    <Compile Include="WorkAround\java\util\Properties.cs" />
     <Compile Include="WorkAround\JsThread.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>

@@ -1,11 +1,18 @@
 ﻿
 --- abzuarbeitende Klassen ---
 
+JSoko.ResourceHandling.Settings;
+JSoko.Utilities_.Utilities;
+JSoko.Utilities_.OSSpecific_.OSSpecific;
+JSoko.ResourceHandling.Texts;
+JSoko.java.util.Properties_
+
 JSoko.JSoko
 JSoko.Board_.Board
 JSoko.DeadlockDetection_.DeadlockDetection
 JSoko.Editor_.Editor;
 JSoko.Gui_.Gui
+JSoko.Gui_.MessageDialogs;
 JSoko.Leveldata.History
 JSoko.Leveldata.Level
 JSoko.Leveldata.LevelCollection
@@ -13,12 +20,8 @@ JSoko.Leveldata.LevelsIo
 JSoko.Leveldata.SelectableLevelCollectionComboBoxModel;
 JSoko.Leveldata.Solutions.SolutionEventListener
 JSoko.PushesLowerBoundCalculation.LowerBoundCalculation
-JSoko.ResourceHandling.Settings;
-JSoko.ResourceHandling.Texts;
 JSoko.Solver.SolverGui
 JSoko.Utilities_.Debug
-JSoko.Utilities_.Utilities;
-JSoko.Utilities_.OSSpecific_.OSSpecific;
 
 
 --- offene imports ---
@@ -93,7 +96,6 @@ de.sokoban_online.jsoko.deadlockdetection.DeadlockDebug;
 de.sokoban_online.jsoko.gui.GraphicalLevelBrowser;
 de.sokoban_online.jsoko.gui.JSokoAboutBox;
 de.sokoban_online.jsoko.gui.MainBoardDisplay;
-de.sokoban_online.jsoko.gui.MessageDialogs;
 de.sokoban_online.jsoko.gui.Transformation;
 de.sokoban_online.jsoko.leveldata.Author;
 de.sokoban_online.jsoko.leveldata.Database;
@@ -200,7 +202,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.List;
-import java.util.Properties;
 import de.sokoban_online.jsoko.JSoko;
 import de.sokoban_online.jsoko.gui.MessageDialogs;
 import de.sokoban_online.jsoko.leveldata.Database;

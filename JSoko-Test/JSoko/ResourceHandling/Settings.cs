@@ -21,7 +21,13 @@
 #region # using *.*
 
 using System;
+using System.IO;
+using JSoko.Gui_;
+using JSoko.java.util;
 using JSoko.OsSpecific_;
+using JSoko.Utilities_;
+// ReSharper disable NotAccessedField.Local
+#pragma warning disable 414
 
 #endregion
 
@@ -38,10 +44,10 @@ namespace JSoko.ResourceHandling
   /// </summary>
   public static class Settings
   {
-    //  /**
-    //   * File name of the program settings (skeleton). Set up in {@link #loadSettings(JSoko)}.
-    //   */
-    //  private static String defaultSettingsFilename;
+    /// <summary>
+    /// File name of the program settings (skeleton). Set up in {@link #loadSettings(JSoko)}.
+    /// </summary>
+    private static string defaultSettingsFilename;
 
     //  /**
     //   * Stores the currently effective property values (settings). Some of them are cached into program variables, in part by using the local annotation
@@ -52,13 +58,10 @@ namespace JSoko.ResourceHandling
     //   */
     //  private static Properties settings;
 
-    //  /**
-    //   * Stores the properties as loaded from the skeleton settings file, as distributed with the program. We save this data to check the keys when we think about
-    //   * property name changes.
-    //   *
-    //   * @see SettingsVar#oldNames()
-    //   */
-    //  private static Properties defaultSettings = null;
+    /// <summary>
+    /// Stores the properties as loaded from the skeleton settings file, as distributed with the program. We save this data to check the keys when we think about property name changes.
+    /// </summary>
+    private static Properties_ defaultSettings;
 
     //  /** Direction of the solver search. */
     //  public enum SearchDirection {
@@ -308,45 +311,47 @@ namespace JSoko.ResourceHandling
     /// <param name="application">reference to the main object</param>
     public static void LoadSettings(JSoko application)
     {
-      // todo
-
       // First set os specific settings like the directories to load/save data from.
       OsSpecific.SetOsSpecificSettings(application);
 
-      //    // The default settings of JSoko.
-      //    defaultSettingsFilename = "/settings.ini";
+      // The default settings of JSoko.
+      defaultSettingsFilename = "settings.ini";
 
-      //    // Settings file for the user specific settings.
-      //    String userSettingsFilename = OSSpecific.getPreferencesDirectory()+"settings.ini";
-      //    if(!new File(userSettingsFilename).exists()) {
-      //      userSettingsFilename = Utilities.getBaseFolder() + "user_settings.ini"; // versions < 1.74 stored the file in the base folder
-      //    }
+      // Settings file for the user specific settings.
+      string userSettingsFilename = OsSpecific.GetPreferencesDirectory() + "settings.ini";
+      if (!File.Exists(userSettingsFilename))
+      {
+        userSettingsFilename = Utilities.GetBaseFolder() + "user_settings.ini"; // versions < 1.74 stored the file in the base folder
+      }
 
-      //    // The properties of this program (from skeleton).
-      //    defaultSettings = new Properties();
+      // The properties of this program (from skeleton).
+      defaultSettings = new Properties_();
 
-      //    /**
-      //     * Load the default settings file.
-      //     */
-      //    BufferedReader propertyInputStream = Utilities.getBufferedReader(defaultSettingsFilename);
-      //    if (propertyInputStream == null) {
+      /**
+       * Load the default settings file.
+       */
+      var propertyInputStream = Utilities.GetBufferedReader(defaultSettingsFilename);
+      if (propertyInputStream == null)
+      {
+        // Load language texts.
+        Texts.LoadAndSetTexts();
 
-      //      // Load language texts.
-      //      Texts.loadAndSetTexts();
+        MessageDialogs.ShowErrorString(application, Texts.GetText("message.fileMissing", "settings.ini"));
+        Environment.Exit(-1);
+      }
 
-      //      MessageDialogs.showErrorString(application, Texts.getText("message.fileMissing", "settings.ini"));
-      //      System.exit(-1);
-      //    }
+      try
+      {
+        defaultSettings.Load(propertyInputStream);
+      }
+      catch (IOException e)
+      {
+        // Load language texts.
+        Texts.LoadAndSetTexts();
 
-      //    try {
-      //      defaultSettings.load(propertyInputStream);
-      //    } catch (IOException e) {
-      //      // Load language texts.
-      //      Texts.loadAndSetTexts();
-
-      //      MessageDialogs.showErrorString(application, Texts.getText("message.fileMissing", "settings.ini"));
-      //      System.exit(-1);
-      //    }
+        MessageDialogs.ShowErrorString(application, Texts.GetText("message.fileMissing", "settings.ini"));
+        Environment.Exit(-1);
+      }
 
       //    try {
       //      if (propertyInputStream != null) {
@@ -390,6 +395,8 @@ namespace JSoko.ResourceHandling
       //    // Set the program variables corresponding to the loaded settings.
       //    // Name changes for properties are also handled there.
       //    setProgramVariablesFromSettings();
+
+      // todo
     }
 
 

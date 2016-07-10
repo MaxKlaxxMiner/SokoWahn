@@ -7,5 +7,11 @@ namespace JSoko.OsSpecific_
     {
       // todo
     }
+
+    public static string GetPreferencesDirectory()
+    {
+      // todo
+      return "";
+    }
   }
 }

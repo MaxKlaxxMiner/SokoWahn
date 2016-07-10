@@ -18,10 +18,13 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-using System;
+#region # using *.*
+
 using System.Drawing;
 using System.IO;
 using JSoko.ResourceHandling;
+
+#endregion
 
 namespace JSoko.Utilities_
 {
@@ -111,6 +114,11 @@ namespace JSoko.Utilities_
     //    return file;
     //  }
 
+    public static string GetBaseFolder()
+    {
+      // todo
+      return "";
+    }
     //  /**
     //   * Returns the folder this program is executed in.
     //   * <p>
@@ -166,6 +174,11 @@ namespace JSoko.Utilities_
     //    return inputStream;
     //  }
 
+    public static Stream GetBufferedReader(string filename)
+    {
+      // todo
+      return null;
+    }
     //  /**
     //   * Returns a <code>BufferedReader</code> to the file corresponding to the passed filename.
     //   * <p>
