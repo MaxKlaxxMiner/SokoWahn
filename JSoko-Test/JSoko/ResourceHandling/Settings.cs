@@ -27,6 +27,7 @@ using JSoko.java.util;
 using JSoko.OsSpecific_;
 using JSoko.Utilities_;
 // ReSharper disable NotAccessedField.Local
+// ReSharper disable MemberCanBePrivate.Global
 #pragma warning disable 414
 
 #endregion
@@ -49,14 +50,13 @@ namespace JSoko.ResourceHandling
     /// </summary>
     private static string defaultSettingsFilename;
 
-    //  /**
-    //   * Stores the currently effective property values (settings). Some of them are cached into program variables, in part by using the local annotation
-    //   * {@link Settings.SettingsVar}.
-    //   * <p>
-    //   * Properties that have a program variable may not be up to date, since when the program variables are changed, the properties are left alone (unchanged).
-    //   * They are changed (synchronized from the program variables) immediately before saving them to disk, again.
-    //   */
-    //  private static Properties settings;
+    /// <summary>
+    /// Stores the currently effective property values (settings). Some of them are cached into program variables, in part by using the local annotation
+    /// 
+    /// Properties that have a program variable may not be up to date, since when the program variables are changed, the properties are left alone (unchanged).
+    /// They are changed (synchronized from the program variables) immediately before saving them to disk, again.
+    /// </summary>
+    private static Properties_ settings;
 
     /// <summary>
     /// Stores the properties as loaded from the skeleton settings file, as distributed with the program. We save this data to check the keys when we think about property name changes.
@@ -71,10 +71,10 @@ namespace JSoko.ResourceHandling
     //    /** Unknown search direction */   UNKNOWN
     //  }
 
-    //  /**
-    //   * Version of this program automatically set by the build file. Do not annotate it, it is handled specially.
-    //   */
-    //  public static String PROGRAM_VERSION;
+    /// <summary>
+    /// Version of this program automatically set by the build file. Do not annotate it, it is handled specially.
+    /// </summary>
+    public static string programVersion;
 
     //  /** Constant for the line separator. */
     //  public static final String LINE_SEPARATOR = System.getProperty("line.separator");
@@ -344,7 +344,7 @@ namespace JSoko.ResourceHandling
       {
         defaultSettings.Load(propertyInputStream);
       }
-      catch (IOException e)
+      catch (IOException)
       {
         // Load language texts.
         Texts.LoadAndSetTexts();
@@ -353,23 +353,22 @@ namespace JSoko.ResourceHandling
         Environment.Exit(-1);
       }
 
-      //    try {
-      //      if (propertyInputStream != null) {
-      //        propertyInputStream.close();
-      //      }
-      //    } catch (IOException e) {
-      //    }
+      try
+      {
+        propertyInputStream.Close();
+      }
+      catch (IOException) { }
 
-      //    /**
-      //     * Load the user specific settings file.
-      //     */
-      //    settings = new Properties();
+      /**
+       * Load the user specific settings file.
+       */
+      settings = new Properties_();
 
-      //    // The default settings are taken as initial content.
-      //    settings.putAll(defaultSettings);
+      // The default settings are taken as initial content.
+      settings.PutAll(defaultSettings);
 
-      //    // The program version is always read from the default settings file.
-      //    PROGRAM_VERSION = getString("version", "");
+      // The program version is always read from the default settings file.
+      programVersion = GetString("version", "");
 
       //    // Load the user settings.
       //    BufferedReader in = null;
@@ -398,7 +397,6 @@ namespace JSoko.ResourceHandling
 
       // todo
     }
-
 
     public static string Get(string name)
     {
@@ -899,6 +897,11 @@ namespace JSoko.ResourceHandling
     //    // }
     //  }
 
+    private static string GetString(string name, string defaultValue)
+    {
+      // todo
+      return "";
+    }
     //  /**
     //   * Returns the string corresponding to the passed property name.
     //   *

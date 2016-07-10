@@ -9,5 +9,10 @@ namespace JSoko.java.util
     {
       // todo
     }
+
+    public void PutAll(Properties_ defaultSettings)
+    {
+      // todo
+    }
   }
 }
