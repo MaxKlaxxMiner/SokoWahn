@@ -156,7 +156,7 @@ namespace JSoko.ResourceHandling
      * old user settings file, we should detect that early, i.e. during the initial loading from file.
      */
 
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field)] // , AllowMultiple = true
+    [AttributeUsage(AttributeTargets.Field)] // , AllowMultiple = true
     sealed class SettingsVar : Attribute
     {
       public string propertyName;
