@@ -1,18 +1,27 @@
 ﻿
-using System.IO;
+using System;
+using JSoko.java.io;
 
 namespace JSoko.java.util
 {
   public class Properties_
   {
-    public void Load(Stream propertyInputStream)
+    public void Load(BufferedReader propertyInputStream)
     {
       // todo
     }
 
     public void PutAll(Properties_ defaultSettings)
     {
+      throw new NotImplementedException();
       // todo
+    }
+
+    public string GetProperty(string key)
+    {
+      if (key == "iconFolder") return "resources/graphics/icons/";
+
+      return null;
     }
   }
 }

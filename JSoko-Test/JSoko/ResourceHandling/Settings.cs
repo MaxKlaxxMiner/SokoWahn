@@ -25,6 +25,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using JSoko.Gui_;
+using JSoko.java.io;
 using JSoko.java.util;
 using JSoko.Leveldata;
 using JSoko.Optimizer_;
@@ -321,11 +322,11 @@ namespace JSoko.ResourceHandling
     [SettingsVar]
     public static int optimizerYCoordinate = -1;
     [SettingsVar]
-    public static int optimizerWidth		= 1024;
+    public static int optimizerWidth = 1024;
     [SettingsVar]
-    public static int optimizerHeight		= 800;
+    public static int optimizerHeight = 800;
     [SettingsVar]
-    public static int optimizationMethod 	= (int)OptimizationMethod.MovesPushes;
+    public static int optimizationMethod = (int)OptimizationMethod.MovesPushes;
 
     // --- Solver settings ---
 
@@ -430,55 +431,50 @@ namespace JSoko.ResourceHandling
       // The program version is always read from the default settings file.
       programVersion = GetString("version", "");
 
-      //    // Load the user settings.
-      //    BufferedReader in = null;
-      //    try {
-      //      in = Utilities.getBufferedReader(userSettingsFilename);
-      //      settings.load(in);
-      //      in.close();
-      //      in = null; // we are completely done with it
-      //    } catch (Exception e) {
-      //      /* Program starts with default settings. */
-      //    } finally {
-      //      if (in != null) {
-      //        try {
-      //          in.close();
-      //        } catch (IOException e) {
-      //        }
-      //      }
-      //    }
+      // Load the user settings.
+      BufferedReader inStream = null;
+      try
+      {
+        inStream = Utilities.GetBufferedReader(userSettingsFilename);
+        settings.Load(inStream);
+        inStream.Close();
+        inStream = null; // we are completely done with it
+      }
+      catch (Exception)
+      {
+        /* Program starts with default settings. */
+      }
+      finally
+      {
+        if (inStream != null)
+        {
+          try
+          {
+            inStream.Close();
+          }
+          catch (IOException) { }
+        }
+      }
 
-      //    // Some Settings must always be set to the default value.
-      //    /* empty */
+      // Some Settings must always be set to the default value.
+      /* empty */
 
-      //    // Set the program variables corresponding to the loaded settings.
-      //    // Name changes for properties are also handled there.
-      //    setProgramVariablesFromSettings();
-
-      // todo
+      // Set the program variables corresponding to the loaded settings.
+      // Name changes for properties are also handled there.
+      SetProgramVariablesFromSettings();
     }
 
-    public static string Get(string name)
+    /// <summary>
+    /// Returns the value of the setting parameter corresponding to the passed parameter key.
+    /// 
+    /// NB: Since we recur to {@link Hashtable#get(Object)}, which is even synchronized, this may become expensive. Really often needed properties should get their own member variable.
+    /// </summary>
+    /// <param name="key">key which identifies the parameter whose value is to be returned</param>
+    /// <returns>value of the settings parameter, or {@code null}</returns>
+    public static string Get(string key)
     {
-      // todo
-      if (name == "iconFolder") return "resources/graphics/icons/";
-
-      return null;
+      return settings.GetProperty(key);
     }
-    //  /**
-    //   * Returns the value of the setting parameter corresponding to the passed parameter key.
-    //   * <p>
-    //   * NB: Since we recur to {@link Hashtable#get(Object)}, which is even synchronized, this may become expensive. Really often needed properties should get
-    //   * their own member variable.
-    //   *
-    //   * @param key
-    //   *            key which identifies the parameter whose value is to be returned
-    //   * @return value of the settings parameter, or {@code null}
-    //   * @see Settings.SettingsVar
-    //   */
-    //  final public static String get(String key) {
-    //    return settings.getProperty(key);
-    //  }
 
     //  /**
     //   * Sets the passed value for the property with the passed key.
@@ -902,9 +898,12 @@ namespace JSoko.ResourceHandling
     //    copyAnnotatedToProperties();
     //  }
 
-    //  /**
-    //   * Sets the program variables to the values from the loaded settings file. Also handles property name changes.
-    //   */
+    /// <summary>
+    /// Sets the program variables to the values from the loaded settings file. Also handles property name changes.
+    /// </summary>
+    private static void SetProgramVariablesFromSettings()
+    {
+      // todo
     //  final private static void setProgramVariablesFromSettings() {
 
     //    // Set the language of the user if possible.
@@ -955,7 +954,7 @@ namespace JSoko.ResourceHandling
     //    // ++testVarInt;
     //    // testVarStr = "Y " + testVarStr;
     //    // }
-    //  }
+    }
 
     private static string GetString(string name, string defaultValue)
     {

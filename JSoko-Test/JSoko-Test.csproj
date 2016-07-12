@@ -83,6 +83,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="WorkAround\java\awt\event_\ActionListener.cs" />
+    <Compile Include="WorkAround\java\io\BufferedReader.cs" />
     <Compile Include="WorkAround\java\util\Properties.cs" />
     <Compile Include="WorkAround\JsThread.cs" />
     <EmbeddedResource Include="Form1.resx">

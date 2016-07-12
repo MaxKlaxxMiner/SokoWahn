@@ -20,8 +20,10 @@
 
 #region # using *.*
 
+using System;
 using System.Drawing;
 using System.IO;
+using JSoko.java.io;
 using JSoko.ResourceHandling;
 
 #endregion
@@ -174,38 +176,40 @@ namespace JSoko.Utilities_
     //    return inputStream;
     //  }
 
-    public static Stream GetBufferedReader(string filename)
+    /// <summary>
+    /// Returns a <code>BufferedReader</code> to the file corresponding to the passed filename.
+    /// 
+    /// This method also searches for the file in the class path.
+    /// </summary>
+    /// <param name="filename">the name of the file</param>
+    /// <returns>the <code>BufferedReader</code> to the file corresponding to the passed filename</returns>
+    public static BufferedReader GetBufferedReader(string filename)
     {
-      // todo
-      return null;
+      BufferedReader b = null;
+
+      // Try to read the file, no matter if it is in the class path or not.
+      try
+      {
+        b = new BufferedReader(File.OpenRead(filename));
+      }
+      catch (Exception)
+      {
+        // ignored
+      }
+
+      if (b == null)
+      {
+        // If the program is started as web start application the file
+        // may be in the jar file. Hence try to read it from the jar, too.
+        //try
+        //{
+          //  b = new BufferedReader(new InputStreamReader(
+          //  JSoko.class.getResourceAsStream(filename)));
+        //}
+        //catch (Exception e) { }
+      }
+      return b;
     }
-    //  /**
-    //   * Returns a <code>BufferedReader</code> to the file corresponding to the passed filename.
-    //   * <p>
-    //   * This method also searches for the file in the class path.
-    //   *
-    //   * @param filename  the name of the file
-    //   * @return the <code>BufferedReader</code> to the file corresponding to the passed filename
-    //   */
-    //  public static BufferedReader getBufferedReader(String filename) {
-
-    //    BufferedReader b = null;
-
-    //    // Try to read the file, no matter if it is in the class path or not.
-    //    try {
-    //      b = new BufferedReader(new FileReader(filename));
-    //    } catch (Exception e) {}
-
-    //    if (b == null) {
-    //      // If the program is started as web start application the file
-    //      // may be in the jar file. Hence try to read it from the jar, too.
-    //      try {
-    //        b = new BufferedReader(new InputStreamReader(
-    //              JSoko.class.getResourceAsStream(filename)));
-    //      } catch (Exception e) {}
-    //    }
-    //    return b;
-    //  }
 
 
     //  /**
