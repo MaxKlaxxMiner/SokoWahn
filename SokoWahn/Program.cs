@@ -353,9 +353,6 @@ namespace SokoWahn
     {
       var scanner = new SokowahnField(field);
 
-      Console.WriteLine(scanner.ToString());
-      Console.WriteLine();
-
       var targetFields = scanner.fieldData.Select((c, i) => new { c, i }).Where(f => f.c == '.' || f.c == '*').Select(f => (ushort)f.i).ToArray();
       if (targetFields.Length < maxBoxes) maxBoxes = targetFields.Length;
       if (minBoxes < 1 || minBoxes > maxBoxes) throw new ArgumentException("minBoxes");
@@ -406,10 +403,14 @@ namespace SokoWahn
           }
         }
 
+        Console.WriteLine(field.ToString());
+        Console.WriteLine();
+
         // --- Aufgaben weiter rückwärts gerichtet abarbeiten ---
         {
           var hash = new Dictionary<ulong, ushort>();
           var nextBuf = new ushort[stateLen * boxesCount * 4];
+          int limitTickCount = Environment.TickCount + 1000;
 
           while (todoPos < todoLen)
           {
@@ -421,7 +422,11 @@ namespace SokoWahn
             if (hash.ContainsKey(crc)) continue;
             hash.Add(crc, depth);
 
-            if ((hash.Count & 0xffff) == 0) Console.WriteLine("[" + boxesCount + "] (" + depth + ") " + ((todoLen - todoPos) / (stateLen + 1)).ToString("N0") + " / " + hash.Count.ToString("N0"));
+            if ((hash.Count & 0xff) == 0 && Environment.TickCount > limitTickCount)
+            {
+              limitTickCount = Environment.TickCount + 1000;
+              Console.WriteLine("[" + boxesCount + "] (" + depth + ") " + ((todoLen - todoPos) / (stateLen + 1)).ToString("N0") + " / " + hash.Count.ToString("N0"));
+            }
 
             depth++;
             int nextLength = scanner.ScanReverseMoves(nextBuf) * stateLen;
@@ -705,6 +710,11 @@ namespace SokoWahn
       for (int b = 1; b <= field.boxesCount; b++)
       {
         Console.Clear();
+        Console.WriteLine();
+        for (int known = 1; known < b; known++)
+        {
+          Console.WriteLine(" known Boxes: " + known + " - Hash: " + boxesHash[known].Count.ToString("N0") + " Nodes");
+        }
         Console.WriteLine();
         Console.WriteLine(" --- Calc Boxes: " + b + " ---");
         Console.WriteLine();
