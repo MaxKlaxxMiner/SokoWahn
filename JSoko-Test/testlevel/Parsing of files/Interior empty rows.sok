@@ -1,0 +1,89 @@
+Interior empty rows
+
+    #
+ -
+   ###
+ -
+  #####
+ -
+ #######
+ #@$  .#
+ #######
+
+
+Interior empty rows 2
+
+   #   
+-_ -
+  ###  
+ -       ___
+ #####
+- - - - - - - -    --_     
+#######
+#@$  .#
+#######
+----
+--
+##
+
+
+Negative test: Following empty lines are comments
+
+#####
+#@$.#
+#####
+----
+----
+
+
+Positive test: Following empty lines are comments 2
+
+#####
+#@$.#
+#####
+----
+----
+#####
+
+
+At least one special character per interior row
+
+  #
+-
+ ###
+-	-
+
+#####
+#@$.#
+#####
+
+
+RLE
+
+3-#|
+2-|
+--3#|
+-|
+-5#|
+-|
+7#|
+#@$--.#|
+7#|
+
+
+Interior empty rows RLE
+
+3-#|2-|--3#|-|-5#|-|7#|#@$--.#|7#
+
+
+RLE rows and normal board rows
+
+   #
+3-|
+  ###
+-
+ #####
+-
+#######
+#@$  .#
+#######

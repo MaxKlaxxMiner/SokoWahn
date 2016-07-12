@@ -1,0 +1,189 @@
+
+
+bipartite deadlock 1
+
+#######
+#.$   #
+### $+#
+  #   #
+  #####
+
+
+bipartite deadlock 2
+
+######
+#   ##
+# *  #
+# .$ #
+## # #
+ # *@#
+ #   #
+ #####
+
+isolated goal
+
+
+bipartite deadlock 3
+
+ #####
+ #* *#
+ #   #
+ #   ###
+ #     #
+### ## #
+#   #  #
+#   #  #
+## ### #
+#.$ .  #
+# @$ ###
+#    #
+######
+
+View: Rotated 0 degrees clockwise, flipped horizontally.
+
+SaveGame 7/3/2/2/2/5
+UUdrrdL
+
+Snapshot 7/3/2/2/2/5
+UUdrrdL
+
+Screen region: 257 0 515 664
+
+
+bipartite deadlock 4
+
+  #####
+  #   #
+  # $$#
+###. .#
+#    ##
+# # ##
+#+$ #
+#   #
+#####
+
+SaveGame 22/9
+[r]RuuDDDlluuurrdUUUUrdR
+
+
+bipartite deadlock 5
+
+ #####
+ #   ####
+ #$  #  #
+ #. .   #
+ #   #  #
+### ##  #
+#   # $ #
+#   #   #
+## ###  #
+#  #.   #
+# $#  ###
+# @#$ #
+# .#  #
+#######
+
+SaveGame 12/1
+[]uuuuuruuuurU
+
+
+bipartite deadlock 6
+
+######
+#.$  #
+# @$ #
+#$ . #
+#. $.#
+######
+
+SaveGame 8/3
+[]dLurUrdR
+
+
+bipartite deadlock 7
+
+ #####
+ #.  ##
+ #$   #
+ #.@$ #
+####  #
+#.$ # #
+#     #
+#$    #
+#.  $.#
+#######
+
+SaveGame 18/5
+[]RulUrdRdlDrddllluR
+
+
+bipartite deadlock 8
+
+####  ####
+# .####  #
+# $      #
+# .   @$ #
+# #####  #
+#. $ ..# #
+# ## $$# #
+# #    # #
+#$  ###  #
+#.     $.#
+##########
+
+
+bipartite deadlock 9
+
+  ####
+  #  #####
+### $   .#
+# . . ##$#
+# $###   #
+# .   @$ #
+# #####  #
+#. $ ..# #
+# ## $$# #
+# #    # #
+#$  ###  #
+#.     $.#
+##########
+
+SaveGame 8/5
+[]lllRRRRR
+
+
+bipartite deadlock 10
+
+####################
+#****************** #
+#****************** #
+#                   #
+#** ************ ** #
+#**              ** #
+#**** ******** **** #
+#**** ******** **** #
+#**** ******** **** #
+#**** ******** **** #
+#**** ******** **** #
+#**** ******** **** #
+#**** ******** **** #
+#**** ******** **** #
+#**              ** #
+#   ************ ** #
+# $+              $ #
+#  ****************.#
+#****************** #
+#####################
+
+SaveGame 75/18
+[r]RRRRRRRRRRRRRrruuuuuuuuuuuuulllddlldddddddddrrdUllllllllllllldLLdrr
+ruLdldL*urrrruurrrrrrrrrUuuuuuuuullllllllldddddddddrrrrrrrrL
+
+
+No advanced simple deadlock
+
+ ###
+ #+###
+## $ #
+#*   #
+######

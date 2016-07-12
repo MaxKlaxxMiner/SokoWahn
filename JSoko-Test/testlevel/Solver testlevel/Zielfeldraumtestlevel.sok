@@ -1,0 +1,311 @@
+
+
+Level 1
+
+  ########
+  #      #
+###      #   ######
+#      $ #####  ###
+#      $        .##
+#####     #@##  .##
+    #     #########
+    #######
+
+
+Level 2
+
+ ####
+##  ######
+#     #..#
+# $$@    #
+#    #   #
+##########
+
+
+Zielfeldraumeingang selber ist Zielfeld
+
+ ####
+##  ######
+# $   #..#
+# $$@ .  #
+#    #   #
+##########
+
+
+Level 3
+
+##########
+#        #
+#        #
+#  $$$$  ######
+#        #  ..#
+#    $$@    ..#
+#        #  ..#
+#        ######
+#        #
+#        #
+##########
+
+
+Level 4
+
+##########
+#        #
+#        #
+#        #####
+#        #####
+#    $$@  ..##
+#        #####
+#        #####
+#        #
+#        #
+##########
+
+
+Level 5
+
+##########
+#        #
+#        #
+#        #####
+#        # ..#
+#    $$@     #
+#        #   #
+#        #####
+#        #
+#        #
+##########
+
+
+Level 6
+
+ #######
+ #  #  #####
+##  #  #...###
+#  $#$ #...  #
+# $ # $ ...  #
+#  $# $#... .#
+#   #  ########
+##$  $      $ #
+ #  #  @$ #   #
+ ###### $##$$ #
+      #      ##
+      ########
+
+
+Zwei Auﬂenfelder beim Zielfeldraumeingang
+
+ ####
+##  ######
+#      #.#
+# $$@ .  #
+#    #   #
+##########
+
+
+Drei Auﬂenfelder
+
+ ####
+##  ####
+#      ###
+# $$@ . .#
+#      # #
+##########
+
+
+Zielfeld + zwei Auﬂenfelder
+
+#####
+#   ##
+# $  #
+# $$ ######
+#      #..#
+#  $$@... #
+#     #   #
+###########
+
+
+Level 7
+
+ ####
+##  ######
+# $   #. #
+#  $@ .  #
+#    #   #
+##########
+
+
+Level 8
+
+ ####
+##  ######
+#      #.#
+# $$@ .  #
+#    #   #
+####   ###
+   #####
+
+
+Level 9
+
+   #####
+   #.  #
+   #.. #
+   #   #
+   #   #
+##### ####
+#  ## #  #
+#@$      #
+# $ # #  #
+# $      #
+#  #######
+#####
+
+
+Level 10
+
+########
+#      #
+#   ## #
+# @$   ######
+# $ ## #    #
+# $ #  #  . #
+# $ #    ...#
+#   #  #    #
+#############
+
+
+Berechnung optimaler Pfad zum Eingang
+
+    ####
+ ####  ###
+ #       ###
+ #     .   #
+ ##### ######
+ #          #
+ #          #
+ #   ###    #
+ #    $     #
+ #    @     #
+ #          #
+ ####       #
+    #########
+
+
+Level 11
+
+   ###########
+  ##  # @ #  ##
+ ## $   #   $ ##
+## $ $  #  $ $ ##
+# $ $ $ # $ $ $ #
+#  $ $  #  $ $  #
+##  $  ###  $  ##
+#      # #    ###
+# ### ## ## #####
+#  ## ## ## #   #
+#               #
+## ##############
+#   ##  #  ##   #
+#               #
+#  ### ### ###  #
+####... # ...####
+   #.... ....#
+   ###. # .###
+     #. # .#
+     #######
+
+
+Level 12
+
+   #####
+   #.  #
+   #...#
+   #.  #
+   #.  #
+##### #####
+#         #
+# $@$$$$$ #
+#    #    #
+###########
+
+
+Sasquatch 03
+
+           ########
+           #......#
+   ####    #......#
+   #  #########...#
+   # $   $    #...#
+   #  # # # # #   #
+##### # # #@# #   #
+#   # ### ### ## ##
+#    $ # $ $ $ # #
+# $$$  $   #     #
+#   # ###$###$## #
+### #  $   #     #
+ ## $  # $ $ $ ###
+ #  # ### ### ##
+ # $          #
+ #  ###########
+ ####
+
+Title: Sasquatch 03
+
+
+Level 13
+
+           #####
+          ##   #
+          #    #
+    ####  # $ ##
+    #  ####$ $#
+    #     $ $ #
+   ## ## $ $ $#
+   #  .#  $ $ #
+   #  .#      #
+##### #########
+#.... @  #
+#....    #
+##  ######
+ ####
+
+
+Sasquatch 32
+
+                   #####
+                   #   #
+           ######### $ #
+    ###### #   #   #   #
+    #    # # $     $ #@#
+  ### ## #### ### ## ###
+  #   $  $     #   #   #
+  #  $  $ # #$ # $$ $$ #
+ ######  $  #  #   #   #
+##    ## ###############
+#  .#   $ #    #
+#..    #  ######
+#...####  #
+#....# ####
+#....#
+######
+
+Solution/Moves 1234/376
+ulldddrrddlUdlUUUULLulldRRllllulldRddllddlLuLuuulllddRdLuuurrrddLrdrdr
+ruulLdlLdRdDrddlUruLLLdllluurrDrrruuururrddlLulDDDrddlUruLLLdLLLuurrDr
+dLLruulldDDDuuLulDDDrdRuuurrurrruuuluRuulllddRRlluurrrdDDDDDrddlUruLLL
+dllluurrDrrruurrruulLdllulluurrrdDDDDDrddlUruLLLdLLLuurrDrdLLruulldDDu
+ulDDDRuurrrurruuluulldRRurDDDDrddlUruLLLdllluurrDrrruulullulldRRRRurDD
+DDrddlUruLLLdLLLLuurrrDrrruuuurrrrrrddlUruLLLLLdllulluurrrdDDDDDrddlUr
+uLLLdLLLulDDuuurrrDrrruurrruurruuRRRurrdLLLLulDDDrddlUruLLLLLdllulluur
+rrdDDDDDrddlUruLLLdLLLuurrDrdLLruulldDDDuurrurrruuuurrrrruurrrrddlddrU
+UdRRRdrruLLuuuLLLLLLulDDDrddlUruLLLLLdllulluurrrdDDDDDrddlUruLLLdllluu
+rrDrdLLruulldDDurrrurruurrruurruurrrrrrrdddLLulUdrdrruuullLLLLulDDDrdd
+lUruLLLLLdllulluurrrdDDDDDrddlUruLLLdllluurrDrdLLruulldDrrrurruurrruur
+ruurrrrddlddrUUUddrrruuullLLLLulDDDrddlUruLLLLLdllulluurrrdDDDDDrddlUr
+uLLLdlllullDDrUluRurrrDrrruuuurrrrruurrrrdddrrrrruLdllluluurrrdDrdLLLd
+lUUUdrdrruuullLLLLulDDDrddlUruLLLLLdllulluurrrdDDDDDrddlUruLLLdLLLLulD
+ururrrDrrruurrruurruurrrrrrrUrruullDDDDDrdLLLdlUUUdrdrruuullLLLLulDDDr
+ddlUruLLLLLdllulluurrrdDDDDDrddlUruLLLdLLLLuurrrDrdLLLrruullldDrrrrurr
+uurrruurruurrrrrrrurruLulDDDDDrdLLLdlUUUddrrruuullLLLLulDDDrddlUruLLLL
+LdllulluurrrdDDDDDrddlUruLLLdlllluurrrDrdLLL

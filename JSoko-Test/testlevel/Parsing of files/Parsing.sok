@@ -1,0 +1,301 @@
+Collection comment
+author: collection author
+email: collection author email
+homepage: homepage collection autor
+author comment: Autor comment Collection
+
+view: collection mustn't have a view!
+further collection comment
+
+
+Level 1
+
+#####
+#@$.#
+#####
+comment
+
+Solution/Moves 1/1/1/1/1
+R
+
+solution comment
+
+Solution 1/1/1/1/1
+R
+
+Solution invalid 1/1/1/1/1
+D
+
+Solution unnecessary long 1/1/1/1/1
+RRRDD
+
+
+Level2
+
+######
+#   .#
+#@$  #
+#    #
+######
+
+Kommentar
+
+Title: level 2 (explicitly stated)
+filler2\n
+author: test author
+email: test email author
+filler1
+homepage:www.test.de
+author comment: der autor ist cool :-)
+view: horizontal mirrored
+difficulty: 5
+
+Solution
+RRdrU
+
+solution name: L�sung1
+own solution:    yes
+solution comment:Testkommentar1
+
+Solution
+drUluRR
+
+solution name: L�sung2
+solution comment end:Testkommentar 2
+
+savegame
+R
+
+
+
+
+
+
+Title very long title that is longer than any fields which that display this title in a sokoban program. Wow, is this title a long one!
+
+########
+#. @ ###
+#  $   #
+#$   ###
+# # $  #
+#   ## #
+# ..   #
+########
+
+comment before the solution:
+This solution is a very good one :-)
+
+Solution:
+
+Solution/Moves 40/10/5/3/5
+lddrdddrrruulLulDDurrrddllLulluUUrurDDDD
+
+comment after solution
+this solution is really very good!
+
+just some more text
+text between two levels
+
+
+
+Solution 40/10/5/3/5 (YASS 2.33)
+rddldddrrruulLulDDurrrddllLulluUUrurDDDD
+
+Optimality: Push-optimal solution
+Solver: YASS 2.33
+Time: 00:00:00
+
+
+level title
+	line that destroys the level title
+#####
+#@$.#
+#####
+
+>comment1
+>comment2
+
+Before this line there is an empty line
+
+Title Level: 03
+
+
+level 05
+
+	########
+	#. @ ###
+	#  $   #
+	#$   ###
+	# #    #
+	#   ## #
+	# .  $.#
+	########
+
+Title: level 05
+
+
+test
+
+#####
+#@$.#
+#####
+
+TITLE: xxx
+
+
+run length encoded
+
+Original 1
+
+4-5#|4-#3-#|4-#$--#|--3#--$##|--#--$-$-#|3#-#-##-#3-6#|#3-#-##-5#--..#|#-$--$10-..#|5#-3#-#@##--..#|4-#5-9#|4-7#
+
+Title: Original 1
+Author: � Thinking Rabbit
+
+Best Solution 230/97
+u3l3uLUllDll3dr12R13lulld14R7l3ululldDDuull3dr10RdrU7l3ulLul3Duull3dr1
+0RuRRlD7l3ull3urDDuull5Duull3dr10RdRRlU7l3uLLul3Duull3dr10RuRDldR
+
+
+run length encoded 2
+
+Sasquatch VII No 10
+
+3-7#|--##5-#|3#-.3#-#|#-$-$--#-#|#@*.$..--#|#-$-$--3#|3#-#.-#|--#3-##|--5#
+
+; 11
+'derived from SokHard 1'
+| 1234 test commend 98343 lu 
+
+Solution/Moves 96/25
+uRlddRUrDRluRUrrdrr3u4l3DRRddlUddllUURuLrurrdLDlluR3u4r3dLr3u4ldlDrdd3
+luuRRlldd3ruU
+
+Solution/Pushes 116/19
+uRlddRUrRRdddlluUddrruuulLrrurDrruuulllldDrdddrUluRldddlluuRlddrruruul
+DlluRuuurrrrdddLruuulllldlDrddllluuRRllddrrruU
+
+savegame
+uRlddRUrDRluRUrrdrr3u4l3DRRdd
+
+
+Maximal size
+
+########################################
+#           #                          #
+#$$         #                          #
+#              .     .  ## #  ##       #
+#       .   #                   #      #
+#     .                    .     #     #
+#           #  ##                #     #
+#       .          # #       .  ##     #
+#   .   .             #      ##        #
+#            #        #    ##          #
+#  .                  #    #  .        #
+#           #    .   #     # .         #
+#          ##       #  .   #        .  #
+#   .    ##    $    #    ###           #
+#       ##          #    #       .     #
+#       #         $ #    #  #          #
+#.   . #     $     ##    #   #         #
+#      #          ##    $#$   #        #
+#      # .$$     ## $    #    ##       #
+#     #   $      #       $     #       #
+#     #   $ .   ##         $   #       #
+#    #         .#             #        #
+#    #         ## *.       # #         #
+#       $      #  .       #            #
+#    #        ## ..   ## # $           #
+#    #       ##  .   ##            #####
+#    #    $ $#  ..              ####   #
+#    #       # ..         $            #
+#    #      ## .$$                     #
+#    #      # ..      ######   $$$$    #
+#    #     ##..$      # $ .#           #
+#    #     #    $     #         $ $    #
+#    #     #     $   $                 #
+#    #     ##  #   $           $$$$   ##
+#    #      ####          #           ##
+#    #                    # #         ##
+#@   #                    ####         #
+#$                       #####         #
+#.#                      ###############
+########################################
+
+Invalid
+
+####
+#@$
+####
+
+
+Too huge
+
+################################################
+#           #                                  #
+#           #                                  #
+#           #                                  #
+#           #                                  #
+#           #                                  #
+#           #                                  #
+#$$         #                                  #
+#              .     .  ## #  ##               #
+#       .   #                   #              #
+#     .                    .     #             #
+#           #  ##                #             #
+#       .          # #       .  ##             #
+#   .   .             #      ##                #
+#            #        #    ##                  #
+#  .                  #    #  .                #
+#           #    .   #     # .                 #
+#          ##       #  .   #        .          #
+#   .    ##    $    #    ###                   #
+#       ##          #    #       .             #
+#       #         $ #    #  #                  #
+#.   . #     $     ##    #   #                 #
+#      #          ##    $#$   #                #
+#      # .$$     ## $    #    ##               #
+#     #   $      #       $     #               #
+#     #   $ .   ##         $   #               #
+#    #         .#             #                #
+#    #         ## *.       # #                 #
+#       $      #  .       #                    #
+#    #        ## ..   ## # $                   #
+#    #       ##  .   ##                    #####
+#    #    $ $#  ..                      ####   #
+#    #       # ..         $                    #
+#    #      ## .$$                             #
+#    #      # ..      ######   $$$$            #
+#    #     ##..$      # $ .#                   #
+#    #     #    $     #         $ $            #
+#    #     #     $   $                         #
+#    #     ##  #   $           $$$$           ##
+#    #      ####          #                   ##
+#    #                    # #                 ##
+#@   #                    ####                 #
+#$                       #####                 #
+#.#                      ###############       #
+################################################
+
+
+Connector line test
+
+--#------#
+-#---#--#
+--#-#--#
+---#-#--#
+--#---#--#
+-#---#--#
+--#-#--#
+----------
+##########
+#........####
+#-$$$$$$$#--#
+#.$......#--#
+#-$$$$$$-#--#
+#......$+#--#
+#$$$$$$$-#--#
+#--------####
+##########
+Title: Steaming Hot
+Author: David Buchweitz

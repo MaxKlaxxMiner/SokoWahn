@@ -1,0 +1,128 @@
+Penalty1
+
+########
+#  #   #
+#. #   #
+#.  $  #
+#  # $ #
+#  # @ #
+########
+
+
+Penalty2 - Lowerbound = 79
+
+########       
+#      #       
+#    @ ########
+#  # $   #  ..#
+# $$$$$$$$ ...#
+#        #  ..#
+#        #  ..#
+###############
+
+
+Penalty3 - Lowerbound = 43
+
+########       
+#      #       
+#    @ ########
+#  #     #    #
+# $$$   $$ ...#
+#        #  ..#
+#        #    #
+###############
+
+
+Test Penalty4 
+
+#############       
+#           #       
+## $ # @    ########
+# # #   ###   #   .#
+#  $ # $   $ $$ ...#
+#       ###    #  .#
+#    #        #   .#
+####################
+
+
+Penalty5
+
+########
+#      #
+#  $@  #
+#  $#  #
+#  $   #
+#      #
+#      #
+#    ###
+#    #  
+### ##  
+#    #  
+#    #  
+# .  #  
+# .. #  
+######  
+
+
+Penalty6 - spielerpositionsabhängig
+
+    ###    
+    #.#    
+    #.#####
+#####$#   #
+#  @$     #
+#   #  ####
+######## 
+
+
+Penalty7
+
+######   
+#    #   
+#.   #   
+#.   #   
+# #  ####
+###$#   #
+#@$     #
+###  ####
+  ####
+
+
+Penalty8
+
+#########
+#..@$   #
+####$   #
+   # ####
+   #  #  
+   #  #  
+   #  #  
+   ####
+
+
+Penalty9 - spielerpositionsabhängig
+
+    ###    
+#####.#####
+#   $   . #
+#   $ # @ #
+#    #    #
+###########
+
+
+Penalty 10 - Nach Push wird Penalty nicht mehr erkennt - ist nicht zu vermeiden.
+
+       ##### 
+ #######   ##
+## #  ## $  #
+#        $  #
+#     ###   #
+### ##### ###
+#    ##   ## 
+#         ## 
+#  $$###@*.# 
+#    # #...# 
+#  ### ##### 
+####         
+
+Das Penalty fällt leider weg, da die Blockerkiste die möglichen Pfade für ein Zielfeld einschränkt, sobald man die Kiste ein Feld nach rechts verschiebt

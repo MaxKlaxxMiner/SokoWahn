@@ -1,0 +1,41 @@
+
+
+blocked box forces deadlock 1
+
+#####
+#   ##
+# # .#
+# $ $#
+# ##+#
+# #  #
+# #  #
+#    #
+######
+
+
+blocked box forces deadlock 2
+
+   #########
+  ##.....$.#
+ ##     ## #
+##    ###  #
+#   .#   @$#
+#  $#  $$$ #
+#     $    #
+#          #
+############
+
+SaveGame 13/2
+lDulldlddrruR
+
+
+blocked box forces deadlock  3
+
+######
+# . ##
+# ** #
+# .* #
+# $# #
+# @$ #
+#    #
+######
