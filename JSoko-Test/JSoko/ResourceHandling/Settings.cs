@@ -291,7 +291,7 @@ namespace JSoko.ResourceHandling
     /// <summary>
     /// Last played collections.
     /// </summary>
-    public static List<SelectableLevelCollection> lastPlayedCollections = new List<SelectableLevelCollection>();
+    public static List<SelectableLevelCollectionComboBoxModel.SelectableLevelCollection> lastPlayedCollections = new List<SelectableLevelCollectionComboBoxModel.SelectableLevelCollection>();
 
     // --- Optimizer settings ---
     [SettingsVar]
@@ -476,35 +476,32 @@ namespace JSoko.ResourceHandling
       return settings.GetProperty(key);
     }
 
-    //  /**
-    //   * Sets the passed value for the property with the passed key.
-    //   * <p>
-    //   * This method is used for properties that aren't performance critical and therefore need not be stored in an own variable in this class.
-    //   *
-    //   * @param key
-    //   *            key of the property to set a new value for
-    //   * @param value
-    //   *            value to be set
-    //   */
-    //  public static void set(String key, String value) {
-    //    settings.setProperty(key, value);
-    //  }
+    /// <summary>
+    /// Sets the passed value for the property with the passed key.
+    /// 
+    /// This method is used for properties that aren't performance critical and therefore need not be stored in an own variable in this class.
+    /// </summary>
+    /// <param name="key">key of the property to set a new value for</param>
+    /// <param name="value">value to be set</param>
+    public static void Set(string key, string value)
+    {
+      settings.SetProperty(key, value);
+    }
 
-    //  /**
-    //   * Stores the passed collections as "last played" collections in the settings.
-    //   *
-    //   * @param lastPlayedCollections
-    //   *            the last played level collections
-    //   */
-    //  public static void setLastPlayedCollections(List<SelectableLevelCollection> lastPlayedCollections) {
-
-    //    // Add the collections in the format: databaseID;collection file
-    //    int counter = 1;
-    //    for (SelectableLevelCollection collection : lastPlayedCollections) {
-    //      settings.setProperty("lastPlayedLevelCollection" + counter, collection.databaseID + "\n" + collection.title + "\n" + collection.file);
-    //      counter++;
-    //    }
-    //  }
+    /// <summary>
+    /// Stores the passed collections as "last played" collections in the settings.
+    /// </summary>
+    /// <param name="lastPlayedCollections">the last played level collections</param>
+    public static void SetLastPlayedCollections(List<SelectableLevelCollectionComboBoxModel.SelectableLevelCollection> lastPlayedCollections)
+    {
+      // Add the collections in the format: databaseID;collection file
+      int counter = 1;
+      foreach (var collection in lastPlayedCollections)
+      {
+        settings.SetProperty("lastPlayedLevelCollection" + counter, collection.databaseId + "\n" + collection.title + "\n" + collection.file);
+        counter++;
+      }
+    }
 
     //  /**
     //   * Returns the last played collection data stored in the settings file.
@@ -904,56 +901,56 @@ namespace JSoko.ResourceHandling
     private static void SetProgramVariablesFromSettings()
     {
       // todo
-    //  final private static void setProgramVariablesFromSettings() {
+      //  final private static void setProgramVariablesFromSettings() {
 
-    //    // Set the language of the user if possible.
-    //    // First the language of the settings file is used.
-    //    // If there isn't one set, this is the first start of the program.
-    //    // Then the language of the system properties is used.
-    //    String userLanguageCode = Settings.getString("currentLanguage", "");
-    //    if (userLanguageCode.length() == 0) {
-    //      userLanguageCode = System.getProperties().getProperty("user.language");
-    //    }
+      //    // Set the language of the user if possible.
+      //    // First the language of the settings file is used.
+      //    // If there isn't one set, this is the first start of the program.
+      //    // Then the language of the system properties is used.
+      //    String userLanguageCode = Settings.getString("currentLanguage", "");
+      //    if (userLanguageCode.length() == 0) {
+      //      userLanguageCode = System.getProperties().getProperty("user.language");
+      //    }
 
-    //    // The language code the program has found for the user. Default is English.
-    //    String validatedUserLanguageCode = "EN";
+      //    // The language code the program has found for the user. Default is English.
+      //    String validatedUserLanguageCode = "EN";
 
-    //    // Check if the language of the user is supported by this program.
-    //    // If yes, then set that language code instead of the default "EN".
-    //    for (String languageCode : Translator.getAvailableLanguageCodes()) {
-    //      if (userLanguageCode.equals(languageCode)) {
-    //        validatedUserLanguageCode = userLanguageCode;
-    //        break;
-    //      }
-    //    }
+      //    // Check if the language of the user is supported by this program.
+      //    // If yes, then set that language code instead of the default "EN".
+      //    for (String languageCode : Translator.getAvailableLanguageCodes()) {
+      //      if (userLanguageCode.equals(languageCode)) {
+      //        validatedUserLanguageCode = userLanguageCode;
+      //        break;
+      //      }
+      //    }
 
-    //    // Set the determined language code as new language for JSoko.
-    //    set("currentLanguage", validatedUserLanguageCode);
+      //    // Set the determined language code as new language for JSoko.
+      //    set("currentLanguage", validatedUserLanguageCode);
 
-    //    // FFS/hm: up to here the above code does belong elsewhere.
+      //    // FFS/hm: up to here the above code does belong elsewhere.
 
-    //    // Skin
-    //    currentSkin = getString("currentSkin", "skin1");
+      //    // Skin
+      //    currentSkin = getString("currentSkin", "skin1");
 
-    //    // Set the folder of the last loaded file to the folder loaded from settings file.
-    //    lastFilePath = getString("lastFilePath", Settings.get("levelFolder"));
+      //    // Set the folder of the last loaded file to the folder loaded from settings file.
+      //    lastFilePath = getString("lastFilePath", Settings.get("levelFolder"));
 
-    //    // Information about the last played level number.
-    //    lastPlayedLevelNumber = getInt("lastPlayedLevelNumber", 1);
+      //    // Information about the last played level number.
+      //    lastPlayedLevelNumber = getInt("lastPlayedLevelNumber", 1);
 
-    //    // Get the Look&Feel to set.
-    //    // FFS/hm@mm: default value "nimRODLookAndFeel" also for the field declaration?
-    //    currentLookAndFeel = getString("currentLookAndFeel", "nimRODLookAndFeel");
+      //    // Get the Look&Feel to set.
+      //    // FFS/hm@mm: default value "nimRODLookAndFeel" also for the field declaration?
+      //    currentLookAndFeel = getString("currentLookAndFeel", "nimRODLookAndFeel");
 
-    //    // Application bounds: these values needn't to be stored in class
-    //    // variables because they aren't important for the performance.
+      //    // Application bounds: these values needn't to be stored in class
+      //    // variables because they aren't important for the performance.
 
-    //    copyPropertiesToAnnotated();
+      //    copyPropertiesToAnnotated();
 
-    //    // if (isSettingsDebugModeActivated) {
-    //    // ++testVarInt;
-    //    // testVarStr = "Y " + testVarStr;
-    //    // }
+      //    // if (isSettingsDebugModeActivated) {
+      //    // ++testVarInt;
+      //    // testVarStr = "Y " + testVarStr;
+      //    // }
     }
 
     private static string GetString(string name, string defaultValue)

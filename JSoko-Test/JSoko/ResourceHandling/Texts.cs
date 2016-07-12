@@ -14,6 +14,12 @@ namespace JSoko.ResourceHandling
       // todo: throw new NotImplementedException();
     }
 
+    public static string GetText(string message)
+    {
+      // todo
+      return message;
+    }
+
     public static string GetText(string message, string settingsIni)
     {
       // todo

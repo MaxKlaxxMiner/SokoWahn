@@ -197,17 +197,16 @@ namespace JSoko.Utilities_
         // ignored
       }
 
-      if (b == null)
-      {
-        // If the program is started as web start application the file
-        // may be in the jar file. Hence try to read it from the jar, too.
-        //try
-        //{
-          //  b = new BufferedReader(new InputStreamReader(
-          //  JSoko.class.getResourceAsStream(filename)));
-        //}
-        //catch (Exception e) { }
-      }
+      //if (b == null)
+      //{
+      //  // If the program is started as web start application the file
+      //  // may be in the jar file. Hence try to read it from the jar, too.
+      //  try
+      //  {
+      //    b = new BufferedReader(new InputStreamReader(JSoko.classs.getResourceAsStream(filename)));
+      //  }
+      //  catch (Exception e) { }
+      //}
       return b;
     }
 

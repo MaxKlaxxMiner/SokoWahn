@@ -23,5 +23,9 @@ namespace JSoko.java.util
 
       return null;
     }
+
+    public void SetProperty(string key, string value)
+    {
+    }
   }
 }

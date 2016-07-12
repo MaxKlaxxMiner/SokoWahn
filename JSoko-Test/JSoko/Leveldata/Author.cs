@@ -1,7 +1,7 @@
 ﻿
 namespace JSoko.Leveldata
 {
-  public class SelectableLevelCollection
+  public class Author
   {
   }
 }

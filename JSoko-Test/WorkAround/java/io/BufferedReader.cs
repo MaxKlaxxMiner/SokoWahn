@@ -3,24 +3,20 @@ using System.IO;
 
 namespace JSoko.java.io
 {
-  public class BufferedReader
+  public sealed class BufferedReader
   {
-    Stream baseStream;
     BinaryReader binaryReader;
 
-    public BufferedReader(Stream baseStream)
+    public BufferedReader(Stream inputStream)
     {
-      this.baseStream = baseStream;
-      binaryReader = new BinaryReader(baseStream);
+      binaryReader = new BinaryReader(inputStream);
     }
 
     public void Close()
     {
       if (binaryReader == null) return;
-
       binaryReader.Close();
       binaryReader = null;
-      baseStream = null;
     }
   }
 }

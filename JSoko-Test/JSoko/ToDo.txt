@@ -13,6 +13,8 @@ JSoko.DeadlockDetection_.DeadlockDetection
 JSoko.Editor_.Editor;
 JSoko.Gui_.Gui
 JSoko.Gui_.MessageDialogs;
+JSoko.Leveldata.Author;
+JSoko.Leveldata.Database;
 JSoko.Leveldata.History
 JSoko.Leveldata.Level
 JSoko.Leveldata.LevelCollection
@@ -98,8 +100,6 @@ de.sokoban_online.jsoko.gui.GraphicalLevelBrowser;
 de.sokoban_online.jsoko.gui.JSokoAboutBox;
 de.sokoban_online.jsoko.gui.MainBoardDisplay;
 de.sokoban_online.jsoko.gui.Transformation;
-de.sokoban_online.jsoko.leveldata.Author;
-de.sokoban_online.jsoko.leveldata.Database;
 de.sokoban_online.jsoko.leveldata.HistoryElement;
 de.sokoban_online.jsoko.leveldata.RunLengthFormat;
 de.sokoban_online.jsoko.leveldata.Snapshot;
@@ -249,3 +249,18 @@ import de.sokoban_online.jsoko.resourceHandling.Settings.SearchDirection;
 import de.sokoban_online.jsoko.resourceHandling.Texts;
 import de.sokoban_online.jsoko.utilities.Debug;
 import de.sokoban_online.jsoko.utilities.Utilities;
+
+--- SelectableLevelCollectionComboBoxModel ---
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import javax.swing.DefaultComboBoxModel;
+import de.sokoban_online.jsoko.leveldata.SelectableLevelCollectionComboBoxModel.SelectableLevelCollection;
+
+--- LevelCollection ---
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import de.sokoban_online.jsoko.resourceHandling.Texts;
