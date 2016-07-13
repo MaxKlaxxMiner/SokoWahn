@@ -4,12 +4,12 @@
 using System;
 using System.Linq;
 using System.Text;
+using SokoWahnCore;
 
 // ReSharper disable UnusedMember.Global
 // ReSharper disable ConvertToLambdaExpressionWhenPossible
 
 #endregion
-
 
 namespace SokoWahn
 {

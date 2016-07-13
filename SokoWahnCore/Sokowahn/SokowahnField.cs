@@ -43,12 +43,12 @@ namespace SokoWahnCore
     /// <summary>
     /// merkt sich die aktuelle Position vom Spieler (posis[0]) und die Positionen aller Boxen
     /// </summary>
-    internal ushort[] posis;
+    public ushort[] posis;
 
     /// <summary>
     /// merkt sich die Anzahl der Boxen, welche sich noch nicht auf einem Zielfeld befinden
     /// </summary>
-    internal int boxesRemain;
+    public int boxesRemain;
     #endregion
 
     #region # // --- Konstruktor ---
@@ -430,6 +430,49 @@ namespace SokoWahnCore
       boxesRemain = newRemain;
 
       Array.Copy(gameState, ofs, posis, 0, posis.Length);
+    }
+
+    /// <summary>
+    /// setzt einen bestimmten Spielstatus (mit automatischer Längenanpassung)
+    /// </summary>
+    /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden sollen</param>
+    public void SetGameState(ushort[] gameState)
+    {
+      // --- altes Spiefeld räumen ---
+      int playerPos = posis[0];
+      fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
+      for (int box = 1; box < posis.Length; box++)
+      {
+        int boxPos = posis[box];
+        fieldData[boxPos] = fieldData[boxPos] == '*' ? '.' : ' ';
+      }
+
+      // --- neues Spielfeld setzen ---
+      playerPos = gameState[0];
+      fieldData[playerPos] = fieldData[playerPos] == '.' ? '+' : '@';
+      int newRemain = 0;
+      for (int box = 1; box < gameState.Length; box++)
+      {
+        int boxPos = gameState[box];
+        if (fieldData[boxPos] == '.')
+        {
+          fieldData[boxPos] = '*';
+        }
+        else
+        {
+          fieldData[boxPos] = '$';
+          newRemain++;
+        }
+      }
+      boxesRemain = newRemain;
+
+      // --- Größe korrigieren, falls notwendig ---
+      if (posis.Length != gameState.Length)
+      {
+        posis = new ushort[gameState.Length];
+      }
+
+      Array.Copy(gameState, 0, posis, 0, gameState.Length);
     }
 
     /// <summary>
