@@ -844,6 +844,16 @@ namespace SokoWahnCore
     {
       return string.Join(Environment.NewLine, Enumerable.Range(0, height).Select(line => new string(fieldData.Skip(line * width).Take(width).ToArray())));
     }
+
+    /// <summary>
+    /// gibt den Inhalt des gesamten Spielfeldes aus inkl. Änderungsmöglichkeit des Zeichens pro Feld
+    /// </summary>
+    /// <param name="changeFunction">Änderungs-Funktion</param>
+    /// <returns>Inhalt des Spielfeldes</returns>
+    public string ToString(Func<char, int, char> changeFunction)
+    {
+      return string.Join(Environment.NewLine, Enumerable.Range(0, height).Select(line => new string(fieldData.Skip(line * width).Take(width).Select((c, i) => changeFunction(c, i + line * width)).ToArray())));
+    }
     #endregion
   }
 }

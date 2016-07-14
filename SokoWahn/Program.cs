@@ -616,7 +616,13 @@ namespace SokoWahn
 
     static void ScanBlocker(SokowahnField field)
     {
+      Console.WriteLine(field.ToString());
+      Console.WriteLine();
 
+      var test = new DeadlockBlocker(field);
+
+      Console.WriteLine(field.ToString((c, i) => test.blockerSingle[i] ? c : '´'));
+      Console.WriteLine();
     }
 
     static void Main()

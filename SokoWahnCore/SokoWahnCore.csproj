@@ -42,6 +42,8 @@
     <Compile Include="LinqTools\Crc64.cs" />
     <Compile Include="LinqTools\LinqExtensions.cs" />
     <Compile Include="LinqTools\SelectArray.cs" />
+    <Compile Include="SokoTools\CreateWayMap.cs" />
+    <Compile Include="SokoTools\DeadlockBlocker.cs" />
     <Compile Include="SokoTools\FieldBoxesVariants.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Sokowahn\SokowahnField.cs" />
