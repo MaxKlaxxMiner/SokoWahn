@@ -335,6 +335,7 @@ namespace SokoWahn
     }
     #endregion
 
+    #region # // --- TopLeft-Tools ---
     static Dictionary<int, HashSet<ulong>> boxesHash;
     static HashSet<ushort> invalidBoxes;
 
@@ -611,6 +612,12 @@ namespace SokoWahn
       Console.WriteLine("Map-Size: " + map.Count.ToString("N0") + " (" + (map.Count / 262144.0).ToString("N1") + " MB)");
       Console.WriteLine();
     }
+    #endregion
+
+    static void ScanBlocker(SokowahnField field)
+    {
+
+    }
 
     static void Main()
     {
@@ -624,26 +631,9 @@ namespace SokoWahn
       //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
       //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
 
-      ScanTopLeftFields(new SokowahnField(TestData.Level3));
+      //ScanTopLeftFields(new SokowahnField(TestData.Level3));
 
-      #region # --- ScanTopLeftFields ---
-      // --- base -------------------------------------- --- ushort-optimize ---------------------
-      //  Level 1:       34.194 -    20 MB                      34.194 -    19 MB
-      //  Level 2:       19.747 -    20 MB                      19.747 -    17 MB
-      //  Level 3:      672.351 -   113 MB                     672.351 -    41 MB
-      //  Level 4:    4.090.845 -   317 MB                   4.090.845 -   133 MB
-      //  Level 5: * 15.245.914 - 5.093 MB (4.404.002)   * 111.678.536 - 5.002 MB (24.615.628)
-      //  Level 6: * 14.234.848 - 5.053 MB (5.085.224)
-      //  Level 7: * 15.718.791 - 5.017 MB (5.222.287)
-      //  Level 8: *  7.197.767 - 5.091 MB (3.474.847)
-      // --- hash-blocker ------------------------------ --- stopper-optimize --------------------
-      //  Level 1:       26.479 -    15 MB                      25.862 -    15 MB
-      //  Level 2:        7.554 -    15 MB                       6.610 -    15 MB
-      //  Level 3:      193.988 -   126 MB                     154.561 -   125 MB
-      //  Level 4:    1.693.282 -   119 MB                   1.447.603 -    89 MB
-      //  Level 5:   17.309.502 -   796 MB (4 Boxes)        15.457.591 -   654 MB (4 Boxes)
-      #endregion
-
+      ScanBlocker(new SokowahnField(TestData.Level1));
 
       #region # // --- Level 3 Hash-Stats ---
       // boxes todoLen todoLenEnd  Hashtable
