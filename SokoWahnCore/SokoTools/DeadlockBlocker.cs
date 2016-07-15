@@ -16,7 +16,7 @@ namespace SokoWahnCore
     /// <summary>
     /// merkt sich das aktuelle Spielfeld
     /// </summary>
-    SokowahnField field;
+    readonly SokowahnField field;
 
     /// <summary>
     /// merkt sich die Wege-Felder, wo sich der Spieler aufhalten darf
@@ -43,8 +43,9 @@ namespace SokoWahnCore
       ScanBlockerSingle();
     }
 
+    #region # void ScanBlockerSingle() // scannt nach einzelnen Felder-Positionen, wo keine Kisten stehen dürfen
     /// <summary>
-    /// scannt nach einzelnen Kisten-Positionen, welche nicht mehr lösbar sind
+    /// scannt nach einzelnen Felder-Positionen, wo keine Kisten stehen dürfen
     /// </summary>
     void ScanBlockerSingle()
     {
@@ -79,13 +80,10 @@ namespace SokoWahnCore
 
       #region # // --- Rückwärts-Suche durchführen ---
       var reverseHash = new HashSet<ulong>(); // alle Stellungen, welche mit einer Kiste rückwärts erreichbar sind
-      var reverseBoxPosis = new HashSet<int>(); // alle Positionen, wo eine Kiste stehen konnte
       var nextBuf = new ushort[StateLen * (1) * 4];
       while (todoStates.Count > 0)
       {
-        var gameState = todoStates.Dequeue();
-        reverseBoxPosis.Add(gameState[1]);
-        scanner.SetGameState(gameState);
+        scanner.SetGameState(todoStates.Dequeue());
         scanner.SetPlayerTopLeft();
 
         ulong crc = scanner.GetGameStateCrc();
@@ -110,7 +108,7 @@ namespace SokoWahnCore
 
       #region # // --- Vorwärts-Suche durchführen ---
       var forwardHash = new HashSet<ulong>(); // alle Stellungen, welche mit einer Kiste vorwärts erreichbar sind
-      var forwardBoxPosis = new HashSet<ushort>(); // alle Positionen, wo eine Kiste stehen konnte
+      var forwardBoxPosis = new HashSet<ushort>(); // alle Positionen, wo eine Kiste stehen könnte
       while (todoStates.Count > 0)
       {
         var gameState = todoStates.Dequeue();
@@ -131,6 +129,17 @@ namespace SokoWahnCore
         }
       }
       #endregion
+
+      #region # // --- geblockte Felder markieren, wo niemals eine Kiste stehen darf ---
+      for (ushort i = 0; i < blockerSingle.Length; i++)
+      {
+        if (!blockerSingle[i] && !forwardBoxPosis.Contains(i))
+        {
+          blockerSingle[i] = true;
+        }
+      }
+      #endregion
     }
+    #endregion
   }
 }
