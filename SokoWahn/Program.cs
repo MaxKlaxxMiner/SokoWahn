@@ -20,47 +20,6 @@ namespace SokoWahn
     const string PathData = "../../../Data/";
     const string PathTest = PathData + "Test/";
 
-    #region # static int ScanTopLeftPos(SokowahnField field) // sucht die oberste und am weitestende linke Position, welche vom Spieler noch erreichbar ist
-    /// <summary>
-    /// sucht die oberste und am weitestende linke Position, welche vom Spieler noch erreichbar ist
-    /// </summary>
-    /// <param name="field">Spielfeld, welches gescannt werden soll</param>
-    /// <returns>erreichbare Spielerposition</returns>
-    static int ScanTopLeftPos(SokowahnField field)
-    {
-      var data = field.fieldData;
-      int bestPos = int.MaxValue;
-      int width = field.width;
-
-      var scanned = new bool[data.Length];
-
-      var next = new Stack<int>();
-      next.Push(field.PlayerPos);
-
-      while (next.Count > 0)
-      {
-        int checkPos = next.Pop();
-        if (checkPos < bestPos) bestPos = checkPos;
-
-        scanned[checkPos] = true;
-
-        checkPos--;
-        if (!scanned[checkPos] && (data[checkPos] == ' ' || data[checkPos] == '.')) next.Push(checkPos);
-
-        checkPos += 2;
-        if (!scanned[checkPos] && (data[checkPos] == ' ' || data[checkPos] == '.')) next.Push(checkPos);
-
-        checkPos -= width + 1;
-        if (!scanned[checkPos] && (data[checkPos] == ' ' || data[checkPos] == '.')) next.Push(checkPos);
-
-        checkPos += width * 2;
-        if (!scanned[checkPos] && (data[checkPos] == ' ' || data[checkPos] == '.')) next.Push(checkPos);
-      }
-
-      return bestPos;
-    }
-    #endregion
-
     #region # static void MiniSolver(SokowahnField field) // einfaches Tool zum finden irgendeiner Lösung eines Spielfeldes
     /// <summary>
     /// einfaches Tool zum finden irgendeiner Lösung eines Spielfeldes
@@ -94,7 +53,7 @@ namespace SokoWahn
           Console.WriteLine("Hash: " + hashCrcs.Count.ToString("N0") + " (" + (100.0 / 48000000 * hashCrcs.Count).ToString("N1") + " %)");
         }
 
-        scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+        scanner.SetPlayerTopLeft();
 
         var crc = scanner.GetGameStateCrc();
         if (hashCrcs.Contains(crc)) continue;
@@ -162,7 +121,7 @@ namespace SokoWahn
                 if (fieldData[revPos] == '#' || fieldData[revPos] == '$' || fieldData[revPos] == '*') continue;
 
                 scanner.SetPlayerPos(playerPos);
-                scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+                scanner.SetPlayerTopLeft();
 
                 ulong crc = scanner.GetGameStateCrc();
                 if (checkDuplicates.Contains(crc)) continue;
@@ -188,7 +147,7 @@ namespace SokoWahn
           {
             ushort depth = todoBuf[todoPos++];
             scanner.SetGameState(todoBuf, todoPos); todoPos += stateLen;
-            scanner.SetPlayerPos(ScanTopLeftPos(scanner));
+            scanner.SetPlayerTopLeft();
 
             ulong crc = scanner.GetGameStateCrc();
             if (hash.ContainsKey(crc)) continue;
@@ -402,7 +361,7 @@ namespace SokoWahn
           for (int v = 0; v < variant.Length; v++) checkState[v + 1] = checkBoxes[variant[v]];
           AppendBoxes(checkState, topLeftTodo.lastBox);
           view.SetGameState(checkState);
-          view.SetPlayerPos(ScanTopLeftPos(view));
+          view.SetPlayerTopLeft();
           ulong crc = view.GetGameStateCrc();
           if (!bHash.Contains(crc))
           {
@@ -514,25 +473,25 @@ namespace SokoWahn
         if (ways.Contains((ushort)(box - 1)))
         {
           view.SetGameState(new[] { (ushort)(box - 1), box });
-          view.SetPlayerPos(ScanTopLeftPos(view));
+          view.SetPlayerTopLeft();
           checkCrc.Add(view.GetGameStateCrc());
         }
         if (ways.Contains((ushort)(box + 1)))
         {
           view.SetGameState(new[] { (ushort)(box + 1), box });
-          view.SetPlayerPos(ScanTopLeftPos(view));
+          view.SetPlayerTopLeft();
           checkCrc.Add(view.GetGameStateCrc());
         }
         if (ways.Contains((ushort)(box - width)))
         {
           view.SetGameState(new[] { (ushort)(box - width), box });
-          view.SetPlayerPos(ScanTopLeftPos(view));
+          view.SetPlayerTopLeft();
           checkCrc.Add(view.GetGameStateCrc());
         }
         if (ways.Contains((ushort)(box + width)))
         {
           view.SetGameState(new[] { (ushort)(box + width), box });
-          view.SetPlayerPos(ScanTopLeftPos(view));
+          view.SetPlayerTopLeft();
           checkCrc.Add(view.GetGameStateCrc());
         }
         if (!checkCrc.Any(crc => boxesHash[1].Contains(crc)))
@@ -627,15 +586,15 @@ namespace SokoWahn
 
     static void Main()
     {
-      //MiniGame(new SokowahnField(TestLevel1));
-      //MiniGame(new SokowahnField(TestLevel3));
-      //MiniGame(new SokowahnField(TestLevel4));
-      //MiniGame(new SokowahnField(TestLevel2));
+      //MiniGame(new SokowahnField(TestData.Level1));
+      //MiniGame(new SokowahnField(TestData.Level3));
+      //MiniGame(new SokowahnField(TestData.Level4));
+      //MiniGame(new SokowahnField(TestData.Level2));
 
-      //MiniSolver(new SokowahnField(TestLevel1));
+      //MiniSolver(new SokowahnField(TestData.Level1));
 
-      //MiniSolverHashBuilder(new SokowahnField(TestLevel3));
-      //MiniSolverHashBuilder2(new SokowahnField(TestLevel3));
+      //MiniSolverHashBuilder(new SokowahnField(TestData.Level3));
+      //MiniSolverHashBuilder2(new SokowahnField(TestData.Level3));
 
       //ScanTopLeftFields(new SokowahnField(TestData.Level3));
 

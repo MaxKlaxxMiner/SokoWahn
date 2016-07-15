@@ -395,6 +395,14 @@ namespace SokoWahnCore
     }
 
     /// <summary>
+    /// setzt die Spielerposition so weit oben und links wie möglich
+    /// </summary>
+    public void SetPlayerTopLeft()
+    {
+      SetPlayerPos(SokoTools.ScanTopLeftPos(this));
+    }
+
+    /// <summary>
     /// setzt einen bestimmten Spielstatus
     /// </summary>
     /// <param name="gameState">Spielstatus mit allen Positionen, welcher gesetzt werden soll</param>
