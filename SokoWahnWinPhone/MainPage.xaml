@@ -8,9 +8,9 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
   <Grid>
-    <Button x:Name="ButtonLeft"  Content="←" HorizontalAlignment="Right" Margin="0,0,170,10" VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
-    <Button x:Name="ButtonRight" Content="→" HorizontalAlignment="Right" Margin="0,0,10,10"  VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
-    <Button x:Name="ButtonUp"    Content="↑" HorizontalAlignment="Right" Margin="0,0,90,90"  VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
-    <Button x:Name="ButtonDown"  Content="↓" HorizontalAlignment="Right" Margin="0,0,90,10"  VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonLeft"  Content="←" HorizontalAlignment="Right" Margin="0,0,170,0" VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonRight" Content="→" HorizontalAlignment="Right" Margin="0,0,10,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonUp"    Content="↑" HorizontalAlignment="Right" Margin="0,0,90,80"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonDown"  Content="↓" HorizontalAlignment="Right" Margin="0,0,90,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
   </Grid>
 </Page>
