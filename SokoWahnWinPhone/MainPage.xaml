@@ -2,13 +2,15 @@
     x:Class="SokoWahnWinPhone.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:SokoWahnWinPhone"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Grid>
-
-    </Grid>
+  <Grid>
+    <Button x:Name="ButtonLeft"  Content="←" HorizontalAlignment="Right" Margin="0,0,170,10" VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonRight" Content="→" HorizontalAlignment="Right" Margin="0,0,10,10"  VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonUp"    Content="↑" HorizontalAlignment="Right" Margin="0,0,90,90"  VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
+    <Button x:Name="ButtonDown"  Content="↓" HorizontalAlignment="Right" Margin="0,0,90,10"  VerticalAlignment="Bottom" MinWidth="60" MinHeight="80" IsHitTestVisible="True" FontSize="38"/>
+  </Grid>
 </Page>
