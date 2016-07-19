@@ -50,6 +50,18 @@ namespace SokoWahnWinPhone
 
     WriteableBitmap skinImg;
 
+    public const string Level3 = "    #####\n"
+                                + "    #   #\n"
+                                + "    #$  #\n"
+                                + "  ###  $##\n"
+                                + "  #  $ $ #\n"
+                                + "### # ## #   ######\n"
+                                + "#   # ## #####  ..#\n"
+                                + "# $  $          ..#\n"
+                                + "##### ### #@##  ..#\n"
+                                + "    #     #########\n"
+                                + "    #######";
+
     /// <summary>
     /// Wird aufgerufen, wenn diese Seite in einem Rahmen angezeigt werden soll.
     /// </summary>
@@ -58,15 +70,6 @@ namespace SokoWahnWinPhone
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
       skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
-
-      int boxWidth = 8;
-      int boxHeight = 8;
-
-      int width = boxWidth * BoxPixelWidth * Multi;
-      int height = boxHeight * BoxPixelHeight * Multi + 1;
-
-      testBild = new WriteableBitmap(width, height);
-      GameImage.Source = testBild;
 
       string game1 = "  ##### \n"
                    + "###   # \n"
@@ -77,7 +80,7 @@ namespace SokoWahnWinPhone
                    + " #@  ###\n"
                    + " #####  \n";
 
-      InitGame(game1);
+      InitGame(Level3);
 
       // TODO: Wenn Ihre Anwendung mehrere Seiten enthält, stellen Sie sicher, dass
       // die Hardware-Zurück-Taste behandelt wird, indem Sie das
@@ -172,8 +175,10 @@ namespace SokoWahnWinPhone
       {
         using (var srcC = skinImg.GetBitmapContext())
         {
+          int tickLimit = Environment.TickCount + 1000;
           for (int y = 0; y < field.height; y++)
           {
+            if (Environment.TickCount > tickLimit) return;
             for (int x = 0; x < w; x++)
             {
               char c = f[x + y * w];
@@ -199,22 +204,22 @@ namespace SokoWahnWinPhone
                   if (GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandSpitzen;
                   if (GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = BildElement.WandSenkrecht;
                   if (!GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandWaagerecht;
-                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = GetF(f, x - 1, y - 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = GetF(f, x - 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
                   if (GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandSpitzen;
                   if (GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = BildElement.WandSenkrecht;
                   if (!GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandWaagerecht;
-                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = GetF(f, x + 1, y - 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = GetF(f, x + 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
                   if (GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandSpitzen;
                   if (GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = BildElement.WandSenkrecht;
                   if (!GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandWaagerecht;
-                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = GetF(f, x - 1, y + 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = GetF(f, x - 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
                   if (GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandSpitzen;
                   if (GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = BildElement.WandSenkrecht;
                   if (!GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandWaagerecht;
-                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = GetF(f, x + 1, y + 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = GetF(f, x + 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
                   MaleTestbild(dstC, srcC, x, y, lo, BildTeile.LinksOben);
                   MaleTestbild(dstC, srcC, x, y, ro, BildTeile.RechtsOben);
@@ -236,6 +241,12 @@ namespace SokoWahnWinPhone
       playField = new SokowahnField(gameTxt);
       drawField = new SokowahnField(playField);
       for (int i = 0; i < drawField.fieldData.Length; i++) drawField.fieldData[i] = '-';
+
+      int width = playField.width * BoxPixelWidth * Multi;
+      int height = playField.height * BoxPixelHeight * Multi + 1;
+
+      testBild = new WriteableBitmap(width, height);
+      GameImage.Source = testBild;
 
       UpdateScreen(playField);
     }
