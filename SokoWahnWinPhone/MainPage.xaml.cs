@@ -26,6 +26,7 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 // ReSharper disable UnusedMember.Local
+// ReSharper disable MemberCanBeInternal
 
 #endregion
 
@@ -61,28 +62,7 @@ namespace SokoWahnWinPhone
       // wird dieses Ereignis für Sie behandelt.
     }
 
-    static async Task<byte[]> ReadAllBytesAsync(string fileName)
-    {
-      try
-      {
-        var storageFile = await Package.Current.InstalledLocation.GetFileAsync(fileName);
-        if (storageFile != null)
-        {
-          var buffer = await FileIO.ReadBufferAsync(storageFile);
-          var reader = DataReader.FromBuffer(buffer);
-          var fileContent = new byte[reader.UnconsumedBufferLength];
-          reader.ReadBytes(fileContent);
-          return fileContent;
-        }
-      }
-      catch (Exception)
-      {
-        // ignored
-      }
-      return null;
-    }
-
-    readonly WriteableBitmap skinImg = new WriteableBitmap(350, 400);
+    WriteableBitmap skinImg;
     WriteableBitmap testBild;
 
     private async void Button_Click(object sender, RoutedEventArgs e)
@@ -95,13 +75,7 @@ namespace SokoWahnWinPhone
         HorizontalAlignment = HorizontalAlignment.Left
       };
 
-      var data = await ReadAllBytesAsync("Assets\\skin-yasc.png");
-
-      var memStream = new MemoryStream();
-      await memStream.WriteAsync(data, 0, data.Length);
-      memStream.Position = 0;
-
-      skinImg.SetSource(memStream.AsRandomAccessStream());
+      skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
 
       var btn = (Button)sender;
       btn.Content = "lol: " + skinImg.PixelWidth;
