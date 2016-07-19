@@ -1,7 +1,13 @@
 ﻿
+#region # using *.*
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.WindowsRuntime;
+// ReSharper disable MemberCanBeInternal
+// ReSharper disable CheckNamespace
+
+#endregion
 
 namespace Windows.UI.Xaml.Media.Imaging
 {
@@ -9,16 +15,7 @@ namespace Windows.UI.Xaml.Media.Imaging
   /// A disposable cross-platform wrapper around a WriteableBitmap, allowing a common API for Silverlight + WPF with locking + unlocking if necessary
   /// </summary>
   /// <remarks>Attempting to put as many preprocessor hacks in this file, to keep the rest of the codebase relatively clean</remarks>
-  public
-#if WPF
- unsafe
-#endif
-#if WINMD
- sealed class
-#else
- struct
-#endif
- BitmapContext : IDisposable
+  public sealed class BitmapContext : IDisposable
   {
     private readonly WriteableBitmap writeableBitmap;
 
@@ -26,11 +23,6 @@ namespace Windows.UI.Xaml.Media.Imaging
     private readonly static Dictionary<WriteableBitmap, int[]> PixelCacheByBmp = new Dictionary<WriteableBitmap, int[]>();
     private readonly int length;
     private readonly int[] pixels;
-
-    /// <summary>
-    /// The Bitmap
-    /// </summary>
-    public WriteableBitmap WriteableBitmap { get { return writeableBitmap; } }
 
     /// <summary>
     /// Width of the bitmap
@@ -50,33 +42,6 @@ namespace Windows.UI.Xaml.Media.Imaging
     {
       this.writeableBitmap = writeableBitmap;
 
-#if WPF
-         // Check if it's the Pbgra32 pixel format
-         if (writeableBitmap.Format != PixelFormats.Pbgra32)
-         {
-            throw new ArgumentException("The input WriteableBitmap needs to have the Pbgra32 pixel format. Use the BitmapFactory.ConvertToPbgra32Format method to automatically convert any input BitmapSource to the right format accepted by this class.", "writeableBitmap");
-         }
-
-         // Mode is used to invalidate the bmp at the end of the update if mode==ReadWrite
-         mode = ReadWriteMode.ReadWrite;
-
-         // Ensure the bitmap is in the dictionary of mapped Instances
-         if (!UpdateCountByBmp.ContainsKey(writeableBitmap))
-         {
-            // Set UpdateCount to 1 for this bitmap 
-            UpdateCountByBmp.Add(writeableBitmap, 1);
-
-            // Lock the bitmap
-            writeableBitmap.Lock();
-         }
-         else
-         {
-            // For previously contextualized bitmaps increment the update count
-            IncrementRefCount(writeableBitmap);
-         }
-
-         backBuffer = (int*)writeableBitmap.BackBuffer;
-#elif NETFX_CORE
       // Ensure the bitmap is in the dictionary of mapped Instances
       if (!UpdateCountByBmp.ContainsKey(writeableBitmap))
       {
@@ -94,10 +59,8 @@ namespace Windows.UI.Xaml.Media.Imaging
         pixels = PixelCacheByBmp[writeableBitmap];
         length = pixels.Length;
       }
-#endif
     }
 
-#if NETFX_CORE
     private unsafe void CopyPixels()
     {
       var data = writeableBitmap.PixelBuffer.ToArray();
@@ -116,65 +79,6 @@ namespace Windows.UI.Xaml.Media.Imaging
         }
       }
     }
-#endif
-
-#if SILVERLIGHT
-
-      /// <summary>
-      /// Gets the Pixels array 
-      /// </summary>        
-      public int[] Pixels { get { return writeableBitmap.Pixels; } }
-
-      /// <summary>
-      /// Gets the length of the Pixels array 
-      /// </summary>
-      public int Length { get { return writeableBitmap.Pixels.Length; } }
-
-      /// <summary>
-      /// Performs a Copy operation from source BitmapContext to destination BitmapContext
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      public static void BlockCopy(BitmapContext src, int srcOffset, BitmapContext dest, int destOffset, int count)
-      {
-         Buffer.BlockCopy(src.Pixels, srcOffset, dest.Pixels, destOffset, count);
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source Array to destination BitmapContext
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      public static void BlockCopy(Array src, int srcOffset, BitmapContext dest, int destOffset, int count)
-      {
-         Buffer.BlockCopy(src, srcOffset, dest.Pixels, destOffset, count);
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source BitmapContext to destination Array
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      public static void BlockCopy(BitmapContext src, int srcOffset, Array dest, int destOffset, int count)
-      {
-         Buffer.BlockCopy(src.Pixels, srcOffset, dest, destOffset, count);
-      }
-
-      /// <summary>
-      /// Clears the BitmapContext, filling the underlying bitmap with zeros
-      /// </summary>
-      public void Clear()
-      {
-         var pixels = writeableBitmap.Pixels;
-         Array.Clear(pixels, 0, pixels.Length);
-      }
-
-      /// <summary>
-      /// Disposes this instance if the underlying platform needs that.
-      /// </summary>
-      public void Dispose()
-      {
-         // For silverlight, do nothing
-      }
-
-#elif NETFX_CORE
 
     /// <summary>
     /// Gets the Pixels array 
@@ -190,9 +94,6 @@ namespace Windows.UI.Xaml.Media.Imaging
     /// Performs a Copy operation from source BitmapContext to destination BitmapContext
     /// </summary>
     /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-#if WINMD
-      [Windows.Foundation.Metadata.DefaultOverload]
-#endif
     public static void BlockCopy(BitmapContext src, int srcOffset, BitmapContext dest, int destOffset, int count)
     {
       Buffer.BlockCopy(src.Pixels, srcOffset, dest.Pixels, destOffset, count);
@@ -230,8 +131,7 @@ namespace Windows.UI.Xaml.Media.Imaging
     /// </summary>
     public void Clear()
     {
-      var pixels = Pixels;
-      Array.Clear(pixels, 0, pixels.Length);
+      Array.Clear(Pixels, 0, Pixels.Length);
     }
 
     /// <summary>
@@ -240,149 +140,31 @@ namespace Windows.UI.Xaml.Media.Imaging
     public unsafe void Dispose()
     {
       // Decrement the update count. If it hits zero
-      if (DecrementRefCount(writeableBitmap) == 0)
-      {
-        // Remove this bitmap from the update map 
-        UpdateCountByBmp.Remove(writeableBitmap);
-        PixelCacheByBmp.Remove(writeableBitmap);
+      if (DecrementRefCount(writeableBitmap) != 0) return;
 
-        // Copy data back
-        using (var stream = writeableBitmap.PixelBuffer.AsStream())
+      // Remove this bitmap from the update map 
+      UpdateCountByBmp.Remove(writeableBitmap);
+      PixelCacheByBmp.Remove(writeableBitmap);
+
+      // Copy data back
+      using (var stream = writeableBitmap.PixelBuffer.AsStream())
+      {
+        var buffer = new byte[4];
+        fixed (int* srcPtr = pixels)
         {
-          var buffer = new byte[4];
-          fixed (int* srcPtr = pixels)
+          for (var i = 0; i < length; i++)
           {
-            for (var i = 0; i < length; i++)
-            {
-              buffer[3] = (byte)((srcPtr[i] >> 24) & 0xff);
-              buffer[2] = (byte)((srcPtr[i] >> 16) & 0xff);
-              buffer[1] = (byte)((srcPtr[i] >> 8) & 0xff);
-              buffer[0] = (byte)((srcPtr[i]) & 0xff);
-              stream.Write(buffer, 0, 4);
-            }
+            buffer[3] = (byte)((srcPtr[i] >> 24) & 0xff);
+            buffer[2] = (byte)((srcPtr[i] >> 16) & 0xff);
+            buffer[1] = (byte)((srcPtr[i] >> 8) & 0xff);
+            buffer[0] = (byte)((srcPtr[i]) & 0xff);
+            stream.Write(buffer, 0, 4);
           }
         }
-        writeableBitmap.Invalidate();
       }
+      writeableBitmap.Invalidate();
     }
 
-#elif WPF
-      /// <summary>
-      /// The pixels as ARGB integer values, where each channel is 8 bit.
-      /// </summary>
-      public unsafe int* Pixels
-      {
-         [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-         get { return backBuffer; }
-      }
-
-      /// <summary>
-      /// The number of pixels.
-      /// </summary>
-      public int Length
-      {
-         [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-         get
-         {
-            double pixelWidth = writeableBitmap.BackBufferStride / WriteableBitmapExtensions.SizeOfArgb;
-            double pixelHeight = writeableBitmap.PixelHeight;
-            return (int)(pixelWidth * pixelHeight);
-         }
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source Bto destination BitmapContext
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-      public static unsafe void BlockCopy(BitmapContext src, int srcOffset, BitmapContext dest, int destOffset, int count)
-      {
-         NativeMethods.CopyUnmanagedMemory((byte*)src.Pixels, srcOffset, (byte*)dest.Pixels, destOffset, count);
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source Array to destination BitmapContext
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-      public static unsafe void BlockCopy(int[] src, int srcOffset, BitmapContext dest, int destOffset, int count)
-      {
-         fixed (int* srcPtr = src)
-         {
-            NativeMethods.CopyUnmanagedMemory((byte*)srcPtr, srcOffset, (byte*)dest.Pixels, destOffset, count);
-         }
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source Array to destination BitmapContext
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-      public static unsafe void BlockCopy(byte[] src, int srcOffset, BitmapContext dest, int destOffset, int count)
-      {
-         fixed (byte* srcPtr = src)
-         {
-            NativeMethods.CopyUnmanagedMemory(srcPtr, srcOffset, (byte*)dest.Pixels, destOffset, count);
-         }
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source BitmapContext to destination Array
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-      public static unsafe void BlockCopy(BitmapContext src, int srcOffset, byte[] dest, int destOffset, int count)
-      {
-         fixed (byte* destPtr = dest)
-         {
-            NativeMethods.CopyUnmanagedMemory((byte*)src.Pixels, srcOffset, destPtr, destOffset, count);
-         }
-      }
-
-      /// <summary>
-      /// Performs a Copy operation from source BitmapContext to destination Array
-      /// </summary>
-      /// <remarks>Equivalent to calling Buffer.BlockCopy in Silverlight, or native memcpy in WPF</remarks>
-      [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-      public static unsafe void BlockCopy(BitmapContext src, int srcOffset, int[] dest, int destOffset, int count)
-      {
-         fixed (int* destPtr = dest)
-         {
-            NativeMethods.CopyUnmanagedMemory((byte*)src.Pixels, srcOffset, (byte*)destPtr, destOffset, count);
-         }
-      }
-
-      /// <summary>
-      /// Clears the BitmapContext, filling the underlying bitmap with zeros
-      /// </summary>
-      [System.Runtime.TargetedPatchingOptOut("Candidate for inlining across NGen boundaries for performance reasons")]
-      public void Clear()
-      {
-         NativeMethods.SetUnmanagedMemory(writeableBitmap.BackBuffer, 0, writeableBitmap.BackBufferStride * writeableBitmap.PixelHeight);
-      }
-
-      /// <summary>
-      /// Disposes the BitmapContext, unlocking it and invalidating if WPF
-      /// </summary>
-      public void Dispose()
-      {
-         // Decrement the update count. If it hits zero
-         if (DecrementRefCount(writeableBitmap) == 0)
-         {
-            // Remove this bitmap from the update map 
-            UpdateCountByBmp.Remove(writeableBitmap);
-
-            // Invalidate the bitmap if ReadWrite mode
-            if (mode == ReadWriteMode.ReadWrite)
-               writeableBitmap.AddDirtyRect(new Int32Rect(0, 0, writeableBitmap.PixelWidth, writeableBitmap.PixelHeight));
-
-            // Unlock the bitmap
-            writeableBitmap.Unlock();
-         }
-      }
-#endif
-
-#if WPF || NETFX_CORE
     private static void IncrementRefCount(WriteableBitmap target)
     {
       UpdateCountByBmp[target]++;
@@ -395,6 +177,5 @@ namespace Windows.UI.Xaml.Media.Imaging
       UpdateCountByBmp[target] = current;
       return current;
     }
-#endif
   }
 }

@@ -1,24 +1,13 @@
-﻿#region Header
-//
-//   Project:           WriteableBitmapEx - WriteableBitmap extensions
-//   Description:       Collection of blit (copy) extension methods for the WriteableBitmap class.
-//
-//   Changed by:        $Author: unknown $
-//   Changed on:        $Date: 2012-05-03 23:12:09 +0200 (Do, 03 Mai 2012) $
-//   Changed in:        $Revision: 90031 $
-//   Project:           $URL: https://writeablebitmapex.svn.codeplex.com/svn/branches/WBX_1.0_BitmapContext/Source/WriteableBitmapEx/WriteableBitmapBlitExtensions.cs $
-//   Id:                $Id: WriteableBitmapBlitExtensions.cs 90031 2012-05-03 21:12:09Z unknown $
-//
-//
-//   Copyright © 2009-2012 Bill Reiss, Rene Schulte and WriteableBitmapEx Contributors
-//
-//   This Software is weak copyleft open source. Please read the License.txt for details.
-//
-#endregion
+﻿
+#region # using *.*
 
 using System;
-// ReSharper disable FieldCanBeMadeReadOnly.Global
+// ReSharper disable CheckNamespace
+// ReSharper disable MemberCanBeInternal
 // ReSharper disable UnusedMember.Global
+// ReSharper disable FieldCanBeMadeReadOnly.Global
+
+#endregion
 
 namespace Windows.UI.Xaml.Media.Imaging
 {
@@ -98,7 +87,7 @@ namespace Windows.UI.Xaml.Media.Imaging
       h = s.h;
     }
 
-    public static readonly RectInt Empty = new RectInt(0, 0, 0, 0);
+    static readonly RectInt Empty = new RectInt(0, 0, 0, 0);
 
     public static RectInt Intersect(RectInt a, RectInt b)
     {
@@ -136,339 +125,60 @@ namespace Windows.UI.Xaml.Media.Imaging
   /// <summary>
   /// Collection of blit (copy) extension methods for the WriteableBitmap class.
   /// </summary>
-  public
-#if WPF
-    unsafe
-#endif
- static partial class WriteableBitmapExtensions
+  public static partial class WriteableBitmapExtensions
   {
-
     #region Methods
 
     /// <summary>
     /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
     /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
+    /// <param name="context">The destination WriteableBitmap.</param>
     /// <param name="destRect">The rectangle that defines the destination region.</param>
     /// <param name="source">The source WriteableBitmap.</param>
     /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
     /// <param name="BlendMode">The blending mode <see cref="BlendMode"/>.</param>
-    public static void Blit(this WriteableBitmap bmp, RectInt destRect, WriteableBitmap source, RectInt sourceRect, BlendMode BlendMode)
+    public static void Blit(this BitmapContext context, RectInt destRect, BitmapContext source, RectInt sourceRect, BlendMode BlendMode)
     {
-      Blit(bmp, destRect, source, sourceRect, Colors.White, BlendMode);
+      Blit(context, destRect, source, sourceRect, Colors.White, BlendMode);
     }
 
     /// <summary>
     /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
     /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
+    /// <param name="context">The destination WriteableBitmap.</param>
     /// <param name="destRect">The rectangle that defines the destination region.</param>
     /// <param name="source">The source WriteableBitmap.</param>
     /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
-    public static void Blit(this WriteableBitmap bmp, RectInt destRect, WriteableBitmap source, RectInt sourceRect)
+    public static void Blit(this BitmapContext context, RectInt destRect, BitmapContext source, RectInt sourceRect)
     {
-      Blit(bmp, destRect, source, sourceRect, Colors.White, BlendMode.Alpha);
+      Blit(context, destRect, source, sourceRect, Colors.White, BlendMode.Alpha);
     }
 
     /// <summary>
     /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
     /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
+    /// <param name="context">The destination WriteableBitmap.</param>
     /// <param name="destPosition">The destination position in the destination bitmap.</param>
     /// <param name="source">The source WriteableBitmap.</param>
     /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
     /// <param name="color">If not Colors.White, will tint the source image. A partially transparent color and the image will be drawn partially transparent.</param>
-    /// <param name="BlendMode">The blending mode <see cref="BlendMode"/>.</param>
-    public static void Blit(this WriteableBitmap bmp, PointInt destPosition, WriteableBitmap source, RectInt sourceRect, Color color, BlendMode BlendMode)
+    /// <param name="blendMode">The blending mode <see cref="BlendMode"/>.</param>
+    public static void Blit(this BitmapContext context, PointInt destPosition, BitmapContext source, RectInt sourceRect, Color color, BlendMode blendMode)
     {
-      RectInt destRect = new RectInt(destPosition, new SizeInt(sourceRect.w, sourceRect.h));
-      Blit(bmp, destRect, source, sourceRect, color, BlendMode);
+      var destRect = new RectInt(destPosition, new SizeInt(sourceRect.w, sourceRect.h));
+      Blit(context, destRect, source, sourceRect, color, blendMode);
     }
 
     /// <summary>
     /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
     /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
+    /// <param name="destContext">The destination WriteableBitmap.</param>
     /// <param name="destRect">The rectangle that defines the destination region.</param>
-    /// <param name="source">The source WriteableBitmap.</param>
+    /// <param name="srcContext">The source WriteableBitmap.</param>
     /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
     /// <param name="color">If not Colors.White, will tint the source image. A partially transparent color and the image will be drawn partially transparent. If the BlendMode is ColorKeying, this color will be used as color key to mask all pixels with this value out.</param>
-    /// <param name="BlendMode">The blending mode <see cref="BlendMode"/>.</param>
-#if WINMD
-      [Windows.Foundation.Metadata.DefaultOverload]
-#endif
-    public static void Blit(this WriteableBitmap bmp, RectInt destRect, WriteableBitmap source, RectInt sourceRect, Color color, BlendMode BlendMode)
-    {
-      if (color.A == 0)
-      {
-        return;
-      }
-      int dw = destRect.w;
-      int dh = destRect.h;
-
-      using (var srcContext = source.GetBitmapContext())
-      {
-        using (var destContext = bmp.GetBitmapContext())
-        {
-          int sourceWidth = srcContext.Width;
-          int dpw = destContext.Width;
-          int dph = destContext.Height;
-          var intersect = RectInt.Intersect(new RectInt(0, 0, dpw, dph), destRect);
-          if (intersect.IsEmpty)
-          {
-            return;
-          }
-
-          var sourcePixels = srcContext.Pixels;
-          var destPixels = destContext.Pixels;
-          int sourceLength = srcContext.Length;
-          int px = destRect.x;
-          int py = destRect.y;
-          int y;
-          double jj;
-          int sr = 0;
-          int sg = 0;
-          int sb = 0;
-          int sa = 0;
-          int ca = color.A;
-          int cr = color.R;
-          int cg = color.G;
-          int cb = color.B;
-          bool tinted = color != Colors.White;
-          var sw = sourceRect.w;
-          var sdx = sourceRect.w / (double)destRect.w;
-          var sdy = sourceRect.h / (double)destRect.h;
-          int sourceStartX = sourceRect.x;
-          int sourceStartY = sourceRect.y;
-          int lastii, lastjj;
-          lastii = -1;
-          lastjj = -1;
-          jj = sourceStartY;
-          y = py;
-          for (int j = 0; j < dh; j++)
-          {
-            if (y >= 0 && y < dph)
-            {
-              double ii = sourceStartX;
-              var idx = px + y * dpw;
-              var x = px;
-              var sourcePixel = sourcePixels[0];
-
-              // Scanline BlockCopy is much faster (3.5x) if no tinting and blending is needed,
-              // even for smaller sprites like the 32x32 particles. 
-              int sourceIdx;
-              if (BlendMode == BlendMode.None && !tinted)
-              {
-                sourceIdx = (int)ii + (int)jj * sourceWidth;
-                var offset = x < 0 ? -x : 0;
-                var xx = x + offset;
-                var wx = sourceWidth - offset;
-                var len = xx + wx < dpw ? wx : dpw - xx;
-                if (len > sw) len = sw;
-                if (len > dw) len = dw;
-                BitmapContext.BlockCopy(srcContext, (sourceIdx + offset) * 4, destContext, (idx + offset) * 4, len * 4);
-              }
-
-              // Pixel by pixel copying
-              else
-              {
-                for (int i = 0; i < dw; i++)
-                {
-                  if (x >= 0 && x < dpw)
-                  {
-                    if ((int)ii != lastii || (int)jj != lastjj)
-                    {
-                      sourceIdx = (int)ii + (int)jj * sourceWidth;
-                      if (sourceIdx >= 0 && sourceIdx < sourceLength)
-                      {
-                        sourcePixel = sourcePixels[sourceIdx];
-                        sa = ((sourcePixel >> 24) & 0xff);
-                        sr = ((sourcePixel >> 16) & 0xff);
-                        sg = ((sourcePixel >> 8) & 0xff);
-                        sb = ((sourcePixel) & 0xff);
-                        if (tinted && sa != 0)
-                        {
-                          sa = (((sa * ca) * 0x8081) >> 23);
-                          sr = ((((((sr * cr) * 0x8081) >> 23) * ca) * 0x8081) >> 23);
-                          sg = ((((((sg * cg) * 0x8081) >> 23) * ca) * 0x8081) >> 23);
-                          sb = ((((((sb * cb) * 0x8081) >> 23) * ca) * 0x8081) >> 23);
-                          sourcePixel = (sa << 24) | (sr << 16) | (sg << 8) | sb;
-                        }
-                      }
-                      else
-                      {
-                        sa = 0;
-                      }
-                    }
-                    if (BlendMode == BlendMode.None)
-                    {
-                      destPixels[idx] = sourcePixel;
-                    }
-                    else if (BlendMode == BlendMode.ColorKeying)
-                    {
-                      sr = ((sourcePixel >> 16) & 0xff);
-                      sg = ((sourcePixel >> 8) & 0xff);
-                      sb = ((sourcePixel) & 0xff);
-
-                      if (sr != color.R || sg != color.G || sb != color.B)
-                      {
-                        destPixels[idx] = sourcePixel;
-                      }
-
-                    }
-                    else
-                    {
-                      int dr;
-                      int dg;
-                      int db;
-                      int da;
-                      if (BlendMode == BlendMode.Mask)
-                      {
-                        int destPixel = destPixels[idx];
-                        da = ((destPixel >> 24) & 0xff);
-                        dr = ((destPixel >> 16) & 0xff);
-                        dg = ((destPixel >> 8) & 0xff);
-                        db = ((destPixel) & 0xff);
-                        destPixel = ((((da * sa) * 0x8081) >> 23) << 24) |
-                                    ((((dr * sa) * 0x8081) >> 23) << 16) |
-                                    ((((dg * sa) * 0x8081) >> 23) << 8) |
-                                    ((((db * sa) * 0x8081) >> 23));
-                        destPixels[idx] = destPixel;
-                      }
-                      else if (sa > 0)
-                      {
-                        int destPixel = destPixels[idx];
-                        da = ((destPixel >> 24) & 0xff);
-                        if ((sa == 255 || da == 0) &&
-                            BlendMode != BlendMode.Additive
-                            && BlendMode != BlendMode.Subtractive
-                            && BlendMode != BlendMode.Multiply
-                          )
-                        {
-                          destPixels[idx] = sourcePixel;
-                        }
-                        else
-                        {
-                          dr = ((destPixel >> 16) & 0xff);
-                          dg = ((destPixel >> 8) & 0xff);
-                          db = ((destPixel) & 0xff);
-                          if (BlendMode == BlendMode.Alpha)
-                          {
-                            destPixel = ((sa + (((da * (255 - sa)) * 0x8081) >> 23)) << 24) |
-                                        ((sr + (((dr * (255 - sa)) * 0x8081) >> 23)) << 16) |
-                                        ((sg + (((dg * (255 - sa)) * 0x8081) >> 23)) << 8) |
-                                        ((sb + (((db * (255 - sa)) * 0x8081) >> 23)));
-                          }
-                          else if (BlendMode == BlendMode.Additive)
-                          {
-                            int a = (255 <= sa + da) ? 255 : (sa + da);
-                            destPixel = (a << 24) |
-                                        (((a <= sr + dr) ? a : (sr + dr)) << 16) |
-                                        (((a <= sg + dg) ? a : (sg + dg)) << 8) |
-                                        (((a <= sb + db) ? a : (sb + db)));
-                          }
-                          else if (BlendMode == BlendMode.Subtractive)
-                          {
-                            int a = da;
-                            destPixel = (a << 24) |
-                                        (((sr >= dr) ? 0 : (sr - dr)) << 16) |
-                                        (((sg >= dg) ? 0 : (sg - dg)) << 8) |
-                                        (((sb >= db) ? 0 : (sb - db)));
-                          }
-                          else if (BlendMode == BlendMode.Multiply)
-                          {
-                            // Faster than a division like (s * d) / 255 are 2 shifts and 2 adds
-                            int ta = (sa * da) + 128;
-                            int tr = (sr * dr) + 128;
-                            int tg = (sg * dg) + 128;
-                            int tb = (sb * db) + 128;
-
-                            int ba = ((ta >> 8) + ta) >> 8;
-                            int br = ((tr >> 8) + tr) >> 8;
-                            int bg = ((tg >> 8) + tg) >> 8;
-                            int bb = ((tb >> 8) + tb) >> 8;
-
-                            destPixel = (ba << 24) |
-                                        ((ba <= br ? ba : br) << 16) |
-                                        ((ba <= bg ? ba : bg) << 8) |
-                                        ((ba <= bb ? ba : bb));
-                          }
-
-                          destPixels[idx] = destPixel;
-                        }
-                      }
-                    }
-                  }
-                  x++;
-                  idx++;
-                  ii += sdx;
-                }
-              }
-            }
-            jj += sdy;
-            y++;
-          }
-        }
-      }
-    }
-
-    #endregion
-
-    #region Methods Context
-
-    /// <summary>
-    /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
-    /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
-    /// <param name="destRect">The rectangle that defines the destination region.</param>
-    /// <param name="source">The source WriteableBitmap.</param>
-    /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
-    /// <param name="BlendMode">The blending mode <see cref="BlendMode"/>.</param>
-    public static void Blit(this BitmapContext bmp, RectInt destRect, BitmapContext source, RectInt sourceRect, BlendMode BlendMode)
-    {
-      Blit(bmp, destRect, source, sourceRect, Colors.White, BlendMode);
-    }
-
-    /// <summary>
-    /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
-    /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
-    /// <param name="destRect">The rectangle that defines the destination region.</param>
-    /// <param name="source">The source WriteableBitmap.</param>
-    /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
-    public static void Blit(this BitmapContext bmp, RectInt destRect, BitmapContext source, RectInt sourceRect)
-    {
-      Blit(bmp, destRect, source, sourceRect, Colors.White, BlendMode.Alpha);
-    }
-
-    /// <summary>
-    /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
-    /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
-    /// <param name="destPosition">The destination position in the destination bitmap.</param>
-    /// <param name="source">The source WriteableBitmap.</param>
-    /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
-    /// <param name="color">If not Colors.White, will tint the source image. A partially transparent color and the image will be drawn partially transparent.</param>
-    /// <param name="BlendMode">The blending mode <see cref="BlendMode"/>.</param>
-    public static void Blit(this BitmapContext bmp, PointInt destPosition, BitmapContext source, RectInt sourceRect, Color color, BlendMode BlendMode)
-    {
-      RectInt destRect = new RectInt(destPosition, new SizeInt(sourceRect.w, sourceRect.h));
-      Blit(bmp, destRect, source, sourceRect, color, BlendMode);
-    }
-
-    /// <summary>
-    /// Copies (blits) the pixels from the WriteableBitmap source to the destination WriteableBitmap (this).
-    /// </summary>
-    /// <param name="bmp">The destination WriteableBitmap.</param>
-    /// <param name="destRect">The rectangle that defines the destination region.</param>
-    /// <param name="source">The source WriteableBitmap.</param>
-    /// <param name="sourceRect">The rectangle that will be copied from the source to the destination.</param>
-    /// <param name="color">If not Colors.White, will tint the source image. A partially transparent color and the image will be drawn partially transparent. If the BlendMode is ColorKeying, this color will be used as color key to mask all pixels with this value out.</param>
-    /// <param name="BlendMode">The blending mode <see cref="BlendMode"/>.</param>
-#if WINMD
-      [Windows.Foundation.Metadata.DefaultOverload]
-#endif
-    public static void Blit(this BitmapContext destContext, RectInt destRect, BitmapContext srcContext, RectInt sourceRect, Color color, BlendMode BlendMode)
+    /// <param name="blendMode">The blending mode <see cref="BlendMode"/>.</param>
+    public static void Blit(this BitmapContext destContext, RectInt destRect, BitmapContext srcContext, RectInt sourceRect, Color color, BlendMode blendMode)
     {
       if (color.A == 0)
       {
@@ -524,7 +234,7 @@ namespace Windows.UI.Xaml.Media.Imaging
           // Scanline BlockCopy is much faster (3.5x) if no tinting and blending is needed,
           // even for smaller sprites like the 32x32 particles. 
           int sourceIdx;
-          if (BlendMode == BlendMode.None && !tinted)
+          if (blendMode == BlendMode.None && !tinted)
           {
             sourceIdx = (int)ii + (int)jj * sourceWidth;
             var offset = x < 0 ? -x : 0;
@@ -567,11 +277,11 @@ namespace Windows.UI.Xaml.Media.Imaging
                     sa = 0;
                   }
                 }
-                if (BlendMode == BlendMode.None)
+                if (blendMode == BlendMode.None)
                 {
                   destPixels[idx] = sourcePixel;
                 }
-                else if (BlendMode == BlendMode.ColorKeying)
+                else if (blendMode == BlendMode.ColorKeying)
                 {
                   sr = ((sourcePixel >> 16) & 0xff);
                   sg = ((sourcePixel >> 8) & 0xff);
@@ -589,7 +299,7 @@ namespace Windows.UI.Xaml.Media.Imaging
                   int dg;
                   int db;
                   int da;
-                  if (BlendMode == BlendMode.Mask)
+                  if (blendMode == BlendMode.Mask)
                   {
                     int destPixel = destPixels[idx];
                     da = ((destPixel >> 24) & 0xff);
@@ -607,9 +317,9 @@ namespace Windows.UI.Xaml.Media.Imaging
                     int destPixel = destPixels[idx];
                     da = ((destPixel >> 24) & 0xff);
                     if ((sa == 255 || da == 0) &&
-                        BlendMode != BlendMode.Additive
-                        && BlendMode != BlendMode.Subtractive
-                        && BlendMode != BlendMode.Multiply
+                        blendMode != BlendMode.Additive
+                        && blendMode != BlendMode.Subtractive
+                        && blendMode != BlendMode.Multiply
                       )
                     {
                       destPixels[idx] = sourcePixel;
@@ -619,14 +329,14 @@ namespace Windows.UI.Xaml.Media.Imaging
                       dr = ((destPixel >> 16) & 0xff);
                       dg = ((destPixel >> 8) & 0xff);
                       db = ((destPixel) & 0xff);
-                      if (BlendMode == BlendMode.Alpha)
+                      if (blendMode == BlendMode.Alpha)
                       {
                         destPixel = ((sa + (((da * (255 - sa)) * 0x8081) >> 23)) << 24) |
                                     ((sr + (((dr * (255 - sa)) * 0x8081) >> 23)) << 16) |
                                     ((sg + (((dg * (255 - sa)) * 0x8081) >> 23)) << 8) |
                                     ((sb + (((db * (255 - sa)) * 0x8081) >> 23)));
                       }
-                      else if (BlendMode == BlendMode.Additive)
+                      else if (blendMode == BlendMode.Additive)
                       {
                         int a = (255 <= sa + da) ? 255 : (sa + da);
                         destPixel = (a << 24) |
@@ -634,7 +344,7 @@ namespace Windows.UI.Xaml.Media.Imaging
                                     (((a <= sg + dg) ? a : (sg + dg)) << 8) |
                                     (((a <= sb + db) ? a : (sb + db)));
                       }
-                      else if (BlendMode == BlendMode.Subtractive)
+                      else if (blendMode == BlendMode.Subtractive)
                       {
                         int a = da;
                         destPixel = (a << 24) |
@@ -642,7 +352,7 @@ namespace Windows.UI.Xaml.Media.Imaging
                                     (((sg >= dg) ? 0 : (sg - dg)) << 8) |
                                     (((sb >= db) ? 0 : (sb - db)));
                       }
-                      else if (BlendMode == BlendMode.Multiply)
+                      else if (blendMode == BlendMode.Multiply)
                       {
                         // Faster than a division like (s * d) / 255 are 2 shifts and 2 adds
                         int ta = (sa * da) + 128;
