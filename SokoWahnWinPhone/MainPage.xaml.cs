@@ -25,6 +25,8 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
+using SokoWahnCore;
+
 // ReSharper disable UnusedMember.Local
 // ReSharper disable MemberCanBeInternal
 
@@ -46,39 +48,16 @@ namespace SokoWahnWinPhone
       NavigationCacheMode = NavigationCacheMode.Required;
     }
 
+    WriteableBitmap skinImg;
+
     /// <summary>
     /// Wird aufgerufen, wenn diese Seite in einem Rahmen angezeigt werden soll.
     /// </summary>
     /// <param name="e">Ereignisdaten, die beschreiben, wie diese Seite erreicht wurde.
     /// Dieser Parameter wird normalerweise zum Konfigurieren der Seite verwendet.</param>
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
-      // TODO: Seite vorbereiten, um sie hier anzuzeigen.
-
-      // TODO: Wenn Ihre Anwendung mehrere Seiten enthält, stellen Sie sicher, dass
-      // die Hardware-Zurück-Taste behandelt wird, indem Sie das
-      // Windows.Phone.UI.Input.HardwareButtons.BackPressed-Ereignis registrieren.
-      // Wenn Sie den NavigationHelper verwenden, der bei einigen Vorlagen zur Verfügung steht,
-      // wird dieses Ereignis für Sie behandelt.
-    }
-
-    WriteableBitmap skinImg;
-    WriteableBitmap testBild;
-
-    private async void Button_Click(object sender, RoutedEventArgs e)
-    {
-      var img = new Image
-      {
-        Width = Content.RenderSize.Width,
-        Height = Content.RenderSize.Height,
-        VerticalAlignment = VerticalAlignment.Top,
-        HorizontalAlignment = HorizontalAlignment.Left
-      };
-
       skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
-
-      var btn = (Button)sender;
-      btn.Content = "lol: " + skinImg.PixelWidth;
 
       int boxWidth = 8;
       int boxHeight = 8;
@@ -87,10 +66,27 @@ namespace SokoWahnWinPhone
       int height = boxHeight * BoxPixelHeight * Multi + 1;
 
       testBild = new WriteableBitmap(width, height);
-      img.Source = testBild;
+      GameImage.Source = testBild;
 
-      (Content as Grid).Children.Add(img);
+      string game1 = "  ##### \n"
+                   + "###   # \n"
+                   + "# $ # ##\n"
+                   + "# #  . #\n"
+                   + "#    # #\n"
+                   + "## #   #\n"
+                   + " #@  ###\n"
+                   + " #####  \n";
+
+      InitGame(game1);
+
+      // TODO: Wenn Ihre Anwendung mehrere Seiten enthält, stellen Sie sicher, dass
+      // die Hardware-Zurück-Taste behandelt wird, indem Sie das
+      // Windows.Phone.UI.Input.HardwareButtons.BackPressed-Ereignis registrieren.
+      // Wenn Sie den NavigationHelper verwenden, der bei einigen Vorlagen zur Verfügung steht,
+      // wird dieses Ereignis für Sie behandelt.
     }
+
+    WriteableBitmap testBild;
 
     const int Multi = 1;
     const int BoxPixelWidth = 50;
@@ -152,39 +148,38 @@ namespace SokoWahnWinPhone
       bmpTarget.Blit(target, bmpSource, source, Colors.White, BlendMode.Alpha);
     }
 
-    bool GetF(char[] felder, int x, int y, int breite)
+    static bool GetF(char[] felder, int x, int y, int breite)
     {
       if (x < 0 || y < 0 || x >= breite || y * breite >= felder.Length) return true;
       return felder[x + y * breite] != '#';
     }
 
-    private void Button_Click_1(object sender, RoutedEventArgs e)
+    SokowahnField playField;
+
+    SokowahnField drawField;
+    void UpdateScreen(SokowahnField field)
     {
-      string[] zeilen = {
-                          "  ##### ",
-                          "###   # ",
-                          "# $ # ##",
-                          "# #  . #",
-                          "#    # #",
-                          "## #   #",
-                          " #@  ###",
-                          " #####  "
-                        };
+      if (playField.width != drawField.width || playField.height != drawField.height)
+      {
+        throw new NotImplementedException("Resize Screen");
+      }
 
-
-      int br = zeilen.First().Length;
-      int höhe = zeilen.Length;
-      var felder = zeilen.SelectMany(x => x).ToArray();
+      var drawData = drawField.fieldData;
+      var f = field.fieldData;
+      int w = field.width;
 
       using (var dstC = testBild.GetBitmapContext())
       {
         using (var srcC = skinImg.GetBitmapContext())
         {
-          for (int y = 0; y < höhe; y++)
+          for (int y = 0; y < field.height; y++)
           {
-            for (int x = 0; x < br; x++)
+            for (int x = 0; x < w; x++)
             {
-              switch (felder[x + y * br])
+              char c = f[x + y * w];
+              if (drawData[x + y * w] == c) continue;
+              drawData[x + y * w] = c;
+              switch (c)
               {
                 case ' ': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); break;
                 case '.': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); MaleTestbild(dstC, srcC, x, y, BildElement.FreiZiel); break;
@@ -201,44 +196,76 @@ namespace SokoWahnWinPhone
                   var lu = BildElement.WandVoll;
                   var ru = BildElement.WandVoll;
 
-                  if (GetF(felder, x - 1, y, br) && GetF(felder, x, y - 1, br)) lo = BildElement.WandSpitzen;
-                  if (GetF(felder, x - 1, y, br) && !GetF(felder, x, y - 1, br)) lo = BildElement.WandSenkrecht;
-                  if (!GetF(felder, x - 1, y, br) && GetF(felder, x, y - 1, br)) lo = BildElement.WandWaagerecht;
-                  if (!GetF(felder, x - 1, y, br) && !GetF(felder, x, y - 1, br)) lo = GetF(felder, x - 1, y - 1, br) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandSpitzen;
+                  if (GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = BildElement.WandSenkrecht;
+                  if (!GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandWaagerecht;
+                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = GetF(f, x - 1, y - 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
 
-                  if (GetF(felder, x + 1, y, br) && GetF(felder, x, y - 1, br)) ro = BildElement.WandSpitzen;
-                  if (GetF(felder, x + 1, y, br) && !GetF(felder, x, y - 1, br)) ro = BildElement.WandSenkrecht;
-                  if (!GetF(felder, x + 1, y, br) && GetF(felder, x, y - 1, br)) ro = BildElement.WandWaagerecht;
-                  if (!GetF(felder, x + 1, y, br) && !GetF(felder, x, y - 1, br)) ro = GetF(felder, x + 1, y - 1, br) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandSpitzen;
+                  if (GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = BildElement.WandSenkrecht;
+                  if (!GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandWaagerecht;
+                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = GetF(f, x + 1, y - 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
 
-                  if (GetF(felder, x - 1, y, br) && GetF(felder, x, y + 1, br)) lu = BildElement.WandSpitzen;
-                  if (GetF(felder, x - 1, y, br) && !GetF(felder, x, y + 1, br)) lu = BildElement.WandSenkrecht;
-                  if (!GetF(felder, x - 1, y, br) && GetF(felder, x, y + 1, br)) lu = BildElement.WandWaagerecht;
-                  if (!GetF(felder, x - 1, y, br) && !GetF(felder, x, y + 1, br)) lu = GetF(felder, x - 1, y + 1, br) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandSpitzen;
+                  if (GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = BildElement.WandSenkrecht;
+                  if (!GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandWaagerecht;
+                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = GetF(f, x - 1, y + 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
 
-                  if (GetF(felder, x + 1, y, br) && GetF(felder, x, y + 1, br)) ru = BildElement.WandSpitzen;
-                  if (GetF(felder, x + 1, y, br) && !GetF(felder, x, y + 1, br)) ru = BildElement.WandSenkrecht;
-                  if (!GetF(felder, x + 1, y, br) && GetF(felder, x, y + 1, br)) ru = BildElement.WandWaagerecht;
-                  if (!GetF(felder, x + 1, y, br) && !GetF(felder, x, y + 1, br)) ru = GetF(felder, x + 1, y + 1, br) ? BildElement.WandVoll : BildElement.WandEcken;
+                  if (GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandSpitzen;
+                  if (GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = BildElement.WandSenkrecht;
+                  if (!GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandWaagerecht;
+                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = GetF(f, x + 1, y + 1, w) ? BildElement.WandVoll : BildElement.WandEcken;
 
                   MaleTestbild(dstC, srcC, x, y, lo, BildTeile.LinksOben);
                   MaleTestbild(dstC, srcC, x, y, ro, BildTeile.RechtsOben);
                   MaleTestbild(dstC, srcC, x, y, lu, BildTeile.LinksUnten);
                   MaleTestbild(dstC, srcC, x, y, ru, BildTeile.RechtsUnten);
                 } break;
-                default: throw new Exception("zeichen unbekannt: '" + felder[x + y * br] + "'");
+                default: throw new Exception("unknown Char: '" + c + "'");
               }
             }
           }
         }
       }
 
-      //var imgBitmapBuf = new byte[width * height * 4];
-      //var rnd = new Random();
-      //for (int i = 0; i < imgBitmapBuf.Length; i++) imgBitmapBuf[i] = (byte)rnd.Next(256);
-
-      //using (var str = test.PixelBuffer.AsStream()) { str.Write(imgBitmapBuf, 0, imgBitmapBuf.Length); }
       testBild.Invalidate();
     }
+
+    void InitGame(string gameTxt)
+    {
+      playField = new SokowahnField(gameTxt);
+      drawField = new SokowahnField(playField);
+      for (int i = 0; i < drawField.fieldData.Length; i++) drawField.fieldData[i] = '-';
+
+      UpdateScreen(playField);
+    }
+
+    void UpdateGame()
+    {
+      UpdateScreen(playField);
+      if (playField.boxesRemain == 0) Application.Current.Exit();
+    }
+
+    private void ButtonLeft_Click(object sender, RoutedEventArgs e)
+    {
+      if (playField.MoveLeft()) UpdateGame();
+    }
+
+    private void ButtonRight_Click(object sender, RoutedEventArgs e)
+    {
+      if (playField.MoveRight()) UpdateGame();
+    }
+
+    private void ButtonUp_Click(object sender, RoutedEventArgs e)
+    {
+      if (playField.MoveUp()) UpdateGame();
+    }
+
+    private void ButtonDown_Click(object sender, RoutedEventArgs e)
+    {
+      if (playField.MoveDown()) UpdateGame();
+    }
+
+
   }
 }

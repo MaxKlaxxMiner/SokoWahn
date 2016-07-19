@@ -8,11 +8,10 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
   <Grid>
-    <Button x:Name="ButtonLeft"  Content="←" HorizontalAlignment="Right" Margin="0,0,170,0" VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
-    <Button x:Name="ButtonRight" Content="→" HorizontalAlignment="Right" Margin="0,0,10,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
-    <Button x:Name="ButtonUp"    Content="↑" HorizontalAlignment="Right" Margin="0,0,90,80"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
-    <Button x:Name="ButtonDown"  Content="↓" HorizontalAlignment="Right" Margin="0,0,90,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38"/>
-    <Button Canvas.ZIndex="99" Content="Button" HorizontalAlignment="Left" Margin="87,91,0,0" VerticalAlignment="Top" Height="103" Width="267" Click="Button_Click"/>
-    <Button Canvas.ZIndex="99" Content="Button" HorizontalAlignment="Left" Margin="87,180,0,0" VerticalAlignment="Top" Height="103" Width="267" Click="Button_Click_1"/>
+    <Button x:Name="ButtonLeft"  Content="←" HorizontalAlignment="Right" Margin="0,0,170,0" VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonLeft_Click"/>
+    <Button x:Name="ButtonRight" Content="→" HorizontalAlignment="Right" Margin="0,0,10,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonRight_Click"/>
+    <Button x:Name="ButtonUp"    Content="↑" HorizontalAlignment="Right" Margin="0,0,90,80"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonUp_Click"/>
+    <Button x:Name="ButtonDown"  Content="↓" HorizontalAlignment="Right" Margin="0,0,90,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonDown_Click"/>
+    <Image x:Name="GameImage" HorizontalAlignment="Left" VerticalAlignment="Top"/>
   </Grid>
 </Page>
