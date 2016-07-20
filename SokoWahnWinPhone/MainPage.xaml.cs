@@ -275,7 +275,7 @@ namespace SokoWahnWinPhone
         }
       }
 
-      if (minField.x >= 0)
+      if (minField.x != int.MaxValue)
       {
         maxField.x = maxField.x - minField.x + 1;
         maxField.y = maxField.y - minField.y + 1;
@@ -286,6 +286,8 @@ namespace SokoWahnWinPhone
     void InitGame(string gameTxt)
     {
       playField = new SokowahnField(gameTxt);
+      undoList.Clear();
+      undoList.Push(playField.GetGameState());
       drawField = new SokowahnField(playField);
       for (int i = 0; i < drawField.fieldData.Length; i++) drawField.fieldData[i] = '-';
 
@@ -300,8 +302,11 @@ namespace SokoWahnWinPhone
       UpdateScreen(playField);
     }
 
+    readonly Stack<ushort[]> undoList = new Stack<ushort[]>();
+
     void UpdateGame()
     {
+      undoList.Push(playField.GetGameState());
       UpdateScreen(playField);
       if (playField.boxesRemain == 0) Application.Current.Exit();
     }
@@ -326,6 +331,15 @@ namespace SokoWahnWinPhone
       if (playField.MoveDown()) UpdateGame();
     }
 
+    private void ButtonUndo_Click(object sender, RoutedEventArgs e)
+    {
+      if (undoList.Count > 1)
+      {
+        undoList.Pop();
+        playField.SetGameState(undoList.Peek());
+        UpdateScreen(playField);
+      }
+    }
 
   }
 }
