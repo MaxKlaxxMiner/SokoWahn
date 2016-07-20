@@ -20,6 +20,7 @@ namespace Windows.UI.Xaml.Media.Imaging
     private readonly WriteableBitmap writeableBitmap;
 
     private readonly int length;
+    private readonly byte[] pixelBytes;
     private readonly int[] pixels;
 
     /// <summary>
@@ -41,27 +42,15 @@ namespace Windows.UI.Xaml.Media.Imaging
       this.writeableBitmap = writeableBitmap;
 
       length = writeableBitmap.PixelWidth * writeableBitmap.PixelHeight;
+      pixelBytes = new byte[length * 4];
       pixels = new int[length];
       CopyPixels();
     }
 
-    private unsafe void CopyPixels()
+    private void CopyPixels()
     {
-      var data = writeableBitmap.PixelBuffer.ToArray();
-      fixed (byte* srcPtr = data)
-      {
-        fixed (int* dstPtr = pixels)
-        {
-#if DEBUG
-          if (pixels.Length < length) throw new IndexOutOfRangeException("pixels.Length < length (" + pixels.Length + " < " + length + ")");
-          if (data.Length < length * 4) throw new IndexOutOfRangeException("data.Length < length (" + data.Length + " < " + length + " * 4)");
-#endif
-          for (var i = 0; i < length; i++)
-          {
-            dstPtr[i] = (srcPtr[i * 4 + 3] << 24) | (srcPtr[i * 4 + 2] << 16) | (srcPtr[i * 4 + 1] << 8) | srcPtr[i * 4 + 0];
-          }
-        }
-      }
+      writeableBitmap.PixelBuffer.CopyTo(pixelBytes);
+      Buffer.BlockCopy(pixelBytes, 0, pixels, 0, pixelBytes.Length);
     }
 
     /// <summary>
@@ -126,23 +115,13 @@ namespace Windows.UI.Xaml.Media.Imaging
       Present();
     }
 
-    public unsafe void Present()
+    public void Present()
     {
       // Copy data back
       using (var stream = writeableBitmap.PixelBuffer.AsStream())
       {
-        var buffer = new byte[4];
-        fixed (int* srcPtr = pixels)
-        {
-          for (var i = 0; i < length; i++)
-          {
-            buffer[3] = (byte)((srcPtr[i] >> 24) & 0xff);
-            buffer[2] = (byte)((srcPtr[i] >> 16) & 0xff);
-            buffer[1] = (byte)((srcPtr[i] >> 8) & 0xff);
-            buffer[0] = (byte)((srcPtr[i]) & 0xff);
-            stream.Write(buffer, 0, 4);
-          }
-        }
+        Buffer.BlockCopy(pixels, 0, pixelBytes, 0, pixelBytes.Length);
+        stream.Write(pixelBytes, 0, pixelBytes.Length);
       }
       writeableBitmap.Invalidate();
     }
