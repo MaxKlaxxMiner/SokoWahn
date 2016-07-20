@@ -48,8 +48,6 @@ namespace SokoWahnWinPhone
       NavigationCacheMode = NavigationCacheMode.Required;
     }
 
-    WriteableBitmap skinImg;
-
     public const string Level3 = "    #####\n"
                                 + "    #   #\n"
                                 + "    #$  #\n"
@@ -70,6 +68,7 @@ namespace SokoWahnWinPhone
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
       skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
+      skinContext = skinImg.GetBitmapContext();
 
       string game1 = "  ##### \n"
                    + "###   # \n"
@@ -89,7 +88,11 @@ namespace SokoWahnWinPhone
       // wird dieses Ereignis für Sie behandelt.
     }
 
-    WriteableBitmap testBild;
+    WriteableBitmap viewImage;
+    BitmapContext viewContext;
+
+    WriteableBitmap skinImg;
+    BitmapContext skinContext;
 
     const int Multi = 1;
     const int BoxPixelWidth = 50;
@@ -171,69 +174,63 @@ namespace SokoWahnWinPhone
       var f = field.fieldData;
       int w = field.width;
 
-      using (var dstC = testBild.GetBitmapContext())
+      int tickLimit = Environment.TickCount + 1000;
+      for (int y = 0; y < field.height; y++)
       {
-        using (var srcC = skinImg.GetBitmapContext())
+        if (Environment.TickCount > tickLimit) return;
+        for (int x = 0; x < w; x++)
         {
-          int tickLimit = Environment.TickCount + 1000;
-          for (int y = 0; y < field.height; y++)
+          char c = f[x + y * w];
+          if (drawData[x + y * w] == c) continue;
+          drawData[x + y * w] = c;
+          switch (c)
           {
-            if (Environment.TickCount > tickLimit) return;
-            for (int x = 0; x < w; x++)
+            case ' ': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); break;
+            case '.': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.FreiZiel); break;
+            case '$': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.KisteOffen); break;
+            case '*': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.KisteZiel); break;
+            case '@': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.Spieler); break;
+            case '+': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.FreiZiel); MaleTestbild(viewContext, skinContext, x, y, BildElement.Spieler); break;
+            case '#':
             {
-              char c = f[x + y * w];
-              if (drawData[x + y * w] == c) continue;
-              drawData[x + y * w] = c;
-              switch (c)
-              {
-                case ' ': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); break;
-                case '.': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); MaleTestbild(dstC, srcC, x, y, BildElement.FreiZiel); break;
-                case '$': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); MaleTestbild(dstC, srcC, x, y, BildElement.KisteOffen); break;
-                case '*': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); MaleTestbild(dstC, srcC, x, y, BildElement.KisteZiel); break;
-                case '@': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); MaleTestbild(dstC, srcC, x, y, BildElement.Spieler); break;
-                case '+': MaleTestbild(dstC, srcC, x, y, BildElement.Frei); MaleTestbild(dstC, srcC, x, y, BildElement.FreiZiel); MaleTestbild(dstC, srcC, x, y, BildElement.Spieler); break;
-                case '#':
-                {
-                  MaleTestbild(dstC, srcC, x, y, BildElement.Frei);
+              MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei);
 
-                  var lo = BildElement.WandVoll;
-                  var ro = BildElement.WandVoll;
-                  var lu = BildElement.WandVoll;
-                  var ru = BildElement.WandVoll;
+              var lo = BildElement.WandVoll;
+              var ro = BildElement.WandVoll;
+              var lu = BildElement.WandVoll;
+              var ru = BildElement.WandVoll;
 
-                  if (GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandSpitzen;
-                  if (GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = BildElement.WandSenkrecht;
-                  if (!GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandWaagerecht;
-                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = GetF(f, x - 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandSpitzen;
+              if (GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = BildElement.WandSenkrecht;
+              if (!GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandWaagerecht;
+              if (!GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = GetF(f, x - 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
-                  if (GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandSpitzen;
-                  if (GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = BildElement.WandSenkrecht;
-                  if (!GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandWaagerecht;
-                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = GetF(f, x + 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandSpitzen;
+              if (GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = BildElement.WandSenkrecht;
+              if (!GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandWaagerecht;
+              if (!GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = GetF(f, x + 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
-                  if (GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandSpitzen;
-                  if (GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = BildElement.WandSenkrecht;
-                  if (!GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandWaagerecht;
-                  if (!GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = GetF(f, x - 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandSpitzen;
+              if (GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = BildElement.WandSenkrecht;
+              if (!GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandWaagerecht;
+              if (!GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = GetF(f, x - 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
-                  if (GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandSpitzen;
-                  if (GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = BildElement.WandSenkrecht;
-                  if (!GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandWaagerecht;
-                  if (!GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = GetF(f, x + 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandSpitzen;
+              if (GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = BildElement.WandSenkrecht;
+              if (!GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandWaagerecht;
+              if (!GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = GetF(f, x + 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
 
-                  MaleTestbild(dstC, srcC, x, y, lo, BildTeile.LinksOben);
-                  MaleTestbild(dstC, srcC, x, y, ro, BildTeile.RechtsOben);
-                  MaleTestbild(dstC, srcC, x, y, lu, BildTeile.LinksUnten);
-                  MaleTestbild(dstC, srcC, x, y, ru, BildTeile.RechtsUnten);
-                } break;
-                default: throw new Exception("unknown Char: '" + c + "'");
-              }
-            }
+              MaleTestbild(viewContext, skinContext, x, y, lo, BildTeile.LinksOben);
+              MaleTestbild(viewContext, skinContext, x, y, ro, BildTeile.RechtsOben);
+              MaleTestbild(viewContext, skinContext, x, y, lu, BildTeile.LinksUnten);
+              MaleTestbild(viewContext, skinContext, x, y, ru, BildTeile.RechtsUnten);
+            } break;
+            default: throw new Exception("unknown Char: '" + c + "'");
           }
         }
       }
 
-      testBild.Invalidate();
+      viewContext.Present();
     }
 
     void InitGame(string gameTxt)
@@ -245,8 +242,10 @@ namespace SokoWahnWinPhone
       int width = playField.width * BoxPixelWidth * Multi;
       int height = playField.height * BoxPixelHeight * Multi + 1;
 
-      testBild = new WriteableBitmap(width, height);
-      GameImage.Source = testBild;
+      viewImage = new WriteableBitmap(width, height);
+      viewContext = viewImage.GetBitmapContext();
+
+      GameImage.Source = viewImage;
 
       UpdateScreen(playField);
     }

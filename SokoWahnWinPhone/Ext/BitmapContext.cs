@@ -2,10 +2,10 @@
 #region # using *.*
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices.WindowsRuntime;
 // ReSharper disable MemberCanBeInternal
 // ReSharper disable CheckNamespace
+// ReSharper disable UnusedMember.Global
 
 #endregion
 
@@ -19,8 +19,6 @@ namespace Windows.UI.Xaml.Media.Imaging
   {
     private readonly WriteableBitmap writeableBitmap;
 
-    private readonly static Dictionary<WriteableBitmap, int> UpdateCountByBmp = new Dictionary<WriteableBitmap, int>();
-    private readonly static Dictionary<WriteableBitmap, int[]> PixelCacheByBmp = new Dictionary<WriteableBitmap, int[]>();
     private readonly int length;
     private readonly int[] pixels;
 
@@ -42,23 +40,9 @@ namespace Windows.UI.Xaml.Media.Imaging
     {
       this.writeableBitmap = writeableBitmap;
 
-      // Ensure the bitmap is in the dictionary of mapped Instances
-      if (!UpdateCountByBmp.ContainsKey(writeableBitmap))
-      {
-        // Set UpdateCount to 1 for this bitmap 
-        UpdateCountByBmp.Add(writeableBitmap, 1);
-        length = writeableBitmap.PixelWidth * writeableBitmap.PixelHeight;
-        pixels = new int[length];
-        CopyPixels();
-        PixelCacheByBmp.Add(writeableBitmap, pixels);
-      }
-      else
-      {
-        // For previously contextualized bitmaps increment the update count
-        IncrementRefCount(writeableBitmap);
-        pixels = PixelCacheByBmp[writeableBitmap];
-        length = pixels.Length;
-      }
+      length = writeableBitmap.PixelWidth * writeableBitmap.PixelHeight;
+      pixels = new int[length];
+      CopyPixels();
     }
 
     private unsafe void CopyPixels()
@@ -137,15 +121,13 @@ namespace Windows.UI.Xaml.Media.Imaging
     /// <summary>
     /// Disposes this instance if the underlying platform needs that.
     /// </summary>
-    public unsafe void Dispose()
+    public void Dispose()
     {
-      // Decrement the update count. If it hits zero
-      if (DecrementRefCount(writeableBitmap) != 0) return;
+      Present();
+    }
 
-      // Remove this bitmap from the update map 
-      UpdateCountByBmp.Remove(writeableBitmap);
-      PixelCacheByBmp.Remove(writeableBitmap);
-
+    public unsafe void Present()
+    {
       // Copy data back
       using (var stream = writeableBitmap.PixelBuffer.AsStream())
       {
@@ -163,19 +145,6 @@ namespace Windows.UI.Xaml.Media.Imaging
         }
       }
       writeableBitmap.Invalidate();
-    }
-
-    private static void IncrementRefCount(WriteableBitmap target)
-    {
-      UpdateCountByBmp[target]++;
-    }
-
-    private static int DecrementRefCount(WriteableBitmap target)
-    {
-      int current = UpdateCountByBmp[target];
-      current--;
-      UpdateCountByBmp[target] = current;
-      return current;
     }
   }
 }
