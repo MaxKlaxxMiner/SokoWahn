@@ -125,5 +125,26 @@ namespace Windows.UI.Xaml.Media.Imaging
       }
       writeableBitmap.Invalidate();
     }
+
+    public void Present(int x, int y, int w, int h)
+    {
+      if (x < 0 || y < 0 || w < 0 || h < 0 || x + w > Width || y + h > Width) throw new ArgumentOutOfRangeException();
+
+      using (var stream = writeableBitmap.PixelBuffer.AsStream())
+      {
+        int scanLine = (x + y * Width) * 4;
+        int scanLineTotal = Width * 4;
+        int scanBytes = w * 4;
+        for (int line = 0; line < h; line++)
+        {
+          Buffer.BlockCopy(pixels, scanLine, pixelBytes, scanLine, scanBytes);
+          stream.Position = scanLine;
+          stream.Write(pixelBytes, scanLine, scanBytes);
+          scanLine += scanLineTotal;
+        }
+
+      }
+      writeableBitmap.Invalidate();
+    }
   }
 }

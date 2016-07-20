@@ -61,6 +61,51 @@ namespace SokoWahnWinPhone
                                 + "    #######";
 
     /// <summary>
+    /// extreme
+    /// </summary>
+    public const string Level8 = "####################\n"
+                                + "#                  #\n"
+                                + "# $  $ $ $ $ $ $ $ #\n"
+                                + "# $$$$$###########################################\n"
+                                + "#                         .                      #\n"
+                                + "# $$$$$#  $ $ $ $ $ ########################## # #\n"
+                                + "#      #  $ $ $ $ $ #   $  $  $  $  $  $  $    # #\n"
+                                + "# $$$$$#  ### # # ## #                       $   #\n"
+                                + "#      #  #        #  # ##################### ## #\n"
+                                + "# $$$$$#  #### ## ##$ #   #                 # #  #\n"
+                                + "#      #     # #  #   # # .                 # #  #\n"
+                                + "# $$$$$#  $$$# #  #   # # ################ ## #  #\n"
+                                + "#      #     # #  # $ # #                #  #$#  #\n"
+                                + "# $$$$$#  $$$# #  #   # # ############## #  # #  #\n"
+                                + "#      #     # #  #   # #.#............# #  # #  #\n"
+                                + "# $$$$$#  $$$# #  # $ # #.#............# #  # #  #\n"
+                                + "#      #     # #  #   # #.#............# #  #    #\n"
+                                + "# $$$$$#  $$$# #  #   # #.#............# #  #$#  #\n"
+                                + "#      #     # #  # $ # #.#............# #  # #  #\n"
+                                + "# $$$$$#  $$$# #  #   # #.#............# #  # #  #\n"
+                                + "#      #     # #  #   # #.#.........   # #  # #  #\n"
+                                + "#@$$$$$#  $$$# #  # $ #  ..............# #  #    #\n"
+                                + "#      #     # #  #   # #.#.........  .# #  #$#  #\n"
+                                + "# $$$$$#  $$$# #  #   # #.#............# #  # #  #\n"
+                                + "#      #     # #  # $ # #.#............# #  # #  #\n"
+                                + "# $$$$$#  $$$# #  #   # #.#............# #  # #  #\n"
+                                + "#      #     # #  #   # #.#............# #  #    #\n"
+                                + "# $$$$$#  $$$# #  # $ # #.#............# #  #$#  #\n"
+                                + "#      #     # #  #   # # #............# #  # #  #\n"
+                                + "# $$$$$#  $$$# #  #   # # ################  # #  #\n"
+                                + "#      #     # #  # # # #                #  # #  #\n"
+                                + "# $$$$$#  $$$# #  # $                       #    #\n"
+                                + "#      #     # #  ## # ###################$##$#  #\n"
+                                + "# $$$$$#  #    #     #                   # ## #  #\n"
+                                + "#      #  #### ##### #  $$ $$ $$ $$ $$ $$   # #  #\n"
+                                + "# $$$$$#           # # $  $  $  $  $  $  $$ # #  #\n"
+                                + "#      #  ###  # # # # $  $  $  $  $  $  $  $ $  #\n"
+                                + "# $$$$$######### # # ######################## ## #\n"
+                                + "#                #                               #\n"
+                                + "#      #       #                                 #\n"
+                                + "##################################################\n";
+
+    /// <summary>
     /// Wird aufgerufen, wenn diese Seite in einem Rahmen angezeigt werden soll.
     /// </summary>
     /// <param name="e">Ereignisdaten, die beschreiben, wie diese Seite erreicht wurde.
@@ -69,15 +114,6 @@ namespace SokoWahnWinPhone
     {
       skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
       skinContext = skinImg.GetBitmapContext();
-
-      string game1 = "  ##### \n"
-                   + "###   # \n"
-                   + "# $ # ##\n"
-                   + "# #  . #\n"
-                   + "#    # #\n"
-                   + "## #   #\n"
-                   + " #@  ###\n"
-                   + " #####  \n";
 
       InitGame(Level3);
 
@@ -174,6 +210,9 @@ namespace SokoWahnWinPhone
       var f = field.fieldData;
       int w = field.width;
 
+      var minField = new PointInt(int.MaxValue, int.MaxValue);
+      var maxField = new PointInt(int.MinValue, int.MinValue);
+
       int tickLimit = Environment.TickCount + 1000;
       for (int y = 0; y < field.height; y++)
       {
@@ -182,6 +221,12 @@ namespace SokoWahnWinPhone
         {
           char c = f[x + y * w];
           if (drawData[x + y * w] == c) continue;
+
+          if (x < minField.x) minField.x = x;
+          if (y < minField.y) minField.y = y;
+          if (x > maxField.x) maxField.x = x;
+          if (y > maxField.y) maxField.y = y;
+
           drawData[x + y * w] = c;
           switch (c)
           {
@@ -230,7 +275,12 @@ namespace SokoWahnWinPhone
         }
       }
 
-      viewContext.Present();
+      if (minField.x >= 0)
+      {
+        maxField.x = maxField.x - minField.x + 1;
+        maxField.y = maxField.y - minField.y + 1;
+        viewContext.Present(minField.x * BoxPixelWidth, minField.y * BoxPixelHeight, maxField.x * BoxPixelWidth, maxField.y * BoxPixelHeight);
+      }
     }
 
     void InitGame(string gameTxt)
