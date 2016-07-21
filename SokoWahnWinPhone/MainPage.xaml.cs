@@ -5,11 +5,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Windows.ApplicationModel;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
@@ -26,6 +30,8 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 using SokoWahnCore;
+using HttpClient = Windows.Web.Http.HttpClient;
+using HttpResponseMessage = Windows.Web.Http.HttpResponseMessage;
 
 // ReSharper disable UnusedMember.Local
 // ReSharper disable MemberCanBeInternal
@@ -61,51 +67,6 @@ namespace SokoWahnWinPhone
                                 + "    #######";
 
     /// <summary>
-    /// extreme
-    /// </summary>
-    public const string Level8 = "####################\n"
-                                + "#                  #\n"
-                                + "# $  $ $ $ $ $ $ $ #\n"
-                                + "# $$$$$###########################################\n"
-                                + "#                         .                      #\n"
-                                + "# $$$$$#  $ $ $ $ $ ########################## # #\n"
-                                + "#      #  $ $ $ $ $ #   $  $  $  $  $  $  $    # #\n"
-                                + "# $$$$$#  ### # # ## #                       $   #\n"
-                                + "#      #  #        #  # ##################### ## #\n"
-                                + "# $$$$$#  #### ## ##$ #   #                 # #  #\n"
-                                + "#      #     # #  #   # # .                 # #  #\n"
-                                + "# $$$$$#  $$$# #  #   # # ################ ## #  #\n"
-                                + "#      #     # #  # $ # #                #  #$#  #\n"
-                                + "# $$$$$#  $$$# #  #   # # ############## #  # #  #\n"
-                                + "#      #     # #  #   # #.#............# #  # #  #\n"
-                                + "# $$$$$#  $$$# #  # $ # #.#............# #  # #  #\n"
-                                + "#      #     # #  #   # #.#............# #  #    #\n"
-                                + "# $$$$$#  $$$# #  #   # #.#............# #  #$#  #\n"
-                                + "#      #     # #  # $ # #.#............# #  # #  #\n"
-                                + "# $$$$$#  $$$# #  #   # #.#............# #  # #  #\n"
-                                + "#      #     # #  #   # #.#.........   # #  # #  #\n"
-                                + "#@$$$$$#  $$$# #  # $ #  ..............# #  #    #\n"
-                                + "#      #     # #  #   # #.#.........  .# #  #$#  #\n"
-                                + "# $$$$$#  $$$# #  #   # #.#............# #  # #  #\n"
-                                + "#      #     # #  # $ # #.#............# #  # #  #\n"
-                                + "# $$$$$#  $$$# #  #   # #.#............# #  # #  #\n"
-                                + "#      #     # #  #   # #.#............# #  #    #\n"
-                                + "# $$$$$#  $$$# #  # $ # #.#............# #  #$#  #\n"
-                                + "#      #     # #  #   # # #............# #  # #  #\n"
-                                + "# $$$$$#  $$$# #  #   # # ################  # #  #\n"
-                                + "#      #     # #  # # # #                #  # #  #\n"
-                                + "# $$$$$#  $$$# #  # $                       #    #\n"
-                                + "#      #     # #  ## # ###################$##$#  #\n"
-                                + "# $$$$$#  #    #     #                   # ## #  #\n"
-                                + "#      #  #### ##### #  $$ $$ $$ $$ $$ $$   # #  #\n"
-                                + "# $$$$$#           # # $  $  $  $  $  $  $$ # #  #\n"
-                                + "#      #  ###  # # # # $  $  $  $  $  $  $  $ $  #\n"
-                                + "# $$$$$######### # # ######################## ## #\n"
-                                + "#                #                               #\n"
-                                + "#      #       #                                 #\n"
-                                + "##################################################\n";
-
-    /// <summary>
     /// Wird aufgerufen, wenn diese Seite in einem Rahmen angezeigt werden soll.
     /// </summary>
     /// <param name="e">Ereignisdaten, die beschreiben, wie diese Seite erreicht wurde.
@@ -115,13 +76,49 @@ namespace SokoWahnWinPhone
       skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
       skinContext = skinImg.GetBitmapContext();
 
-      InitGame(Level3);
+      var level = await DownloadLevelAsync("http://www.game-sokoban.com/index.php?mode=level&lid=404");
+
+      InitGame(level);
 
       // TODO: Wenn Ihre Anwendung mehrere Seiten enthält, stellen Sie sicher, dass
       // die Hardware-Zurück-Taste behandelt wird, indem Sie das
       // Windows.Phone.UI.Input.HardwareButtons.BackPressed-Ereignis registrieren.
       // Wenn Sie den NavigationHelper verwenden, der bei einigen Vorlagen zur Verfügung steht,
       // wird dieses Ereignis für Sie behandelt.
+    }
+
+    static async Task<string> DownloadPageStringAsync(string url)
+    {
+      var client = new HttpClient();
+      var response = await client.GetAsync(new Uri(url));
+      response.EnsureSuccessStatusCode();
+      return await response.Content.ReadAsStringAsync();
+    }
+
+    static int IntParse(string v, int alternate = 0)
+    {
+      int result;
+      if (int.TryParse(v, out result)) return result;
+      return alternate;
+    }
+
+    static async Task<string> DownloadLevelAsync(string url)
+    {
+      string lade = await DownloadPageStringAsync(url);
+      lade = lade.Remove(0, lade.IndexOf("<div id=\"startLevel\">", StringComparison.Ordinal));
+      lade = lade.Substring(0, lade.IndexOf("</div>", StringComparison.Ordinal) + 6);
+      var xElement = XElement.Parse(lade);
+
+      char[] welt = string.Concat(xElement.Descendants("r").Select(x => string.Concat(x.Value.Split(',').Select(z => new string(z[z.Length - 1], IntParse(z.Substring(0, z.Length - 1), 1)))) + "\r\n")).Replace('v', ' ').Replace('w', '#').Replace('f', ' ').Replace('a', '.').ToCharArray();
+      int spalten = welt.Select((c, i) => new { c, i }).Where(x => x.c == '\r').Select(x => x.i).First();
+      xElement.Descendants("b").First().Value.Split(',').Select(z => IntParse(z) + (IntParse(z) / spalten * 2)).Select(x => welt[x] = welt[x] == '.' ? '*' : '$').Count();
+      int spieler = IntParse(xElement.Descendants("mv").First().Value);
+      spieler += spieler / spalten * 2;
+      welt[spieler] = welt[spieler] == '.' ? '+' : '@';
+
+      string str = new string(welt);
+
+      return str;
     }
 
     WriteableBitmap viewImage;
