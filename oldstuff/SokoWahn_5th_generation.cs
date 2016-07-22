@@ -1,5 +1,5 @@
 ﻿// gibt an, ob der Parallel-Betrieb komplett deaktiviert werden soll (lansamer, übersichtlicher fürs Debuggen)
-#define parallelDeaktivieren
+//#define parallelDeaktivieren
 
 #region # using *.*
 using System;

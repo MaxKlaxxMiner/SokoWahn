@@ -76,7 +76,12 @@ namespace SokoWahnWinPhone
       skinImg = await RtTools.ReadBitmapAsync("Assets\\skin-yasc.png");
       skinContext = skinImg.GetBitmapContext();
 
-      var level = await DownloadLevelAsync("http://www.game-sokoban.com/index.php?mode=level&lid=404");
+      var idList = await RtTools.ReadAllBytesAsync("Assets\\id-list.txt");
+      var allLevels = Encoding.UTF8.GetString(idList, 0, idList.Length).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
+
+      int selectedRandom = allLevels[new Random().Next(allLevels.Length)];
+
+      var level = await DownloadLevelAsync("http://www.game-sokoban.com/index.php?mode=level&lid=" + selectedRandom);
 
       InitGame(level);
 
