@@ -86,7 +86,7 @@ namespace SokoWahnCore
           }
         }
 
-        if (valid(boxesVariant, box)) yield return boxesVariant;
+        yield return boxesVariant;
 
         while (boxesVariant[box]++ == box + dif) if (--box < 0) yield break;
       }

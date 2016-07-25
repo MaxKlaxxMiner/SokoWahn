@@ -580,15 +580,24 @@ namespace SokoWahn
 
       var test = new DeadlockBlocker(field);
 
-      //test.ScanBoxVariants(2, 16777216);
+      int width = field.width;
+      var allPossibleBoxPositions = test.blockerSingle.Select((b, i) => new { b, i }).Where(x => !x.b).SelectArray(x => x.i);
+      int boxDistanceLimit = SokoTools.MaxBoxDistance(allPossibleBoxPositions, 0, allPossibleBoxPositions.Length, width);
 
-      foreach (var set in SokoTools.FieldBoxesVariantsExtended(field.fieldData.Length, 2, (boxes, index) => !test.blockerSingle[boxes[index]]))
+      for (int boxDistance = 1; boxDistance <= boxDistanceLimit; boxDistance++)
       {
-        field.SetGameState(set.SelectArray(x => (ushort)x));
-        Console.WriteLine(field.ToString());
-        Console.ReadLine();
-      }
+        Func<int[], int, bool> validateMethod = (boxes, index) => !test.blockerSingle[boxes[index]] && SokoTools.MaxBoxDistance(boxes, 0, index + 1, width) <= boxDistance;
 
+        foreach (var set in SokoTools.FieldBoxesVariantsExtended(field.fieldData.Length, 2, validateMethod))
+        {
+          if (test.blockerSingle[set[set.Length - 1]]) continue;
+          if (SokoTools.MaxBoxDistance(set, 0, set.Length, width) != boxDistance) continue;
+
+          field.SetGameState(set.SelectArray(x => (ushort)x));
+          Console.WriteLine(field.ToString());
+          Console.ReadLine();
+        }
+      }
 
     }
 
@@ -606,7 +615,7 @@ namespace SokoWahn
 
       //ScanTopLeftFields(new SokowahnField(TestData.Level3));
 
-      ScanBlocker(new SokowahnField(TestData.Level1));
+      ScanBlocker(new SokowahnField(TestData.Level2));
 
       #region # // --- Level 3 Hash-Stats ---
       // boxes todoLen todoLenEnd  Hashtable

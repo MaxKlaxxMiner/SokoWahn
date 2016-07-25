@@ -42,6 +42,7 @@
     <Compile Include="LinqTools\Crc64.cs" />
     <Compile Include="LinqTools\LinqExtensions.cs" />
     <Compile Include="LinqTools\SelectArray.cs" />
+    <Compile Include="SokoTools\MaxBoxDistance.cs" />
     <Compile Include="SokoTools\ScanTopLeftPos.cs" />
     <Compile Include="SokoTools\CreateWayMap.cs" />
     <Compile Include="SokoTools\DeadlockBlocker.cs" />
