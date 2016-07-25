@@ -54,7 +54,6 @@
     <Compile Include="HashGenerator\CreateHashBuilder.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SokowahnField.cs" />
     <Compile Include="TestData.cs" />
   </ItemGroup>
   <ItemGroup>
