@@ -580,7 +580,15 @@ namespace SokoWahn
 
       var test = new DeadlockBlocker(field);
 
-      test.ScanBoxVariants(2, 16777216);
+      //test.ScanBoxVariants(2, 16777216);
+
+      foreach (var set in SokoTools.FieldBoxesVariantsExtended(field.fieldData.Length, 2, (boxes, index) => !test.blockerSingle[boxes[index]]))
+      {
+        field.SetGameState(set.SelectArray(x => (ushort)x));
+        Console.WriteLine(field.ToString());
+        Console.ReadLine();
+      }
+
 
     }
 

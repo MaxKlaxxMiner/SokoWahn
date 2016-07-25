@@ -13,16 +13,16 @@ namespace SokoWahnCore
     /// <summary>
     /// vergleichbar mit ".Select().ToArray()", jedoch schneller
     /// </summary>
-    /// <typeparam name="Tout">Ausgabe-Datentyp</typeparam>
-    /// <typeparam name="Tin">Eingabe-Datentyp</typeparam>
+    /// <typeparam name="TOut">Ausgabe-Datentyp</typeparam>
+    /// <typeparam name="TIn">Eingabe-Datentyp</typeparam>
     /// <param name="source">Enumerable mit den Quelldaten</param>
     /// <param name="selectMethod">Select-Methode zum umwandeln des Datensatzes</param>
     /// <returns>fertiges Array</returns>
-    public static Tout[] SelectArray<Tout, Tin>(this IEnumerable<Tin> source, Func<Tin, Tout> selectMethod)
+    public static TOut[] SelectArray<TOut, TIn>(this IEnumerable<TIn> source, Func<TIn, TOut> selectMethod)
     {
-      var sourceArray = (source as Tin[]) ?? source.ToArray();
+      var sourceArray = (source as TIn[]) ?? source.ToArray();
 
-      var outputArray = new Tout[sourceArray.Length];
+      var outputArray = new TOut[sourceArray.Length];
 
       for (int i = 0; i < outputArray.Length; i++) outputArray[i] = selectMethod(sourceArray[i]);
 
