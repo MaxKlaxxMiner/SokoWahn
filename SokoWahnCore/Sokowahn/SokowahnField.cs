@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBeInternal
@@ -58,8 +59,25 @@ namespace SokoWahnCore
     /// <param name="fieldText">Daten des Spielfeldes als Textdaten</param>
     public SokowahnField(string fieldText)
     {
+      // --- Felder mit Zahlen dekomprimieren ---
+      var decompressedFieldText = new StringBuilder();
+      for (int i = 0; i < fieldText.Length; i++)
+      {
+        if (char.IsNumber(fieldText[i]))
+        {
+          int count = 0;
+          while (i < fieldText.Length - 1 && char.IsNumber(fieldText[i])) count = count * 10 + (fieldText[i++] - '0');
+          if (count < 1 || count > 999) throw new Exception("Field-Error");
+          decompressedFieldText.Append(fieldText[i], count);
+        }
+        else
+        {
+          decompressedFieldText.Append(fieldText[i]);
+        }
+      }
+
       // --- Zeilen einlesen ---
-      var lines = fieldText.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\t", "        ").Split('\n');
+      var lines = decompressedFieldText.Replace("\r\n", "\n").Replace('\r', '\n').Replace('n', '\n').Replace('\t', ' ').Replace('-', ' ').ToString().Split('\n');
 
       lines = NormalizeLines(lines);
       if (lines.Length < 3) throw new ArgumentException("kein sinnvolles Spielfeld gefunden");

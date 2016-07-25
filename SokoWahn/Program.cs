@@ -106,7 +106,7 @@ namespace SokoWahn
           int[] playerDirections = { -1, +1, -scanner.width, +scanner.width };
           var checkDuplicates = new HashSet<ulong>();
 
-          foreach (var boxesVariant in SokoTools.FieldBoxesVariants(targetFields.Length, boxesCount, false).Select(v => v.SelectArray(f => targetFields[f])))
+          foreach (var boxesVariant in SokoTools.FieldBoxesVariantsStatic(targetFields.Length, boxesCount).Select(v => v.SelectArray(f => targetFields[f])))
           {
             scanner.SetPlayerPos(emptyPlayerPos);
             scanner.SetBoxes(boxesVariant);
@@ -356,7 +356,7 @@ namespace SokoWahn
         var checkBoxes = topLeftTodo.state.Skip(1).Where(b => b != topLeftTodo.lastBox).ToArray();
         var checkState = new ushort[1 + boxesCountMin];
         checkState[0] = playerTopLeft;
-        foreach (var variant in SokoTools.FieldBoxesVariants(checkBoxes.Length, boxesCountMin - 1, false))
+        foreach (var variant in SokoTools.FieldBoxesVariantsStatic(checkBoxes.Length, boxesCountMin - 1))
         {
           for (int v = 0; v < variant.Length; v++) checkState[v + 1] = checkBoxes[variant[v]];
           AppendBoxes(checkState, topLeftTodo.lastBox);
@@ -580,8 +580,8 @@ namespace SokoWahn
 
       var test = new DeadlockBlocker(field);
 
-      Console.WriteLine(field.ToString((c, i) => test.blockerSingle[i] ? c : '´'));
-      Console.WriteLine();
+      test.ScanBoxVariants(2, 16777216);
+
     }
 
     static void Main()

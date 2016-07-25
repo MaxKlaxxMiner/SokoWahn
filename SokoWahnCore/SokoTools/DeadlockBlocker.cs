@@ -141,5 +141,21 @@ namespace SokoWahnCore
       #endregion
     }
     #endregion
+
+    /// <summary>
+    /// gibt alle Kistenvarianten zurück, welche auf Blocker geprüft werden sollten
+    /// </summary>
+    /// <param name="boxesCount">Anzahl der Kisten, welche geprüft werden sollen (min. 2)</param>
+    /// <param name="minBoxDistance">minimale Entfernung zwischen den zwei am weitesten entfernten Kisten (min. 1)</param>
+    /// <returns>Enumerable der zu prüfenden Stellungen</returns>
+    public IEnumerable<ushort[]> ScanBoxVariants(int boxesCount, int minBoxDistance = 1)
+    {
+      int bufferStep = 1 + boxesCount;
+      var buffer = new ushort[bufferStep];
+
+
+
+      yield break;
+    }
   }
 }
