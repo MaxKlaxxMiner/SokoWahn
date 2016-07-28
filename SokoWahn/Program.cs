@@ -588,12 +588,17 @@ namespace SokoWahn
       {
         Func<int[], int, bool> validateMethod = (boxes, index) => !test.blockerSingle[boxes[index]] && SokoTools.MaxBoxDistance(boxes, 0, index + 1, width) <= boxDistance;
 
+        var areas = new int[field.fieldData.Length];
+
         foreach (var set in SokoTools.FieldBoxesVariantsExtended(field.fieldData.Length, 2, validateMethod))
         {
           if (test.blockerSingle[set[set.Length - 1]]) continue;
           if (SokoTools.MaxBoxDistance(set, 0, set.Length, width) != boxDistance) continue;
 
-          field.SetGameState(set.SelectArray(x => (ushort)x));
+          test.ScanAreasWithBoxes(set, areas);
+
+          field.SetGameState(areas[2], set.SelectArray(x => (ushort)x));
+
           Console.WriteLine(field.ToString());
           Console.ReadLine();
         }

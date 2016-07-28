@@ -502,6 +502,50 @@ namespace SokoWahnCore
     }
 
     /// <summary>
+    /// setzt einen bestimmten Spielstatus (mit automatischer Längenanpassung)
+    /// </summary>
+    /// <param name="newPlayerPos">neue Spielerposition</param>
+    /// <param name="boxes">alle Kisten, welche neu gesetzt werden sollen</param>
+    public void SetGameState(int newPlayerPos, ushort[] boxes)
+    {
+      // --- altes Spiefeld räumen ---
+      int playerPos = posis[0];
+      fieldData[playerPos] = fieldData[playerPos] == '+' ? '.' : ' ';
+      for (int box = 1; box < posis.Length; box++)
+      {
+        int boxPos = posis[box];
+        fieldData[boxPos] = fieldData[boxPos] == '*' ? '.' : ' ';
+      }
+
+      // --- neues Spielfeld setzen ---
+      fieldData[newPlayerPos] = fieldData[newPlayerPos] == '.' ? '+' : '@';
+      posis[0] = (ushort)newPlayerPos;
+      int newRemain = 0;
+      for (int box = 0; box < boxes.Length; box++)
+      {
+        int boxPos = boxes[box];
+        if (fieldData[boxPos] == '.')
+        {
+          fieldData[boxPos] = '*';
+        }
+        else
+        {
+          fieldData[boxPos] = '$';
+          newRemain++;
+        }
+      }
+      boxesRemain = newRemain;
+
+      // --- Größe korrigieren, falls notwendig ---
+      if (posis.Length != boxes.Length + 1)
+      {
+        posis = new ushort[boxes.Length + 1];
+      }
+
+      Array.Copy(boxes, 0, posis, 1, boxes.Length);
+    }
+
+    /// <summary>
     /// ändert die Kisten-Positionen und kann ebenfalls die Anzahl der Kisten ändern
     /// </summary>
     public void SetBoxes(ushort[] newBoxes)

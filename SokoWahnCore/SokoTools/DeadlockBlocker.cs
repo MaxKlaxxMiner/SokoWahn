@@ -153,9 +153,55 @@ namespace SokoWahnCore
       int bufferStep = 1 + boxesCount;
       var buffer = new ushort[bufferStep];
 
-
-
       yield break;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="inputBoxes"></param>
+    /// <param name="outputAreas"></param>
+    public unsafe void ScanAreasWithBoxes(int[] inputBoxes, int[] outputAreas)
+    {
+      fixed (bool* ways = wayMap)
+      {
+        int width = field.width;
+        int fields = wayMap.Length;
+        int outputLength = 1; outputAreas[0] = 0;
+
+        bool* walked = stackalloc bool[fields];
+        ushort* todo = stackalloc ushort[fields];
+        int todoLen = 0;
+
+        for (int i = 0; i < inputBoxes.Length; i++) walked[i] = true;
+
+        for (ushort i = 0; i < fields; i++)
+        {
+          if (!ways[i] || walked[i]) continue;
+
+          int outputStart = outputLength++;
+
+          todo[todoLen++] = i;
+          while (todoLen > 0)
+          {
+            ushort doit = todo[--todoLen];
+            outputAreas[outputLength++] = doit;
+            walked[doit] = true;
+
+            int p = doit - 1;
+            if (ways[p] && !walked[p]) todo[todoLen++] = (ushort)p;
+            p += 2;
+            if (ways[p] && !walked[p]) todo[todoLen++] = (ushort)p;
+            p = p - 1 - width;
+            if (ways[p] && !walked[p]) todo[todoLen++] = (ushort)p;
+            p += width * 2;
+            if (ways[p] && !walked[p]) todo[todoLen++] = (ushort)p;
+          }
+
+          outputAreas[outputStart] = outputLength - outputStart - 1;
+          outputAreas[0]++;
+        }
+      }
     }
   }
 }
