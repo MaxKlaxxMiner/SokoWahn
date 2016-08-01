@@ -172,7 +172,7 @@ namespace SokoWahnCore
     }
 
     /// <summary>
-    /// scannt nach allen Zugmöglichkeiten und gibt diese zurück
+    /// scannt nach allen Zugmöglichkeiten und gibt die entsprechende Anzahl zurück
     /// </summary>
     /// <param name="output">Ausgabe Buffer für alle Zugmöglichkeiten</param>
     /// <returns>Anzahl der erkannten Zugmöglichkeiten</returns>
@@ -519,7 +519,6 @@ namespace SokoWahnCore
 
       // --- neues Spielfeld setzen ---
       fieldData[newPlayerPos] = fieldData[newPlayerPos] == '.' ? '+' : '@';
-      posis[0] = (ushort)newPlayerPos;
       int newRemain = 0;
       for (int box = 0; box < boxes.Length; box++)
       {
@@ -542,6 +541,8 @@ namespace SokoWahnCore
         posis = new ushort[boxes.Length + 1];
       }
 
+      // --- Daten übertragen ---
+      posis[0] = (ushort)newPlayerPos;
       Array.Copy(boxes, 0, posis, 1, boxes.Length);
     }
 

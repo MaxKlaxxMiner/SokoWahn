@@ -584,13 +584,15 @@ namespace SokoWahn
       var allPossibleBoxPositions = test.blockerSingle.Select((b, i) => new { b, i }).Where(x => !x.b).SelectArray(x => x.i);
       int boxDistanceLimit = SokoTools.MaxBoxDistance(allPossibleBoxPositions, 0, allPossibleBoxPositions.Length, width);
 
+      var areas = new int[field.fieldData.Length];
+      int boxCount = 2;
+      var nextBuf = new ushort[boxCount * 4 * (boxCount + 1)];
+
       for (int boxDistance = 1; boxDistance <= boxDistanceLimit; boxDistance++)
       {
         Func<int[], int, bool> validateMethod = (boxes, index) => !test.blockerSingle[boxes[index]] && SokoTools.MaxBoxDistance(boxes, 0, index + 1, width) <= boxDistance;
 
-        var areas = new int[field.fieldData.Length];
-
-        foreach (var set in SokoTools.FieldBoxesVariantsExtended(field.fieldData.Length, 2, validateMethod))
+        foreach (var set in SokoTools.FieldBoxesVariantsExtended(field.fieldData.Length, boxCount, validateMethod))
         {
           if (test.blockerSingle[set[set.Length - 1]]) continue;
           if (SokoTools.MaxBoxDistance(set, 0, set.Length, width) != boxDistance) continue;
@@ -599,8 +601,27 @@ namespace SokoWahn
 
           field.SetGameState(areas[2], set.SelectArray(x => (ushort)x));
 
+          if (field.boxesRemain == 0) continue;
+
+          int nextCount = field.ScanMoves(nextBuf);
+          if (nextCount == 0)
+          {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("--- DEAD ---\r\n");
+            Console.ForegroundColor = ConsoleColor.Gray;
+          }
+
           Console.WriteLine(field.ToString());
-          Console.ReadLine();
+
+          if (field.GetGameStateCrc() == 2803048869991601240)
+          {
+            Console.ReadLine();
+          }
+          else
+          {
+            Console.WriteLine();
+          }
+
         }
       }
 
