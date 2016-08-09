@@ -630,7 +630,7 @@ namespace SokoWahn
     static void Main()
     {
       //MiniGame(new SokowahnField(TestData.Level1));
-      //MiniGame(new SokowahnField(TestData.Level3));
+      MiniGame.Run(new SokowahnField(TestData.Level3));
       //MiniGame(new SokowahnField(TestData.Level4));
       //MiniGame(new SokowahnField(TestData.Level2));
 

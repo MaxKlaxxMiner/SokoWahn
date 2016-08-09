@@ -1,0 +1,18 @@
+﻿<Page
+    x:Class="SokoWahnWinPhone.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+  <Grid>
+    <RepeatButton x:Name="ButtonLeft"  Canvas.ZIndex="99" Content="←" HorizontalAlignment="Right" Margin="0,0,170,0" VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonLeft_Click" Delay="300" Interval="50"/>
+    <RepeatButton x:Name="ButtonRight" Canvas.ZIndex="99" Content="→" HorizontalAlignment="Right" Margin="0,0,10,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonRight_Click" Delay="300" Interval="50"/>
+    <RepeatButton x:Name="ButtonUp"    Canvas.ZIndex="99" Content="↑" HorizontalAlignment="Right" Margin="0,0,90,80" VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonUp_Click" Delay="300" Interval="50"/>
+    <RepeatButton x:Name="ButtonDown"  Canvas.ZIndex="99" Content="↓" HorizontalAlignment="Right" Margin="0,0,90,0"  VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonDown_Click" Delay="300" Interval="50"/>
+    <RepeatButton x:Name="ButtonUndo"  Canvas.ZIndex="99" Content="&lt;" HorizontalAlignment="Left" Margin="10,0,0,0" VerticalAlignment="Bottom" MinWidth="70" MinHeight="90" IsHitTestVisible="True" FontSize="38" Click="ButtonUndo_Click" Delay="300" Interval="50"/>
+    <Image x:Name="GameImage" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+  </Grid>
+</Page>
