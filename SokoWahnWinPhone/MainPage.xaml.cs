@@ -21,6 +21,7 @@ using Windows.Storage;
 using Windows.Storage.Streams;
 using Windows.UI;
 using Windows.UI.Core;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -51,27 +52,24 @@ namespace SokoWahnWinPhone
     {
       InitializeComponent();
 
+      Application.Current.UnhandledException += Current_UnhandledException;
+
       NavigationCacheMode = NavigationCacheMode.Required;
     }
 
-    public const string Level3 = "    #####\n"
-                                + "    #   #\n"
-                                + "    #$  #\n"
-                                + "  ###  $##\n"
-                                + "  #  $ $ #\n"
-                                + "### # ## #   ######\n"
-                                + "#   # ## #####  ..#\n"
-                                + "# $  $          ..#\n"
-                                + "##### ### #@##  ..#\n"
-                                + "    #     #########\n"
-                                + "    #######";
+    static async void Current_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+      e.Handled = true;
+      await new MessageDialog(e.Exception.ToString()).ShowAsync();
+      Application.Current.Exit();
+    }
 
     static async Task<Dictionary<int, string>> LoadSolutionsAsync()
     {
       var result = new Dictionary<int, string>();
 
       var bytes = await RtTools.ReadLocalAllBytesAsync("solutions.xml");
-      if (bytes == null) return result;
+      if (bytes == null || bytes.Length == 0) return result;
 
       var xmlFile = XElement.Load(new MemoryStream(bytes));
       foreach (var el in xmlFile.Descendants("level"))
