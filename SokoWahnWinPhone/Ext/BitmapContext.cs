@@ -128,7 +128,7 @@ namespace Windows.UI.Xaml.Media.Imaging
 
     public void Present(int x, int y, int w, int h)
     {
-      if (x < 0 || y < 0 || w < 0 || h < 0 || x + w > Width || y + h > Width) throw new ArgumentOutOfRangeException();
+      if (x < 0 || y < 0 || w < 0 || h < 0 || x + w > Width || y + h > Height) throw new ArgumentOutOfRangeException();
 
       using (var stream = writeableBitmap.PixelBuffer.AsStream())
       {
