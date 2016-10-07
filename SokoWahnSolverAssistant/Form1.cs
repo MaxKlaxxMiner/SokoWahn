@@ -20,29 +20,26 @@ namespace SokoWahnSolverAssistent
 {
   public sealed partial class Form1 : Form
   {
+    /// <summary>
+    /// System zum zeichnen des Spielfeldes
+    /// </summary>
+    readonly DrawSystem drawSystem;
+
+    /// <summary>
+    /// Konstruktor
+    /// </summary>
     public Form1()
     {
       InitializeComponent();
-    }
 
-    DrawSystem drawSystem = new DrawSystem();
+      drawSystem = new DrawSystem(drawPictureBox, "../../../SokoWahnWinPhone/Assets/skin-yasc.png");
+    }
 
     void Form1_Load(object sender, EventArgs e)
     {
       var playField = new SokowahnField(TestData.Level3);
       drawSystem.DrawField(playField);
     }
-
-    #region # // --- Draw-System ---
-
-    /// <summary>
-    /// aktualisiert das 
-    /// </summary>
-    /// <param name="field">Feld, welches gezeichnet werden soll</param>
-    void DrawField(SokowahnField field)
-    {
-    }
-    #endregion
 
     void exitToolStripMenuItem_Click(object sender, EventArgs e)
     {

@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using SokoWahnCore;
 
 #endregion
@@ -23,6 +25,25 @@ namespace SokoWahnSolverAssistent.Draw
     SokowahnField drawField = new SokowahnField("#####\n#@$.#\n#####"); // minimum Dummy-Feld
 
     /// <summary>
+    /// Picturebox, welche zum Zeichnen des Spielfeldes verwendet werden soll
+    /// </summary>
+    readonly PictureBox drawPictureBox;
+
+    /// <summary>
+    /// Konstruktor
+    /// </summary>
+    /// <param name="drawPictureBox">Picturebox, welche zum Zeichnen des Spielfeldes verwendet werden soll</param>
+    /// <param name="skinFile">Skin-Datei, welche zum Zeichnen verwendet werden soll</param>
+    public DrawSystem(PictureBox drawPictureBox, string skinFile)
+    {
+      if (!File.Exists(skinFile)) throw new FileNotFoundException(skinFile);
+
+      drawPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+
+      this.drawPictureBox = drawPictureBox;
+    }
+
+    /// <summary>
     /// zeichnet ein bestimmtes Spielfeld
     /// </summary>
     /// <param name="field">Spielfeld, welches gezeichnet werden soll</param>
@@ -31,7 +52,7 @@ namespace SokoWahnSolverAssistent.Draw
       if (field.width != drawField.width || field.height != drawField.height)
       {
         drawField = new SokowahnField(field);
-        Array.Clear(field.fieldData, 0, field.fieldData.Length);
+        Init();
       }
 
       var drawData = drawField.fieldData;
@@ -41,10 +62,8 @@ namespace SokoWahnSolverAssistent.Draw
       var minField = new PointInt(int.MaxValue, int.MaxValue);
       var maxField = new PointInt(int.MinValue, int.MinValue);
 
-      int tickLimit = Environment.TickCount + 1000;
       for (int y = 0; y < field.height; y++)
       {
-        if (Environment.TickCount > tickLimit) return;
         for (int x = 0; x < w; x++)
         {
           char c = f[x + y * w];
@@ -98,7 +117,7 @@ namespace SokoWahnSolverAssistent.Draw
           //    MaleTestbild(viewContext, skinContext, x, y, lu, BildTeile.LinksUnten);
           //    MaleTestbild(viewContext, skinContext, x, y, ru, BildTeile.RechtsUnten);
           //  } break;
-            default: throw new Exception("unknown Char: '" + c + "'");
+            default: break; // throw new Exception("unknown Char: '" + c + "'");
           }
         }
       }
@@ -110,5 +129,15 @@ namespace SokoWahnSolverAssistent.Draw
         //viewContext.Present(minField.x * BoxPixelWidth, minField.y * BoxPixelHeight, maxField.x * BoxPixelWidth, maxField.y * BoxPixelHeight);
       }
     }
+
+    /// <summary>
+    /// erzeugt ein komplett neues Spielfeld
+    /// </summary>
+    void Init()
+    {
+      // alle Felder leeren, damit das gesamte Spielfeld neu gezeichnet
+      Array.Clear(drawField.fieldData, 0, drawField.fieldData.Length);
+    }
+
   }
 }
