@@ -16,5 +16,10 @@ namespace SokoWahnSolverAssistent
     {
       InitializeComponent();
     }
+
+    void exitToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+      Close();
+    }
   }
 }
