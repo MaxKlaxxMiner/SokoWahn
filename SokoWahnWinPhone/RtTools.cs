@@ -37,6 +37,7 @@ namespace SokoWahnWinPhone
           var reader = DataReader.FromBuffer(buffer);
           var fileContent = new byte[reader.UnconsumedBufferLength];
           reader.ReadBytes(fileContent);
+          reader.Dispose();
           return fileContent;
         }
       }
@@ -45,6 +46,45 @@ namespace SokoWahnWinPhone
         // ignored
       }
       return null;
+    }
+    #endregion
+
+    #region # // --- WriteLocalAllBytes / ReadLocalAllBytes ---
+    /// <summary>
+    /// schreibt eine Datei in den lokalen Ordner
+    /// </summary>
+    /// <param name="fileName">Datei, welche geschrieben werden soll</param>
+    /// <param name="bytes">Bytes, welche geschrieben werden sollen</param>
+    public static async void WriteLocalAllBytesAsync(string fileName, byte[] bytes)
+    {
+      var folder = ApplicationData.Current.LocalFolder;
+      var file = await folder.CreateFileAsync(fileName, CreationCollisionOption.ReplaceExisting);
+      await FileIO.WriteBytesAsync(file, bytes);
+    }
+
+    /// <summary>
+    /// liest eine Datei aus den lokalen und gibt den Inhalt als Byte-Array zurück (oder "null" wenn nicht gefunden)
+    /// </summary>
+    /// <param name="fileName">Datei, welche gelesene werden soll</param>
+    /// <returns>Bytes, welche ausgelesen wurden (oder "null" wenn nicht gefunden)</returns>
+    public static async Task<byte[]> ReadLocalAllBytesAsync(string fileName)
+    {
+      try
+      {
+        var folder = ApplicationData.Current.LocalFolder;
+        var file = await folder.GetFileAsync(fileName);
+        if (file == null) return null;
+        var buffer = await FileIO.ReadBufferAsync(file);
+        var reader = DataReader.FromBuffer(buffer);
+        var bytes = new byte[reader.UnconsumedBufferLength];
+        reader.ReadBytes(bytes);
+        reader.Dispose();
+        return bytes;
+      }
+      catch (Exception exc)
+      {
+        return null;
+      }
     }
     #endregion
 

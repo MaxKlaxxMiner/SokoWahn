@@ -612,16 +612,10 @@ namespace SokoWahn
           }
 
           Console.WriteLine(field.ToString());
-
-          if (field.GetGameStateCrc() == 2803048869991601240)
+          if (nextCount == 0)
           {
-            Console.ReadLine();
+            int stop = 0;
           }
-          else
-          {
-            Console.WriteLine();
-          }
-
         }
       }
 
@@ -630,7 +624,7 @@ namespace SokoWahn
     static void Main()
     {
       //MiniGame(new SokowahnField(TestData.Level1));
-      MiniGame.Run(new SokowahnField(TestData.Level3));
+      //MiniGame.Run(new SokowahnField(TestData.Level3));
       //MiniGame(new SokowahnField(TestData.Level4));
       //MiniGame(new SokowahnField(TestData.Level2));
 
@@ -641,7 +635,7 @@ namespace SokoWahn
 
       //ScanTopLeftFields(new SokowahnField(TestData.Level3));
 
-      ScanBlocker(new SokowahnField(TestData.Level2));
+      ScanBlocker(new SokowahnField(TestData.Level3));
 
       #region # // --- Level 3 Hash-Stats ---
       // boxes todoLen todoLenEnd  Hashtable

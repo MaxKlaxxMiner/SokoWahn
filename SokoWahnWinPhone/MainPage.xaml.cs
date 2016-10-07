@@ -21,6 +21,7 @@ using Windows.Storage;
 using Windows.Storage.Streams;
 using Windows.UI;
 using Windows.UI.Core;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -51,20 +52,43 @@ namespace SokoWahnWinPhone
     {
       InitializeComponent();
 
+      Application.Current.UnhandledException += Current_UnhandledException;
+
       NavigationCacheMode = NavigationCacheMode.Required;
     }
 
-    public const string Level3 = "    #####\n"
-                                + "    #   #\n"
-                                + "    #$  #\n"
-                                + "  ###  $##\n"
-                                + "  #  $ $ #\n"
-                                + "### # ## #   ######\n"
-                                + "#   # ## #####  ..#\n"
-                                + "# $  $          ..#\n"
-                                + "##### ### #@##  ..#\n"
-                                + "    #     #########\n"
-                                + "    #######";
+    static async void Current_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+      e.Handled = true;
+      await new MessageDialog(e.Exception.ToString()).ShowAsync();
+      Application.Current.Exit();
+    }
+
+    static async Task<Dictionary<int, string>> LoadSolutionsAsync()
+    {
+      var result = new Dictionary<int, string>();
+
+      var bytes = await RtTools.ReadLocalAllBytesAsync("solutions.xml");
+      if (bytes == null || bytes.Length == 0) return result;
+
+      var xmlFile = XElement.Load(new MemoryStream(bytes));
+      foreach (var el in xmlFile.Descendants("level"))
+      {
+        result.Add(int.Parse(el.Attribute("id").Value), el.Value);
+      }
+
+      return result;
+    }
+
+    static void SaveSolutions(Dictionary<int, string> solutions)
+    {
+      var xmlFile = new XElement("levels", solutions.Select(el => new XElement("level", new XAttribute("id", el.Key), el.Value)));
+
+      var mem = new MemoryStream();
+      xmlFile.Save(mem, SaveOptions.DisableFormatting);
+
+      RtTools.WriteLocalAllBytesAsync("solutions.xml", mem.ToArray());
+    }
 
     /// <summary>
     /// Wird aufgerufen, wenn diese Seite in einem Rahmen angezeigt werden soll.
@@ -77,11 +101,15 @@ namespace SokoWahnWinPhone
       skinContext = skinImg.GetBitmapContext();
 
       var idList = await RtTools.ReadAllBytesAsync("Assets\\id-list.txt");
-      var allLevels = Encoding.UTF8.GetString(idList, 0, idList.Length).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray();
+      var allLevels = new HashSet<int>(Encoding.UTF8.GetString(idList, 0, idList.Length).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(int.Parse)).ToArray();
 
-      int selectedRandom = allLevels[new Random().Next(allLevels.Length)];
+      var solutions = await LoadSolutionsAsync();
 
-      var level = await DownloadLevelAsync("http://www.game-sokoban.com/index.php?mode=level&lid=" + selectedRandom);
+      allLevels = allLevels.Where(x => !solutions.ContainsKey(x)).ToArray();
+
+      selectedLevelId = allLevels[new Random().Next(allLevels.Length)];
+
+      var level = await DownloadLevelAsync("http://www.game-sokoban.com/index.php?mode=level&lid=" + selectedLevelId);
 
       InitGame(level);
 
@@ -198,6 +226,7 @@ namespace SokoWahnWinPhone
       return felder[x + y * breite] != '#';
     }
 
+    int selectedLevelId;
     SokowahnField playField;
 
     SokowahnField drawField;
@@ -310,7 +339,33 @@ namespace SokoWahnWinPhone
     {
       undoList.Push(playField.GetGameState());
       UpdateScreen(playField);
-      if (playField.boxesRemain == 0) Application.Current.Exit();
+      if (playField.boxesRemain == 0) // Ziel erreicht?
+      {
+        var solutionChars = new StringBuilder();
+        var lastState = undoList.Last();
+        foreach (var state in undoList.Reverse().Skip(1))
+        {
+          ushort lastPos = lastState[0];
+          ushort pos = state[0];
+          bool boxMove = lastState.Contains(pos);
+
+          if (lastPos - 1 == pos) solutionChars.Append(boxMove ? 'L' : 'l');
+          if (lastPos + 1 == pos) solutionChars.Append(boxMove ? 'R' : 'r');
+          if (lastPos - playField.width == pos) solutionChars.Append(boxMove ? 'U' : 'u');
+          if (lastPos + playField.width == pos) solutionChars.Append(boxMove ? 'D' : 'd');
+
+          lastState = state;
+        }
+
+        LoadSolutionsAsync().ContinueWith(solutionsTask =>
+        {
+          var solutions = solutionsTask.Result;
+          solutions.Add(selectedLevelId, solutionChars.ToString());
+          SaveSolutions(solutions);
+
+          Application.Current.Exit();
+        });
+      }
     }
 
     private void ButtonLeft_Click(object sender, RoutedEventArgs e)
