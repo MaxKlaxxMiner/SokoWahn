@@ -21,6 +21,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -30,6 +32,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -44,9 +48,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Draw\RawBitmap.cs" />
+    <Compile Include="Draw\DrawSkin.cs" />
     <Compile Include="Draw\DrawSystem.cs" />
+    <Compile Include="Draw\RectInt.cs" />
     <Compile Include="Draw\SizeInt.cs" />
     <Compile Include="Draw\PointInt.cs" />
+    <Compile Include="Draw\SpriteParts.cs" />
+    <Compile Include="Draw\SpriteType.cs" />
+    <Compile Include="Draw\Unsafe.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

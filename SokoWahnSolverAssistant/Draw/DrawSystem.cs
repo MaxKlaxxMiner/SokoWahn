@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,7 +29,22 @@ namespace SokoWahnSolverAssistent.Draw
     /// <summary>
     /// Picturebox, welche zum Zeichnen des Spielfeldes verwendet werden soll
     /// </summary>
-    readonly PictureBox drawPictureBox;
+    readonly PictureBox pictureBox;
+
+    /// <summary>
+    /// aktuelles Bild, welches in der PictureBox dargestellt wird
+    /// </summary>
+    Bitmap pictureBitmap;
+
+    /// <summary>
+    /// Bitmap, welches zum eigentlichen Zeichnen verwendet wird
+    /// </summary>
+    RawBitmap drawBitmap;
+
+    /// <summary>
+    /// Skin, welches zum Zeichnen verwendet wird
+    /// </summary>
+    DrawSkin skin;
 
     /// <summary>
     /// Konstruktor
@@ -36,11 +53,37 @@ namespace SokoWahnSolverAssistent.Draw
     /// <param name="skinFile">Skin-Datei, welche zum Zeichnen verwendet werden soll</param>
     public DrawSystem(PictureBox drawPictureBox, string skinFile)
     {
-      if (!File.Exists(skinFile)) throw new FileNotFoundException(skinFile);
+      pictureBox = drawPictureBox;
+
+      skin = new DrawSkin(skinFile);
 
       drawPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+    }
 
-      this.drawPictureBox = drawPictureBox;
+    /// <summary>
+    /// erzeugt ein komplett neues Spielfeld
+    /// </summary>
+    void Init()
+    {
+      // alle Felder leeren, damit das gesamte Spielfeld neu gezeichnet
+      Array.Clear(drawField.fieldData, 0, drawField.fieldData.Length);
+      pictureBitmap = new Bitmap(drawField.width * skin.spriteSize.w, drawField.height * skin.spriteSize.h, PixelFormat.Format32bppArgb);
+      pictureBox.Image = pictureBitmap;
+      drawBitmap = new RawBitmap(pictureBitmap);
+    }
+
+    /// <summary>
+    /// gibt an, ob das Feld nicht zu den Wand-Teilen dazu gehört
+    /// </summary>
+    /// <param name="fieldChars">Spielfeld mit den entsprechenden Zeichen</param>
+    /// <param name="x">X-Position auf dem Spielfeld</param>
+    /// <param name="y">Y-Position auf dem Spielfeld</param>
+    /// <param name="fieldWidth">Breite des Spielfeldes</param>
+    /// <returns>true, wenn es keine Wand ist</returns>
+    static bool CheckField(char[] fieldChars, int x, int y, int fieldWidth)
+    {
+      if (x < 0 || y < 0 || x >= fieldWidth || y * fieldWidth >= fieldChars.Length) return true;
+      return fieldChars[x + y * fieldWidth] != '#';
     }
 
     /// <summary>
@@ -75,49 +118,48 @@ namespace SokoWahnSolverAssistent.Draw
           if (y > maxField.y) maxField.y = y;
 
           drawData[x + y * w] = c;
+          skin.BlitSprite(drawBitmap, x, y, SpriteType.Empty);
           switch (c)
           {
-          //  case ' ': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); break;
-          //  case '.': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.FreiZiel); break;
-          //  case '$': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.KisteOffen); break;
-          //  case '*': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.KisteZiel); break;
-          //  case '@': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.Spieler); break;
-          //  case '+': MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei); MaleTestbild(viewContext, skinContext, x, y, BildElement.FreiZiel); MaleTestbild(viewContext, skinContext, x, y, BildElement.Spieler); break;
-          //  case '#':
-          //  {
-          //    MaleTestbild(viewContext, skinContext, x, y, BildElement.Frei);
+            case ' ': break;
+            case '.': skin.BlitSprite(drawBitmap, x, y, SpriteType.EmptyFinish); break;
+            case '$': skin.BlitSprite(drawBitmap, x, y, SpriteType.Box); break;
+            case '*': skin.BlitSprite(drawBitmap, x, y, SpriteType.BoxFinish); break;
+            case '@': skin.BlitSprite(drawBitmap, x, y, SpriteType.Player); break;
+            case '+': skin.BlitSprite(drawBitmap, x, y, SpriteType.EmptyFinish); skin.BlitSprite(drawBitmap, x, y, SpriteType.Player); break;
+            case '#':
+            {
+              var lo = SpriteType.WallFill;
+              var ro = SpriteType.WallFill;
+              var lu = SpriteType.WallFill;
+              var ru = SpriteType.WallFill;
 
-          //    var lo = BildElement.WandVoll;
-          //    var ro = BildElement.WandVoll;
-          //    var lu = BildElement.WandVoll;
-          //    var ru = BildElement.WandVoll;
+              if (CheckField(f, x - 1, y, w) && CheckField(f, x, y - 1, w)) lo = SpriteType.WallEdge;
+              if (CheckField(f, x - 1, y, w) && !CheckField(f, x, y - 1, w)) lo = SpriteType.WallVertical;
+              if (!CheckField(f, x - 1, y, w) && CheckField(f, x, y - 1, w)) lo = SpriteType.WallHorizon;
+              if (!CheckField(f, x - 1, y, w) && !CheckField(f, x, y - 1, w)) lo = CheckField(f, x - 1, y - 1, w) ? SpriteType.WallCorner : SpriteType.WallFill;
 
-          //    if (GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandSpitzen;
-          //    if (GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = BildElement.WandSenkrecht;
-          //    if (!GetF(f, x - 1, y, w) && GetF(f, x, y - 1, w)) lo = BildElement.WandWaagerecht;
-          //    if (!GetF(f, x - 1, y, w) && !GetF(f, x, y - 1, w)) lo = GetF(f, x - 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (CheckField(f, x + 1, y, w) && CheckField(f, x, y - 1, w)) ro = SpriteType.WallEdge;
+              if (CheckField(f, x + 1, y, w) && !CheckField(f, x, y - 1, w)) ro = SpriteType.WallVertical;
+              if (!CheckField(f, x + 1, y, w) && CheckField(f, x, y - 1, w)) ro = SpriteType.WallHorizon;
+              if (!CheckField(f, x + 1, y, w) && !CheckField(f, x, y - 1, w)) ro = CheckField(f, x + 1, y - 1, w) ? SpriteType.WallCorner : SpriteType.WallFill;
 
-          //    if (GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandSpitzen;
-          //    if (GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = BildElement.WandSenkrecht;
-          //    if (!GetF(f, x + 1, y, w) && GetF(f, x, y - 1, w)) ro = BildElement.WandWaagerecht;
-          //    if (!GetF(f, x + 1, y, w) && !GetF(f, x, y - 1, w)) ro = GetF(f, x + 1, y - 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (CheckField(f, x - 1, y, w) && CheckField(f, x, y + 1, w)) lu = SpriteType.WallEdge;
+              if (CheckField(f, x - 1, y, w) && !CheckField(f, x, y + 1, w)) lu = SpriteType.WallVertical;
+              if (!CheckField(f, x - 1, y, w) && CheckField(f, x, y + 1, w)) lu = SpriteType.WallHorizon;
+              if (!CheckField(f, x - 1, y, w) && !CheckField(f, x, y + 1, w)) lu = CheckField(f, x - 1, y + 1, w) ? SpriteType.WallCorner : SpriteType.WallFill;
 
-          //    if (GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandSpitzen;
-          //    if (GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = BildElement.WandSenkrecht;
-          //    if (!GetF(f, x - 1, y, w) && GetF(f, x, y + 1, w)) lu = BildElement.WandWaagerecht;
-          //    if (!GetF(f, x - 1, y, w) && !GetF(f, x, y + 1, w)) lu = GetF(f, x - 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
+              if (CheckField(f, x + 1, y, w) && CheckField(f, x, y + 1, w)) ru = SpriteType.WallEdge;
+              if (CheckField(f, x + 1, y, w) && !CheckField(f, x, y + 1, w)) ru = SpriteType.WallVertical;
+              if (!CheckField(f, x + 1, y, w) && CheckField(f, x, y + 1, w)) ru = SpriteType.WallHorizon;
+              if (!CheckField(f, x + 1, y, w) && !CheckField(f, x, y + 1, w)) ru = CheckField(f, x + 1, y + 1, w) ? SpriteType.WallCorner : SpriteType.WallFill;
 
-          //    if (GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandSpitzen;
-          //    if (GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = BildElement.WandSenkrecht;
-          //    if (!GetF(f, x + 1, y, w) && GetF(f, x, y + 1, w)) ru = BildElement.WandWaagerecht;
-          //    if (!GetF(f, x + 1, y, w) && !GetF(f, x, y + 1, w)) ru = GetF(f, x + 1, y + 1, w) ? BildElement.WandEcken : BildElement.WandVoll;
-
-          //    MaleTestbild(viewContext, skinContext, x, y, lo, BildTeile.LinksOben);
-          //    MaleTestbild(viewContext, skinContext, x, y, ro, BildTeile.RechtsOben);
-          //    MaleTestbild(viewContext, skinContext, x, y, lu, BildTeile.LinksUnten);
-          //    MaleTestbild(viewContext, skinContext, x, y, ru, BildTeile.RechtsUnten);
-          //  } break;
-            default: break; // throw new Exception("unknown Char: '" + c + "'");
+              skin.BlitSprite(drawBitmap, x, y, lo, SpriteParts.TopLeft);
+              skin.BlitSprite(drawBitmap, x, y, ro, SpriteParts.TopRight);
+              skin.BlitSprite(drawBitmap, x, y, lu, SpriteParts.BottomLeft);
+              skin.BlitSprite(drawBitmap, x, y, ru, SpriteParts.BottomRight);
+            } break;
+            default: throw new Exception("unknown Char: '" + c + "'");
           }
         }
       }
@@ -126,18 +168,8 @@ namespace SokoWahnSolverAssistent.Draw
       {
         maxField.x = maxField.x - minField.x + 1;
         maxField.y = maxField.y - minField.y + 1;
-        //viewContext.Present(minField.x * BoxPixelWidth, minField.y * BoxPixelHeight, maxField.x * BoxPixelWidth, maxField.y * BoxPixelHeight);
+        drawBitmap.Present(pictureBitmap, minField.x * skin.spriteSize.w, minField.y * skin.spriteSize.h, maxField.x * skin.spriteSize.w, maxField.y * skin.spriteSize.h);
       }
     }
-
-    /// <summary>
-    /// erzeugt ein komplett neues Spielfeld
-    /// </summary>
-    void Init()
-    {
-      // alle Felder leeren, damit das gesamte Spielfeld neu gezeichnet
-      Array.Clear(drawField.fieldData, 0, drawField.fieldData.Length);
-    }
-
   }
 }
