@@ -1,6 +1,11 @@
 
 --- Basis-Spiel erstellen ---
 
+- einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
+- grundlegende Spielfunktionen mit Zielerkennung hinzufügen
+- grafische Darstellung des Spielfeldes
+- reale Spielbarkeit einbauen
+
 
 --- Helper: einfachen Blocker erstellen (verbotene Stellungen für Kisten markieren) ---
 
