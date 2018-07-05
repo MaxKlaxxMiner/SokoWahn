@@ -2,9 +2,47 @@
 --- Basis-Spiel erstellen ---
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
+-- Konstruktor mit Textfeld/Textdatei
+--- maximale Anzahl der Spalten ermitteln
+--- maximale Anzahl der Zeilen ermitteln
+--- Spielfeld zeichenbasiert einlesen (unbekannte Zeichen durch Leerzeichen ersetzen)
+--- trimen von leeren Randbereichen
+--- Spieler suchen und Position merken (nur genau einer Spieler darf vorhanden sein)
+--- Ziele zählen
+--- Kisten zählen und mit Ziele vergleichen
+-- Ausgabe-Funktionen
+--- Einzel-Abfrage bestimmter Felder
+--- Komplett-Ausgabe textbasiert (für Debug-Zwecke)
 - grundlegende Spielfunktionen mit Zielerkennung hinzufügen
-- grafische Darstellung des Spielfeldes
+-- Spielerbewegung, jeweils: links, rechts, oben und unten
+--- prüfen, ob der Schritt erlaubt ist
+---- Weg ist durch eine Mauer blockiert
+---- Laufbarkeit in ein leeres benachbartes Feld
+---- Verschiebbarkeit einer anliegenden Kiste im benachbarten Feld
+---- anliegende Kiste, welche nicht verschiebbar ist
+--- Bewegung ausführen
+---- laufen (ohne Kiste)
+---- schieben (mit Kiste)
+----- prüfen ob die geschobene Kiste ein Ziel erreicht hat -> ggf. prüfen, ob alle Kisten ein Ziel erreicht haben und das Spiel fertig ist
+---- Schritte jeder Art merken
+----- Rückwärts-Funktion hinzufügen
+------ Einzel-Schritt-Variante
+------ Letzter-Kistenwechsel-Variante
 - reale Spielbarkeit einbauen
+-- einfache Text-Ausgabe des Spielfeldes
+-- Tasten abfragen (links, rechts, oben, unten und zurück)
+-- prüfen, Spielzüge möglich sind
+--- Bewegungscheck, ob Zug erlaubt ist
+--- wurde die End-Stellung bereits erreicht
+-- entsprechend erlaubte Spielzüge durchführen
+--- sichbare Ausgabe erneuern
+- grafische Darstellung des Spielfeldes
+
+
+--- Helper: einfache Suche nach direkt kürzeren Laufwegen ---
+
+
+--- Helper: Klickbarkeit auf ein Feld, wohin sich der Spieler direkt bewegen soll ---
 
 
 --- Helper: einfachen Blocker erstellen (verbotene Stellungen für Kisten markieren) ---
