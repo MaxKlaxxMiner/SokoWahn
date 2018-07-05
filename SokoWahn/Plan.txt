@@ -1,0 +1,29 @@
+
+--- Basis-Spiel erstellen ---
+
+
+--- Helper: einfachen Blocker erstellen (verbotene Stellungen für Kisten markieren) ---
+
+
+--- Helper: drag & drop für einfache Kisten hinzufügen ---
+
+
+--- Helper: drag & drop für komplexe Kisten-Kombination hinzufügen ---
+
+
+--- Helper: drag & drop für nachträglich korrigerbare Kisten hinzufügen ---
+
+
+--- Speed: Felder-Logik aufbauen (64-Bit optimierte Bitmap, 2 Bits pro Spielfeld) ---
+
+
+--- Speed: Laufwege-Map erstellen ---
+
+
+--- Solver: kisten-basierete Brute Force Suche (vorwärts & rückwärts, um gezielte Teil- und/oder Komplettlösungen zu erreichen) ---
+
+
+--- Scanner: Kistenwege-Map erstellen, ob und wie schnell (steps) eine Kiste ein bestimmtes Ziel erreichen kann (durch Rückwärts-Suche und mit Erweiterung auf Multi-Kisten) ---
+
+
+--- Optimizer: laufwege-basierte Brute Force Suche (vorwärts & rückwärts, um optimale Lösungen für Teil- und/oder Komplettlösungen zu erreichen) ---
