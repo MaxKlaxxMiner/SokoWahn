@@ -62,6 +62,17 @@ namespace SokoWahnLib
           }
         }
       }
+
+      // --- Spielfeld trimmen (sofern möglich) ---
+      int cutLeft = 0;
+      for (int x = width - 1; x >= 0; x--)
+      {
+        for (int y = 0; y < height; y++)
+        {
+          if (field[x + y * width] != ' ') cutLeft = x; // Spalte mit Inhalt gefunden -> maximal erst ab dort abschneiden
+        }
+      }
+
     }
   }
 }

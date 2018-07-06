@@ -15,7 +15,6 @@
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
 -- Konstruktor mit Textfeld/Textdatei
 --- trimmen von leeren Randbereichen
----- leere Spalten links zählen
 ---- leere Spelten rechts zählen
 ---- leere Zeilen oben zählen
 ---- leere Zeilen unten zählen

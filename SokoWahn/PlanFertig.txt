@@ -19,3 +19,5 @@
 --- maximale Anzahl der Spalten ermitteln
 --- Größe des Spielfeldes prüfen
 --- Spielfeld zeichenbasiert einlesen (unbekannte Zeichen durch Leerzeichen ersetzen)
+--- trimmen von leeren Randbereichen
+---- leere Spalten links zählen
