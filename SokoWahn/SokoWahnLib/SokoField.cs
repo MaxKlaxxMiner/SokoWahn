@@ -32,10 +32,14 @@ namespace SokoWahnLib
     /// <param name="txtField">komplettes Spielfeld im Textformat</param>
     public SokoField(string txtField)
     {
+      if (string.IsNullOrWhiteSpace(txtField)) throw new SokoFieldException("empty field");
+
       // --- Spielfeld einlesen ---
       var lines = txtField.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
       width = lines.Max(line => line.Length);
       height = lines.Length;
+      if (width * height < 3) throw new SokoFieldException("invalid field-size");
+
       var field = new char[width * height];
       for (int y = 0; y < height; y++)
       {

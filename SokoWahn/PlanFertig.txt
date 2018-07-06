@@ -17,4 +17,5 @@
 -- Konstruktor mit Textfeld/Textdatei
 --- maximale Anzahl der Zeilen ermitteln
 --- maximale Anzahl der Spalten ermitteln
+--- Größe des Spielfeldes prüfen
 --- Spielfeld zeichenbasiert einlesen (unbekannte Zeichen durch Leerzeichen ersetzen)
