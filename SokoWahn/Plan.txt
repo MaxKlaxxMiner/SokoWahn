@@ -14,7 +14,6 @@
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
 -- Konstruktor mit Textfeld/Textdatei
---- Spielfeld zeichenbasiert einlesen (unbekannte Zeichen durch Leerzeichen ersetzen)
 --- trimen von leeren Randbereichen
 --- Spieler suchen und Position merken (nur genau einer Spieler darf vorhanden sein)
 --- Ziele zählen
