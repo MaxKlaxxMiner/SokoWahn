@@ -1,8 +1,6 @@
 
 --- Projekte erstellen und einrichten ---
 
-- SokoWahnLib erstellen (Klassenbibliothek)
--- Unsafe erlauben
 - TestTool erstellen (Konsolenprogramm)
 -- Projekt erstellen und zur Solution hinzufügen
 -- Projekt auf AnyCpu umstellen

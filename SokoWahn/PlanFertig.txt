@@ -3,3 +3,4 @@
 
 - SokoWahnLib erstellen (Klassenbibliothek)
 -- Projekt erstellen und zur Solution hinzufügen
+-- Unsafe erlauben
