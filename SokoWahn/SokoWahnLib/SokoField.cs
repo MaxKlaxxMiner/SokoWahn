@@ -81,6 +81,15 @@ namespace SokoWahnLib
           if (field[x + y * width] != ' ') cutRight = width - x - 1; // weitere rechte Spalte mit Inhalt gefunden -> maximal erst ab dort abschneiden
         }
       }
+
+      int cutTop = 0;
+      for (int y = height - 1; y >= 0; y--)
+      {
+        for (int x = 0; x < width; x++)
+        {
+          if (field[x + y * width] != ' ') cutTop = y; // weitere obere Zeile mit Inhalt gefunden -> maximal erst ab dort abschneiden
+        }
+      }
     }
   }
 }
