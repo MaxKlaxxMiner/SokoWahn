@@ -23,3 +23,4 @@
 ---- leere Spalten links zählen
 ---- leere Spelten rechts zählen
 ---- leere Zeilen oben zählen
+---- leere Zeilen unten zählen
