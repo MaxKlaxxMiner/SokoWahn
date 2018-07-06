@@ -1,7 +1,7 @@
 
 --- Projekte erstellen und einrichten ---
 
-- TestTool erstellen (Konsolenprogramm)
+- SokoWahnTool erstellen (Konsolenprogramm)
 -- Projekt erstellen und zur Solution hinzufügen
 -- Projekt auf AnyCpu umstellen
 -- SokoWahnLib verweisen
