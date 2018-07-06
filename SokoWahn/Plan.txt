@@ -13,7 +13,6 @@
 --- Basis-Spiel erstellen ---
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
--- eigene Exception-Klasse für fehlerhafte Spielfelder
 -- Konstruktor mit Textfeld/Textdatei
 --- Größe des Spielfeldes prüfen
 --- trimen von leeren Randbereichen

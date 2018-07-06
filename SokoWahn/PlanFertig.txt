@@ -13,6 +13,7 @@
 --- Basis-Spiel erstellen ---
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
+-- eigene Exception-Klasse für fehlerhafte Spielfelder
 -- Konstruktor mit Textfeld/Textdatei
 --- maximale Anzahl der Zeilen ermitteln
 --- maximale Anzahl der Spalten ermitteln
