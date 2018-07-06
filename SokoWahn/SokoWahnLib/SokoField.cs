@@ -64,7 +64,7 @@ namespace SokoWahnLib
       }
 
       // --- Spielfeld trimmen (sofern möglich) ---
-      int cutLeft = 0;
+      int cutLeft = -1;
       for (int x = width - 1; x >= 0; x--)
       {
         for (int y = 0; y < height; y++)
@@ -73,7 +73,7 @@ namespace SokoWahnLib
         }
       }
 
-      int cutRight = 0;
+      int cutRight = -1;
       for (int x = 0; x < width; x++)
       {
         for (int y = 0; y < height; y++)
@@ -82,7 +82,7 @@ namespace SokoWahnLib
         }
       }
 
-      int cutTop = 0;
+      int cutTop = -1;
       for (int y = height - 1; y >= 0; y--)
       {
         for (int x = 0; x < width; x++)
@@ -91,7 +91,7 @@ namespace SokoWahnLib
         }
       }
 
-      int cutBottom = 0;
+      int cutBottom = -1;
       for (int y = 0; y < height; y++)
       {
         for (int x = 0; x < width; x++)
@@ -99,6 +99,8 @@ namespace SokoWahnLib
           if (field[x + y * width] != ' ') cutBottom = height - y - 1; // weitere untere Zeile mit Inhalt gefunden -> maximal erst ab dort abschneiden
         }
       }
+
+      if (cutLeft < 0 || cutRight < 0 || cutTop < 0 || cutBottom < 0) throw new SokoFieldException("empty field");
     }
   }
 }
