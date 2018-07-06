@@ -15,3 +15,4 @@
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
 -- Konstruktor mit Textfeld/Textdatei
 --- maximale Anzahl der Zeilen ermitteln
+--- maximale Anzahl der Spalten ermitteln
