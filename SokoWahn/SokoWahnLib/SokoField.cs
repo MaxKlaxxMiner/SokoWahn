@@ -25,7 +25,12 @@ namespace SokoWahnLib
     /// Höhe des Spielfeldes in Zeilen
     /// </summary>
     public readonly int height;
+    /// <summary>
+    /// die Daten des Spielfeldes (Größe: width * height)
+    /// </summary>
+    public readonly char[] field;
 
+    #region # // --- Konstruktor ---
     /// <summary>
     /// Konstruktor
     /// </summary>
@@ -101,6 +106,31 @@ namespace SokoWahnLib
       }
 
       if (cutLeft < 0 || cutRight < 0 || cutTop < 0 || cutBottom < 0) throw new SokoFieldException("empty field");
+
+      if (cutLeft + cutRight + cutTop + cutBottom > 0) // Trim durchführen (sofern notwendig)
+      {
+        int oldWidth = width;
+        width -= cutLeft;
+        width -= cutRight;
+        height -= cutTop;
+        height -= cutBottom;
+        this.field = new char[width * height]; // Neues kleineres Spielfeld erstellen
+        // Spielfeld Inhalt kopieren
+        for (int y = 0; y < height; y++)
+        {
+          for (int x = 0; x < width; x++)
+          {
+            this.field[x + y * width] = field[cutLeft + x + (cutTop + y) * oldWidth];
+          }
+        }
+        // End-Größe erneut prüfen
+        if (width * height < 3) throw new SokoFieldException("invalid field-size");
+      }
+      else
+      {
+        this.field = field; // Spielfeld würde nicht geändert und kann direkt verwendet werden
+      }
     }
+    #endregion
   }
 }
