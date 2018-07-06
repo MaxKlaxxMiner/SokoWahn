@@ -4,3 +4,5 @@
 - SokoWahnLib erstellen (Klassenbibliothek)
 -- Projekt erstellen und zur Solution hinzufügen
 -- Unsafe erlauben
+- SokoWahnTool erstellen (Konsolenprogramm)
+-- Projekt erstellen und zur Solution hinzufügen
