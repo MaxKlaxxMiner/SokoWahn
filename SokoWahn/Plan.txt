@@ -2,7 +2,6 @@
 --- Projekte erstellen und einrichten ---
 
 - SokoWahnTool erstellen (Konsolenprogramm)
--- Projekt auf AnyCpu umstellen
 -- SokoWahnLib verweisen
 - SokoWahnHelper erstellen (Window-Forms Programm)
 -- Projekt erstellen und zur Solution hinzufügen

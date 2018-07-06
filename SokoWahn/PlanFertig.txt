@@ -6,3 +6,4 @@
 -- Unsafe erlauben
 - SokoWahnTool erstellen (Konsolenprogramm)
 -- Projekt erstellen und zur Solution hinzufügen
+-- Projekt auf AnyCpu umstellen
