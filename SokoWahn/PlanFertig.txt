@@ -8,3 +8,10 @@
 -- Projekt erstellen und zur Solution hinzufügen
 -- Projekt auf AnyCpu umstellen
 -- SokoWahnLib verweisen
+
+
+--- Basis-Spiel erstellen ---
+
+- einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
+-- Konstruktor mit Textfeld/Textdatei
+--- maximale Anzahl der Zeilen ermitteln
