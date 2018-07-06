@@ -2,7 +2,6 @@
 --- Projekte erstellen und einrichten ---
 
 - SokoWahnLib erstellen (Klassenbibliothek)
--- Projekt erstellen und zur Solution hinzufügen
 -- Unsafe erlauben
 - TestTool erstellen (Konsolenprogramm)
 -- Projekt erstellen und zur Solution hinzufügen
