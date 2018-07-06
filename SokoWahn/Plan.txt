@@ -1,13 +1,13 @@
 
 --- Projekte erstellen und einrichten ---
 
-- SokoWahnTool erstellen (Konsolenprogramm)
--- SokoWahnLib verweisen
 - SokoWahnHelper erstellen (Window-Forms Programm)
 -- Projekt erstellen und zur Solution hinzufügen
 -- Projekt auf AnyCpu umstellen
+-- SokoWahnLib verweisen
 - SokoWahnTest erstellen (Unit-Test)
 -- Projekt erstellen und zur Solution hinzufügen
+-- SokoWahnLib verweisen
 
 
 --- Basis-Spiel erstellen ---
