@@ -21,3 +21,4 @@
 --- Spielfeld zeichenbasiert einlesen (unbekannte Zeichen durch Leerzeichen ersetzen)
 --- trimmen von leeren Randbereichen
 ---- leere Spalten links zählen
+---- leere Spelten rechts zählen
