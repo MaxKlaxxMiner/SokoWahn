@@ -14,9 +14,6 @@
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
 -- Konstruktor mit Textfeld/Textdatei
---- Ziele zählen
---- Kisten zählen und mit Anzahl der Ziele vergleichen
---- Mindestanzahl von einer Kiste erwarten
 -- Ausgabe-Funktionen
 --- Einzel-Abfrage bestimmter Felder
 --- Komplett-Ausgabe textbasiert (für Debug-Zwecke)

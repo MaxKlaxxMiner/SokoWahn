@@ -27,3 +27,6 @@
 ---- auf ungültigen Zustand prüfen
 ---- Spielfeld zurecht schneiden (sofern notwendig)
 --- Spieler suchen und Position merken (nur genau einer Spieler darf vorhanden sein)
+--- Ziele zählen
+--- Kisten zählen und mit Anzahl der Ziele vergleichen
+--- Mindestanzahl von einer Kiste erwarten
