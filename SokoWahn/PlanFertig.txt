@@ -26,3 +26,4 @@
 ---- leere Zeilen unten zählen
 ---- auf ungültigen Zustand prüfen
 ---- Spielfeld zurecht schneiden (sofern notwendig)
+--- Spieler suchen und Position merken (nur genau einer Spieler darf vorhanden sein)

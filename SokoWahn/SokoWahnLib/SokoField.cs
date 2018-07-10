@@ -30,6 +30,11 @@ namespace SokoWahnLib
     /// </summary>
     public readonly char[] field;
 
+    /// <summary>
+    /// die aktuelle Spielerposition
+    /// </summary>
+    public int playerPos;
+
     #region # // --- Konstruktor ---
     /// <summary>
     /// Konstruktor
@@ -39,7 +44,7 @@ namespace SokoWahnLib
     {
       if (string.IsNullOrWhiteSpace(txtField)) throw new SokoFieldException("empty field");
 
-      // --- Spielfeld einlesen ---
+      #region # // --- Spielfeld einlesen ---
       var lines = txtField.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n');
       width = lines.Max(line => line.Length);
       height = lines.Length;
@@ -67,8 +72,9 @@ namespace SokoWahnLib
           }
         }
       }
+      #endregion
 
-      // --- Spielfeld trimmen (sofern möglich) ---
+      #region # // --- Spielfeld trimmen (sofern möglich) ---
       int cutLeft = -1;
       for (int x = width - 1; x >= 0; x--)
       {
@@ -130,6 +136,19 @@ namespace SokoWahnLib
       {
         this.field = field; // Spielfeld würde nicht geändert und kann direkt verwendet werden
       }
+      #endregion
+
+      #region # // --- Spieler suchen ---
+      playerPos = -1;
+      for (int i = 0; i < field.Length; i++)
+      {
+        if (field[i] == '@' || field[i] == '+') // Feld mit Spieler gefunden?
+        {
+          if (playerPos >= 0) throw new SokoFieldException("duplicate player found");
+          playerPos = i;
+        }
+      }
+      #endregion
     }
     #endregion
   }
