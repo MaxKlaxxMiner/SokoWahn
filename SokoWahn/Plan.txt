@@ -13,26 +13,30 @@
 --- Basis-Spiel erstellen ---
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
--- Konstruktor mit Textfeld/Textdatei
--- Ausgabe-Funktionen
---- Einzel-Abfrage bestimmter Felder
---- Komplett-Ausgabe textbasiert (für Debug-Zwecke)
-- grundlegende Spielfunktionen mit Zielerkennung hinzufügen
--- Spielerbewegung, jeweils: links, rechts, oben und unten
---- prüfen, ob der Schritt erlaubt ist
----- Weg ist durch eine Mauer blockiert
----- Laufbarkeit in ein leeres benachbartes Feld
----- Verschiebbarkeit einer anliegenden Kiste im benachbarten Feld
----- anliegende Kiste, welche nicht verschiebbar ist
---- Bewegung ausführen
----- laufen (ohne Kiste)
----- schieben (mit Kiste)
------ prüfen ob die geschobene Kiste ein Ziel erreicht hat -> ggf. prüfen, ob alle Kisten ein Ziel erreicht haben und das Spiel fertig ist
----- Schritte jeder Art merken
------ Rückwärts-Funktion hinzufügen
------- Einzel-Schritt-Variante
------- Letzter-Kistenwechsel-Variante
-- reale Spielbarkeit einbauen
+-- allgemeines Interface und entsprechende Methoden für das Spielfeld erstellen
+--- Abfrage-Property für die Breite des Spielfeldes
+--- Abfrage-Property für die Höhe des Spielfeldes
+--- Abfrage-Property für Spieler-Position (pos: x + y * Breite)
+--- Abfrage-Methode eines bestimmten Spielfeldes (pos: x + y * Breite)
+--- Abfrage-Property, ob das Spielende bereits erreicht wurde
+--- Abfrage-Property, wieviele Spielzüge bereits gemacht wurden (moves)
+--- Abfrage-Property, wieviele Kistenzüge bereits gemacht wurden (pushes)
+--- grundlegende Spielfunktionen mit Zielerkennung hinzufügen
+---- Spielerbewegung, jeweils: links, rechts, oben und unten
+----- prüfen, ob der Schritt erlaubt ist
+------ Weg ist durch eine Mauer blockiert
+------ Laufbarkeit in ein leeres benachbartes Feld
+------ Verschiebbarkeit einer anliegenden Kiste im benachbarten Feld
+------ anliegende Kiste, welche nicht verschiebbar ist
+----- Bewegung ausführen
+------ laufen (ohne Kiste)
+------ schieben (mit Kiste)
+------- prüfen ob die geschobene Kiste ein Ziel erreicht hat -> ggf. prüfen, ob alle Kisten ein Ziel erreicht haben und das Spiel fertig ist
+------ Schritte jeder Art merken
+------- Rückwärts-Funktion hinzufügen
+-------- Einzel-Schritt-Variante
+-------- Letzter-Kistenwechsel-Variante
+- reale Spielbarkeit hinzufügen
 -- einfache Text-Ausgabe des Spielfeldes
 -- Tasten abfragen (links, rechts, oben, unten und zurück)
 -- prüfen, Spielzüge möglich sind
