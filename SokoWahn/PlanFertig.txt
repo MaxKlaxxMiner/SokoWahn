@@ -30,3 +30,5 @@
 --- Ziele zählen
 --- Kisten zählen und mit Anzahl der Ziele vergleichen
 --- Mindestanzahl von einer Kiste erwarten
+-- allgemeines Interface und entsprechende Methoden für das Spielfeld erstellen
+--- Abfrage-Property für die Breite des Spielfeldes

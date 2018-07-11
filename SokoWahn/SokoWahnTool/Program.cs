@@ -27,6 +27,8 @@ namespace SokoWahnTool
             #     #########
             #######
       ");
+
+      ISokoField iField = field;
     }
   }
 }

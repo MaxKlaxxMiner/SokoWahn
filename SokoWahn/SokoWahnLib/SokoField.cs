@@ -15,7 +15,7 @@ namespace SokoWahnLib
   /// <summary>
   /// Klasse für ein komplettes SokoWahn-Spielfeld
   /// </summary>
-  public class SokoField
+  public class SokoField : ISokoField
   {
     /// <summary>
     /// Breite des Spielfeldes in Spalten
@@ -166,6 +166,13 @@ namespace SokoWahnLib
       if (boxPositions.Length > targetPositions.Length) throw new SokoFieldException("more boxes than targets (" + boxPositions.Length + " > " + targetPositions.Length + ")");
       #endregion
     }
+    #endregion
+
+    #region # // --- ISokoField ---
+    /// <summary>
+    /// gibt die Breite des Spielfeldes zurück
+    /// </summary>
+    public int Width { get { return width; } }
     #endregion
   }
 }
