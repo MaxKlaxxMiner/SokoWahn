@@ -14,10 +14,7 @@
 
 - einfaches Spielfeld erstellen (Textbasiert) mit Test-Map
 -- allgemeines Interface und entsprechende Methoden für das Spielfeld erstellen
---- Abfrage-Property, ob das Spielende bereits erreicht wurde
---- Abfrage-Property, wieviele Spielzüge bereits gemacht wurden (moves)
---- Abfrage-Property, wieviele Kistenzüge bereits gemacht wurden (pushes)
---- grundlegende Spielfunktionen mit Zielerkennung hinzufügen
+--- grundlegende Spielfunktionen hinzufügen
 ---- Spielerbewegung, jeweils: links, rechts, oben und unten
 ----- prüfen, ob der Schritt erlaubt ist
 ------ Weg ist durch eine Mauer blockiert
@@ -27,7 +24,6 @@
 ----- Bewegung ausführen
 ------ laufen (ohne Kiste)
 ------ schieben (mit Kiste)
-------- prüfen ob die geschobene Kiste ein Ziel erreicht hat -> ggf. prüfen, ob alle Kisten ein Ziel erreicht haben und das Spiel fertig ist
 ------ Schritte jeder Art merken
 ------- Rückwärts-Funktion hinzufügen
 -------- Einzel-Schritt-Variante
@@ -37,8 +33,11 @@
 -- Tasten abfragen (links, rechts, oben, unten und zurück)
 -- prüfen, Spielzüge möglich sind
 --- Bewegungscheck, ob Zug erlaubt ist
+--- generische Erweiterungsmethode, ob das Spielende bereits erreicht wurde
 --- wurde die End-Stellung bereits erreicht
 -- entsprechend erlaubte Spielzüge durchführen
+-- zählen, wieviele Spielzüge bereits gemacht wurden (moves)
+-- zählen, wieviele Kistenzüge bereits gemacht wurden (pushes)
 --- sichbare Ausgabe erneuern
 - grafische Darstellung des Spielfeldes
 
