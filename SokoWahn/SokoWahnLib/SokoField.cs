@@ -173,6 +173,23 @@ namespace SokoWahnLib
     /// gibt die Breite des Spielfeldes zurück
     /// </summary>
     public int Width { get { return width; } }
+    /// <summary>
+    /// gibt die Höhe des Spielfeldes zurück
+    /// </summary>
+    public int Height { get { return height; } }
+    /// <summary>
+    /// gibt die aktuelle Spielerposition zurück (pos: x + y * Width)
+    /// </summary>
+    public int PlayerPos { get { return playerPos; } }
+    /// <summary>
+    /// gibt den Inhalt des Spielfeldes an einer bestimmten Position zurück
+    /// </summary>
+    /// <param name="pos">Position des Spielfeldes, welches abgefragt werden soll (pos: x + y * Width)</param>
+    /// <returns>Inhalt des Spielfeldes</returns>
+    public char GetField(int pos)
+    {
+      return field[pos];
+    }
     #endregion
   }
 }

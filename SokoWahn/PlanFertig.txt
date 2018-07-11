@@ -32,3 +32,6 @@
 --- Mindestanzahl von einer Kiste erwarten
 -- allgemeines Interface und entsprechende Methoden für das Spielfeld erstellen
 --- Abfrage-Property für die Breite des Spielfeldes
+--- Abfrage-Property für die Höhe des Spielfeldes
+--- Abfrage-Property für Spieler-Position (pos: x + y * Breite)
+--- Abfrage-Methode eines bestimmten Spielfeldes (pos: x + y * Breite)
