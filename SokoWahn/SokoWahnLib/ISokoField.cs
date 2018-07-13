@@ -31,5 +31,10 @@ namespace SokoWahnLib
     /// <param name="pos">Position des Spielfeldes, welches abgefragt werden soll (pos: x + y * Width)</param>
     /// <returns>Inhalt des Spielfeldes</returns>
     char GetField(int pos);
+    /// <summary>
+    /// lässt den Spieler (ungeprüft) einen Spielzug durchführen
+    /// </summary>
+    /// <param name="move">Spielzug, welcher durchgeführt werden soll</param>
+    void Move(MoveType move);
   }
 }

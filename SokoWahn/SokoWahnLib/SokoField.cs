@@ -2,6 +2,7 @@
 // ReSharper disable RedundantUsingDirective
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -173,14 +174,17 @@ namespace SokoWahnLib
     /// gibt die Breite des Spielfeldes zurück
     /// </summary>
     public int Width { get { return width; } }
+
     /// <summary>
     /// gibt die Höhe des Spielfeldes zurück
     /// </summary>
     public int Height { get { return height; } }
+
     /// <summary>
     /// gibt die aktuelle Spielerposition zurück (pos: x + y * Width)
     /// </summary>
     public int PlayerPos { get { return playerPos; } }
+
     /// <summary>
     /// gibt den Inhalt des Spielfeldes an einer bestimmten Position zurück
     /// </summary>
@@ -189,6 +193,103 @@ namespace SokoWahnLib
     public char GetField(int pos)
     {
       return field[pos];
+    }
+
+    /// <summary>
+    /// lässt den Spieler (ungeprüft) einen Spielzug durchführen
+    /// </summary>
+    /// <param name="move">Spielzug, welcher durchgeführt werden soll</param>
+    public void Move(MoveType move)
+    {
+      // --- Spieler an der alten Position entfernen ---
+      Debug.Assert(field[playerPos] == '@' || field[playerPos] == '+');
+      field[playerPos] = field[playerPos] == '@' ? ' ' : '.';
+
+      switch (move)
+      {
+        // --- normales laufen auf leere Felder ---
+
+        case MoveType.Left:
+        {
+          Debug.Assert(playerPos % width > 0);
+          playerPos--;
+        } break;
+
+        case MoveType.Right:
+        {
+          Debug.Assert(playerPos % width < width - 1);
+          playerPos++;
+        } break;
+
+        case MoveType.Up:
+        {
+          Debug.Assert(playerPos > width - 1);
+          playerPos -= width;
+        } break;
+
+        case MoveType.Down:
+        {
+          Debug.Assert(playerPos / width < height - 1);
+          playerPos += width;
+        } break;
+
+
+        // --- mit Kisten schieben ---
+
+        case MoveType.LeftPush:
+        {
+          Debug.Assert(playerPos % width > 1);
+          playerPos--;
+
+          Debug.Assert(field[playerPos] == '$' || field[playerPos] == '*');
+          field[playerPos] = field[playerPos] == '$' ? ' ' : '.';
+
+          Debug.Assert(field[playerPos - 1] == ' ' || field[playerPos - 1] == '.');
+          field[playerPos - 1] = field[playerPos - 1] == ' ' ? '$' : '*';
+        } break;
+
+        case MoveType.RightPush:
+        {
+          Debug.Assert(playerPos % width < width - 2);
+          playerPos++;
+
+          Debug.Assert(field[playerPos] == '$' || field[playerPos] == '*');
+          field[playerPos] = field[playerPos] == '$' ? ' ' : '.';
+
+          Debug.Assert(field[playerPos + 1] == ' ' || field[playerPos + 1] == '.');
+          field[playerPos + 1] = field[playerPos + 1] == ' ' ? '$' : '*';
+        } break;
+
+        case MoveType.UpPush:
+        {
+          Debug.Assert(playerPos > width - 1);
+          playerPos -= width;
+
+          Debug.Assert(field[playerPos] == '$' || field[playerPos] == '*');
+          field[playerPos] = field[playerPos] == '$' ? ' ' : '.';
+
+          Debug.Assert(field[playerPos - width] == ' ' || field[playerPos - width] == '.');
+          field[playerPos - width] = field[playerPos - width] == ' ' ? '$' : '*';
+        } break;
+
+        case MoveType.DownPush:
+        {
+          Debug.Assert(playerPos / width < height - 2);
+          playerPos += width;
+
+          Debug.Assert(field[playerPos] == '$' || field[playerPos] == '*');
+          field[playerPos] = field[playerPos] == '$' ? ' ' : '.';
+
+          Debug.Assert(field[playerPos + width] == ' ' || field[playerPos + width] == '.');
+          field[playerPos + width] = field[playerPos + width] == ' ' ? '$' : '*';
+        } break;
+
+        default: throw new Exception("unknown Move-Type: " + move);
+      }
+
+      // --- Spieler an die neue Position setzen ---
+      Debug.Assert(field[playerPos] == ' ' || field[playerPos] == '.');
+      field[playerPos] = field[playerPos] == ' ' ? '@' : '+';
     }
     #endregion
   }

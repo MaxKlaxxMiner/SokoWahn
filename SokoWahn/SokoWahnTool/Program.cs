@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SokoWahnLib;
+// ReSharper disable BitwiseOperatorOnEnumWithoutFlags
 #endregion
 
 namespace SokoWahnTool
@@ -21,9 +22,9 @@ namespace SokoWahnTool
           ###  $##
           #  $ $ #
         ### # ## #   ######
-        #   #@## #####  ..#
+        #   # ## #####  ..#
         # $  $          ..#
-        ##### ### # ##  ..#
+        ##### ### #@##  ..#
             #     #########
             #######
       ");
@@ -53,19 +54,31 @@ namespace SokoWahnTool
         {
           case ConsoleKey.A:
           case ConsoleKey.LeftArrow:
-          case ConsoleKey.NumPad4: break; // links
+          case ConsoleKey.NumPad4:
+          {
+            if ((moves & MoveType.Left) != MoveType.None) iField.Move(moves & MoveType.LeftPush);
+          } break; // links
 
           case ConsoleKey.D:
           case ConsoleKey.RightArrow:
-          case ConsoleKey.NumPad6: break; // rechts
+          case ConsoleKey.NumPad6:
+          {
+            if ((moves & MoveType.Right) != MoveType.None) iField.Move(moves & MoveType.RightPush);
+          } break; // rechts
 
           case ConsoleKey.W:
           case ConsoleKey.UpArrow:
-          case ConsoleKey.NumPad8: break; // hoch
+          case ConsoleKey.NumPad8:
+          {
+            if ((moves & MoveType.Up) != MoveType.None) iField.Move(moves & MoveType.UpPush);
+          } break; // hoch
 
           case ConsoleKey.S:
           case ConsoleKey.DownArrow:
-          case ConsoleKey.NumPad2: break; // runter
+          case ConsoleKey.NumPad2:
+          {
+            if ((moves & MoveType.Down) != MoveType.None) iField.Move(moves & MoveType.DownPush);
+          } break; // runter
 
           case ConsoleKey.Delete:
           case ConsoleKey.Backspace: break; // Schritt zurück
