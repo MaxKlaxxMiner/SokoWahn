@@ -38,3 +38,5 @@
 - reale Spielbarkeit hinzufügen
 -- einfache Text-Ausgabe des Spielfeldes
 -- Tasten abfragen (links, rechts, oben, unten und zurück)
+-- prüfen, Spielzüge möglich sind
+--- Bewegungscheck, ob Zug erlaubt ist

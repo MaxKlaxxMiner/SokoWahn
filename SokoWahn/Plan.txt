@@ -30,7 +30,6 @@
 -------- Letzter-Kistenwechsel-Variante
 - reale Spielbarkeit hinzufügen
 -- prüfen, Spielzüge möglich sind
---- Bewegungscheck, ob Zug erlaubt ist
 --- generische Erweiterungsmethode, ob das Spielende bereits erreicht wurde
 --- wurde die End-Stellung bereits erreicht
 -- entsprechend erlaubte Spielzüge durchführen

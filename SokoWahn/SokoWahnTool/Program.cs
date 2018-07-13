@@ -21,9 +21,9 @@ namespace SokoWahnTool
           ###  $##
           #  $ $ #
         ### # ## #   ######
-        #   # ## #####  ..#
+        #   #@## #####  ..#
         # $  $          ..#
-        ##### ### #@##  ..#
+        ##### ### # ##  ..#
             #     #########
             #######
       ");
@@ -46,6 +46,8 @@ namespace SokoWahnTool
         Console.Write(iField.GetField(iField.PlayerPos)); // Spieler neu mit grüner Farbe ausgeben
         Console.Write('\b'); // ein Zeichen zurück springen, damit der blinkende Cursor wieder auf den Spieler zeigt
         Console.ForegroundColor = ConsoleColor.Gray; // Farbe zurück auf Default (grau) setzen
+
+        var moves = iField.GetMoveTypes(); // fragt die Bewegungsmöglichkeiten des Spieler ab
 
         switch (Console.ReadKey(true).Key)
         {
