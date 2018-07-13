@@ -29,7 +29,6 @@
 -------- Einzel-Schritt-Variante
 -------- Letzter-Kistenwechsel-Variante
 - reale Spielbarkeit hinzufügen
--- Tasten abfragen (links, rechts, oben, unten und zurück)
 -- prüfen, Spielzüge möglich sind
 --- Bewegungscheck, ob Zug erlaubt ist
 --- generische Erweiterungsmethode, ob das Spielende bereits erreicht wurde

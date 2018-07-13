@@ -37,3 +37,4 @@
 --- Abfrage-Methode eines bestimmten Spielfeldes (pos: x + y * Breite)
 - reale Spielbarkeit hinzufügen
 -- einfache Text-Ausgabe des Spielfeldes
+-- Tasten abfragen (links, rechts, oben, unten und zurück)

@@ -147,9 +147,9 @@ namespace SokoWahnLib
 
       #region # // --- Spieler suchen ---
       playerPos = -1;
-      for (int i = 0; i < field.Length; i++)
+      for (int i = 0; i < this.field.Length; i++)
       {
-        if (field[i] == '@' || field[i] == '+') // Feld mit Spieler gefunden?
+        if (this.field[i] == '@' || this.field[i] == '+') // Feld mit Spieler gefunden?
         {
           if (playerPos >= 0) throw new SokoFieldException("duplicate player found");
           playerPos = i;
