@@ -28,7 +28,23 @@ namespace SokoWahnTool
             #######
       ");
 
-      ISokoField iField = field;
+      ISokoField iField = field; // nur Interface abfragen
+
+      Console.Clear();
+      Console.WriteLine();
+      Console.WriteLine("    Size: {0} x {1}", iField.Width, iField.Height);
+      Console.WriteLine();
+      Console.WriteLine("  Player: {0}, {1}", iField.PlayerPos % iField.Width, iField.PlayerPos / iField.Width);
+      Console.WriteLine();
+      Console.WriteLine(iField.GetText()); // Spielfeld ausgeben
+
+#if DEBUG
+      if (Environment.CommandLine.Contains(".vshost.exe"))
+      {
+        Console.WriteLine("Press any key to continue . . .");
+        Console.ReadKey(false);
+      }
+#endif
     }
   }
 }
