@@ -161,19 +161,21 @@ namespace Sokosolver
 
     private void Form1_Load(object sender, EventArgs e)
     {
-      textBox4.Text = @"     #### 
-     #  ##
-     # $ #
-   ### # #
-  ##     #
-###   $ ##
-#  . $### 
-# @.  #   
-# #.#$#   
-#  .  #   
-#######   ";
+//      textBox4.Text = @"     #### 
+//     #  ##
+//     # $ #
+//   ### # #
+//  ##     #
+//###   $ ##
+//#  . $### 
+//# @.  #   
+//# #.#$#   
+//#  .  #   
+//#######   ";
 
-//      textBox4.Text = "216";
+      //textBox4.Text = "214";
+      textBox4.Text = "261";
+      //textBox4.Text = "216";
 
 #if DEBUG
       textBox5.Text = "-1";
