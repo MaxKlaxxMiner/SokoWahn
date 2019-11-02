@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable NotAccessedField.Global
 
@@ -44,6 +46,25 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public void Dispose()
     {
+      foreach (var portal in portals)
+      {
+        portal.Dispose();
+      }
+    }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new
+      {
+        startPos = fieldPosis.Min(),
+        size = fieldPosis.Count,
+        portals = "[" + portals.Length + "] " + string.Join("-", portals.AsEnumerable()),
+        posis = string.Join(",", fieldPosis.OrderBy(pos => pos))
+      }.ToString();
     }
   }
 }

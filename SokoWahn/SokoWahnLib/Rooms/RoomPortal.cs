@@ -57,5 +57,14 @@ namespace SokoWahnLib.Rooms
     public void Dispose()
     {
     }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { posFrom, posTo, revPortalIndex }.ToString();
+    }
   }
 }

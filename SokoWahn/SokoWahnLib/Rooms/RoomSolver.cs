@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 // ReSharper disable UnusedMember.Global
+// ReSharper disable NotAccessedField.Local
 #endregion
 
 namespace SokoWahnLib.Rooms
@@ -21,6 +22,11 @@ namespace SokoWahnLib.Rooms
     readonly ISokoField field;
 
     /// <summary>
+    /// merkt sich alle Räume
+    /// </summary>
+    readonly List<Room> rooms;
+
+    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="field">Spielfeld, welches gelöst werden soll</param>
@@ -31,6 +37,7 @@ namespace SokoWahnLib.Rooms
 
       // --- begehbare Felder ermitteln ---
       var walkFields = field.GetWalkPosis();
+      rooms = walkFields.OrderBy(pos => pos).Select(pos => new Room(field, pos, new RoomPortal[0])).ToList();
     }
 
     /// <summary>
@@ -46,6 +53,11 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public void Dispose()
     {
+      foreach (var room in rooms)
+      {
+        room.Dispose();
+      }
+      rooms.Clear();
     }
   }
 }
