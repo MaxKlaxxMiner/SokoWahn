@@ -1,7 +1,6 @@
 
 --- Room-Portals ---
 - Vorbereitung
--- begehbare/zusammenhängende Felder scannen
 -- Room-Klasse erstellen
 --- Referenzen für andere Rooms hinzufügen (Array)
 --- Rooms aus allen gültigen Feldern erstellen

@@ -28,6 +28,22 @@ namespace SokoWahnLib.Rooms
     {
       if (field == null) throw new ArgumentNullException("field");
       this.field = field;
+
+      // --- begehbare Felder ermitteln ---
+      var walkFields = new HashSet<int>();
+      var todo = new Stack<int>();
+      todo.Push(field.PlayerPos);
+      while (todo.Count > 0)
+      {
+        int pos = todo.Pop();
+        if (field.GetField(pos) == '#') continue; // Feld ist nie begehbar
+        if (walkFields.Contains(pos)) continue;   // Feld schon bekannt
+        walkFields.Add(pos);                      // bekannte Felder merken
+        todo.Push(pos - 1); // links hinzufügen
+        todo.Push(pos + 1); // rechts hinzufügen
+        todo.Push(pos - field.Width); // oben hinzufügen
+        todo.Push(pos + field.Width); // unten hinzufügen
+      }
     }
 
     /// <summary>
