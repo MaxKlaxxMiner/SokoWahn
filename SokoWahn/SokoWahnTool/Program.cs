@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SokoWahnLib;
+using SokoWahnLib.Rooms;
+
 // ReSharper disable BitwiseOperatorOnEnumWithoutFlags
 #endregion
 
@@ -29,7 +31,12 @@ namespace SokoWahnTool
             #######
       ");
 
-      MiniGame(field);
+      //MiniGame(field);
+
+      var solver = new RoomSolver(field);
+      solver.DisplayConsole();
+      Console.ReadKey();
+
     }
   }
 }

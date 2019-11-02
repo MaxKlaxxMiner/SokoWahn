@@ -1,6 +1,5 @@
 
 --- Room-Portals ---
-- Hauptklasse (RoomSolver) erstellen
 - Vorbereitung
 -- begehbare/zusammenhängende Felder scannen
 -- Room-Klasse erstellen

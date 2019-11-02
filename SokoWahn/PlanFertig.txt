@@ -1,4 +1,8 @@
 
+--- Room-Portals ---
+- Hauptklasse (RoomSolver) erstellen
+
+
 --- Projekte erstellen und einrichten ---
 
 - SokoWahnLib erstellen (Klassenbibliothek)
