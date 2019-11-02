@@ -43,6 +43,45 @@ namespace SokoWahnLib
     }
     #endregion
 
+    #region # public static bool ValidPos(this ISokoField field, int pos) // prüft, ob die Position auf dem Spielfeld gültig ist
+    /// <summary>
+    /// prüft, ob die Position auf dem Spielfeld gültig ist
+    /// </summary>
+    /// <param name="field">Spielfeld, welches benutzt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn es sich um eine gültige Position handelt</returns>
+    public static bool ValidPos(this ISokoField field, int pos)
+    {
+      return GetWalkPosis(field).Contains(pos);
+    }
+    #endregion
+
+    #region # public static HashSet<int> GetWalkPosis(this ISokoField field) // gibt alle begehbaren Position auf dem Spielfeld zurück
+    /// <summary>
+    /// gibt alle begehbaren Position auf dem Spielfeld zurück
+    /// </summary>
+    /// <param name="field">gesamtes Spielfeld, welches abgefragt werden soll</param>
+    /// <returns>HastSet der begehbaren Positionen</returns>
+    public static HashSet<int> GetWalkPosis(this ISokoField field)
+    {
+      var walkFields = new HashSet<int>();
+      var todo = new Stack<int>();
+      todo.Push(field.PlayerPos);
+      while (todo.Count > 0)
+      {
+        int pos = todo.Pop();
+        if (field.GetField(pos) == '#') continue; // Feld ist nie begehbar
+        if (walkFields.Contains(pos)) continue;   // Feld schon bekannt
+        walkFields.Add(pos);                      // bekannte Felder merken
+        todo.Push(pos - 1); // links hinzufügen
+        todo.Push(pos + 1); // rechts hinzufügen
+        todo.Push(pos - field.Width); // oben hinzufügen
+        todo.Push(pos + field.Width); // unten hinzufügen
+      }
+      return walkFields;
+    }
+    #endregion
+
     #region # public static MoveType GetMoveTypes(this ISokoField field) // gibt alle Bewegungsmöglichkeiten des Spielers zurück
     /// <summary>
     /// gibt alle Bewegungsmöglichkeiten des Spielers zurück

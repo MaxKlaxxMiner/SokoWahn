@@ -13,7 +13,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// Klasse zum effizienten lösen von Spielfeldern
   /// </summary>
-  public class RoomSolver
+  public class RoomSolver : IDisposable
   {
     /// <summary>
     /// merkt sich das zu lösende Spielfeld
@@ -30,20 +30,7 @@ namespace SokoWahnLib.Rooms
       this.field = field;
 
       // --- begehbare Felder ermitteln ---
-      var walkFields = new HashSet<int>();
-      var todo = new Stack<int>();
-      todo.Push(field.PlayerPos);
-      while (todo.Count > 0)
-      {
-        int pos = todo.Pop();
-        if (field.GetField(pos) == '#') continue; // Feld ist nie begehbar
-        if (walkFields.Contains(pos)) continue;   // Feld schon bekannt
-        walkFields.Add(pos);                      // bekannte Felder merken
-        todo.Push(pos - 1); // links hinzufügen
-        todo.Push(pos + 1); // rechts hinzufügen
-        todo.Push(pos - field.Width); // oben hinzufügen
-        todo.Push(pos + field.Width); // unten hinzufügen
-      }
+      var walkFields = field.GetWalkPosis();
     }
 
     /// <summary>
@@ -52,6 +39,13 @@ namespace SokoWahnLib.Rooms
     public void DisplayConsole()
     {
       Console.WriteLine(("\r\n" + field.GetText()).Replace("\r\n", "\r\n  ")); // Spielfeld (mit Indent) ausgeben
+    }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public void Dispose()
+    {
     }
   }
 }

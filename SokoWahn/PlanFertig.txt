@@ -3,6 +3,7 @@
 - Hauptklasse (RoomSolver) erstellen
 - Vorbereitung
 -- begehbare/zusammenhängende Felder scannen
+-- Portal-Klasse erstellen
 
 
 --- Projekte erstellen und einrichten ---
