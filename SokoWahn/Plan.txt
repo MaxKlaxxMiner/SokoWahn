@@ -1,4 +1,22 @@
 
+--- Room-Portals ---
+- Hauptklasse (RoomSolver) erstellen
+- Vorbereitung
+-- begehbare/zusammenhängende Felder scannen
+-- Room-Klasse erstellen
+--- Referenzen für andere Rooms hinzufügen (Array)
+--- Rooms aus allen gültigen Feldern erstellen
+---- Rooms mit Nachbarn referenzieren
+---- Basis-Funktionalität planen
+- Merge: zwei Rooms zu einen verschmelzen
+-- Merge planen
+- Search: Suche durchführen
+-- Vorwärts-Scan
+-- Rückwärts-Scan
+-- gefundene Lösung verknüpfen
+-- auf optimale Lösung prüfen
+
+
 --- Projekte erstellen und einrichten ---
 
 - SokoWahnHelper erstellen (Window-Forms Programm)
