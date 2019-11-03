@@ -18,20 +18,20 @@ namespace SokoWahnTool
     /// startet ein bestimmtes Spielfeld als Mini-Game
     /// </summary>
     /// <param name="iField">Spielfeld, welches verwendet werden soll</param>
-    static void MiniGame(ISokoField iField)
+    /// <param name="indent">optionaler Abstand zum linken Rand (Default: 2)</param>
+    static void MiniGame(ISokoField iField, int indent = 2)
     {
       for (; ; )
       {
         Console.Clear();
         Console.WriteLine();
-        Console.WriteLine("    Size: {0} x {1}", iField.Width, iField.Height);
+        Console.WriteLine(new string(' ', indent) + "  Size: {0} x {1}", iField.Width, iField.Height);
         Console.WriteLine();
-        Console.WriteLine("  Player: {0}, {1}", iField.PlayerPos % iField.Width, iField.PlayerPos / iField.Width);
-        Console.WriteLine();
-        Console.WriteLine(iField.GetText()); // Spielfeld ausgeben
+        Console.WriteLine(new string(' ', indent) + "Player: {0}, {1}", iField.PlayerPos % iField.Width, iField.PlayerPos / iField.Width);
+        Console.WriteLine(("\r\n" + iField.GetText()).Replace("\r\n", "\r\n" + new string(' ', indent))); // Spielfeld ausgeben
 
         // --- Spieler zusätzlich markieren ---
-        Console.SetCursorPosition(iField.PlayerPos % iField.Width, Console.CursorTop - iField.Height + iField.PlayerPos / iField.Width - 1); // Cursor auf den Spieler setzen
+        Console.SetCursorPosition(iField.PlayerPos % iField.Width + indent, Console.CursorTop - iField.Height + iField.PlayerPos / iField.Width - 1); // Cursor auf den Spieler setzen
         Console.ForegroundColor = ConsoleColor.Green; // Farbe Grün setzen
         Console.Write(iField.GetField(iField.PlayerPos)); // Spieler neu mit grüner Farbe ausgeben
         Console.Write('\b'); // ein Zeichen zurück springen, damit der blinkende Cursor wieder auf den Spieler zeigt

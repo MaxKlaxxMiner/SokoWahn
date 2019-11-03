@@ -64,20 +64,7 @@ namespace SokoWahnLib
         string line = lines[y]; // Zeile abfragen
         for (int x = 0; x < width; x++)
         {
-          char c = x < line.Length ? line[x] : ' '; // Zeichen in der Zeile Abfragen (außerhalb der Zeile = Leerzeichen)
-          switch (c)
-          {
-            case '@': // Spieler
-            case '+': // Spieler auf einem Zielfeld
-            case '$': // verschiebare Kiste
-            case '.': // Zielfeld
-            case '*': // Kiste auf einem Zielfeld
-            case '#': // Mauer
-            case ' ': // leeres Spielfeld
-            field[x + y * width] = c; break; // den Wert übertragen
-
-            default: c = ' '; goto case ' '; // bei unbekannten Zeichen ein leeres Spielfeld verwenden
-          }
+          field[x + y * width] = SokoFieldHelper.FilterChar(x < line.Length ? line[x] : ' '); // Zeichen in der Zeile Abfragen (außerhalb der Zeile = Leerzeichen)
         }
       }
       #endregion
