@@ -9,6 +9,8 @@
 -- Portal-Klasse erstellen
 - DisplayConsole
 -- Anzeige des gesamten Spielfeldes
+-- Anzeige des gesamten Spielfeldes ohne Kisten und ohne Spieler
+-- Räume auswählbar machen und zeigen (z.B. grau)
 
 
 --- Projekte erstellen und einrichten ---

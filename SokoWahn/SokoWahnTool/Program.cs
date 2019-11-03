@@ -41,8 +41,29 @@ namespace SokoWahnTool
       //MiniGame(FieldTest1);
 
       var solver = new RoomSolver(FieldTest1);
-      solver.DisplayConsole();
-      Console.ReadKey();
+      int selectRoom = -1;
+      for (; ; )
+      {
+        Console.Clear();
+        solver.DisplayConsole(selectRoom);
+        var key = Console.ReadKey();
+        switch (key.Key)
+        {
+          case ConsoleKey.Escape: return;
+          case ConsoleKey.Add:
+          case ConsoleKey.OemPlus:
+          {
+            selectRoom++;
+            if (selectRoom >= solver.rooms.Count) selectRoom = solver.rooms.Count - 1;
+          } break;
+          case ConsoleKey.Subtract:
+          case ConsoleKey.OemMinus:
+          {
+            selectRoom--;
+            if (selectRoom < -1) selectRoom = -1;
+          } break;
+        }
+      }
 
     }
   }

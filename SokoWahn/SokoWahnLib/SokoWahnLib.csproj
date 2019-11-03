@@ -50,6 +50,7 @@
     <Compile Include="SokoFieldExtensions.cs" />
     <Compile Include="SokoField.cs" />
     <Compile Include="SokoFieldException.cs" />
+    <Compile Include="SokoFieldHelper.cs" />
     <Compile Include="UnsafeHelper.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -13,8 +13,6 @@
 -- gefundene Lösung verknüpfen
 -- auf optimale Lösung prüfen
 - DisplayConsole
--- Anzeige des gesamten Spielfeldes ohne Kisten und ohne Spieler
--- Räume auswählbar machen und zeigen (z.B. grau)
 -- Portale der Räume anzeigen (z.B. blau)
 -- Portale auswählbar machen und separat zeigen (z.B. grün)
 -- Zustände der Räume pro Portal auswählbar machen
