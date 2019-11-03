@@ -2,8 +2,27 @@
 --- Room-Portals ---
 - Vorbereitung
 -- Room-Klasse erstellen
+-- Info hinzufügen, welche Zielfelder enthalten sind
 --- Rooms aus allen gültigen Feldern erstellen
----- Basis-Funktionalität planen
+---- Basis-Funktionalität
+----- mögliche Zustände erstellen und im Raum speichern
+------ Basis Anfangs-Stellung hinzufügen
+------ Basis Ziel-Stellung hinzufügen
+------ Abgleich: leeres Feld
+------ Abgleich: Feld mit Spieler
+------ Abgleich: Feld mit Kiste
+----- mögliche Varianten berechnen und in den Räumen speichern
+------ alle Varianten ab der Startstellung vorwärts durchrechnen
+------- 1. Spieler beginnt an der Startstellung innerhalb der Raumes
+------- 2. Spieler hat den Raum über ein Portal betrten
+------ alle Varianten von der Endstellung rückwärts durchrechnen
+------- 1. Spieler verbleibt nach erreichen des Zieles im Raum
+------- 2. Spieler verlässt nach erreichen des Zieles den Raum wieder
+------ beide Ergebnislisten abgleichen und nicht erreichbare Varianten verwerfen
+----- für Portale zugehörige Varianten ermitteln, und in den Portalen speichern
+------ durch das Portal laufen
+------ Kiste durch das Portal schieben
+
 - Merge: zwei Rooms zu einen verschmelzen
 -- Merge planen
 - Search: Suche durchführen
