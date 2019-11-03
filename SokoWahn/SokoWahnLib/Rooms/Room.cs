@@ -46,10 +46,19 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public void Dispose()
     {
-      foreach (var portal in portals)
+      for (int i = 0; i < portals.Length; i++)
       {
-        portal.Dispose();
+        if (portals[i] != null) portals[i].Dispose();
+        portals[i] = null;
       }
+    }
+
+    /// <summary>
+    /// Destructor
+    /// </summary>
+    ~Room()
+    {
+      Dispose();
     }
 
     /// <summary>
@@ -62,7 +71,7 @@ namespace SokoWahnLib.Rooms
       {
         startPos = fieldPosis.Min(),
         size = fieldPosis.Count,
-        portals = "[" + portals.Length + "] " + string.Join("-", portals.AsEnumerable()),
+        portals = portals.Length + ": " + string.Join(", ", portals.AsEnumerable()),
         posis = string.Join(",", fieldPosis.OrderBy(pos => pos))
       }.ToString();
     }

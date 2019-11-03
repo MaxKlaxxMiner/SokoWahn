@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SokoWahnLib;
 using SokoWahnLib.Rooms;
+// ReSharper disable UnusedMember.Local
 
 // ReSharper disable BitwiseOperatorOnEnumWithoutFlags
 #endregion
@@ -41,6 +42,7 @@ namespace SokoWahnTool
       //MiniGame(FieldTest1);
 
       var solver = new RoomSolver(FieldTest1);
+      //var solver = new RoomSolver(FieldStart);
       int selectRoom = -1;
       for (; ; )
       {
@@ -54,7 +56,7 @@ namespace SokoWahnTool
           case ConsoleKey.OemPlus:
           {
             selectRoom++;
-            if (selectRoom >= solver.rooms.Count) selectRoom = solver.rooms.Count - 1;
+            if (selectRoom >= solver.rooms.Length) selectRoom = solver.rooms.Length - 1;
           } break;
           case ConsoleKey.Subtract:
           case ConsoleKey.OemMinus:

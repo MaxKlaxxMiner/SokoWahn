@@ -3,7 +3,6 @@
 - Vorbereitung
 -- Room-Klasse erstellen
 --- Rooms aus allen gültigen Feldern erstellen
----- Rooms mit Nachbarn referenzieren
 ---- Basis-Funktionalität planen
 - Merge: zwei Rooms zu einen verschmelzen
 -- Merge planen
@@ -13,8 +12,7 @@
 -- gefundene Lösung verknüpfen
 -- auf optimale Lösung prüfen
 - DisplayConsole
--- Portale der Räume anzeigen (z.B. blau)
--- Portale auswählbar machen und separat zeigen (z.B. grün)
+-- Portale auswählbar machen und separat zeigen (z.B. weiß)
 -- Zustände der Räume pro Portal auswählbar machen
 -- Zustand des Raumes darstellen
 -- Laufschritte darstellen

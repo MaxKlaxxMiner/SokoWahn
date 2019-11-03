@@ -5,12 +5,14 @@
 -- Room-Klasse erstellen
 --- Referenzen für andere Rooms hinzufügen (Array)
 --- Rooms aus allen gültigen Feldern erstellen
+---- Rooms mit Nachbarn referenzieren
 -- begehbare/zusammenhängende Felder scannen
 -- Portal-Klasse erstellen
 - DisplayConsole
 -- Anzeige des gesamten Spielfeldes
 -- Anzeige des gesamten Spielfeldes ohne Kisten und ohne Spieler
 -- Räume auswählbar machen und zeigen (z.B. grau)
+-- Portale der Räume anzeigen (z.B. dunkelrot)
 
 
 --- Projekte erstellen und einrichten ---

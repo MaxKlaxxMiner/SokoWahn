@@ -27,10 +27,6 @@ namespace SokoWahnLib.Rooms
     /// merkt sich den Raum, wohin das Portal führt
     /// </summary>
     public readonly Room roomTo;
-    /// <summary>
-    /// merkt sich den Index des Portals auf der gegenüberliegenden Seite (für schnellen Rücksprung)
-    /// </summary>
-    public readonly int revPortalIndex;
 
     /// <summary>
     /// Konstruktor
@@ -38,17 +34,15 @@ namespace SokoWahnLib.Rooms
     /// <param name="posFrom">Austritts-Position aus dem eigenen Raum</param>
     /// <param name="posTo">Eintritts-Position in den benachbarten Raum</param>
     /// <param name="roomTo">benachbarter Raum</param>
-    /// <param name="revPortalIndex">Index des Portals auf der gegenüberliegenden Seite (für schnellen Rücksprung)</param>
-    public RoomPortal(int posFrom, int posTo, Room roomTo, int revPortalIndex)
+    public RoomPortal(int posFrom, int posTo, Room roomTo)
     {
-      if (!field.ValidPos(posFrom)) throw new ArgumentOutOfRangeException("posFrom");
-      if (!field.ValidPos(posTo)) throw new ArgumentOutOfRangeException("posTo");
       if (roomTo == null) throw new ArgumentNullException("roomTo");
       field = roomTo.field;
+      if (!field.ValidPos(posFrom)) throw new ArgumentOutOfRangeException("posFrom");
+      if (!field.ValidPos(posTo)) throw new ArgumentOutOfRangeException("posTo");
       this.posFrom = posFrom;
       this.posTo = posTo;
       this.roomTo = roomTo;
-      this.revPortalIndex = revPortalIndex;
     }
 
     /// <summary>
@@ -59,12 +53,20 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
+    /// Destructor
+    /// </summary>
+    ~RoomPortal()
+    {
+      Dispose();
+    }
+
+    /// <summary>
     /// gibt den Inhalt als lesbare Zeichenkette zurück
     /// </summary>
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
-      return new { posFrom, posTo, revPortalIndex }.ToString();
+      return "( " + posFrom + " -> " + posTo + " )";
     }
   }
 }
