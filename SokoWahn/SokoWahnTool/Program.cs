@@ -15,25 +15,32 @@ namespace SokoWahnTool
 {
   static partial class Program
   {
+    static readonly SokoField FieldStart = new SokoField(@"
+          #####
+          #   #
+          #$  #
+        ###  $##
+        #  $ $ #
+      ### # ## #   ######
+      #   # ## #####  ..#
+      # $  $          ..#
+      ##### ### #@##  ..#
+          #     #########
+          #######
+    ");
+
+    static readonly SokoField FieldTest1 = new SokoField(@"
+      ######
+      #    #
+      # $@.#
+      ######
+    ");
+
     static void Main()
     {
-      var field = new SokoField(@"
-            #####
-            #   #
-            #$  #
-          ###  $##
-          #  $ $ #
-        ### # ## #   ######
-        #   # ## #####  ..#
-        # $  $          ..#
-        ##### ### #@##  ..#
-            #     #########
-            #######
-      ");
+      //MiniGame(FieldTest1);
 
-      //MiniGame(field);
-
-      var solver = new RoomSolver(field);
+      var solver = new RoomSolver(FieldTest1);
       solver.DisplayConsole();
       Console.ReadKey();
 
