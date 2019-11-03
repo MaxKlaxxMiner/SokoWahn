@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 // ReSharper disable UnusedMember.Global
 // ReSharper disable NotAccessedField.Local
+// ReSharper disable MemberCanBePrivate.Global
 #endregion
 
 namespace SokoWahnLib.Rooms
@@ -19,12 +20,12 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// merkt sich das zu lösende Spielfeld
     /// </summary>
-    readonly ISokoField field;
+    public readonly ISokoField field;
 
     /// <summary>
     /// merkt sich alle Räume
     /// </summary>
-    readonly List<Room> rooms;
+    public readonly List<Room> rooms;
 
     /// <summary>
     /// Konstruktor
@@ -46,6 +47,8 @@ namespace SokoWahnLib.Rooms
     public void DisplayConsole()
     {
       Console.WriteLine(("\r\n" + field.GetText()).Replace("\r\n", "\r\n  ")); // Spielfeld (mit Indent) ausgeben
+      Console.WriteLine("  Rooms: {0:N0}", rooms.Count);
+      Console.WriteLine();
     }
 
     /// <summary>

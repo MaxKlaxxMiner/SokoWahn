@@ -2,8 +2,13 @@
 --- Room-Portals ---
 - Hauptklasse (RoomSolver) erstellen
 - Vorbereitung
+-- Room-Klasse erstellen
+--- Referenzen für andere Rooms hinzufügen (Array)
+--- Rooms aus allen gültigen Feldern erstellen
 -- begehbare/zusammenhängende Felder scannen
 -- Portal-Klasse erstellen
+- DisplayConsole
+-- Anzeige des gesamten Spielfeldes
 
 
 --- Projekte erstellen und einrichten ---
