@@ -2,6 +2,7 @@
 // ReSharper disable RedundantUsingDirective
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -150,5 +151,21 @@ namespace SokoWahnLib
       return result;
     }
     #endregion
+
+    /// <summary>
+    /// prüft, ob eine bestimmte Position sich in einer Ecke befindet
+    /// </summary>
+    /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn es sich um eine Ecke handelt</returns>
+    public static bool CheckCorner(this ISokoField field, int pos)
+    {
+      Debug.Assert(field.ValidPos(pos));
+      bool left = field.GetField(pos - 1) == '#';
+      bool right = field.GetField(pos + 1) == '#';
+      bool top = field.GetField(pos - field.Width) == '#';
+      bool bottom = field.GetField(pos + field.Width) == '#';
+      return top && (left || right) || bottom && (left || right);
+    }
   }
 }

@@ -66,13 +66,14 @@ namespace SokoWahnLib.Rooms
       stateDataUsed = 0;
       switch (field.GetField(pos))
       {
-        // todo: verbotene Kisten in Ecken filtern und erlaubte Kisten in Ecken fixieren (daher: andere Zustände ignorieren)
-
         case '@': // Spieler auf einem leeren Feld
         {
           AddState((ushort)pos, 0, 0, false); // | Start | Ende | Spieler auf einem leeren Feld
           AddState(0, 0, 0, false);           // |     - | Ende | leeres Feld
-          AddState(0, 1, 0, true);            // |     - |    - | Kiste auf einem leeren Feld
+          if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
+          {
+            AddState(0, 1, 0, true);          // |     - |    - | Kiste auf einem leeren Feld
+          }
         } break;
 
         case '+': // Spieler auf einem Zielfeld
@@ -86,7 +87,10 @@ namespace SokoWahnLib.Rooms
         {
           AddState(0, 0, 0, false);           // | Start | Ende | leeres Feld
           AddState((ushort)pos, 0, 0, false); // |     - | Ende | Spieler auf einem leeren Feld
-          AddState(0, 1, 0, true);            // |     - |    - | Kiste auf einem leeren Feld
+          if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
+          {
+            AddState(0, 1, 0, true);          // |     - |    - | Kiste auf einem leeren Feld
+          }
         } break;
 
         case '.': // Zielfeld
@@ -101,13 +105,17 @@ namespace SokoWahnLib.Rooms
           AddState(0, 1, 0, true);            // | Start |    - | Kiste auf einem leeren Feld
           AddState(0, 0, 0, false);           // |     - | Ende | leeres Feld
           AddState((ushort)pos, 0, 0, false); // |     - | Ende | Spieler auf einem leeren Feld
+          if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
         } break;
 
         case '*': // Kiste auf einem Zielfeld
         {
           AddState(0, 1, 1, true);            // | Start | Ende | Kiste auf einem Zielfeld
-          AddState(0, 0, 0, false);           // |     - |    - | leeres Feld
-          AddState((ushort)pos, 0, 0, false); // |     - |    - | Spieler auf einem leeren Feld
+          if (!field.CheckCorner(pos)) // Kiste kann weggeschoben werden?
+          {
+            AddState(0, 0, 0, false);           // |     - |    - | leeres Feld
+            AddState((ushort)pos, 0, 0, false); // |     - |    - | Spieler auf einem leeren Feld
+          }
         } break;
 
         default: throw new NotSupportedException("char: " + field.GetField(pos));
