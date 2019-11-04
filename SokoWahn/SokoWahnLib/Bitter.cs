@@ -248,7 +248,7 @@ namespace SokoWahnLib
       Debug.Assert(bitPos + 16 <= bitCount);
       ushort value = 0;
       value |= GetByte(bitPos);
-      value |= (ushort)(GetByte(bitPos + 1) << 8);
+      value |= (ushort)(GetByte(bitPos + 8) << 8);
       return value;
     }
 
@@ -262,9 +262,9 @@ namespace SokoWahnLib
       Debug.Assert(bitPos + 32 <= bitCount);
       uint value = 0;
       value |= GetByte(bitPos);
-      value |= (uint)GetByte(bitPos + 1) << 8;
-      value |= (uint)GetByte(bitPos + 2) << 16;
-      value |= (uint)GetByte(bitPos + 3) << 24;
+      value |= (uint)GetByte(bitPos + 8) << 8;
+      value |= (uint)GetByte(bitPos + 16) << 16;
+      value |= (uint)GetByte(bitPos + 24) << 24;
       return value;
     }
 
@@ -278,13 +278,13 @@ namespace SokoWahnLib
       Debug.Assert(bitPos + 64 <= bitCount);
       ulong value = 0;
       value |= GetByte(bitPos);
-      value |= (uint)GetByte(bitPos + 1) << 8;
-      value |= (uint)GetByte(bitPos + 2) << 16;
-      value |= (uint)GetByte(bitPos + 3) << 24;
-      value |= (ulong)GetByte(bitPos + 4) << 32;
-      value |= (ulong)GetByte(bitPos + 5) << 40;
-      value |= (ulong)GetByte(bitPos + 6) << 48;
-      value |= (ulong)GetByte(bitPos + 7) << 56;
+      value |= (uint)GetByte(bitPos + 8) << 8;
+      value |= (uint)GetByte(bitPos + 16) << 16;
+      value |= (uint)GetByte(bitPos + 24) << 24;
+      value |= (ulong)GetByte(bitPos + 32) << 32;
+      value |= (ulong)GetByte(bitPos + 40) << 40;
+      value |= (ulong)GetByte(bitPos + 48) << 48;
+      value |= (ulong)GetByte(bitPos + 56) << 56;
       return value;
     }
 
