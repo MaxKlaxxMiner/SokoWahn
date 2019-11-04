@@ -21,6 +21,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly HashSet<int> fieldPosis;
     /// <summary>
+    /// merkt sich alle Zielfelder, welche zum Raum gehören
+    /// </summary>
+    public readonly HashSet<int> targetPosis;
+    /// <summary>
     /// merkt sich die Portale zu den anderen Räumen
     /// </summary>
     public readonly RoomPortal[] portals;
@@ -38,6 +42,8 @@ namespace SokoWahnLib.Rooms
       if (portals == null) throw new ArgumentNullException("portals");
       this.field = field;
       fieldPosis = new HashSet<int> { pos };
+      targetPosis = new HashSet<int>();
+      if (field.GetField(pos) == '.' || field.GetField(pos) == '*') targetPosis.Add(pos);
       this.portals = portals;
     }
 

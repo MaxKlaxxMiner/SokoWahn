@@ -6,6 +6,7 @@
 --- Referenzen für andere Rooms hinzufügen (Array)
 --- Rooms aus allen gültigen Feldern erstellen
 ---- Rooms mit Nachbarn referenzieren
+--- Info hinzufügen, welche Zielfelder enthalten sind
 -- begehbare/zusammenhängende Felder scannen
 -- Portal-Klasse erstellen
 - DisplayConsole

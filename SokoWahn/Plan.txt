@@ -2,9 +2,9 @@
 --- Room-Portals ---
 - Vorbereitung
 -- Room-Klasse erstellen
--- Info hinzufügen, welche Zielfelder enthalten sind
 --- Rooms aus allen gültigen Feldern erstellen
 ---- Basis-Funktionalität
+----- Bitter hinzufügen (für Kisten-Bitmaske)
 ----- mögliche Zustände erstellen und im Raum speichern
 ------ Basis Anfangs-Stellung hinzufügen
 ------ Basis Ziel-Stellung hinzufügen
