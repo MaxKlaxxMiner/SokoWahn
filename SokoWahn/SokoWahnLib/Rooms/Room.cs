@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 // ReSharper disable MemberCanBePrivate.Global
@@ -63,6 +64,82 @@ namespace SokoWahnLib.Rooms
                        + (ulong)fieldPosis.Count; // Bit-markierte Felder, welche mit Kisten belegt sind
       stateData = new Bitter(stateDataElement * (ulong)fieldPosis.Count * 3UL); // Raum mit einzelnen Feld kann nur drei Zustände annehmen: 1 = leer, 2 = Spieler, 3 = Kiste
       stateDataUsed = 0;
+      switch (field.GetField(pos))
+      {
+        // todo: verbotene Kisten in Ecken filtern und erlaubte Kisten in Ecken fixieren (daher: andere Zustände ignorieren)
+
+        case '@': // Spieler auf einem leeren Feld
+        {
+          AddState((ushort)pos, 0, 0, false); // | Start | Ende | Spieler auf einem leeren Feld
+          AddState(0, 0, 0, false);           // |     - | Ende | leeres Feld
+          AddState(0, 1, 0, true);            // |     - |    - | Kiste auf einem leeren Feld
+        } break;
+
+        case '+': // Spieler auf einem Zielfeld
+        {
+          AddState((ushort)pos, 0, 0, false); // | Start |    - | Spieler auf einem Zielfeld
+          AddState(0, 0, 0, false);           // |     - |    - | leeres Zielfeld
+          AddState(0, 1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
+        } break;
+
+        case ' ': // leeres Feld
+        {
+          AddState(0, 0, 0, false);           // | Start | Ende | leeres Feld
+          AddState((ushort)pos, 0, 0, false); // |     - | Ende | Spieler auf einem leeren Feld
+          AddState(0, 1, 0, true);            // |     - |    - | Kiste auf einem leeren Feld
+        } break;
+
+        case '.': // Zielfeld
+        {
+          AddState(0, 0, 0, false);           // | Start |    - | leeres Zielfeld
+          AddState((ushort)pos, 0, 0, false); // |     - |    - | Spieler auf einem Zielfeld
+          AddState(0, 1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
+        } break;
+
+        case '$': // Feld mit Kiste
+        {
+          AddState(0, 1, 0, true);            // | Start |    - | Kiste auf einem leeren Feld
+          AddState(0, 0, 0, false);           // |     - | Ende | leeres Feld
+          AddState((ushort)pos, 0, 0, false); // |     - | Ende | Spieler auf einem leeren Feld
+        } break;
+
+        case '*': // Kiste auf einem Zielfeld
+        {
+          AddState(0, 1, 1, true);            // | Start | Ende | Kiste auf einem Zielfeld
+          AddState(0, 0, 0, false);           // |     - |    - | leeres Feld
+          AddState((ushort)pos, 0, 0, false); // |     - |    - | Spieler auf einem leeren Feld
+        } break;
+
+        default: throw new NotSupportedException("char: " + field.GetField(pos));
+      }
+    }
+
+    /// <summary>
+    /// fügt einen weiteren Raum-Zustand hinzu
+    /// </summary>
+    void AddState(ushort playerPos, byte boxCount, byte finishedBoxCount, params bool[] boxBits)
+    {
+      Debug.Assert(playerPos < field.Width * field.Height);
+      Debug.Assert(playerPos == 0 || field.ValidPos(playerPos));
+      Debug.Assert(boxCount <= fieldPosis.Count);
+      Debug.Assert(finishedBoxCount <= boxCount);
+      Debug.Assert(boxBits.Length == fieldPosis.Count);
+      Debug.Assert(boxBits.Count(x => x) == boxCount);
+
+      ulong bitPos = stateDataUsed * stateDataElement;
+      stateData.SetUShort(bitPos, playerPos);
+      stateData.SetByte(bitPos + 16, boxCount);
+      stateData.SetByte(bitPos + 24, finishedBoxCount);
+      stateData.ClearBits(bitPos + 32, (uint)boxBits.Length);
+      for (uint i = 0; i < boxBits.Length; i++)
+      {
+        if (boxBits[i]) stateData.SetBit(bitPos + 32 + i);
+        Debug.Assert(stateData.GetBit(bitPos + 32 + i) == boxBits[i]);
+      }
+      Debug.Assert(stateData.GetUShort(bitPos) == playerPos);
+      Debug.Assert(stateData.GetByte(bitPos + 16) == boxCount);
+      Debug.Assert(stateData.GetByte(bitPos + 24) == finishedBoxCount);
+      stateDataUsed++;
     }
 
     /// <summary>

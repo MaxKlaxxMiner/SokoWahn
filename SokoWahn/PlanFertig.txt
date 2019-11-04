@@ -9,6 +9,12 @@
 ---- Rooms mit Nachbarn referenzieren
 ---- Basis-Funktionalität
 ----- Bitter hinzufügen (für Kisten-Bitmaske)
+----- mögliche Zustände erstellen und im Raum speichern
+------ Basis Anfangs-Stellung hinzufügen
+------ Basis Ziel-Stellung hinzufügen
+------ Abgleich: leeres Feld
+------ Abgleich: Feld mit Spieler
+------ Abgleich: Feld mit Kiste
 -- begehbare/zusammenhängende Felder scannen
 -- Portal-Klasse erstellen
 - DisplayConsole
