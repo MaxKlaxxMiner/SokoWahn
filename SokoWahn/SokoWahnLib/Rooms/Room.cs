@@ -8,7 +8,7 @@ using System.Linq;
 namespace SokoWahnLib.Rooms
 {
   /// <summary>
-  /// Klasse, welche einen komlletten Raum darstellt
+  /// Klasse, welche einen kompletten Raum darstellt
   /// </summary>
   public class Room : IDisposable
   {
@@ -28,6 +28,18 @@ namespace SokoWahnLib.Rooms
     /// merkt sich die Portale zu den anderen Räumen
     /// </summary>
     public readonly RoomPortal[] portals;
+    /// <summary>
+    /// merkt sich die die Daten der Zustände
+    /// </summary>
+    public readonly Bitter stateData;
+    /// <summary>
+    /// Größe eines einzelnen Zustand-Elementes
+    /// </summary>
+    public readonly ulong stateDataElement;
+    /// <summary>
+    /// Anzahl der benutzen Zustand-Elemente
+    /// </summary>
+    public uint stateDataUsed;
 
     /// <summary>
     /// Konstruktor um ein Raum aus einem einzelnen Feld zu erstellen
@@ -45,6 +57,12 @@ namespace SokoWahnLib.Rooms
       targetPosis = new HashSet<int>();
       if (field.GetField(pos) == '.' || field.GetField(pos) == '*') targetPosis.Add(pos);
       this.portals = portals;
+      stateDataElement = sizeof(ushort) * 8       // Spieler-Position (wenn auf dem Spielfeld vorhanden, sonst = 0)
+                       + sizeof(byte) * 8         // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
+                       + sizeof(byte) * 8         // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
+                       + (ulong)fieldPosis.Count; // Bit-markierte Felder, welche mit Kisten belegt sind
+      stateData = new Bitter(stateDataElement * (ulong)fieldPosis.Count * 3UL); // Raum mit einzelnen Feld kann nur drei Zustände annehmen: 1 = leer, 2 = Spieler, 3 = Kiste
+      stateDataUsed = 0;
     }
 
     /// <summary>

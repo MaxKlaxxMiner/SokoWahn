@@ -4,7 +4,6 @@
 -- Room-Klasse erstellen
 --- Rooms aus allen gültigen Feldern erstellen
 ---- Basis-Funktionalität
------ Bitter hinzufügen (für Kisten-Bitmaske)
 ----- mögliche Zustände erstellen und im Raum speichern
 ------ Basis Anfangs-Stellung hinzufügen
 ------ Basis Ziel-Stellung hinzufügen

@@ -3,10 +3,12 @@
 - Hauptklasse (RoomSolver) erstellen
 - Vorbereitung
 -- Room-Klasse erstellen
+--- Info hinzufügen, welche Zielfelder enthalten sind
 --- Referenzen für andere Rooms hinzufügen (Array)
 --- Rooms aus allen gültigen Feldern erstellen
 ---- Rooms mit Nachbarn referenzieren
---- Info hinzufügen, welche Zielfelder enthalten sind
+---- Basis-Funktionalität
+----- Bitter hinzufügen (für Kisten-Bitmaske)
 -- begehbare/zusammenhängende Felder scannen
 -- Portal-Klasse erstellen
 - DisplayConsole
