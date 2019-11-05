@@ -13,8 +13,9 @@
 ------- 2. Spieler verlässt nach erreichen des Zieles den Raum wieder
 ------ beide Ergebnislisten abgleichen und nicht erreichbare Varianten verwerfen
 ----- für Portale zugehörige Varianten ermitteln, und in den Portalen speichern
------- durch das Portal laufen
------- Kiste durch das Portal schieben
+------ Rückwärts gerichtete Portale ebenfalls referenzieren (eingehend)
+------ durch das Portal in den Raum laufen
+------ Kiste durch das Portal in dem Raum schieben
 
 - Merge: zwei Rooms zu einen verschmelzen
 -- Merge planen
@@ -24,10 +25,11 @@
 -- gefundene Lösung verknüpfen
 -- auf optimale Lösung prüfen
 - DisplayConsole
+-- alle Zustände des Raumes auswählbar machen und darstellen
 -- Portale auswählbar machen und separat zeigen (z.B. weiß)
 -- Zustände der Räume pro Portal auswählbar machen
--- Zustand des Raumes darstellen
--- Laufschritte darstellen
+-- Portal-Varianten pro Zustand im Portal speichern
+-- Laufwege der Varianten darstellen
 
 
 --- Projekte erstellen und einrichten ---
