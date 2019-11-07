@@ -48,6 +48,7 @@
     <Compile Include="Rooms\Room.cs" />
     <Compile Include="Rooms\RoomPortal.cs" />
     <Compile Include="Rooms\RoomSolver.cs" />
+    <Compile Include="Rooms\StateDebugInfo.cs" />
     <Compile Include="SokoFieldExtensions.cs" />
     <Compile Include="SokoField.cs" />
     <Compile Include="SokoFieldException.cs" />

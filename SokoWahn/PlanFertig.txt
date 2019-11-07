@@ -22,6 +22,7 @@
 -- Anzeige des gesamten Spielfeldes ohne Kisten und ohne Spieler
 -- Räume auswählbar machen und zeigen (z.B. grau)
 -- Portale der Räume anzeigen (z.B. dunkelrot)
+-- alle Zustände des Raumes auswählbar machen und darstellen
 
 
 --- Projekte erstellen und einrichten ---

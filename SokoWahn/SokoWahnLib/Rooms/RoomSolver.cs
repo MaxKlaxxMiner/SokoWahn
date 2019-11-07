@@ -78,10 +78,13 @@ namespace SokoWahnLib.Rooms
     /// gibt das Spielfeld in der Konsole aus
     /// </summary>
     /// <param name="selectRoom">optional: Raum, welcher dargestellt werden soll</param>
+    /// <param name="selectState">optional: Status des Raums, welcher dargestellt werden soll</param>
     /// <param name="displayIndent">optional: gibt an wie weit die Anzeige eingerückt sein soll (Default: 2)</param>
-    public void DisplayConsole(int selectRoom = -1, int displayIndent = 2)
+    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int displayIndent = 2)
     {
       if (selectRoom >= rooms.Length) throw new ArgumentOutOfRangeException("selectRoom");
+      if (selectState >= 0 && selectRoom < 0) throw new ArgumentOutOfRangeException("selectState");
+      if (selectRoom >= 0 && selectState >= rooms[selectRoom].stateDataUsed) throw new ArgumentOutOfRangeException("selectState");
       if (displayIndent < 0) throw new ArgumentOutOfRangeException("displayIndent");
       string indent = new string(' ', displayIndent);
 
@@ -102,27 +105,45 @@ namespace SokoWahnLib.Rooms
         var room = rooms[selectRoom];
         Console.ForegroundColor = ConsoleColor.White;
         // --- alle Felder des Raumes markieren ---
-        foreach (int pos in room.fieldPosis)
+        if (selectState >= 0)
         {
-          Console.CursorTop = cTop + pos / field.Width;
-          Console.CursorLeft = indent.Length + pos % field.Width;
-          Console.BackgroundColor = ConsoleColor.DarkGray;
-          Console.Write(field.GetField(pos));
+          var stateInfo = room.GetStateInfo((uint)selectState);
+          var boxes = new HashSet<int>(stateInfo.boxPosis);
+          foreach (int pos in room.fieldPosis)
+          {
+            Console.CursorTop = cTop + pos / field.Width;
+            Console.CursorLeft = indent.Length + pos % field.Width;
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
+            if (room.goalPosis.Contains(pos))
+            {
+              Console.Write(boxes.Contains(pos) ? '*' : (stateInfo.playerPos == pos ? '+' : '.'));
+            }
+            else
+            {
+              Console.Write(boxes.Contains(pos) ? '$' : (stateInfo.playerPos == pos ? '@' : ' '));
+            }
+          }
         }
-        // --- alle Portale des Raumes markieren --
+        else
+        {
+          foreach (int pos in room.fieldPosis)
+          {
+            Console.CursorTop = cTop + pos / field.Width;
+            Console.CursorLeft = indent.Length + pos % field.Width;
+            Console.BackgroundColor = ConsoleColor.DarkGreen;
+            Console.Write(field.GetField(pos));
+          }
+        }
+        // --- alle äußeren Portale des Raumes markieren --
         foreach (var portal in room.portals)
         {
-          int pos = portal.posFrom;
-          Console.CursorTop = cTop + pos / field.Width;
-          Console.CursorLeft = indent.Length + pos % field.Width;
-          Console.BackgroundColor = ConsoleColor.DarkGreen;
-          Console.Write(field.GetField(pos));
-          pos = portal.posTo;
+          int pos = portal.posTo;
           Console.CursorTop = cTop + pos / field.Width;
           Console.CursorLeft = indent.Length + pos % field.Width;
           Console.BackgroundColor = ConsoleColor.DarkRed;
           Console.Write(field.GetField(pos));
         }
+
         Console.CursorTop = oldTop;     // alte Cursor-Position zurück setzen
         Console.CursorLeft = 0;
         Console.ForegroundColor = ConsoleColor.Gray;  // Standard-Farben setzen
@@ -135,7 +156,16 @@ namespace SokoWahnLib.Rooms
         var room = rooms[selectRoom];
         Console.WriteLine(indent + "    Room: {0:N0} / {1:N0}", selectRoom + 1, rooms.Length);
         Console.WriteLine();
-        Console.WriteLine(indent + "   Posis: {0:N0}", string.Join(", ", room.fieldPosis));
+        Console.WriteLine(indent + "   Posis: {0}", string.Join(", ", room.fieldPosis));
+        Console.WriteLine();
+        if (selectState >= 0)
+        {
+          Console.WriteLine(indent + "   State: {0:N0} / {1:N0}", selectState + 1, room.stateDataUsed);
+        }
+        else
+        {
+          Console.WriteLine(indent + "  States: {0:N0}", room.stateDataUsed);
+        }
         Console.WriteLine();
         for (int i = 0; i < room.portals.Length; i++)
         {
@@ -146,7 +176,9 @@ namespace SokoWahnLib.Rooms
       {
         Console.WriteLine(indent + "   Rooms: {0:N0}", rooms.Length);
         Console.WriteLine();
-        Console.WriteLine(indent + "  Fields: {0:N0}", rooms.Sum(x => x.fieldPosis.Count));
+        Console.WriteLine(indent + "  Fields: {0:N0}", rooms.Sum(x => x.fieldPosis.Length));
+        Console.WriteLine();
+        Console.WriteLine(indent + "  States: {0:N0}", rooms.Sum(x => x.stateDataUsed));
         Console.WriteLine();
         Console.WriteLine(indent + " Portals: {0:N0}", rooms.Sum(x => x.portals.Length));
       }

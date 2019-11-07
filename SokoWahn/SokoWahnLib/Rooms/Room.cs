@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-
+// ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable NotAccessedField.Global
 
@@ -20,7 +20,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// merkt sich alle Felder, welche zum Raum gehören
     /// </summary>
-    public readonly HashSet<int> fieldPosis;
+    public readonly int[] fieldPosis;
     /// <summary>
     /// merkt sich alle Zielfelder, welche zum Raum gehören
     /// </summary>
@@ -54,15 +54,15 @@ namespace SokoWahnLib.Rooms
       if (!field.ValidPos(pos)) throw new ArgumentOutOfRangeException("pos");
       if (portals == null) throw new ArgumentNullException("portals");
       this.field = field;
-      fieldPosis = new HashSet<int> { pos };
+      fieldPosis = new[] { pos };
       goalPosis = new HashSet<int>();
       if (field.GetField(pos) == '.' || field.GetField(pos) == '*') goalPosis.Add(pos);
       this.portals = portals;
-      stateDataElement = sizeof(ushort) * 8       // Spieler-Position (wenn auf dem Spielfeld vorhanden, sonst = 0)
-                       + sizeof(byte) * 8         // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
-                       + sizeof(byte) * 8         // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
-                       + (ulong)fieldPosis.Count; // Bit-markierte Felder, welche mit Kisten belegt sind
-      stateData = new Bitter(stateDataElement * (ulong)fieldPosis.Count * 3UL); // Raum mit einzelnen Feld kann nur drei Zustände annehmen: 1 = leer, 2 = Spieler, 3 = Kiste
+      stateDataElement = sizeof(ushort) * 8        // Spieler-Position (wenn auf dem Spielfeld vorhanden, sonst = 0)
+                       + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
+                       + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
+                       + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
+      stateData = new Bitter(stateDataElement * (ulong)fieldPosis.Length * 3UL); // Raum mit einzelnen Feld kann nur drei Zustände annehmen: 1 = leer, 2 = Spieler, 3 = Kiste
       stateDataUsed = 0;
       switch (field.GetField(pos))
       {
@@ -129,9 +129,9 @@ namespace SokoWahnLib.Rooms
     {
       Debug.Assert(playerPos < field.Width * field.Height);
       Debug.Assert(playerPos == 0 || field.ValidPos(playerPos));
-      Debug.Assert(boxCount <= fieldPosis.Count);
+      Debug.Assert(boxCount <= fieldPosis.Length);
       Debug.Assert(finishedBoxCount <= boxCount);
-      Debug.Assert(boxBits.Length == fieldPosis.Count);
+      Debug.Assert(boxBits.Length == fieldPosis.Length);
       Debug.Assert(boxBits.Count(x => x) == boxCount);
 
       ulong bitPos = stateDataUsed * stateDataElement;
@@ -148,6 +148,25 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(stateData.GetByte(bitPos + 16) == boxCount);
       Debug.Assert(stateData.GetByte(bitPos + 24) == finishedBoxCount);
       stateDataUsed++;
+    }
+
+    /// <summary>
+    /// fragt einen betsimmten Raumzustand ab (für Debug-Zwecke)
+    /// </summary>
+    /// <param name="stateIndex">Zustand, welcher ausgewählt wird (muss kleiner als stateDataUsed sein)</param>
+    /// <returns>Zustand des Raumes</returns>
+    public StateDebugInfo GetStateInfo(uint stateIndex)
+    {
+      if (stateIndex >= stateDataUsed) throw new ArgumentOutOfRangeException("stateIndex");
+      ulong bitPos = stateIndex * stateDataElement;
+
+      return new StateDebugInfo(
+        this, // Room
+        stateData.GetUShort(bitPos),    // Player-Pos
+        stateData.GetByte(bitPos + 16), // Box-Count
+        stateData.GetByte(bitPos + 24), // Box-Count (finished)
+        Enumerable.Range(0, fieldPosis.Length).Where(i => stateData.GetBit(bitPos + 32 + (ulong)i)).Select(i => fieldPosis[i]).ToArray() // Box-Positions
+      );
     }
 
     /// <summary>
@@ -179,7 +198,7 @@ namespace SokoWahnLib.Rooms
       return new
       {
         startPos = fieldPosis.Min(),
-        size = fieldPosis.Count,
+        size = fieldPosis.Length,
         portals = portals.Length + ": " + string.Join(", ", portals.AsEnumerable()),
         posis = string.Join(",", fieldPosis.OrderBy(pos => pos))
       }.ToString();

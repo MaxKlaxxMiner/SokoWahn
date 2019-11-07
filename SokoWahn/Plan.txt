@@ -25,7 +25,6 @@
 -- gefundene Lösung verknüpfen
 -- auf optimale Lösung prüfen
 - DisplayConsole
--- alle Zustände des Raumes auswählbar machen und darstellen
 -- Portale auswählbar machen und separat zeigen (z.B. weiß)
 -- Zustände der Räume pro Portal auswählbar machen
 -- Portal-Varianten pro Zustand im Portal speichern
