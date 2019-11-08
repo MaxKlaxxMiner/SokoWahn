@@ -95,34 +95,44 @@ namespace SokoWahnTool
       //var solver = new RoomSolver(FieldStart);
       //var solver = new RoomSolver(FieldMonster);
       int selectRoom = -1;
-      int selectState = -1;
+      int selectState = -1;  // ausgewählter Zustand (Konflikt mit selectPortal)
+      int selectPortal = -1; // ausgewähltes Portal  (Konflikt mit selectState)
       for (; ; )
       {
         Console.Clear();
-        solver.DisplayConsole(selectRoom, selectState);
+        solver.DisplayConsole(selectRoom, selectState, selectPortal);
         var key = Console.ReadKey();
         switch (key.Key)
         {
           case ConsoleKey.Escape: return;
 
+          #region # // --- Raum-Auswahl (+/- Tasten) ---
           case ConsoleKey.Add:
-          case ConsoleKey.OemPlus:
+          case ConsoleKey.OemPlus: // zum nächsten Raum wechseln
           {
+            selectState = -1;
+            selectPortal = -1;
+
             selectRoom++;
             if (selectRoom >= solver.rooms.Length) selectRoom = solver.rooms.Length - 1;
-            selectState = -1;
           } break;
 
           case ConsoleKey.Subtract:
-          case ConsoleKey.OemMinus:
+          case ConsoleKey.OemMinus: // zum vorherigen Raum wechseln
           {
+            selectState = -1;
+            selectPortal = -1;
+
             selectRoom--;
             if (selectRoom < -1) selectRoom = -1;
-            selectState = -1;
           } break;
+          #endregion
 
-          case ConsoleKey.PageDown:
+          #region # // --- Zustand-Auswahl (Bild-hoch/Bild-unten Tasten) ---
+          case ConsoleKey.PageDown: // zum nächsten Zustand wecheln
           {
+            selectPortal = -1;
+
             if (selectRoom < 0) selectRoom = 0;
             selectState++;
             if (selectState >= (int)solver.rooms[selectRoom].stateDataUsed)
@@ -137,8 +147,10 @@ namespace SokoWahnTool
             }
           } break;
 
-          case ConsoleKey.PageUp:
+          case ConsoleKey.PageUp: // zum vorherigen Zustand wechseln
           {
+            selectPortal = -1;
+
             if (selectRoom < 0) break;
             selectState--;
             if (selectState < 0)
@@ -152,6 +164,65 @@ namespace SokoWahnTool
               selectState = (int)solver.rooms[selectRoom].stateDataUsed - 1;
             }
           } break;
+          #endregion
+
+          #region # // --- Portal-Auswahl (Hoch/Runter Tasten + Leertaste) ---
+          case ConsoleKey.DownArrow: // zum nächsten Portal wechseln
+          {
+            selectState = -1;
+
+            if (selectRoom < 0) selectRoom = 0;
+            selectPortal++;
+            if (selectPortal >= solver.rooms[selectRoom].incomingPortals.Length)
+            {
+              if (selectRoom < solver.rooms.Length - 1)
+              {
+                selectRoom++;
+                selectPortal = 0;
+                break;
+              }
+              selectPortal = solver.rooms[selectRoom].incomingPortals.Length - 1;
+            }
+          } break;
+
+          case ConsoleKey.UpArrow: // zum vorherigen Portal wechseln
+          {
+            selectState = -1;
+
+            if (selectRoom < 0) break;
+            selectPortal--;
+            if (selectPortal < 0)
+            {
+              selectRoom--;
+              if (selectRoom < 0)
+              {
+                selectRoom = -1;
+                break;
+              }
+              selectPortal = solver.rooms[selectRoom].incomingPortals.Length - 1;
+            }
+          } break;
+
+          case ConsoleKey.Spacebar: // durch das Portal zum gegenüberliegenden Raum wechseln
+          {
+            if (selectRoom < 0 || selectPortal < 0) break;
+
+            var nextRoom = solver.rooms[selectRoom].incomingPortals[selectPortal].roomFrom;
+            var nextPortal = solver.rooms[selectRoom].outgoingPortals[selectPortal];
+
+            selectRoom = -1;
+            for (int r = 0; r < solver.rooms.Length; r++)
+            {
+              if (solver.rooms[r] == nextRoom) { selectRoom = r; break; }
+            }
+
+            selectPortal = -1;
+            for (int p = 0; p < nextRoom.incomingPortals.Length; p++)
+            {
+              if (nextRoom.incomingPortals[p] == nextPortal) { selectPortal = p; break; }
+            }
+          } break;
+          #endregion
         }
       }
 

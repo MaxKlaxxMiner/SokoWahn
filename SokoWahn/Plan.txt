@@ -4,28 +4,27 @@
 -- Room-Klasse erstellen
 --- Rooms aus allen gültigen Feldern erstellen
 ---- Basis-Funktionalität
------ mögliche Varianten berechnen und in den Räumen speichern
------- alle Varianten ab der Startstellung vorwärts durchrechnen
-------- 1. Spieler beginnt an der Startstellung innerhalb der Raumes
-------- 2. Spieler hat den Raum über ein Portal betrten
------- alle Varianten von der Endstellung rückwärts durchrechnen
-------- 1. Spieler verbleibt nach erreichen des Zieles im Raum
-------- 2. Spieler verlässt nach erreichen des Zieles den Raum wieder
------- beide Ergebnislisten abgleichen und nicht erreichbare Varianten verwerfen
 ----- für Portale zugehörige Varianten ermitteln, und in den Portalen speichern
------- Rückwärts gerichtete Portale ebenfalls referenzieren (eingehend)
 ------ durch das Portal in den Raum laufen
 ------ Kiste durch das Portal in dem Raum schieben
 
 - Merge: zwei Rooms zu einen verschmelzen
--- Merge planen
+-- mögliche Varianten berechnen und in den Räumen speichern
+--- alle Varianten ab der Startstellung vorwärts durchrechnen
+---- 1. Spieler beginnt an der Startstellung innerhalb der Raumes
+---- 2. Spieler hat den Raum über ein Portal betrten
+--- alle Varianten von der Endstellung rückwärts durchrechnen
+---- 1. Spieler verbleibt nach erreichen des Zieles im Raum
+---- 2. Spieler verlässt nach erreichen des Zieles den Raum wieder
+--- beide Ergebnislisten abgleichen und nicht erreichbare Varianten verwerfen
+-- Merge weiter planen
+
 - Search: Suche durchführen
 -- Vorwärts-Scan
 -- Rückwärts-Scan
 -- gefundene Lösung verknüpfen
 -- auf optimale Lösung prüfen
 - DisplayConsole
--- Portale auswählbar machen und separat zeigen (z.B. weiß)
 -- Portal-Varianten auswählbar machen
 --- Details der Varianten zeigen (z.B. Spielzüge um einen bestimmten Zustand zu erreichen)
 --- Laufwege der Varianten darstellen

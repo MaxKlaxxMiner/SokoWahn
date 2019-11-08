@@ -40,36 +40,64 @@ namespace SokoWahnLib.Rooms
 
       // --- begehbare Felder ermitteln und Basis-Räume erstellen ---
       var walkFields = field.GetWalkPosis();
-      rooms = walkFields.OrderBy(pos => pos).Select(pos => new Room(field, pos, new RoomPortal[ // Größe des Arrays vorher bestimmen
-        (walkFields.Contains(pos - 1) ? 1 : 0) +            // Portal zur linken Seite
-        (walkFields.Contains(pos + 1) ? 1 : 0) +            // Portal zur rechten Seite
-        (walkFields.Contains(pos - field.Width) ? 1 : 0) +  // Portal nach oben
-        (walkFields.Contains(pos + field.Width) ? 1 : 0)    // Portal nach unten
-       ])).ToArray();
+      rooms = walkFields.OrderBy(pos => pos).Select(pos =>
+      {
+        int portals = (walkFields.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
+                      (walkFields.Contains(pos + 1) ? 1 : 0) + // eingegendes Portal von der rechten Seite
+                      (walkFields.Contains(pos - field.Width) ? 1 : 0) + // eingehendes Portal von oben
+                      (walkFields.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
+        return new Room(field, pos, new RoomPortal[portals], new RoomPortal[portals]);
+      }).ToArray();
 
-      // --- Basis-Räume miteinander über Portale verknüpfen ---
+      // --- eingehende Portale in den Basis-Räumen erstellen und hinzufügen ---
       foreach (var room in rooms)
       {
         int pos = room.fieldPosis.First();
-        var portals = room.portals;
+        var portals = room.incomingPortals;
         int pIndex = 0;
-        if (walkFields.Contains(pos - 1)) // Portal zur linken Seite erstellen
+
+        // eingehendes Portal von der linken Seite
+        if (walkFields.Contains(pos - 1))
         {
-          portals[pIndex++] = new RoomPortal(pos, pos - 1, rooms.First(r => r.fieldPosis.First() == pos - 1));
+          portals[pIndex++] = new RoomPortal(pos - 1, pos, rooms.First(r => r.fieldPosis.First() == pos - 1), room); // eingehend
         }
-        if (walkFields.Contains(pos + 1)) // Portal zur rechten Seite erstellen
+
+        // eingehendes Portal von der rechten Seite
+        if (walkFields.Contains(pos + 1))
         {
-          portals[pIndex++] = new RoomPortal(pos, pos + 1, rooms.First(r => r.fieldPosis.First() == pos + 1));
+          portals[pIndex++] = new RoomPortal(pos + 1, pos, rooms.First(r => r.fieldPosis.First() == pos + 1), room);
         }
-        if (walkFields.Contains(pos - field.Width)) // Portal nach oben erstellen
+
+        // eingehendes Portal von oben
+        if (walkFields.Contains(pos - field.Width))
         {
-          portals[pIndex++] = new RoomPortal(pos, pos - field.Width, rooms.First(r => r.fieldPosis.First() == pos - field.Width));
+          portals[pIndex++] = new RoomPortal(pos - field.Width, pos, rooms.First(r => r.fieldPosis.First() == pos - field.Width), room);
         }
-        if (walkFields.Contains(pos + field.Width)) // Portal nach unten erstellen
+
+        // eingehendes Portal von unten
+        if (walkFields.Contains(pos + field.Width))
         {
-          portals[pIndex++] = new RoomPortal(pos, pos + field.Width, rooms.First(r => r.fieldPosis.First() == pos + field.Width));
+          portals[pIndex++] = new RoomPortal(pos + field.Width, pos, rooms.First(r => r.fieldPosis.First() == pos + field.Width), room);
         }
+
         Debug.Assert(pIndex == portals.Length);
+      }
+
+      // --- ausgehende Portale in den Basis-Räumen referenzieren (bestehende verwenden) ---
+      foreach (var room in rooms)
+      {
+        var iPortals = room.incomingPortals;
+        var oPortals = room.outgoingPortals;
+        Debug.Assert(iPortals.Length == oPortals.Length);
+        for (int pIndex = 0; pIndex < iPortals.Length; pIndex++)
+        {
+          oPortals[pIndex] = iPortals[pIndex].roomFrom.incomingPortals.First(p => p.posFrom == iPortals[pIndex].posTo);
+          iPortals[pIndex].oppositePortal = oPortals[pIndex];
+          Debug.Assert(iPortals[pIndex].posFrom == oPortals[pIndex].posTo);
+          Debug.Assert(iPortals[pIndex].posTo == oPortals[pIndex].posFrom);
+          Debug.Assert(iPortals[pIndex].roomFrom == oPortals[pIndex].roomTo);
+          Debug.Assert(iPortals[pIndex].roomTo == oPortals[pIndex].roomFrom);
+        }
       }
 
     }
@@ -78,13 +106,20 @@ namespace SokoWahnLib.Rooms
     /// gibt das Spielfeld in der Konsole aus
     /// </summary>
     /// <param name="selectRoom">optional: Raum, welcher dargestellt werden soll</param>
-    /// <param name="selectState">optional: Status des Raums, welcher dargestellt werden soll</param>
+    /// <param name="selectState">optional: Status des Raums, welcher dargestellt werden soll (Konflikt mit selectPortal)</param>
+    /// <param name="selectPortal">optional: Portal des Raums, welches dargestellt werden soll (Konflikt mit selectState)</param>
     /// <param name="displayIndent">optional: gibt an wie weit die Anzeige eingerückt sein soll (Default: 2)</param>
-    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int displayIndent = 2)
+    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int selectPortal = -1, int displayIndent = 2)
     {
       if (selectRoom >= rooms.Length) throw new ArgumentOutOfRangeException("selectRoom");
+      if (selectState >= 0 && selectPortal >= 0) throw new ArgumentException("conflicted: selectState and selectPortal");
+
       if (selectState >= 0 && selectRoom < 0) throw new ArgumentOutOfRangeException("selectState");
       if (selectRoom >= 0 && selectState >= rooms[selectRoom].stateDataUsed) throw new ArgumentOutOfRangeException("selectState");
+
+      if (selectPortal >= 0 && selectRoom < 0) throw new ArgumentOutOfRangeException("selectPortal");
+      //      if (selectRoom >= 0 && selectPortal >= rooms
+
       if (displayIndent < 0) throw new ArgumentOutOfRangeException("displayIndent");
       string indent = new string(' ', displayIndent);
 
@@ -135,12 +170,22 @@ namespace SokoWahnLib.Rooms
           }
         }
         // --- alle äußeren Portale des Raumes markieren --
-        foreach (var portal in room.portals)
+        for (int i = 0; i < room.incomingPortals.Length; i++)
         {
-          int pos = portal.posTo;
-          Console.CursorTop = cTop + pos / field.Width;
-          Console.CursorLeft = indent.Length + pos % field.Width;
-          Console.BackgroundColor = ConsoleColor.DarkRed;
+          var portal = room.incomingPortals[i];
+          int pos = portal.posFrom;
+          Console.CursorTop = cTop + pos/field.Width;
+          Console.CursorLeft = indent.Length + pos%field.Width;
+          if (selectPortal == i)
+          {
+            Console.ForegroundColor = ConsoleColor.Black;
+            Console.BackgroundColor = ConsoleColor.White;
+          }
+          else
+          {
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.BackgroundColor = ConsoleColor.DarkRed;
+          }
           Console.Write(field.GetField(pos));
         }
 
@@ -167,9 +212,20 @@ namespace SokoWahnLib.Rooms
           Console.WriteLine(indent + "  States: {0:N0}", room.stateDataUsed);
         }
         Console.WriteLine();
-        for (int i = 0; i < room.portals.Length; i++)
+        for (int i = 0; i < room.incomingPortals.Length; i++)
         {
-          Console.WriteLine(indent + "Portal {0}: {1}", i, room.portals[i]);
+          if (i == selectPortal)
+          {
+            Console.ForegroundColor = ConsoleColor.Black;
+            Console.BackgroundColor = ConsoleColor.White;
+            Console.WriteLine(indent + "Portal {0}: {1}" + indent, i, room.incomingPortals[i]);
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.BackgroundColor = ConsoleColor.Black;
+          }
+          else
+          {
+            Console.WriteLine(indent + "Portal {0}: {1}" + indent, i, room.incomingPortals[i]);
+          }
         }
       }
       else
@@ -180,7 +236,7 @@ namespace SokoWahnLib.Rooms
         Console.WriteLine();
         Console.WriteLine(indent + "  States: {0:N0}", rooms.Sum(x => x.stateDataUsed));
         Console.WriteLine();
-        Console.WriteLine(indent + " Portals: {0:N0}", rooms.Sum(x => x.portals.Length));
+        Console.WriteLine(indent + " Portals: {0:N0}", rooms.Sum(x => x.incomingPortals.Length));
       }
       Console.WriteLine();
     }

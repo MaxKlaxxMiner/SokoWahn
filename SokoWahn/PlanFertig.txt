@@ -15,14 +15,17 @@
 ------ Abgleich: leeres Feld
 ------ Abgleich: Feld mit Spieler
 ------ Abgleich: Feld mit Kiste
+----- für Portale zugehörige Varianten ermitteln, und in den Portalen speichern
+------ Rückwärts gerichtete Portale ebenfalls referenzieren (eingehend)
 -- begehbare/zusammenhängende Felder scannen
 -- Portal-Klasse erstellen
 - DisplayConsole
 -- Anzeige des gesamten Spielfeldes
 -- Anzeige des gesamten Spielfeldes ohne Kisten und ohne Spieler
--- Räume auswählbar machen und zeigen (z.B. grau)
--- Portale der Räume anzeigen (z.B. dunkelrot)
+-- Räume auswählbar machen und zeigen (dunkelgrün)
+-- Portale der Räume anzeigen (dunkelrot)
 -- alle Zustände des Raumes auswählbar machen und darstellen
+-- Portale auswählbar machen und separat zeigen (weiß)
 
 
 --- Projekte erstellen und einrichten ---

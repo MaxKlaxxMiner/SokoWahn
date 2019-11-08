@@ -26,9 +26,13 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly HashSet<int> goalPosis;
     /// <summary>
-    /// merkt sich die Portale zu den anderen Räumen
+    /// merkt sich die eigenden Portale von den anderen Räumen
     /// </summary>
-    public readonly RoomPortal[] portals;
+    public readonly RoomPortal[] incomingPortals;
+    /// <summary>
+    /// merkt sich die ausgehenden Portal in andere Räume
+    /// </summary>
+    public readonly RoomPortal[] outgoingPortals;
     /// <summary>
     /// merkt sich die die Daten der Zustände
     /// </summary>
@@ -47,17 +51,21 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="field">gesamtes Spielfeld, welches verwendet wird</param>
     /// <param name="pos">Position des Feldes, worraus der Raum generiert werden soll</param>
-    /// <param name="portals">vorhandene Portale zu anderen Räumen</param>
-    public Room(ISokoField field, int pos, RoomPortal[] portals)
+    /// <param name="incomingPortals">eingehende Portale von den anderen Räumen</param>
+    /// <param name="outgoingPortals">ausgehende Portale in andere Räume</param>
+    public Room(ISokoField field, int pos, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
     {
       if (field == null) throw new ArgumentNullException("field");
       if (!field.ValidPos(pos)) throw new ArgumentOutOfRangeException("pos");
-      if (portals == null) throw new ArgumentNullException("portals");
+      if (incomingPortals == null) throw new ArgumentNullException("incomingPortals");
+      if (outgoingPortals == null) throw new ArgumentNullException("outgoingPortals");
+      if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("incomingPortals.Length != outgoingPortals.Length");
       this.field = field;
       fieldPosis = new[] { pos };
       goalPosis = new HashSet<int>();
       if (field.GetField(pos) == '.' || field.GetField(pos) == '*') goalPosis.Add(pos);
-      this.portals = portals;
+      this.incomingPortals = incomingPortals;
+      this.outgoingPortals = outgoingPortals;
       stateDataElement = sizeof(ushort) * 8        // Spieler-Position (wenn auf dem Spielfeld vorhanden, sonst = 0)
                        + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
                        + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
@@ -174,10 +182,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public void Dispose()
     {
-      for (int i = 0; i < portals.Length; i++)
+      for (int i = 0; i < incomingPortals.Length; i++)
       {
-        if (portals[i] != null) portals[i].Dispose();
-        portals[i] = null;
+        if (incomingPortals[i] != null) incomingPortals[i].Dispose();
+        incomingPortals[i] = null;
       }
     }
 
@@ -199,7 +207,7 @@ namespace SokoWahnLib.Rooms
       {
         startPos = fieldPosis.Min(),
         size = fieldPosis.Length,
-        portals = portals.Length + ": " + string.Join(", ", portals.AsEnumerable()),
+        incomingPortals = incomingPortals.Length + ": " + string.Join(", ", incomingPortals.AsEnumerable()),
         posis = string.Join(",", fieldPosis.OrderBy(pos => pos))
       }.ToString();
     }
