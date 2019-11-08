@@ -91,9 +91,9 @@ namespace SokoWahnTool
     {
       //MiniGame(FieldTest1);
 
-      //var solver = new RoomSolver(FieldTest1);
+      var solver = new RoomSolver(FieldTest1);
       //var solver = new RoomSolver(FieldStart);
-      var solver = new RoomSolver(FieldMonster);
+      //var solver = new RoomSolver(FieldMonster);
       int selectRoom = -1;
       int selectState = -1;
       for (; ; )
@@ -121,7 +121,7 @@ namespace SokoWahnTool
             selectState = -1;
           } break;
 
-          case ConsoleKey.DownArrow:
+          case ConsoleKey.PageDown:
           {
             if (selectRoom < 0) selectRoom = 0;
             selectState++;
@@ -137,7 +137,7 @@ namespace SokoWahnTool
             }
           } break;
 
-          case ConsoleKey.UpArrow:
+          case ConsoleKey.PageUp:
           {
             if (selectRoom < 0) break;
             selectState--;

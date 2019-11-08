@@ -26,9 +26,9 @@
 -- auf optimale Lösung prüfen
 - DisplayConsole
 -- Portale auswählbar machen und separat zeigen (z.B. weiß)
--- Zustände der Räume pro Portal auswählbar machen
--- Portal-Varianten pro Zustand im Portal speichern
--- Laufwege der Varianten darstellen
+-- Portal-Varianten auswählbar machen
+--- Details der Varianten zeigen (z.B. Spielzüge um einen bestimmten Zustand zu erreichen)
+--- Laufwege der Varianten darstellen
 
 
 --- Projekte erstellen und einrichten ---
