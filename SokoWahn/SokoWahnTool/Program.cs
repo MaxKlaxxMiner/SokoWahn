@@ -61,6 +61,16 @@ namespace SokoWahnTool
           #####
     ");
 
+    static readonly SokoField FieldMoves105022 = new SokoField(@"
+       #               ###  
+      #.###############   # 
+      # $                $# 
+      #*.**************.**@#
+      #                $ $ #
+       ################.  # 
+                       ###  
+    ");
+
     static readonly SokoField FieldMonster = new SokoField(@"
       ###################################
       #..... $ $ $ $ $   $ $ $ $ $ .....#
@@ -93,6 +103,7 @@ namespace SokoWahnTool
 
       var solver = new RoomSolver(FieldTest1);
       //var solver = new RoomSolver(FieldStart);
+      //var solver = new RoomSolver(FieldMoves105022);
       //var solver = new RoomSolver(FieldMonster);
       int selectRoom = -1;
       int selectState = -1;  // ausgewählter Zustand (Konflikt mit selectPortal)
