@@ -3,7 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 // ReSharper disable UnusedMember.Global
@@ -103,6 +105,54 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
+    /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <param name="values">Werte, welche miteinander multipliziert werden sollen</param>
+    /// <returns>fertiges Ergebnis</returns>
+    static string MulNumber(IEnumerable<ulong> values)
+    {
+      var mul = new BigInteger(1);
+      ulong mulTmp = 1;
+      foreach (var val in values)
+      {
+        if (val > uint.MaxValue)
+        {
+          mul *= val;
+          continue;
+        }
+        mulTmp *= val;
+        if (mulTmp > uint.MaxValue)
+        {
+          mul *= mulTmp;
+          mulTmp = 1;
+        }
+      }
+      if (mulTmp > 1) mul *= mulTmp;
+
+      var txt = mul.ToString();
+
+      string separator = CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator;
+      int c = 0;
+      while (txt.Length > c + 3)
+      {
+        txt = txt.Insert(txt.Length - c - 3, separator);
+        c += 3 + separator.Length;
+      }
+
+      return txt;
+    }
+
+    /// <summary>
+    /// zeigt den maximalen Aufwand zum lösen des gesamten Feldes an
+    /// </summary>
+    /// <param name="indent">Leerzeichen zum einrücken der Zeilen</param>
+    void DisplayEffort(string indent)
+    {
+      Console.WriteLine(indent + "  Effort: " + MulNumber(rooms.Select(x => (ulong)x.stateDataUsed)));
+      Console.WriteLine();
+    }
+
+    /// <summary>
     /// gibt das Spielfeld in der Konsole aus
     /// </summary>
     /// <param name="selectRoom">optional: Raum, welcher dargestellt werden soll</param>
@@ -131,7 +181,9 @@ namespace SokoWahnLib.Rooms
       //if (selectRoom >= 0) fieldTxt = new string(fieldTxt.Select(SokoFieldHelper.ClearChar).ToArray()); // Spielfeld im Select-Modus leeren
 
       int cTop = Console.CursorTop + 1; // Anfangs-Position des Spielfeldes merken
-      Console.WriteLine(fieldTxt);            // Spielfeld ausgeben
+      Console.WriteLine(fieldTxt);      // Spielfeld ausgeben
+
+      DisplayEffort(indent);
 
       // --- Spielfeld wieder mit Inhalt befüllen ---
       if (selectRoom >= 0)
@@ -174,8 +226,8 @@ namespace SokoWahnLib.Rooms
         {
           var portal = room.incomingPortals[i];
           int pos = portal.posFrom;
-          Console.CursorTop = cTop + pos/field.Width;
-          Console.CursorLeft = indent.Length + pos%field.Width;
+          Console.CursorTop = cTop + pos / field.Width;
+          Console.CursorLeft = indent.Length + pos % field.Width;
           if (selectPortal == i)
           {
             Console.ForegroundColor = ConsoleColor.Black;

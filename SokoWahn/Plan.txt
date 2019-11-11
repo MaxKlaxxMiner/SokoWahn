@@ -8,6 +8,11 @@
 ------ durch das Portal in den Raum laufen
 ------ Kiste durch das Portal in dem Raum schieben
 
+- Optimizer
+-- Rooms untereinander vergleichen (nur welche über Portale verbunden sind)
+-- überflüssige Varianten entfernen
+-- nicht mehr benötigte Zustände entfernen
+
 - Merge: zwei Rooms zu einen verschmelzen
 -- mögliche Varianten berechnen und in den Räumen speichern
 --- alle Varianten ab der Startstellung vorwärts durchrechnen
@@ -26,7 +31,7 @@
 -- auf optimale Lösung prüfen
 - DisplayConsole
 -- Portal-Varianten auswählbar machen
---- Details der Varianten zeigen (z.B. Spielzüge um einen bestimmten Zustand zu erreichen)
+--- Details der Varianten zeigen (z.B. Anzahl der Spielzüge um einen bestimmten Zustand zu erreichen)
 --- Laufwege der Varianten darstellen
 
 
