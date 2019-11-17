@@ -350,7 +350,7 @@ namespace SokoWahnLib.Rooms
               if (outgoingPortal == -1) continue; // Kiste kann nicht auf der gegenüberliegenden Seite herrausgeschoben werden
             }
             portal.roomToPlayerVariants.Add(variantsDataUsed);
-            AddVariant(startState, outgoingPortal, endState, 1, (uint)startSt.boxCount);
+            AddVariant(startState + statePlayerUsed, outgoingPortal, endState, 1, (uint)startSt.boxCount);
           }
         }
       }

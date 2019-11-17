@@ -63,5 +63,14 @@ namespace SokoWahnLib.Rooms
       this.boxPosis = boxPosis;
       if (boxPosis.Length != boxCount) throw new ArgumentException("boxCount");
     }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { boxCount, playerPos, finishedBoxCount, boxPosis = string.Join(", ", boxPosis) }.ToString();
+    }
   }
 }
