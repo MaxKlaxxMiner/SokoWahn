@@ -299,7 +299,7 @@ namespace SokoWahnLib.Rooms
                 if (selectVariant == v)
                 {
                   Console.ForegroundColor = ConsoleColor.Black;
-                  Console.BackgroundColor = ConsoleColor.Yellow;
+                  Console.BackgroundColor = ConsoleColor.Gray;
                 }
                 Console.WriteLine(indent + indent + "Ply-Variant {0}: {1}" + indent, v + 1, incomingPortal.roomTo.GetVariantInfo(incomingPortal.roomToPlayerVariants[v]));
                 if (selectVariant == v)
@@ -313,9 +313,9 @@ namespace SokoWahnLib.Rooms
                 if (selectVariant == v + incomingPortal.roomToPlayerVariants.Count)
                 {
                   Console.ForegroundColor = ConsoleColor.Black;
-                  Console.BackgroundColor = ConsoleColor.Yellow;
+                  Console.BackgroundColor = ConsoleColor.Gray;
                 }
-                Console.WriteLine(indent + indent + "Ply-Variant {0}: {1}" + indent, v + 1, incomingPortal.roomTo.GetVariantInfo(incomingPortal.roomToBoxVariants[v]));
+                Console.WriteLine(indent + indent + "Box-Variant {0}: {1}" + indent, v + 1, incomingPortal.roomTo.GetVariantInfo(incomingPortal.roomToBoxVariants[v]));
                 if (selectVariant == v + incomingPortal.roomToPlayerVariants.Count)
                 {
                   Console.ForegroundColor = ConsoleColor.Gray;

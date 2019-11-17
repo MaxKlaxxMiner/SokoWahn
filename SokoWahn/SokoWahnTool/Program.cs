@@ -113,7 +113,7 @@ namespace SokoWahnTool
       {
         Console.Clear();
         solver.DisplayConsole(selectRoom, selectState, selectPortal, selectVariant);
-        var key = Console.ReadKey();
+        var key = Console.ReadKey(true);
         switch (key.Key)
         {
           case ConsoleKey.Escape: return;

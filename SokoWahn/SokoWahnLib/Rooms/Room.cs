@@ -336,8 +336,21 @@ namespace SokoWahnLib.Rooms
           {
             var startSt = GetBoxStateInfo(startState);
             Debug.Assert(startSt.playerPos == 0);
+            int outgoingPortal = -1;
+            if (startSt.boxCount > 0)
+            {
+              for (int i = 0; i < outgoingPortals.Length; i++)
+              {
+                if (outgoingPortals[i].posTo - outgoingPortals[i].posFrom == portal.posTo - portal.posFrom)
+                {
+                  Debug.Assert(outgoingPortal == -1);
+                  outgoingPortal = i;
+                }
+              }
+              if (outgoingPortal == -1) continue; // Kiste kann nicht auf der gegenüberliegenden Seite herrausgeschoben werden
+            }
             portal.roomToPlayerVariants.Add(variantsDataUsed);
-            AddVariant(startState, -1, endState, 1, 0);
+            AddVariant(startState, outgoingPortal, endState, 1, (uint)startSt.boxCount);
           }
         }
       }
@@ -354,7 +367,7 @@ namespace SokoWahnLib.Rooms
     /// fügt eine weitere Variante hinzu
     /// </summary>
     /// <param name="incomingState">Vorher-Zustand</param>
-    /// <param name="outgoingPortal">das Portal an, wo eine Kiste rausgeschoben wurde (oder -1, wenn keine Kiste den Raum verlässt)</param>
+    /// <param name="outgoingPortal">das Portal an, wo eine Kiste rausgeschoben wurde oder der Spieler den Raum verlassen hat (oder -1, wenn nichts den Raum verlässt)</param>
     /// <param name="outgoingState">erreichbaren End-Zustand</param>
     /// <param name="moves">Anzahl der Laufschritte, welche für den neuen Zustand nötig sind (inkl. Kistenverschiebungen)</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen, welche für den neuen Zustand nötig sind</param>
@@ -390,15 +403,20 @@ namespace SokoWahnLib.Rooms
     public VariantDebugInfo GetVariantInfo(uint variantIndex)
     {
       Debug.Assert(variantIndex < variantsDataUsed);
-      var incomingPortal = incomingPortals.First(p => p.roomToPlayerVariants.Any(x => x == variantIndex) || p.roomToBoxVariants.Any(x => x == variantIndex));
+
       ulong bitPos = variantIndex * variantsDateElement;
+      var incomingPortal = incomingPortals.First(p => p.roomToPlayerVariants.Any(x => x == variantIndex) || p.roomToBoxVariants.Any(x => x == variantIndex));
+      bool incomingBox = incomingPortal.roomToBoxVariants.Any(x => x == variantIndex);
+      uint incomingState = variantsData.GetUInt(bitPos);
+      uint outgoingState = variantsData.GetUInt(bitPos + 40);
+
       return new VariantDebugInfo(
         incomingPortal,
-        incomingPortal.roomToBoxVariants.Any(x => x == variantIndex),
-        variantsData.GetUInt(bitPos),
+        incomingBox,
+        incomingState,
         variantsData.GetByte(bitPos + 32) == 0xff ? null : outgoingPortals[variantsData.GetByte(bitPos + 32)],
-        false, // todo: outgoingBox?
-        variantsData.GetUInt(bitPos + 40),
+        !incomingBox && GetStateInfo(incomingState).boxCount > GetStateInfo(outgoingState).boxCount,
+        outgoingState,
         variantsData.GetUInt24(bitPos + 72),
         variantsData.GetUInt24(bitPos + 96)
       );

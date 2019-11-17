@@ -82,7 +82,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
-      return new { moves, pushes, incomingState, outgoingBox, outgoingPortal, outgoingState, incomingBox }.ToString();
+      return new { moves, pushes, incomingBox, incomingPortal, incomingState, outgoingBox, outgoingPortal, outgoingState }.ToString();
     }
   }
 }
