@@ -75,7 +75,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly ulong variantsDateElement;
     /// <summary>
-    /// Anzahl der benutzen Zustand-Elemente
+    /// Anzahl der benutzen Varianten-Elemente
     /// </summary>
     public uint variantsDataUsed;
 
@@ -114,7 +114,8 @@ namespace SokoWahnLib.Rooms
       statePlayerData = new Bitter(statePlayerElement * 1UL); // Raum mit eintelnen Spieler-Feld kann nur ein Zustand annehmen: 1 = Spieler
       statePlayerUsed = 0;
 
-      variantsDateElement = sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
+      variantsDateElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
+                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
                           + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
                           + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
                           + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
@@ -325,44 +326,82 @@ namespace SokoWahnLib.Rooms
       int pos = fieldPosis.First();
 
       // --- Varianten hinzufügen, wo der Spieler im Raum verbleibt ---
-      for (uint state = 0; state < statePlayerUsed; state++)
+      for (uint endState = 0; endState < statePlayerUsed; endState++)
       {
-        var st = GetPlayerStateInfo(state);
-
+        var endSt = GetPlayerStateInfo(endState);
+        Debug.Assert(endSt.playerPos > 0);
+        foreach (var portal in incomingPortals)
+        {
+          for (uint startState = 0; startState < stateBoxUsed; startState++)
+          {
+            var startSt = GetBoxStateInfo(startState);
+            Debug.Assert(startSt.playerPos == 0);
+            portal.roomToPlayerVariants.Add(variantsDataUsed);
+            AddVariant(startState, -1, endState, 1, 0);
+          }
+        }
       }
 
       // --- Varianten hinzufügen, wo der Spieler den Raum verlässt ---
       for (uint state = 0; state < stateBoxUsed; state++)
       {
         var st = GetBoxStateInfo(state);
+        Debug.Assert(st.playerPos == 0);
       }
     }
 
     /// <summary>
     /// fügt eine weitere Variante hinzu
     /// </summary>
-    /// <param name="outgoingPortal">gibt das Portal an, wo eine Kiste rausgeschoben wurde (oder -1, wenn keine Kiste den Raum verlässt)</param>
-    /// <param name="outgoingState">gibt den erreichbaren End-Zustand</param>
+    /// <param name="incomingState">Vorher-Zustand</param>
+    /// <param name="outgoingPortal">das Portal an, wo eine Kiste rausgeschoben wurde (oder -1, wenn keine Kiste den Raum verlässt)</param>
+    /// <param name="outgoingState">erreichbaren End-Zustand</param>
     /// <param name="moves">Anzahl der Laufschritte, welche für den neuen Zustand nötig sind (inkl. Kistenverschiebungen)</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen, welche für den neuen Zustand nötig sind</param>
-    void AddVariant(int outgoingPortal, uint outgoingState, uint moves, uint pushes)
+    void AddVariant(uint incomingState, int outgoingPortal, uint outgoingState, uint moves, uint pushes)
     {
+      Debug.Assert(incomingState < statePlayerUsed + stateBoxUsed);
       Debug.Assert(outgoingPortal == -1 || (outgoingPortal >= 0 && outgoingPortal < outgoingPortals.Length && outgoingPortal < 0xff));
       Debug.Assert(outgoingState < statePlayerUsed + stateBoxUsed);
       Debug.Assert(moves > 0 && moves < 16777216);
       Debug.Assert(pushes < 16777216 && pushes <= moves);
 
       ulong bitPos = variantsDataUsed * variantsDateElement;
-      variantsData.SetByte(bitPos, (byte)(uint)outgoingPortal);
-      variantsData.SetUInt(bitPos + 8, outgoingState);
-      variantsData.SetUInt24(bitPos + 40, moves);
-      variantsData.SetUInt24(bitPos + 64, pushes);
+      variantsData.SetUInt(bitPos, incomingState);
+      variantsData.SetByte(bitPos + 32, (byte)(uint)outgoingPortal);
+      variantsData.SetUInt(bitPos + 40, outgoingState);
+      variantsData.SetUInt24(bitPos + 72, moves);
+      variantsData.SetUInt24(bitPos + 96, pushes);
 
-      Debug.Assert(variantsData.GetByte(bitPos) == outgoingPortal || (variantsData.GetByte(bitPos) == 0xff && outgoingPortal == -1));
-      Debug.Assert(variantsData.GetUInt(bitPos + 8) == outgoingState);
-      Debug.Assert(variantsData.GetUInt24(bitPos + 40) == moves);
-      Debug.Assert(variantsData.GetUInt24(bitPos + 64) == pushes);
+      Debug.Assert(variantsData.GetUInt(bitPos) == incomingState);
+      Debug.Assert(variantsData.GetByte(bitPos + 32) == outgoingPortal || (variantsData.GetByte(bitPos + 32) == 0xff && outgoingPortal == -1));
+      Debug.Assert(variantsData.GetUInt(bitPos + 40) == outgoingState);
+      Debug.Assert(variantsData.GetUInt24(bitPos + 72) == moves);
+      Debug.Assert(variantsData.GetUInt24(bitPos + 96) == pushes);
+      Debug.Assert(variantsDateElement == 120);
       variantsDataUsed++;
+    }
+
+    /// <summary>
+    /// fragt eine bestimmte Variante ab (für Debug-Zwecke)
+    /// </summary>
+    /// <param name="variantIndex">Index der Variante</param>
+    /// <returns>fertig ausgelesene Variante</returns>
+    public VariantDebugInfo GetVariantInfo(uint variantIndex)
+    {
+      Debug.Assert(variantIndex < variantsDataUsed);
+      var incomingPortal = incomingPortals.First(p => p.roomToPlayerVariants.Any(x => x == variantIndex) || p.roomToBoxVariants.Any(x => x == variantIndex));
+      ulong bitPos = variantIndex * variantsDateElement;
+      return new VariantDebugInfo(
+        incomingPortal,
+        incomingPortal.roomToBoxVariants.Any(x => x == variantIndex),
+        variantsData.GetUInt(bitPos),
+        variantsData.GetByte(bitPos + 32) == 0xff ? null : outgoingPortals[variantsData.GetByte(bitPos + 32)],
+        false, // todo: outgoingBox?
+        variantsData.GetUInt(bitPos + 40),
+        variantsData.GetUInt24(bitPos + 72),
+        variantsData.GetUInt24(bitPos + 96)
+      );
     }
     #endregion
 

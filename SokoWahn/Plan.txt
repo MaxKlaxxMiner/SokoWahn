@@ -31,7 +31,6 @@
 -- auf optimale Lösung prüfen
 - DisplayConsole
 -- Portal-Varianten auswählbar machen
---- Details der Varianten zeigen (z.B. Anzahl der Spielzüge um einen bestimmten Zustand zu erreichen)
 --- Laufwege der Varianten darstellen
 
 

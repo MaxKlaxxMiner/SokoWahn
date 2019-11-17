@@ -175,8 +175,9 @@ namespace SokoWahnLib.Rooms
     /// <param name="selectRoom">optional: Raum, welcher dargestellt werden soll</param>
     /// <param name="selectState">optional: Status des Raums, welcher dargestellt werden soll (Konflikt mit selectPortal)</param>
     /// <param name="selectPortal">optional: Portal des Raums, welches dargestellt werden soll (Konflikt mit selectState)</param>
+    /// <param name="selectVariant">optionsl: Portal-Variante, welche drargestellt werden soll</param>
     /// <param name="displayIndent">optional: gibt an wie weit die Anzeige eingerückt sein soll (Default: 2)</param>
-    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int selectPortal = -1, int displayIndent = 2)
+    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int selectPortal = -1, int selectVariant = -1, int displayIndent = 2)
     {
       if (selectRoom >= rooms.Length) throw new ArgumentOutOfRangeException("selectRoom");
       if (selectState >= 0 && selectPortal >= 0) throw new ArgumentException("conflicted: selectState and selectPortal");
@@ -283,17 +284,49 @@ namespace SokoWahnLib.Rooms
         Console.WriteLine();
         for (int i = 0; i < room.incomingPortals.Length; i++)
         {
+          var incomingPortal = room.incomingPortals[i];
           if (i == selectPortal)
           {
             Console.ForegroundColor = ConsoleColor.Black;
             Console.BackgroundColor = ConsoleColor.White;
-            Console.WriteLine(indent + "Portal {0}: {1}" + indent, i, room.incomingPortals[i]);
+            Console.WriteLine(indent + "Portal {0}: {1} (Variants: {2})" + indent, i, incomingPortal, incomingPortal.roomToPlayerVariants.Count + incomingPortal.roomToBoxVariants.Count);
             Console.ForegroundColor = ConsoleColor.Gray;
             Console.BackgroundColor = ConsoleColor.Black;
+            if (selectVariant >= 0)
+            {
+              for (int v = 0; v < incomingPortal.roomToPlayerVariants.Count; v++)
+              {
+                if (selectVariant == v)
+                {
+                  Console.ForegroundColor = ConsoleColor.Black;
+                  Console.BackgroundColor = ConsoleColor.Yellow;
+                }
+                Console.WriteLine(indent + indent + "Ply-Variant {0}: {1}" + indent, v + 1, incomingPortal.roomTo.GetVariantInfo(incomingPortal.roomToPlayerVariants[v]));
+                if (selectVariant == v)
+                {
+                  Console.ForegroundColor = ConsoleColor.Gray;
+                  Console.BackgroundColor = ConsoleColor.Black;
+                }
+              }
+              for (int v = 0; v < incomingPortal.roomToBoxVariants.Count; v++)
+              {
+                if (selectVariant == v + incomingPortal.roomToPlayerVariants.Count)
+                {
+                  Console.ForegroundColor = ConsoleColor.Black;
+                  Console.BackgroundColor = ConsoleColor.Yellow;
+                }
+                Console.WriteLine(indent + indent + "Ply-Variant {0}: {1}" + indent, v + 1, incomingPortal.roomTo.GetVariantInfo(incomingPortal.roomToBoxVariants[v]));
+                if (selectVariant == v + incomingPortal.roomToPlayerVariants.Count)
+                {
+                  Console.ForegroundColor = ConsoleColor.Gray;
+                  Console.BackgroundColor = ConsoleColor.Black;
+                }
+              }
+            }
           }
           else
           {
-            Console.WriteLine(indent + "Portal {0}: {1}" + indent, i, room.incomingPortals[i]);
+            Console.WriteLine(indent + "Portal {0}: {1} (Variants: {2})" + indent, i, incomingPortal, incomingPortal.roomToPlayerVariants.Count + incomingPortal.roomToBoxVariants.Count);
           }
         }
       }

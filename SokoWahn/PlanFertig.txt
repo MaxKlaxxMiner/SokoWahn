@@ -26,6 +26,8 @@
 -- Portale der Räume anzeigen (dunkelrot)
 -- alle Zustände des Raumes auswählbar machen und darstellen
 -- Portale auswählbar machen und separat zeigen (weiß)
+-- Portal-Varianten auswählbar machen
+--- Details der Varianten zeigen (z.B. Anzahl der Spielzüge um einen bestimmten Zustand zu erreichen)
 
 
 --- Projekte erstellen und einrichten ---

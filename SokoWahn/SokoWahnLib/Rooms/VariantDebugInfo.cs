@@ -7,6 +7,7 @@ namespace SokoWahnLib.Rooms
   /*
    * --- Speicher-Nutzung ---
    * 
+   * uint   incomingState
    * byte   outgoingPortal
    * uint   outgoingState
    * uint24 moves
@@ -73,6 +74,15 @@ namespace SokoWahnLib.Rooms
       this.outgoingState = outgoingState;
       this.moves = moves;
       this.pushes = pushes;
+    }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { moves, pushes, incomingState, outgoingBox, outgoingPortal, outgoingState, incomingBox }.ToString();
     }
   }
 }

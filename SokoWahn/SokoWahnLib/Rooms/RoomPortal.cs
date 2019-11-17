@@ -1,6 +1,9 @@
 ﻿#region # using *.*
 using System;
+using System.Collections.Generic;
 using System.Linq;
+// ReSharper disable CollectionNeverQueried.Global
+// ReSharper disable CollectionNeverUpdated.Global
 
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable MemberCanBePrivate.Global
@@ -37,6 +40,14 @@ namespace SokoWahnLib.Rooms
     /// merkt sich das zurückführende Portal
     /// </summary>
     public RoomPortal oppositePortal;
+    /// <summary>
+    /// merkt sich die Varianten, wenn der Spieler in das benachbarte Portal läuft
+    /// </summary>
+    public readonly List<uint> roomToPlayerVariants = new List<uint>();
+    /// <summary>
+    /// merkt sich die Varianten, wenn eine Kiste in das benachbarte Portal geschoben wird
+    /// </summary>
+    public readonly List<uint> roomToBoxVariants = new List<uint>();
 
     /// <summary>
     /// Konstruktor
