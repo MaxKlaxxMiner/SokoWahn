@@ -82,6 +82,19 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
+      var room = incomingPortal != null ? incomingPortal.roomTo : outgoingPortal.roomFrom;
+      if (room.fieldPosis.Length == 1)
+      {
+        var incomingSt = room.GetStateInfo(incomingState);
+        var outgoingSt = room.GetStateInfo(outgoingState);
+        return new
+        {
+          moves,
+          pushes,
+          start = (incomingSt.boxCount > 0 ? "Box" : (incomingSt.playerPos == 0 ? "[-]" : "Ply")) + (incomingPortal != null ? "  " + incomingPortal + " <- " + (incomingBox ? "Box" : "Ply") : ""),
+          end = (outgoingSt.boxCount > 0 ? "Box" : (outgoingSt.playerPos == 0 ? "[-]" : "Ply")) + (outgoingPortal != null ? "  " + outgoingPortal + " -> " + (outgoingBox ? "Box" : "Ply") : "")
+        }.ToString();
+      }
       return new { moves, pushes, incomingBox, incomingPortal, incomingState, outgoingBox, outgoingPortal, outgoingState }.ToString();
     }
   }

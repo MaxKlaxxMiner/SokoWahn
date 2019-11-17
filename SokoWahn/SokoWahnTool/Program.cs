@@ -185,6 +185,13 @@ namespace SokoWahnTool
           #region # // --- Portal-Auswahl (Hoch/Runter Tasten + Leertaste) ---
           case ConsoleKey.DownArrow: // zum nächsten Portal wechseln
           {
+            if (selectVariant >= 0 && selectRoom >= 0 && selectPortal >= 0)
+            {
+              var incomingPortal = solver.rooms[selectRoom].incomingPortals[selectPortal];
+              selectVariant++;
+              if (selectVariant < incomingPortal.roomToPlayerVariants.Count + incomingPortal.roomToBoxVariants.Count) break;
+            }
+
             selectState = -1;
             selectVariant = -1;
 
@@ -204,6 +211,12 @@ namespace SokoWahnTool
 
           case ConsoleKey.UpArrow: // zum vorherigen Portal wechseln
           {
+            if (selectVariant >= 0 && selectRoom >= 0 && selectPortal >= 0)
+            {
+              selectVariant--;
+              break;
+            }
+
             selectState = -1;
             selectVariant = -1;
 
@@ -249,14 +262,11 @@ namespace SokoWahnTool
             if (selectRoom < 0 || selectPortal < 0) break;
             var incomingPortal = solver.rooms[selectRoom].incomingPortals[selectPortal];
             selectVariant++;
-            if (selectVariant >= incomingPortal.roomToPlayerVariants.Count + incomingPortal.roomToBoxVariants.Count) selectVariant = 0;
+            if (selectVariant >= incomingPortal.roomToPlayerVariants.Count + incomingPortal.roomToBoxVariants.Count) selectVariant--;
           } break;
           case ConsoleKey.LeftArrow:
           {
-            if (selectRoom < 0 || selectPortal < 0) break;
-            var incomingPortal = solver.rooms[selectRoom].incomingPortals[selectPortal];
-            selectVariant--;
-            if (selectVariant < 0) selectVariant = incomingPortal.roomToPlayerVariants.Count + incomingPortal.roomToBoxVariants.Count - 1;
+            selectVariant = -1;
           } break;
           #endregion
         }

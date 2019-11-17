@@ -384,15 +384,34 @@ namespace SokoWahnLib.Rooms
         Debug.Assert(endSt.playerPos == 0);
         foreach (var portal in incomingPortals)
         {
-          for (uint startState = 0; startState < statePlayerUsed; startState++)
+          if (endSt.boxCount > 0) // Feld mit Kiste
           {
-            var startSt = GetPlayerStateInfo(startState);
-            Debug.Assert(startSt.playerPos > 0);
-            Debug.Assert(startSt.boxCount == 0);
-            for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+            for (uint startState = 0; startState < stateBoxUsed; startState++)
             {
-              portal.roomToPlayerVariants.Add(variantsDataUsed);
-              AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
+              var startSt = GetBoxStateInfo(startState);
+              if (startSt.boxCount > 0) continue;
+              Debug.Assert(startSt.playerPos == 0);
+              Debug.Assert(startSt.boxCount == 0);
+              for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+              {
+                portal.roomToBoxVariants.Add(variantsDataUsed);
+                AddVariant(startState + statePlayerUsed, outgoingPortal, endState + statePlayerUsed, 0, 1);
+              }
+            }
+          }
+          else // leeres Feld bleibt zurück
+          {
+            for (uint startState = 0; startState < statePlayerUsed; startState++)
+            {
+              var startSt = GetPlayerStateInfo(startState);
+              Debug.Assert(startSt.playerPos > 0);
+              Debug.Assert(startSt.boxCount == 0);
+              for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+              {
+                if (portal.posFrom == outgoingPortals[outgoingPortal].posTo) continue; // direktes rein- und rauslaufen vermeiden
+                portal.roomToPlayerVariants.Add(variantsDataUsed);
+                AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
+              }
             }
           }
         }
