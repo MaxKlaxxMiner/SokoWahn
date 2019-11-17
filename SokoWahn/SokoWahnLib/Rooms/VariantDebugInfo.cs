@@ -5,9 +5,8 @@
 namespace SokoWahnLib.Rooms
 {
   /*
-   * --- Speicher-Felder ---
+   * --- Speicher-Nutzung ---
    * 
-   * bit    outgoingBox
    * byte   outgoingPortal
    * uint   outgoingState
    * uint24 moves

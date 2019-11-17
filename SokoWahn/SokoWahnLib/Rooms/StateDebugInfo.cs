@@ -5,9 +5,13 @@
 namespace SokoWahnLib.Rooms
 {
   /*
-   * --- Speicher-Felder ---
-   * 
+   * --- Speicher-Nutzung mit Spieler ---
    * ushort playerPos
+   * byte   boxCount
+   * byte   finishedBoxCount
+   * bits[] boxPosis
+   * 
+   * --- Speicher-Nutzung ohne Spieler ---
    * byte   boxCount
    * byte   finishedBoxCount
    * bits[] boxPosis

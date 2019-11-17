@@ -146,7 +146,7 @@ namespace SokoWahnTool
 
             if (selectRoom < 0) selectRoom = 0;
             selectState++;
-            if (selectState >= (int)solver.rooms[selectRoom].stateDataUsed)
+            if (selectState >= (int)solver.rooms[selectRoom].StateUsed)
             {
               if (selectRoom < solver.rooms.Length - 1)
               {
@@ -154,7 +154,7 @@ namespace SokoWahnTool
                 selectState = 0;
                 break;
               }
-              selectState = (int)solver.rooms[selectRoom].stateDataUsed - 1;
+              selectState = (int)solver.rooms[selectRoom].StateUsed - 1;
             }
           } break;
 
@@ -172,7 +172,7 @@ namespace SokoWahnTool
                 selectRoom = -1;
                 break;
               }
-              selectState = (int)solver.rooms[selectRoom].stateDataUsed - 1;
+              selectState = (int)solver.rooms[selectRoom].StateUsed - 1;
             }
           } break;
           #endregion

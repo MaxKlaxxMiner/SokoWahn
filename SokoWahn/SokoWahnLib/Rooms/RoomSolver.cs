@@ -165,7 +165,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="indent">Leerzeichen zum einrücken der Zeilen</param>
     void DisplayEffort(string indent)
     {
-      Console.WriteLine(indent + "  Effort: " + MulNumber(rooms.Select(x => (ulong)x.stateDataUsed)));
+      Console.WriteLine(indent + "  Effort: " + MulNumber(rooms.Select(x => (ulong)(x.StateUsed))));
       Console.WriteLine();
     }
 
@@ -182,7 +182,7 @@ namespace SokoWahnLib.Rooms
       if (selectState >= 0 && selectPortal >= 0) throw new ArgumentException("conflicted: selectState and selectPortal");
 
       if (selectState >= 0 && selectRoom < 0) throw new ArgumentOutOfRangeException("selectState");
-      if (selectRoom >= 0 && selectState >= rooms[selectRoom].stateDataUsed) throw new ArgumentOutOfRangeException("selectState");
+      if (selectRoom >= 0 && selectState >= rooms[selectRoom].StateUsed) throw new ArgumentOutOfRangeException("selectState");
 
       if (selectPortal >= 0 && selectRoom < 0) throw new ArgumentOutOfRangeException("selectPortal");
       //      if (selectRoom >= 0 && selectPortal >= rooms
@@ -274,11 +274,11 @@ namespace SokoWahnLib.Rooms
         Console.WriteLine();
         if (selectState >= 0)
         {
-          Console.WriteLine(indent + "   State: {0:N0} / {1:N0}", selectState + 1, room.stateDataUsed);
+          Console.WriteLine(indent + "   State: {0:N0} / {1:N0}", selectState + 1, room.StateUsed);
         }
         else
         {
-          Console.WriteLine(indent + "  States: {0:N0}", room.stateDataUsed);
+          Console.WriteLine(indent + "  States: {0:N0}", room.StateUsed);
         }
         Console.WriteLine();
         for (int i = 0; i < room.incomingPortals.Length; i++)
@@ -303,7 +303,7 @@ namespace SokoWahnLib.Rooms
         Console.WriteLine();
         Console.WriteLine(indent + "  Fields: {0:N0}", rooms.Sum(x => x.fieldPosis.Length));
         Console.WriteLine();
-        Console.WriteLine(indent + "  States: {0:N0}", rooms.Sum(x => x.stateDataUsed));
+        Console.WriteLine(indent + "  States: {0:N0}", rooms.Sum(x => x.StateUsed));
         Console.WriteLine();
         Console.WriteLine(indent + " Portals: {0:N0}", rooms.Sum(x => x.incomingPortals.Length));
       }

@@ -53,6 +53,7 @@ namespace SokoWahnLib
     /// <returns>true, wenn es sich um eine gültige Position handelt</returns>
     public static bool ValidPos(this ISokoField field, int pos)
     {
+      if (pos < 0 || pos >= field.Width * field.Height) return false;
       return GetWalkPosis(field).Contains(pos);
     }
     #endregion
