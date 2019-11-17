@@ -196,7 +196,6 @@ namespace SokoWahnLib.Rooms
 
       // --- Spielfeld anzeigen ---
       string fieldTxt = ("\r\n" + field.GetText()).Replace("\r\n", "\r\n" + indent); // Spielfeld (mit Indent) berechnen
-      //if (selectRoom >= 0) fieldTxt = new string(fieldTxt.Select(SokoFieldHelper.ClearChar).ToArray()); // Spielfeld im Select-Modus leeren
 
       int cTop = Console.CursorTop + 1; // Anfangs-Position des Spielfeldes merken
       Console.WriteLine(fieldTxt);      // Spielfeld ausgeben

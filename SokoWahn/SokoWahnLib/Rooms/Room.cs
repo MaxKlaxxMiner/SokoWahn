@@ -7,6 +7,7 @@ using System.Linq;
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable RedundantIfElseBlock
 // ReSharper disable CollectionNeverQueried.Global
+// ReSharper disable CollectionNeverUpdated.Global
 
 namespace SokoWahnLib.Rooms
 {
@@ -346,7 +347,7 @@ namespace SokoWahnLib.Rooms
         }
       }
 
-      // --- Varianten hinzufügen, wo der Spieler im Raum verbleibt ---
+      // --- Varianten hinzufügen, wo der Spieler im Raum bleibt ---
       for (uint endState = 0; endState < statePlayerUsed; endState++)
       {
         var endSt = GetPlayerStateInfo(endState);
@@ -371,16 +372,30 @@ namespace SokoWahnLib.Rooms
               if (outgoingPortal == -1) continue; // Kiste kann nicht auf der gegenüberliegenden Seite herrausgeschoben werden
             }
             portal.roomToPlayerVariants.Add(variantsDataUsed);
-            AddVariant(startState + statePlayerUsed, outgoingPortal, endState, 1, (uint)startSt.boxCount);
+            AddVariant(startState + statePlayerUsed, outgoingPortal, endState, 0, (uint)startSt.boxCount);
           }
         }
       }
 
       // --- Varianten hinzufügen, wo der Spieler den Raum verlässt ---
-      for (uint state = 0; state < stateBoxUsed; state++)
+      for (uint endState = 0; endState < stateBoxUsed; endState++)
       {
-        var st = GetBoxStateInfo(state);
-        Debug.Assert(st.playerPos == 0);
+        var endSt = GetBoxStateInfo(endState);
+        Debug.Assert(endSt.playerPos == 0);
+        foreach (var portal in incomingPortals)
+        {
+          for (uint startState = 0; startState < statePlayerUsed; startState++)
+          {
+            var startSt = GetPlayerStateInfo(startState);
+            Debug.Assert(startSt.playerPos > 0);
+            Debug.Assert(startSt.boxCount == 0);
+            for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+            {
+              portal.roomToPlayerVariants.Add(variantsDataUsed);
+              AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
+            }
+          }
+        }
       }
     }
 
@@ -398,7 +413,7 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(outgoingPortal == -1 || (outgoingPortal >= 0 && outgoingPortal < outgoingPortals.Length && outgoingPortal < 0xff));
       Debug.Assert(outgoingState < statePlayerUsed + stateBoxUsed);
       Debug.Assert(moves < 16777216);
-      Debug.Assert(pushes < 16777216 && pushes <= moves);
+      Debug.Assert(pushes < 16777216 && pushes <= moves + 1);
 
       ulong bitPos = variantsDataUsed * variantsDateElement;
       variantsData.SetUInt(bitPos, incomingState);
