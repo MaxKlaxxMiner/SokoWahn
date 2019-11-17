@@ -280,6 +280,15 @@ namespace SokoWahnLib.Rooms
         else
         {
           Console.WriteLine(indent + "  States: {0:N0}", room.StateUsed);
+          if (room.startPlayerVariants.Count + room.startBoxVariants.Count > 0) Console.WriteLine();
+          for (int v = 0; v < room.startPlayerVariants.Count; v++)
+          {
+            Console.WriteLine(indent + "Ply-Variant {0}: {1}", v + 1, room.GetVariantInfo(room.startPlayerVariants[v]));
+          }
+          for (int v = 0; v < room.startBoxVariants.Count; v++)
+          {
+            Console.WriteLine(indent + "Box-Variant {0}: {1}", v + 1, room.GetVariantInfo(room.startBoxVariants[v]));
+          }
         }
         Console.WriteLine();
         for (int i = 0; i < room.incomingPortals.Length; i++)
