@@ -40,6 +40,7 @@ namespace SokoWahnLib.Rooms
       if (field == null) throw new ArgumentNullException("field");
       this.field = field;
 
+      #region # // --- Räume erstellen ---
       // --- begehbare Felder ermitteln und Basis-Räume erstellen ---
       var walkFields = field.GetWalkPosis();
       rooms = walkFields.OrderBy(pos => pos).Select(pos =>
@@ -50,7 +51,9 @@ namespace SokoWahnLib.Rooms
                       (walkFields.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
         return new Room(field, pos, new RoomPortal[portals], new RoomPortal[portals]);
       }).ToArray();
+      #endregion
 
+      #region # // --- Portale erstellen ---
       // --- eingehende Portale in den Basis-Räumen erstellen und hinzufügen ---
       foreach (var room in rooms)
       {
@@ -101,7 +104,21 @@ namespace SokoWahnLib.Rooms
           Debug.Assert(iPortals[pIndex].roomTo == oPortals[pIndex].roomFrom);
         }
       }
+      #endregion
 
+      #region # // --- Zustände erstellen ---
+      foreach (var room in rooms)
+      {
+        room.InitStates();
+      }
+      #endregion
+
+      #region # // --- Varianten erstellen ---
+      foreach (var room in rooms)
+      {
+        room.InitVariants();
+      }
+      #endregion
     }
 
     /// <summary>

@@ -96,6 +96,19 @@ namespace SokoWahnLib.Rooms
                           + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
       variantsData = new Bitter(variantsDateElement * (4 * 4 + 4 * 4 + 4 + 4)); // (4 eigehende Kisten * 4 ausgehende Kisten) + (4 eingehden Spieler * 4 ausgehende Spieler) + (4 Starts) + (4 Ziele)
       variantsDataUsed = 0;
+    }
+
+    #region # // --- Zustand-Methoden ---
+    /// <summary>
+    /// erstellt die ersten Zustände
+    /// </summary>
+    public void InitStates()
+    {
+      Debug.Assert(fieldPosis.Length == 1);
+      Debug.Assert(stateDataUsed == 0);
+      Debug.Assert(variantsDataUsed == 0);
+
+      int pos = fieldPosis.First();
 
       switch (field.GetField(pos))
       {
@@ -153,27 +166,8 @@ namespace SokoWahnLib.Rooms
 
         default: throw new NotSupportedException("char: " + field.GetField(pos));
       }
-
-      // --- ausgehende Varianten hinzufügen (nur bei Start-Stellung) ---
-      if (field.GetField(pos) == '@' || field.GetField(pos) == '+')
-      {
-        for (int outgoingPortalIndex = 0; outgoingPortalIndex < outgoingPortals.Length; outgoingPortalIndex++)
-        {
-          var outgoingPortal = outgoingPortals[outgoingPortalIndex];
-        }
-      }
-
-      // --- eingehende Varianten hinzufügen (End-Stellung) ---
-
-      // --- eingehende und ausgehende Varianten hinzufügen (mittleres Spiel) ---
-      for (int incomingPortalIndex = 0; incomingPortalIndex < incomingPortals.Length; incomingPortalIndex++)
-      {
-        var incomingPortal = incomingPortals[incomingPortalIndex];
-
-      }
     }
 
-    #region # // --- Zustand-Methoden ---
     /// <summary>
     /// fügt einen weiteren Raum-Zustand hinzu
     /// </summary>
@@ -223,6 +217,36 @@ namespace SokoWahnLib.Rooms
     #endregion
 
     #region # // --- Varianten-Methoden ---
+    /// <summary>
+    /// initialisiert die ersten Varianten
+    /// </summary>
+    public void InitVariants()
+    {
+      Debug.Assert(fieldPosis.Length == 1);
+      Debug.Assert(stateDataUsed > 0);
+      Debug.Assert(variantsDataUsed == 0);
+
+      int pos = fieldPosis.First();
+
+      // --- ausgehende Varianten hinzufügen (nur bei Start-Stellung) ---
+      if (field.GetField(pos) == '@' || field.GetField(pos) == '+')
+      {
+        for (int outgoingPortalIndex = 0; outgoingPortalIndex < outgoingPortals.Length; outgoingPortalIndex++)
+        {
+          var outgoingPortal = outgoingPortals[outgoingPortalIndex];
+        }
+      }
+
+      // --- eingehende Varianten hinzufügen (End-Stellung) ---
+
+      // --- eingehende und ausgehende Varianten hinzufügen (mittleres Spiel) ---
+      for (int incomingPortalIndex = 0; incomingPortalIndex < incomingPortals.Length; incomingPortalIndex++)
+      {
+        var incomingPortal = incomingPortals[incomingPortalIndex];
+
+      }
+    }
+
     /// <summary>
     /// fügt eine weitere Variante hinzu
     /// </summary>
