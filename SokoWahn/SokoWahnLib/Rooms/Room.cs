@@ -33,18 +33,32 @@ namespace SokoWahnLib.Rooms
     /// merkt sich die ausgehenden Portal in andere Räume
     /// </summary>
     public readonly RoomPortal[] outgoingPortals;
+
     /// <summary>
-    /// merkt sich die die Daten der Zustände
+    /// merkt sich die Daten der Zustände
     /// </summary>
     public readonly Bitter stateData;
     /// <summary>
-    /// Größe eines einzelnen Zustand-Elementes
+    /// Größe eines einzelnen Zustand-Elementes (in Bits)
     /// </summary>
     public readonly ulong stateDataElement;
     /// <summary>
     /// Anzahl der benutzen Zustand-Elemente
     /// </summary>
     public uint stateDataUsed;
+
+    /// <summary>
+    /// merkt sich die Daten der Varianten
+    /// </summary>
+    public readonly Bitter variantsData;
+    /// <summary>
+    /// Größe eines einzelnen Varianten-Elementes (in Bits)
+    /// </summary>
+    public readonly ulong variantsDateElement;
+    /// <summary>
+    /// Anzahl der benutzen Zustand-Elemente
+    /// </summary>
+    public uint variantsDataUsed;
 
     /// <summary>
     /// Konstruktor um ein Raum aus einem einzelnen Feld zu erstellen
@@ -60,18 +74,29 @@ namespace SokoWahnLib.Rooms
       if (incomingPortals == null) throw new ArgumentNullException("incomingPortals");
       if (outgoingPortals == null) throw new ArgumentNullException("outgoingPortals");
       if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("incomingPortals.Length != outgoingPortals.Length");
+
       this.field = field;
       fieldPosis = new[] { pos };
       goalPosis = new HashSet<int>();
       if (field.GetField(pos) == '.' || field.GetField(pos) == '*') goalPosis.Add(pos);
       this.incomingPortals = incomingPortals;
       this.outgoingPortals = outgoingPortals;
+
       stateDataElement = sizeof(ushort) * 8        // Spieler-Position (wenn auf dem Spielfeld vorhanden, sonst = 0)
                        + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
                        + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
                        + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-      stateData = new Bitter(stateDataElement * (ulong)fieldPosis.Length * 3UL); // Raum mit einzelnen Feld kann nur drei Zustände annehmen: 1 = leer, 2 = Spieler, 3 = Kiste
+      stateData = new Bitter(stateDataElement * (ulong)fieldPosis.Length * 3UL); // Raum mit einen einzelnen Feld kann nur drei Zustände annehmen: 1 = leer, 2 = Spieler, 3 = Kiste
       stateDataUsed = 0;
+
+      variantsDateElement = 1                 // gibt an, ob durch den Ausgang eine Kiste geschoben wurde (sonst: Spieler)
+                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
+                          + sizeof(uint) * 8  // Status, welcher der eigene Raum erhält
+                          + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
+                          + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
+      variantsData = new Bitter(variantsDateElement * (4 * 4 + 4 * 4 + 4 + 4)); // (4 eigehende Kisten * 4 ausgehende Kisten) + (4 eingehden Spieler * 4 ausgehende Spieler) + (4 Starts) + (4 Ziele)
+      variantsDataUsed = 0;
+
       switch (field.GetField(pos))
       {
         case '@': // Spieler auf einem leeren Feld
@@ -118,7 +143,7 @@ namespace SokoWahnLib.Rooms
 
         case '*': // Kiste auf einem Zielfeld
         {
-          AddState(0, 1, 1, true);            // | Start | Ende | Kiste auf einem Zielfeld
+          AddState(0, 1, 1, true);              // | Start | Ende | Kiste auf einem Zielfeld
           if (!field.CheckCorner(pos)) // Kiste kann weggeschoben werden?
           {
             AddState(0, 0, 0, false);           // |     - |    - | leeres Feld
@@ -128,8 +153,27 @@ namespace SokoWahnLib.Rooms
 
         default: throw new NotSupportedException("char: " + field.GetField(pos));
       }
+
+      // --- ausgehende Varianten hinzufügen (nur bei Start-Stellung) ---
+      if (field.GetField(pos) == '@' || field.GetField(pos) == '+')
+      {
+        for (int outgoingPortalIndex = 0; outgoingPortalIndex < outgoingPortals.Length; outgoingPortalIndex++)
+        {
+          var outgoingPortal = outgoingPortals[outgoingPortalIndex];
+        }
+      }
+
+      // --- eingehende Varianten hinzufügen (End-Stellung) ---
+
+      // --- eingehende und ausgehende Varianten hinzufügen (mittleres Spiel) ---
+      for (int incomingPortalIndex = 0; incomingPortalIndex < incomingPortals.Length; incomingPortalIndex++)
+      {
+        var incomingPortal = incomingPortals[incomingPortalIndex];
+
+      }
     }
 
+    #region # // --- Zustand-Methoden ---
     /// <summary>
     /// fügt einen weiteren Raum-Zustand hinzu
     /// </summary>
@@ -176,6 +220,40 @@ namespace SokoWahnLib.Rooms
         Enumerable.Range(0, fieldPosis.Length).Where(i => stateData.GetBit(bitPos + 32 + (ulong)i)).Select(i => fieldPosis[i]).ToArray() // Box-Positions
       );
     }
+    #endregion
+
+    #region # // --- Varianten-Methoden ---
+    /// <summary>
+    /// fügt eine weitere Variante hinzu
+    /// </summary>
+    /// <param name="outgoingBox">gibt an, ob eine Kiste durch das ausgehende Portal geschoben wurde (sonst: Spieler)</param>
+    /// <param name="outgoingPortal">ausgehendes Portal, welches für den ausgehenden Verkehr zuständig ist (-1: kein Ausgang verzeichnet, z.B. bei der Ziel-Stellung)</param>
+    /// <param name="outgoingState">ausgehender End-Zustand</param>
+    /// <param name="moves">Anzahl der Laufschritte, welche für den neuen Zustand nötig sind (inkl. Kistenverschiebungen)</param>
+    /// <param name="pushes">Anzahl der Kistenverschiebungen, welche für den neuen Zustand nötig sind</param>
+    void AddVariant(bool outgoingBox, int outgoingPortal, uint outgoingState, int moves, int pushes)
+    {
+      Debug.Assert(!outgoingBox || outgoingPortal >= 0);
+      Debug.Assert(outgoingPortal == -1 || (outgoingPortal >= 0 && outgoingPortal < outgoingPortals.Length && outgoingPortal<0xff));
+      Debug.Assert(outgoingState < stateDataUsed);
+      Debug.Assert(moves > 0);
+      Debug.Assert(pushes >= 0);
+
+      ulong bitPos = variantsDataUsed * variantsDateElement;
+      if (outgoingBox) variantsData.SetBit(bitPos); else variantsData.ClearBit(bitPos);
+      variantsData.SetByte(bitPos + 1, (byte)(uint)outgoingPortal);
+      variantsData.SetUInt(bitPos + 9, outgoingState);
+      variantsData.SetUInt24(bitPos + 41, (uint)moves);
+      variantsData.SetUInt24(bitPos + 65, (uint)pushes);
+
+      Debug.Assert(variantsData.GetBit(bitPos) == outgoingBox);
+      Debug.Assert(variantsData.GetByte(bitPos + 1) == outgoingPortal || (variantsData.GetByte(bitPos + 1) == 0xff && outgoingPortal == -1));
+      Debug.Assert(variantsData.GetUInt(bitPos + 9) == outgoingState);
+      Debug.Assert(variantsData.GetUInt24(bitPos + 41) == moves);
+      Debug.Assert(variantsData.GetUInt24(bitPos + 65) == pushes);
+      variantsDataUsed++;
+    }
+    #endregion
 
     /// <summary>
     /// gibt alle Ressourcen wieder frei

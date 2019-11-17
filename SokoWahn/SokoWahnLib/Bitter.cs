@@ -83,6 +83,20 @@ namespace SokoWahnLib
     }
 
     /// <summary>
+    /// setzt einen 24-Bit Wert an einer bestimmten Bit-Position
+    /// </summary>
+    /// <param name="bitPos">Position, wohin der 24-Bit Wert geschrieben werden soll</param>
+    /// <param name="value">Wert, welcher geschrieben werden soll</param>
+    public void SetUInt24(ulong bitPos, uint value)
+    {
+      Debug.Assert(bitPos + 24 <= bitCount);
+      Debug.Assert(value < 16777216);
+      SetByte(bitPos, (byte)value);
+      SetByte(bitPos + 8, (byte)(value >> 8));
+      SetByte(bitPos + 16, (byte)(value >> 16));
+    }
+
+    /// <summary>
     /// setzt einen 32-Bit Wert an einer bestimmten Bit-Position
     /// </summary>
     /// <param name="bitPos">Position, wohin der 32-Bit Wert geschrieben werden soll</param>
@@ -249,6 +263,21 @@ namespace SokoWahnLib
       ushort value = 0;
       value |= GetByte(bitPos);
       value |= (ushort)(GetByte(bitPos + 8) << 8);
+      return value;
+    }
+
+    /// <summary>
+    /// gibt einen 24-Bit Wert von einer bestimmten Bit-Position zurück
+    /// </summary>
+    /// <param name="bitPos">Position, wo der 24-Bit Wert abgefragt werden soll</param>
+    /// <returns>ausgelesener 24-Bit Wert</returns>
+    public uint GetUInt24(ulong bitPos)
+    {
+      Debug.Assert(bitPos + 24 <= bitCount);
+      uint value = 0;
+      value |= GetByte(bitPos);
+      value |= (uint)GetByte(bitPos + 8) << 8;
+      value |= (uint)GetByte(bitPos + 16) << 16;
       return value;
     }
 

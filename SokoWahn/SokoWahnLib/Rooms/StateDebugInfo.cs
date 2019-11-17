@@ -4,6 +4,16 @@
 
 namespace SokoWahnLib.Rooms
 {
+  /*
+   * --- Speicher-Felder ---
+   * 
+   * ushort playerPos
+   * byte   boxCount
+   * byte   finishedBoxCount
+   * bits[] boxPosis
+   * 
+   */
+
   /// <summary>
   /// Struktur zum speichern eines Raum-Status (für Debug-Zwecke)
   /// </summary>
@@ -16,21 +26,21 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Spieler-Position im Raum (sofern vorhanden, sonst 0)
     /// </summary>
-    public int playerPos;
+    public readonly int playerPos;
 
     /// <summary>
     /// Anzahl der Kisten, welche sich im Raum befinden
     /// </summary>
-    public int boxCount;
+    public readonly int boxCount;
     /// <summary>
     /// Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
     /// </summary>
-    public int finishedBoxCount;
+    public readonly int finishedBoxCount;
 
     /// <summary>
     /// Position der Kisten (sofern vorhanden, sonst leeres Array)
     /// </summary>
-    public int[] boxPosis;
+    public readonly int[] boxPosis;
 
     /// <summary>
     /// Konstruktor
