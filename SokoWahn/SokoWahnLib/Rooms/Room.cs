@@ -121,7 +121,7 @@ namespace SokoWahnLib.Rooms
                          + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
                          + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
                          + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-      statePlayerData = new Bitter(statePlayerElement * 1UL); // Raum mit eintelnen Spieler-Feld kann nur ein Zustand annehmen: 1 = Spieler
+      statePlayerData = new Bitter(statePlayerElement * 1UL); // Raum mit einzelnen Spieler-Feld kann nur ein Zustand annehmen: 1 = Spieler
       statePlayerUsed = 0;
 
       variantsDateElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
@@ -371,52 +371,53 @@ namespace SokoWahnLib.Rooms
             }
             if (outgoingPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt
 
-            // Variante hinzufügen: Spieler betritt den Raum, vorhandene Kiste wird rausgeschoben (Moves: 0, Pushes: 1)
+            // Variante hinzufügen: Spieler betritt den Raum, vorhandene Kiste wird rausgeschoben (Moves: 0, Pushes: 1), Info: eingehende Spielerbewegung wird nicht als Move gewertet
             portal.roomToPlayerVariants.Add(variantsDataUsed);
             AddVariant(startState + statePlayerUsed, outgoingPortal, endState, 0, 1);
           }
         }
       }
 
-      // --- Varianten hinzufügen, wo der Spieler den Raum verlässt ---
-      //for (uint endState = 0; endState < stateBoxUsed; endState++)
-      //{
-      //  var endSt = GetBoxStateInfo(endState);
-      //  Debug.Assert(endSt.playerPos == 0);
-      //  foreach (var portal in incomingPortals)
-      //  {
-      //    if (endSt.boxCount > 0) // Feld mit Kiste
-      //    {
-      //      for (uint startState = 0; startState < stateBoxUsed; startState++)
-      //      {
-      //        var startSt = GetBoxStateInfo(startState);
-      //        if (startSt.boxCount > 0) continue;
-      //        Debug.Assert(startSt.playerPos == 0);
-      //        Debug.Assert(startSt.boxCount == 0);
-      //        for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
-      //        {
-      //          portal.roomToBoxVariants.Add(variantsDataUsed);
-      //          AddVariant(startState + statePlayerUsed, outgoingPortal, endState + statePlayerUsed, 0, 1);
-      //        }
-      //      }
-      //    }
-      //    else // leeres Feld bleibt zurück
-      //    {
-      //      for (uint startState = 0; startState < statePlayerUsed; startState++)
-      //      {
-      //        var startSt = GetPlayerStateInfo(startState);
-      //        Debug.Assert(startSt.playerPos > 0);
-      //        Debug.Assert(startSt.boxCount == 0);
-      //        for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
-      //        {
-      //          if (portal.posFrom == outgoingPortals[outgoingPortal].posTo) continue; // direktes rein- und rauslaufen vermeiden
-      //          portal.roomToPlayerVariants.Add(variantsDataUsed);
-      //          AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
-      //        }
-      //      }
-      //    }
-      //  }
-      //}
+      // --- Varianten hinzufügen, wo der Spieler nicht im Raum bleibt ---
+      for (uint endState = 0; endState < stateBoxUsed; endState++)
+      {
+        var endSt = GetBoxStateInfo(endState); Debug.Assert(endSt.playerPos == 0);
+        foreach (var portal in incomingPortals) // eingehende Portale verarbeiten
+        {
+          if (endSt.boxCount > 0) // Feld mit Kiste
+          {
+            for (uint startState = 0; startState < stateBoxUsed; startState++)
+            {
+              var startSt = GetBoxStateInfo(startState);
+              if (startSt.boxCount > 0) continue;
+              Debug.Assert(startSt.playerPos == 0);
+              Debug.Assert(startSt.boxCount == 0);
+
+              // Kiste kann doch nicht reingeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
+              if (!field.ValidPos(portal.posFrom + portal.posFrom - pos)) continue;
+
+              // Variante hinzufügen: Kiste wird in den Raum geschoben (Moves: 0, Pushes: 0), Info: eingehende Kistenbewegung wird nicht als Push gewertet
+              portal.roomToBoxVariants.Add(variantsDataUsed);
+              AddVariant(startState + statePlayerUsed, -1, endState + statePlayerUsed, 0, 0);
+            }
+          }
+          //    else // leeres Feld bleibt zurück
+          //    {
+          //      for (uint startState = 0; startState < statePlayerUsed; startState++)
+          //      {
+          //        var startSt = GetPlayerStateInfo(startState);
+          //        Debug.Assert(startSt.playerPos > 0);
+          //        Debug.Assert(startSt.boxCount == 0);
+          //        for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+          //        {
+          //          if (portal.posFrom == outgoingPortals[outgoingPortal].posTo) continue; // direktes rein- und rauslaufen vermeiden
+          //          portal.roomToPlayerVariants.Add(variantsDataUsed);
+          //          AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
+          //        }
+          //      }
+          //    }
+        }
+      }
     }
 
     /// <summary>
