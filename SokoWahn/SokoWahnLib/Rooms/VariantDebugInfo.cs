@@ -91,8 +91,8 @@ namespace SokoWahnLib.Rooms
         {
           moves,
           pushes,
-          start = (incomingSt.boxCount > 0 ? "Box" : (incomingSt.playerPos == 0 ? "[-]" : "Ply")) + (incomingPortal != null ? "  " + incomingPortal + " <- " + (incomingBox ? "Box" : "Ply") : ""),
-          end = (outgoingSt.boxCount > 0 ? "Box" : (outgoingSt.playerPos == 0 ? "[-]" : "Ply")) + (outgoingPortal != null ? "  " + outgoingPortal + " -> " + (outgoingBox ? "Box" : "Ply") : "")
+          start = (incomingSt.boxCount > 0 ? "Box" : (incomingSt.playerPos == 0 ? "[-]" : "Ply")) + (incomingPortal != null ? " " + incomingPortal.ToString().Replace(")", "- " + (incomingBox ? "Box" : "Ply") + " )") : ""),
+          end = (outgoingSt.boxCount > 0 ? "Box" : (outgoingSt.playerPos == 0 ? "[-]" : "Ply")) + (outgoingPortal != null ? " " + outgoingPortal.ToString().Replace(")", "- " + (outgoingBox ? "Box" : "Ply") + " )") : "")
         }.ToString();
       }
       return new { moves, pushes, incomingBox, incomingPortal, incomingState, outgoingBox, outgoingPortal, outgoingState }.ToString();
