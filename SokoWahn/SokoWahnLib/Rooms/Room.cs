@@ -150,43 +150,46 @@ namespace SokoWahnLib.Rooms
       {
         case '@': // Spieler auf einem leeren Feld
         {
-          AddPlayerState(pos, 0, 0, false); // | Start | Ende | Spieler auf einem leeren Feld
-          AddBoxState(0, 0, false);         // |     - | Ende | leeres Feld
+          AddPlayerState(pos, 0, 0, false);   // | Start | Ende | Spieler auf einem Feld
+          AddBoxState(0, 0, false);           // |     - | Ende | leeres Feld
           if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
           {
-            AddBoxState(1, 0, true);        // |     - |    - | Kiste auf einem leeren Feld
+            AddBoxState(1, 0, true);          // |     - |    - | Kiste auf einem Feld
           }
         } break;
 
         case '+': // Spieler auf einem Zielfeld
         {
-          AddPlayerState(pos, 0, 0, false); // | Start |    - | Spieler auf einem Zielfeld
-          AddBoxState(0, 0, false);         // |     - |    - | leeres Zielfeld
-          AddBoxState(1, 1, true);          // |     - | Ende | Kiste auf einem Zielfeld
+          AddPlayerState(pos, 0, 0, false);   // | Start |    - | Spieler auf einem Zielfeld
+          AddBoxState(0, 0, false);           // |     - |    - | leeres Zielfeld
+          AddBoxState(1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
         } break;
 
         case ' ': // leeres Feld
         {
-          AddBoxState(0, 0, false);         // | Start | Ende | leeres Feld
-          AddPlayerState(pos, 0, 0, false); // |     - | Ende | Spieler auf einem leeren Feld
+          AddBoxState(0, 0, false);           // | Start | Ende | leeres Feld
           if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
           {
-            AddBoxState(1, 0, true);        // |     - |    - | Kiste auf einem leeren Feld
+            AddPlayerState(pos, 0, 0, false); // |     - | Ende | Spieler auf einem Feld
+            AddBoxState(1, 0, true);          // |     - |    - | Kiste auf einem Feld
           }
         } break;
 
         case '.': // Zielfeld
         {
-          AddBoxState(0, 0, false);         // | Start |    - | leeres Zielfeld
-          AddPlayerState(pos, 0, 0, false); // |     - |    - | Spieler auf einem Zielfeld
-          AddBoxState(1, 1, true);          // |     - | Ende | Kiste auf einem Zielfeld
+          AddBoxState(0, 0, false);           // | Start |    - | leeres Zielfeld
+          AddBoxState(1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
+          if (!field.CheckCorner(pos)) // Spieler kann sich nur auf dem Feld befinden, wenn die Kiste rausgeschoben wurde (was bei einer Ecke nicht möglich ist)
+          {
+            AddPlayerState(pos, 0, 0, false); // |     - |    - | Spieler auf einem Zielfeld
+          }
         } break;
 
         case '$': // Feld mit Kiste
         {
-          AddBoxState(1, 0, true);          // | Start |    - | Kiste auf einem leeren Feld
-          AddBoxState(0, 0, false);         // |     - | Ende | leeres Feld
-          AddPlayerState(pos, 0, 0, false); // |     - | Ende | Spieler auf einem leeren Feld
+          AddBoxState(1, 0, true);            // | Start |    - | Kiste auf einem Feld
+          AddBoxState(0, 0, false);           // |     - | Ende | leeres Feld
+          AddPlayerState(pos, 0, 0, false);   // |     - | Ende | Spieler auf einem leeren Feld
           if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
         } break;
 
@@ -348,74 +351,74 @@ namespace SokoWahnLib.Rooms
       }
 
       // --- Varianten hinzufügen, wo der Spieler im Raum bleibt ---
-      for (uint endState = 0; endState < statePlayerUsed; endState++)
-      {
-        var endSt = GetPlayerStateInfo(endState);
-        Debug.Assert(endSt.playerPos > 0);
-        foreach (var portal in incomingPortals)
-        {
-          for (uint startState = 0; startState < stateBoxUsed; startState++)
-          {
-            var startSt = GetBoxStateInfo(startState);
-            Debug.Assert(startSt.playerPos == 0);
-            int outgoingPortal = -1;
-            if (startSt.boxCount > 0)
-            {
-              for (int i = 0; i < outgoingPortals.Length; i++)
-              {
-                if (outgoingPortals[i].posTo - outgoingPortals[i].posFrom == portal.posTo - portal.posFrom)
-                {
-                  Debug.Assert(outgoingPortal == -1);
-                  outgoingPortal = i;
-                }
-              }
-              if (outgoingPortal == -1) continue; // Kiste kann nicht auf der gegenüberliegenden Seite herrausgeschoben werden
-            }
-            portal.roomToPlayerVariants.Add(variantsDataUsed);
-            AddVariant(startState + statePlayerUsed, outgoingPortal, endState, 0, (uint)startSt.boxCount);
-          }
-        }
-      }
+      //for (uint endState = 0; endState < statePlayerUsed; endState++)
+      //{
+      //  var endSt = GetPlayerStateInfo(endState);
+      //  Debug.Assert(endSt.playerPos > 0);
+      //  foreach (var portal in incomingPortals)
+      //  {
+      //    for (uint startState = 0; startState < stateBoxUsed; startState++)
+      //    {
+      //      var startSt = GetBoxStateInfo(startState);
+      //      Debug.Assert(startSt.playerPos == 0);
+      //      int outgoingPortal = -1;
+      //      if (startSt.boxCount > 0)
+      //      {
+      //        for (int i = 0; i < outgoingPortals.Length; i++)
+      //        {
+      //          if (outgoingPortals[i].posTo - outgoingPortals[i].posFrom == portal.posTo - portal.posFrom)
+      //          {
+      //            Debug.Assert(outgoingPortal == -1);
+      //            outgoingPortal = i;
+      //          }
+      //        }
+      //        if (outgoingPortal == -1) continue; // Kiste kann nicht auf der gegenüberliegenden Seite herrausgeschoben werden
+      //      }
+      //      portal.roomToPlayerVariants.Add(variantsDataUsed);
+      //      AddVariant(startState + statePlayerUsed, outgoingPortal, endState, 0, (uint)startSt.boxCount);
+      //    }
+      //  }
+      //}
 
       // --- Varianten hinzufügen, wo der Spieler den Raum verlässt ---
-      for (uint endState = 0; endState < stateBoxUsed; endState++)
-      {
-        var endSt = GetBoxStateInfo(endState);
-        Debug.Assert(endSt.playerPos == 0);
-        foreach (var portal in incomingPortals)
-        {
-          if (endSt.boxCount > 0) // Feld mit Kiste
-          {
-            for (uint startState = 0; startState < stateBoxUsed; startState++)
-            {
-              var startSt = GetBoxStateInfo(startState);
-              if (startSt.boxCount > 0) continue;
-              Debug.Assert(startSt.playerPos == 0);
-              Debug.Assert(startSt.boxCount == 0);
-              for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
-              {
-                portal.roomToBoxVariants.Add(variantsDataUsed);
-                AddVariant(startState + statePlayerUsed, outgoingPortal, endState + statePlayerUsed, 0, 1);
-              }
-            }
-          }
-          else // leeres Feld bleibt zurück
-          {
-            for (uint startState = 0; startState < statePlayerUsed; startState++)
-            {
-              var startSt = GetPlayerStateInfo(startState);
-              Debug.Assert(startSt.playerPos > 0);
-              Debug.Assert(startSt.boxCount == 0);
-              for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
-              {
-                if (portal.posFrom == outgoingPortals[outgoingPortal].posTo) continue; // direktes rein- und rauslaufen vermeiden
-                portal.roomToPlayerVariants.Add(variantsDataUsed);
-                AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
-              }
-            }
-          }
-        }
-      }
+      //for (uint endState = 0; endState < stateBoxUsed; endState++)
+      //{
+      //  var endSt = GetBoxStateInfo(endState);
+      //  Debug.Assert(endSt.playerPos == 0);
+      //  foreach (var portal in incomingPortals)
+      //  {
+      //    if (endSt.boxCount > 0) // Feld mit Kiste
+      //    {
+      //      for (uint startState = 0; startState < stateBoxUsed; startState++)
+      //      {
+      //        var startSt = GetBoxStateInfo(startState);
+      //        if (startSt.boxCount > 0) continue;
+      //        Debug.Assert(startSt.playerPos == 0);
+      //        Debug.Assert(startSt.boxCount == 0);
+      //        for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+      //        {
+      //          portal.roomToBoxVariants.Add(variantsDataUsed);
+      //          AddVariant(startState + statePlayerUsed, outgoingPortal, endState + statePlayerUsed, 0, 1);
+      //        }
+      //      }
+      //    }
+      //    else // leeres Feld bleibt zurück
+      //    {
+      //      for (uint startState = 0; startState < statePlayerUsed; startState++)
+      //      {
+      //        var startSt = GetPlayerStateInfo(startState);
+      //        Debug.Assert(startSt.playerPos > 0);
+      //        Debug.Assert(startSt.boxCount == 0);
+      //        for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
+      //        {
+      //          if (portal.posFrom == outgoingPortals[outgoingPortal].posTo) continue; // direktes rein- und rauslaufen vermeiden
+      //          portal.roomToPlayerVariants.Add(variantsDataUsed);
+      //          AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
+      //        }
+      //      }
+      //    }
+      //  }
+      //}
     }
 
     /// <summary>
