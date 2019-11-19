@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+// ReSharper disable UnusedMember.Global
 #endregion
 
 namespace SokoWahnLib
@@ -161,12 +162,64 @@ namespace SokoWahnLib
     /// <returns>true, wenn es sich um eine Ecke handelt</returns>
     public static bool CheckCorner(this ISokoField field, int pos)
     {
-      Debug.Assert(field.ValidPos(pos));
+      if (pos < 0 || pos >= field.Width * field.Height || field.GetField(pos) == '#') return true; // ungültige Felder zählen auch als "Ecken"
       bool left = field.GetField(pos - 1) == '#';
       bool right = field.GetField(pos + 1) == '#';
       bool top = field.GetField(pos - field.Width) == '#';
       bool bottom = field.GetField(pos + field.Width) == '#';
       return top && (left || right) || bottom && (left || right);
+    }
+
+    /// <summary>
+    /// gibt an, ob an einer bestimmten Position ein Spieler steht
+    /// </summary>
+    /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn ein Spieler sich auf dem Feld befindet</returns>
+    public static bool IsPlayer(this ISokoField field, int pos)
+    {
+      if (pos < 0 || pos >= field.Width * field.Height) return false;
+      char c = field.GetField(pos);
+      return c == '@' || c == '+';
+    }
+
+    /// <summary>
+    /// gibt an, ob an einer bestimmten Position sich eine Kiste befindet
+    /// </summary>
+    /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn eine Kiste sich auf dem Feld befindet</returns>
+    public static bool IsBox(this ISokoField field, int pos)
+    {
+      if (pos < 0 || pos >= field.Width * field.Height) return false;
+      char c = field.GetField(pos);
+      return c == '$' || c == '*';
+    }
+
+    /// <summary>
+    /// gibt an, ob sich an einer bestimmten Position ein Zielfeld befindet
+    /// </summary>
+    /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn es ein Zielfeld ist</returns>
+    public static bool IsGoal(this ISokoField field, int pos)
+    {
+      if (pos < 0 || pos >= field.Width * field.Height) return false;
+      char c = field.GetField(pos);
+      return c == '.' || c == '*';
+    }
+
+    /// <summary>
+    /// prüft, ob ein bestimmtes Feld frei ist
+    /// </summary>
+    /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn fas Feld frei ist</returns>
+    public static bool IsFree(this ISokoField field, int pos)
+    {
+      if (pos < 0 || pos >= field.Width * field.Height) return false;
+      char c = field.GetField(pos);
+      return c == ' ' || c == '.';
     }
   }
 }
