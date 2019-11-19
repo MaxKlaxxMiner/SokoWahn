@@ -146,7 +146,17 @@ namespace SokoWahnLib.Rooms
       }
       if (mulTmp > 1) mul *= mulTmp;
 
+      string tmp = "";
       var txt = mul.ToString();
+      if (txt.Length > 12)
+      {
+        tmp = txt.Substring(0, 4);
+        if (int.Parse(txt.Substring(4, 5)) >= 50000) // Nachkommastelle aufrunden?
+        {
+          tmp = (int.Parse(txt.Substring(0, 4)) + 1).ToString();
+        }
+        tmp = tmp.Insert(1, CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator) + "e" + (txt.Length - 1);
+      }
 
       string separator = CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator;
       int c = 0;
@@ -154,6 +164,13 @@ namespace SokoWahnLib.Rooms
       {
         txt = txt.Insert(txt.Length - c - 3, separator);
         c += 3 + separator.Length;
+      }
+
+      if (tmp != "")
+      {
+        int max = Console.BufferWidth - tmp.Length - 16;
+        if (txt.Length > max) txt = txt.Substring(0, max - 4) + " ...";
+        txt = tmp + " (" + txt + ")";
       }
 
       return txt;
@@ -165,7 +182,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="indent">Leerzeichen zum einrücken der Zeilen</param>
     void DisplayEffort(string indent)
     {
-      Console.WriteLine(indent + "  Effort: " + MulNumber(rooms.Select(x => (ulong)(x.StateUsed))));
+      Console.WriteLine(indent + "  Effort: " + MulNumber(rooms.Select(x => (ulong)(x.variantsDataUsed))));
       Console.WriteLine();
     }
 
