@@ -16,6 +16,7 @@ namespace SokoWahnLib.Rooms
   /// </summary>
   public sealed class RoomPortal : IDisposable
   {
+    #region # // --- Variablen ---
     /// <summary>
     /// merkt sich das gesamte Spielfeld
     /// </summary>
@@ -48,7 +49,9 @@ namespace SokoWahnLib.Rooms
     /// merkt sich die Varianten, wenn eine Kiste in das benachbarte Portal geschoben wird
     /// </summary>
     public readonly List<uint> roomToBoxVariants = new List<uint>();
+    #endregion
 
+    #region # // --- Konstruktor ---
     /// <summary>
     /// Konstruktor
     /// </summary>
@@ -70,7 +73,9 @@ namespace SokoWahnLib.Rooms
       this.roomFrom = roomFrom;
       this.roomTo = roomTo;
     }
+    #endregion
 
+    #region # // --- Dispose ---
     /// <summary>
     /// gibt alle Ressourcen wieder frei
     /// </summary>
@@ -85,7 +90,9 @@ namespace SokoWahnLib.Rooms
     {
       Dispose();
     }
+    #endregion
 
+    #region # // --- ToString() ---
     /// <summary>
     /// gibt den Inhalt als lesbare Zeichenkette zurück
     /// </summary>
@@ -94,5 +101,6 @@ namespace SokoWahnLib.Rooms
     {
       return "( " + posFrom + " -> " + posTo + " )";
     }
+    #endregion
   }
 }

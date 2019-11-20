@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 // ReSharper disable NotAccessedField.Local
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable FieldCanBeMadeReadOnly.Global
+// ReSharper disable UnusedMethodReturnValue.Global
 #endregion
 
 namespace SokoWahnLib.Rooms
@@ -31,6 +32,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public Room[] rooms;
 
+    #region # // --- Konstruktor ---
     /// <summary>
     /// Konstruktor
     /// </summary>
@@ -120,7 +122,203 @@ namespace SokoWahnLib.Rooms
       }
       #endregion
     }
+    #endregion
 
+    #region # // --- Optimizer ---
+    /// <summary>
+    /// entfernt alle Kisten-Varianten eines Raumes
+    /// </summary>
+    /// <param name="room">Room, wo die Kistenvarianten entfernt werden sollen</param>
+    /// <param name="maxCount">maximale Anzahl der Elemente, welche optimiert werden dürfen</param>
+    /// <param name="output">Details der durchgeführten Optimierungen</param>
+    /// <returns>Anzahl der optimierten Elemente</returns>
+    static int OptimizeRemoveBoxes(Room room, int maxCount, List<KeyValuePair<string, int>> output)
+    {
+      int totalCount = 0;
+
+      // --- eingehende Portale filtern ---
+      foreach (var portal in room.incomingPortals)
+      {
+        if (portal.roomToBoxVariants.Count > 0)
+        {
+          output.Add(new KeyValuePair<string, int>("[Box-Net] remove box-variants from portal " + portal, portal.roomToBoxVariants.Count));
+          totalCount += portal.roomToBoxVariants.Count;
+          portal.roomToBoxVariants.Clear();
+          if (totalCount >= maxCount) return totalCount;
+        }
+
+        // --- Spieler-Varianten mit Kisten suchen und entfernen ---
+        for (int i = 0; i < portal.roomToPlayerVariants.Count; i++)
+        {
+          var variantStates = room.GetVariantStates(portal.roomToPlayerVariants[i]);
+          if (room.GetStateInfo(variantStates.Key).boxCount + room.GetStateInfo(variantStates.Value).boxCount > 0) // eine Spieler-Variante mit Kisten gefunden?
+          {
+            portal.roomToPlayerVariants.RemoveAt(i);
+            i--;
+            output.Add(new KeyValuePair<string, int>("[Box-Net] remove ply-variants from portal " + portal, 1));
+            totalCount++;
+            if (totalCount >= maxCount) return totalCount;
+          }
+        }
+      }
+
+      // --- ausgehende Portale filtern ---
+      foreach (var portal in room.outgoingPortals)
+      {
+        // --- ausgehende Kisten-Varianten alle direkt entfernen ---
+        if (portal.roomToBoxVariants.Count > 0)
+        {
+          output.Add(new KeyValuePair<string, int>("[Box-Net] remove box-variants from portal " + portal, portal.roomToBoxVariants.Count));
+          totalCount += portal.roomToBoxVariants.Count;
+          portal.roomToBoxVariants.Clear();
+          if (totalCount >= maxCount) return totalCount;
+        }
+
+        var roomTo = portal.roomTo;
+
+        // --- Spieler-Varianten mit Kisten suchen und entfernen ---
+        for (int i = 0; i < portal.roomToPlayerVariants.Count; i++)
+        {
+          var variantStates = roomTo.GetVariantStates(portal.roomToPlayerVariants[i]);
+          if (roomTo.GetStateInfo(variantStates.Key).boxCount + roomTo.GetStateInfo(variantStates.Value).boxCount > 0) // eine Spieler-Variante mit Kisten gefunden?
+          {
+            portal.roomToPlayerVariants.RemoveAt(i);
+            i--;
+            output.Add(new KeyValuePair<string, int>("[Box-Net] remove ply-variants from portal " + portal, 1));
+            totalCount++;
+            if (totalCount >= maxCount) return totalCount;
+          }
+        }
+      }
+
+      return totalCount;
+    }
+
+    /// <summary>
+    /// optimiert das Spielfeld und gibt die optimierten Element als lesbare Liste zurück 
+    /// </summary>
+    /// <param name="maxCount">maximale Anzahl der Elemente, welche optimiert werden dürfen</param>
+    /// <param name="output">Details der durchgeführten Optimierungen</param>
+    /// <returns>Anzahl der optimierten Elemente</returns>
+    public int Optimize(int maxCount, List<KeyValuePair<string, int>> output)
+    {
+      int totalCount = 0;
+
+      // --- Kisten-Netzwerke erstellen ---
+      var boxNetworks = new List<HashSet<Room>>();
+      foreach (var room in rooms)
+      {
+        if (boxNetworks.Any(network => network.Contains(room))) continue; // Raum schon in eins der Netzwerke vorhanden?
+        if (!room.HasBoxStates()) continue; // Raum kann nie Kisten enthalten?
+
+        var net = new HashSet<Room> { room };
+        boxNetworks.Add(net);
+        var checkPortals = new Stack<RoomPortal>();
+        foreach (var portal in room.outgoingPortals) checkPortals.Push(portal);
+        while (checkPortals.Count > 0)
+        {
+          var checkPortal = checkPortals.Pop();
+          if (net.Contains(checkPortal.roomTo)) continue; // benachbarte Raum schon im Netzwerk vorhanden?
+          if (checkPortal.roomToBoxVariants.Count == 0) continue; // keine Variante vorhanden, welche eine Kiste in den benachbarten Raum schieben könnte?
+          Debug.Assert(checkPortal.roomTo.HasBoxStates());
+          // benachbarter Raum kann in das Netzwerk aufgenommen werden
+          net.Add(checkPortal.roomTo);
+          foreach (var portal in checkPortal.roomTo.outgoingPortals) checkPortals.Push(portal); // Portale des zusätzlichen Raumen ebenfalls prüfen
+        }
+      }
+
+      // --- Kisten-Netzwerke prüfen ob diese eventuell kistenfrei sein könnten ---
+      foreach (var net in boxNetworks)
+      {
+        if (net.Any(r => r.HasStartBoxes())) continue;
+
+        // --- komplettes Kisten-Netzwerk ohne Kisten gefunden? ---
+        foreach (var room in net)
+        {
+          totalCount += OptimizeRemoveBoxes(room, maxCount - totalCount, output);
+          if (totalCount >= maxCount) return totalCount;
+        }
+      }
+
+      // --- Varianten optimieren ---
+      var todo = new HashSet<Room>();
+      foreach (var room in rooms) todo.Add(room);
+
+      while (todo.Count > 0 && totalCount < maxCount)
+      {
+        var nextRoom = todo.First();
+        todo.Remove(nextRoom);
+
+        int optimizeCount = nextRoom.Optimize(maxCount - totalCount, output);
+        if (optimizeCount == 0) continue; // keine Optimierungen gefunden?
+
+        totalCount += optimizeCount;
+        foreach (var portal in nextRoom.outgoingPortals)
+        {
+          todo.Add(portal.roomTo); // benachbarte Räume als Aufgaben hinzufügen
+        }
+      }
+      if (totalCount >= maxCount) return totalCount;
+
+      // --- nicht mehr benutzte Varianten entfernen ---
+      foreach (var room in rooms)
+      {
+        int vCount = 0;
+        vCount += room.startBoxVariants.Count;
+        vCount += room.startPlayerVariants.Count;
+        foreach (var portal in room.incomingPortals)
+        {
+          vCount += portal.roomToBoxVariants.Count;
+          vCount += portal.roomToPlayerVariants.Count;
+        }
+        Debug.Assert(vCount <= room.variantsDataUsed);
+        while (vCount < room.variantsDataUsed)
+        {
+          for (uint v = room.variantsDataUsed - 1; v < room.variantsDataUsed; v--)
+          {
+            if (room.startBoxVariants.Contains(v)) continue;
+            if (room.startPlayerVariants.Contains(v)) continue;
+            if (room.incomingPortals.Any(p => p.roomToBoxVariants.Contains(v) || p.roomToPlayerVariants.Contains(v))) continue;
+
+            // --- Variante entfernen und Bits zusammenschieben ---
+            room.variantsDataUsed--;
+            room.variantsData.MoveBits(v * room.variantsDataElement, (v + 1) * room.variantsDataElement, (room.variantsDataUsed - v) * room.variantsDataElement);
+
+            // --- nachfolgende Varianten-IDs angleichen ---
+            for (int i = 0; i < room.startBoxVariants.Count; i++)
+            {
+              if (room.startBoxVariants[i] > v) room.startBoxVariants[i]--;
+            }
+            for (int i = 0; i < room.startPlayerVariants.Count; i++)
+            {
+              if (room.startPlayerVariants[i] > v) room.startPlayerVariants[i]--;
+            }
+            foreach (var portal in room.incomingPortals)
+            {
+              var bb = portal.roomToBoxVariants;
+              var bp = portal.roomToPlayerVariants;
+              for (int i = 0; i < bb.Count; i++)
+              {
+                if (bb[i] > v) bb[i]--;
+              }
+              for (int i = 0; i < bp.Count; i++)
+              {
+                if (bp[i] > v) bp[i]--;
+              }
+            }
+
+            output.Add(new KeyValuePair<string, int>("[Variants] remove variant " + v + " from room " + room.fieldPosis[0], 1));
+            totalCount++;
+            if (totalCount >= maxCount) return totalCount;
+          }
+        }
+      }
+
+      return totalCount;
+    }
+    #endregion
+
+    #region # // --- Display ---
     /// <summary>
     /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück
     /// </summary>
@@ -367,7 +565,9 @@ namespace SokoWahnLib.Rooms
       }
       Console.WriteLine();
     }
+    #endregion
 
+    #region # // --- Dispose ---
     /// <summary>
     /// gibt alle Ressourcen wieder frei
     /// </summary>
@@ -388,5 +588,6 @@ namespace SokoWahnLib.Rooms
     {
       Dispose();
     }
+    #endregion
   }
 }

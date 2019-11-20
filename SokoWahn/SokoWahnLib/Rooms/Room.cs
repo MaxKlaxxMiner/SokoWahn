@@ -1,4 +1,5 @@
-﻿using System;
+﻿#region # using *.*
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -8,6 +9,8 @@ using System.Linq;
 // ReSharper disable RedundantIfElseBlock
 // ReSharper disable CollectionNeverQueried.Global
 // ReSharper disable CollectionNeverUpdated.Global
+// ReSharper disable MemberCanBeMadeStatic.Global
+#endregion
 
 namespace SokoWahnLib.Rooms
 {
@@ -16,6 +19,7 @@ namespace SokoWahnLib.Rooms
   /// </summary>
   public class Room : IDisposable
   {
+    #region # // --- Variablen ---
     /// <summary>
     /// merkt sich das gesamte Spiel, welches verwendet wird
     /// </summary>
@@ -75,7 +79,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Größe eines einzelnen Varianten-Elementes (in Bits)
     /// </summary>
-    public readonly ulong variantsDateElement;
+    public readonly ulong variantsDataElement;
     /// <summary>
     /// Anzahl der benutzen Varianten-Elemente
     /// </summary>
@@ -88,7 +92,9 @@ namespace SokoWahnLib.Rooms
     /// merkt sich alle Start-Varianten, wo der Spieler den Raum verlässt
     /// </summary>
     public readonly List<uint> startBoxVariants = new List<uint>();
+    #endregion
 
+    #region # // --- Konstruktor ---
     /// <summary>
     /// Konstruktor um ein Raum aus einem einzelnen Feld zu erstellen
     /// </summary>
@@ -124,14 +130,15 @@ namespace SokoWahnLib.Rooms
       statePlayerData = new Bitter(statePlayerElement * 1UL); // Raum mit einzelnen Spieler-Feld kann nur ein Zustand annehmen: 1 = Spieler
       statePlayerUsed = 0;
 
-      variantsDateElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
+      variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
                           + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
                           + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
                           + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
                           + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
-      variantsData = new Bitter(variantsDateElement * (4 * 4 + 4 * 4 + 4 + 4)); // (4 in-Kisten * 4 out-Kisten) + (4 in-Spieler * 4 out-Spieler) + (4 Starts) + (4 Ziele)
+      variantsData = new Bitter(variantsDataElement * (4 * 4 + 4 * 4 + 4 + 4)); // (4 in-Kisten * 4 out-Kisten) + (4 in-Spieler * 4 out-Spieler) + (4 Starts) + (4 Ziele)
       variantsDataUsed = 0;
     }
+    #endregion
 
     #region # // --- Zustand-Methoden ---
     /// <summary>
@@ -482,7 +489,7 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(moves < 16777216);
       Debug.Assert(pushes < 16777216 && pushes <= moves + 1);
 
-      ulong bitPos = variantsDataUsed * variantsDateElement;
+      ulong bitPos = variantsDataUsed * variantsDataElement;
       variantsData.SetUInt(bitPos, incomingState);
       variantsData.SetByte(bitPos + 32, (byte)(uint)outgoingPortal);
       variantsData.SetUInt(bitPos + 40, outgoingState);
@@ -494,8 +501,21 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(variantsData.GetUInt(bitPos + 40) == outgoingState);
       Debug.Assert(variantsData.GetUInt24(bitPos + 72) == moves);
       Debug.Assert(variantsData.GetUInt24(bitPos + 96) == pushes);
-      Debug.Assert(variantsDateElement == 120);
+      Debug.Assert(variantsDataElement == 120);
       variantsDataUsed++;
+    }
+
+    /// <summary>
+    /// gibt den eingehenden und ausgehenden Zustand einer Variante zurück
+    /// </summary>
+    /// <param name="variantIndex">Variante, welche abgefragt werden soll</param>
+    /// <returns>ein- und ausgehender Zustand</returns>
+    public KeyValuePair<uint, uint> GetVariantStates(uint variantIndex)
+    {
+      ulong bitPos = variantIndex * variantsDataElement;
+      uint incomingState = variantsData.GetUInt(bitPos);
+      uint outgoingState = variantsData.GetUInt(bitPos + 40);
+      return new KeyValuePair<uint, uint>(incomingState, outgoingState);
     }
 
     /// <summary>
@@ -507,7 +527,7 @@ namespace SokoWahnLib.Rooms
     {
       Debug.Assert(variantIndex < variantsDataUsed);
 
-      ulong bitPos = variantIndex * variantsDateElement;
+      ulong bitPos = variantIndex * variantsDataElement;
       var incomingPortal = incomingPortals.FirstOrDefault(p => p.roomToPlayerVariants.Any(x => x == variantIndex) || p.roomToBoxVariants.Any(x => x == variantIndex));
       bool incomingBox = incomingPortal != null && incomingPortal.roomToBoxVariants.Any(x => x == variantIndex);
       uint incomingState = variantsData.GetUInt(bitPos);
@@ -526,6 +546,55 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
+    #region # // --- Optimize ---
+    /// <summary>
+    /// prüft den eigenen Raum, ob Zustände bekannt sind, wo Kisten enthalten sein können
+    /// </summary>
+    /// <returns>true, wenn Zustände mit enthaltenen Kisten gefunden wurden</returns>
+    public bool HasBoxStates()
+    {
+      for (uint state = 0; state < stateBoxUsed; state++)
+      {
+        if (GetBoxStateInfo(state).boxCount > 0) return true;
+      }
+
+      for (uint state = 0; state < statePlayerUsed; state++)
+      {
+        if (GetPlayerStateInfo(state).boxCount > 0) return true;
+      }
+
+      return false;
+    }
+
+    /// <summary>
+    /// prüft, ob mindestens eine Kiste bei der Start-Stellung enthalten ist
+    /// </summary>
+    /// <returns>true, wenn mindestens eine Kiste beim Start vorhanden ist</returns>
+    public bool HasStartBoxes()
+    {
+      return fieldPosis.Any(pos => field.IsBox(pos));
+    }
+
+    /// <summary>
+    /// optimiert den Raum und deren Verbindungen zu den benachbarten Räumen und gibt die Anzahl der durchgeführten Optimierungen zurück
+    /// </summary>
+    /// <param name="maxCount">maximale Anzahl der erlaubten Optimierungen</param>
+    /// <param name="output">Ausgabe-Liste mit den durchgeführten Optimierungen</param>
+    /// <returns>Anzahl der insgesamt durchgeführten Optimierungen</returns>
+    public int Optimize(int maxCount, List<KeyValuePair<string, int>> output)
+    {
+      if (incomingPortals.Length < 3) return 0;
+
+      foreach (var incomingPortal in incomingPortals)
+      {
+        var outgoingPortal = incomingPortal.oppositePortal;
+      }
+
+      return 0;
+    }
+    #endregion
+
+    #region # // --- Dispose ---
     /// <summary>
     /// gibt alle Ressourcen wieder frei
     /// </summary>
@@ -545,7 +614,9 @@ namespace SokoWahnLib.Rooms
     {
       Dispose();
     }
+    #endregion
 
+    #region # // --- ToString() ---
     /// <summary>
     /// gibt den Inhalt als lesbare Zeichenkette zurück
     /// </summary>
@@ -560,5 +631,6 @@ namespace SokoWahnLib.Rooms
         posis = string.Join(",", fieldPosis.OrderBy(pos => pos))
       }.ToString();
     }
+    #endregion
   }
 }

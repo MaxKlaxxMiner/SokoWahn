@@ -450,6 +450,36 @@ namespace SokoWahnLib
     }
 
     /// <summary>
+    /// verschiebt eine Reihe von mehrere Bits von einer Position zu einer anderen
+    /// </summary>
+    /// <param name="destBitPos">Ziel-Position, wohin die Bits geschoben werden sollen</param>
+    /// <param name="srcBitPos">Quell-Position, welche Bits verschoben werden sollen</param>
+    /// <param name="count">Anzahl der zu verschiebenden Bits</param>
+    public void MoveBits(ulong destBitPos, ulong srcBitPos, ulong count)
+    {
+      if (bitCount == 0 || destBitPos == srcBitPos) return;
+      Debug.Assert(destBitPos < bitCount);
+      Debug.Assert(srcBitPos < bitCount);
+      Debug.Assert(count <= bitCount);
+      Debug.Assert(destBitPos + count <= bitCount);
+      Debug.Assert(srcBitPos + count <= bitCount);
+      if (destBitPos < srcBitPos)
+      {
+        for (ulong c = 0; c < count; c++)
+        {
+          if (GetBit(srcBitPos + c)) SetBit(destBitPos + c); else ClearBit(destBitPos + c);
+        }
+      }
+      else
+      {
+        for (ulong c = count - 1; c < count; c--)
+        {
+          if (GetBit(srcBitPos + c)) SetBit(destBitPos + c); else ClearBit(destBitPos + c);
+        }
+      }
+    }
+
+    /// <summary>
     /// gibt den nicht gemanagten Speicher wieder frei
     /// </summary>
     public void Dispose()

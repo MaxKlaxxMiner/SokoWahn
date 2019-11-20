@@ -101,18 +101,27 @@ namespace SokoWahnTool
     {
       //MiniGame(FieldTest1);
 
-      var solver = new RoomSolver(FieldTest1);
+      //var solver = new RoomSolver(FieldTest1);
       //var solver = new RoomSolver(FieldStart);
-      //var solver = new RoomSolver(FieldMoves105022);
+      var solver = new RoomSolver(FieldMoves105022);
       //var solver = new RoomSolver(FieldMonster);
+
       int selectRoom = -1;
       int selectState = -1;  // ausgewählter Zustand (Konflikt mit selectPortal)
       int selectPortal = -1; // ausgewähltes Portal  (Konflikt mit selectState)
       int selectVariant = -1; // ausgewählt Portal-Variante
+      int optimizeOffset = 0;
+      var lastOptimize = new List<KeyValuePair<string, int>>();
       for (; ; )
       {
         Console.Clear();
         solver.DisplayConsole(selectRoom, selectState, selectPortal, selectVariant);
+        while (lastOptimize.Count > 1 && lastOptimize.Count > (Console.WindowHeight - Console.CursorTop) - 2) { lastOptimize.RemoveAt(0); optimizeOffset++; }
+        for (int i = 0; i < lastOptimize.Count; i++)
+        {
+          var optimizeLine = lastOptimize[i];
+          Console.WriteLine("  {0:N0}: {1}, count: {2:N0}", optimizeOffset + i + 1, optimizeLine.Key, optimizeLine.Value);
+        }
         var key = Console.ReadKey(true);
         switch (key.Key)
         {
@@ -267,6 +276,18 @@ namespace SokoWahnTool
           case ConsoleKey.LeftArrow:
           {
             selectVariant = -1;
+          } break;
+          #endregion
+
+          #region # // --- Optimize ---
+          case ConsoleKey.Enter:
+          {
+            selectRoom = -1;
+            selectState = -1;
+            selectPortal = -1;
+            selectVariant = -1;
+            int count = solver.Optimize(1, lastOptimize);
+            if (count == 0) lastOptimize.Add(new KeyValuePair<string, int>("no optimizations found", 0));
           } break;
           #endregion
         }
