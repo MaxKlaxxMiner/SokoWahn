@@ -104,6 +104,7 @@ namespace SokoWahnTool
       var solver = new RoomSolver(FieldTest1);
       //var solver = new RoomSolver(FieldStart);
       //var solver = new RoomSolver(FieldMoves105022);
+      //var solver = new RoomSolver(Field628);
       //var solver = new RoomSolver(FieldMonster);
 
       int selectRoom = -1;

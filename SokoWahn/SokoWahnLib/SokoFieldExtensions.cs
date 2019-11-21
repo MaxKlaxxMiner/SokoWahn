@@ -206,7 +206,7 @@ namespace SokoWahnLib
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
       char c = field.GetField(pos);
-      return c == '.' || c == '*';
+      return c == '.' || c == '*' || c == '+';
     }
 
     /// <summary>

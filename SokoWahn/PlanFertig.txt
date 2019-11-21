@@ -1,33 +1,29 @@
 
 --- Aufwand-Zahlen ---
 
-a-Test1:   1.944
-b-Test1:     162
-c-Test1: 290.400
-d-Test1: 185.856
+a-Test1: 290.400
+b-Test1: 185.856
+c-Test1: 104.544
 
-a-Start: 6,050e24
-b-Start: 2,626e21
-c-Start: 2,786e48 (2.786.159.986.491.845.798.121.855.837.599.675.001.589.632.860.160)
-d-Start: 6,191e47 (619.146.663.664.854.621.804.856.852.799.927.778.131.029.524.480)
+a-Start: 2,786e48 (2.786.159.986.491.845.798.121.855.837.599.675.001.589.632.860.160)
+b-Start: 6,191e47 (619.146.663.664.854.621.804.856.852.799.927.778.131.029.524.480)
+c-Start: 6,318e46 (63.178.230.986.209.655.286.209.882.938.768.140.625.615.257.600)
 
-a-Moves: 2,713e30
-b-Moves: 3,768e28
-c-Moves: 8,218e72 (8.217.840.843.879.263.757.211.037.441.362.776.441.322.014.513.862.363.264.105.668.582.939.033.600)
-d-Moves: 8,218e72 (8.217.840.843.879.263.757.211.037.441.362.776.441.322.014.513.862.363.264.105.668.582.939.033.600)
+a-Moves: 8,218e72 (8.217.840.843.879.263.757.211.037.441.362.776.441.322.014.513.862.363.264.105.668.582.939.033.600)
+b-Moves: 8,218e72 (8.217.840.843.879.263.757.211.037.441.362.776.441.322.014.513.862.363.264.105.668.582.939.033.600)
+c-Moves: 6,724e72 (6.723.687.963.173.943.074.081.757.906.569.544.361.081.648.238.614.660.852.450.092.476.950.118.400)
 
-a-Monst: 7,943e314
-b-Monst: 1,569e314
+a-628xt: 2,790e124 (27.902.090.360.458.082.520.867.711.388.661.057.527.340.297.608.253.975.426.927.522.437.080.408.694 ...)
+b-628xt: 2,790e124 (27.902.090.360.458.082.520.867.711.388.661.057.527.340.297.608.253.975.426.927.522.437.080.408.694 ...)
+c-628xt: 1,332e123 (1.331.510.554.398.940.545.668.111.299.299.301.353.192.220.316.514.060.594.384.120.536.562.885.746 ...)
+
+a-Monst: 6,524e882 (6.524.122.603.693.242.880.661.272.904.118.914.238.602.368.610.159.826.568.012.388.535.613.383.737 ...)
+b-Monst: 6,524e882 (6.524.122.603.693.242.880.661.272.904.118.914.238.602.368.610.159.826.568.012.388.535.613.383.737 ...)
 c-Monst: 6,524e882 (6.524.122.603.693.242.880.661.272.904.118.914.238.602.368.610.159.826.568.012.388.535.613.383.737 ...)
-d-Monst: 6,524e882 (6.524.122.603.693.242.880.661.272.904.118.914.238.602.368.610.159.826.568.012.388.535.613.383.737 ...)
 
-a: Basis-Version
-b: Status-Filter: Spieler können sich nur auf Feldern befinden, wo direkt vorher eine Kiste weggeschoben wurde oder es sich um ein Startfeld handelt
-c: Neu: Varianten werden nun als Berechnungsgrundlage verwendet
-d: Filtern von Kisten-Netzwerken (zusammenhängende Räume, welche mit Kisten arbeiten könnten aber nie Kisten enthalten werden)
-
---- weitere Optimierungen ---
-- Startvarianten mit verbleibenden Spieler entfernen, wenn der Raum nicht mehr für Kisten geeignet ist
+a: Neu: Varianten werden nun als Berechnungsgrundlage verwendet
+b: Filtern von Kisten-Netzwerken (zusammenhängende Räume, welche mit Kisten arbeiten könnten aber nie Kisten enthalten werden)
+c: Kisten-Einbahnstraßen mit Sackgassen gefiltert + Startvarianten entfernen, wenn der Raum nicht mehr für Kisten geeignet ist
 
 
 --- Room-Portals ---

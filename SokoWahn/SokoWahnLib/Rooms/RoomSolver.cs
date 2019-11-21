@@ -191,6 +191,22 @@ namespace SokoWahnLib.Rooms
         }
       }
 
+      // --- Start-Varianten entfernen, welche ohne Kisten keine Bedeutung mehr haben ---
+      if (room.startBoxVariants.Count > 0 && !room.fieldPosis.All(pos => room.field.IsPlayer(pos)))
+      {
+        output.Add(new KeyValuePair<string, int>("[Box-Net] remove box-variants from room " + room.fieldPosis.First(), room.startBoxVariants.Count));
+        totalCount += room.startBoxVariants.Count;
+        room.startBoxVariants.Clear();
+        if (totalCount >= maxCount) return totalCount;
+      }
+      if (room.startPlayerVariants.Count > 0 && !room.fieldPosis.All(pos => room.field.IsPlayer(pos)))
+      {
+        output.Add(new KeyValuePair<string, int>("[Box-Net] remove ply-variants from room " + room.fieldPosis.First(), room.startPlayerVariants.Count));
+        totalCount += room.startPlayerVariants.Count;
+        room.startPlayerVariants.Clear();
+        if (totalCount >= maxCount) return totalCount;
+      }
+
       return totalCount;
     }
 
@@ -204,7 +220,7 @@ namespace SokoWahnLib.Rooms
     {
       int totalCount = 0;
 
-      // --- Kisten-Netzwerke erstellen ---
+      #region # // --- Kisten-Netzwerke erstellen ---
       var boxNetworks = new List<HashSet<Room>>();
       foreach (var room in rooms)
       {
@@ -238,8 +254,9 @@ namespace SokoWahnLib.Rooms
           }
         }
       }
+      #endregion
 
-      // --- Kisten-Netzwerke prüfen ob diese eventuell kistenfrei sein könnten ---
+      #region # // --- Kisten-Netzwerke prüfen ob diese eventuell kistenfrei sein könnten ---
       foreach (var net in boxNetworks)
       {
         if (net.Any(r => r.HasStartBoxes())) continue;
@@ -251,8 +268,23 @@ namespace SokoWahnLib.Rooms
           if (totalCount >= maxCount) return totalCount;
         }
       }
+      #endregion
 
-      // --- Varianten optimieren ---
+      #region # // --- Kisten-Einbahnstraßen mit Sackgassen finden ---
+      foreach (var room in rooms)
+      {
+        if (room.fieldPosis.Any(pos => field.IsGoal(pos))) continue; // Zielfelder im Raum vorhanden: hier können Kisten ohne Rückkehr rein geschoben werden
+
+        // --- prüfen, ob es nur eingehende Kisten-Varianten gibt aber keine ausgehenden ---
+        if (room.incomingPortals.Any(x => x.roomToBoxVariants.Count > 0) && room.outgoingPortals.All(x => x.roomToBoxVariants.Count == 0))
+        {
+          totalCount += OptimizeRemoveBoxes(room, maxCount - totalCount, output);
+          if (totalCount >= maxCount) return totalCount;
+        }
+      }
+      #endregion
+
+      #region # // --- Varianten aufräumen ---
       var todo = new HashSet<Room>();
       foreach (var room in rooms) todo.Add(room);
 
@@ -325,6 +357,7 @@ namespace SokoWahnLib.Rooms
           }
         }
       }
+      #endregion
 
       return totalCount;
     }
