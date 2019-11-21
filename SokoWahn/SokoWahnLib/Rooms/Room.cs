@@ -100,8 +100,8 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="field">gesamtes Spielfeld, welches verwendet wird</param>
     /// <param name="pos">Position des Feldes, worraus der Raum generiert werden soll</param>
-    /// <param name="incomingPortals">eingehende Portale von den anderen Räumen</param>
-    /// <param name="outgoingPortals">ausgehende Portale in andere Räume</param>
+    /// <param name="incomingPortals">eingehende Portale von anderen Räumen</param>
+    /// <param name="outgoingPortals">ausgehende Portale nach andere Räume</param>
     public Room(ISokoField field, int pos, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
     {
       if (field == null) throw new ArgumentNullException("field");
@@ -113,15 +113,9 @@ namespace SokoWahnLib.Rooms
       this.field = field;
       fieldPosis = new[] { pos };
       goalPosis = new HashSet<int>();
-      if (field.GetField(pos) == '.' || field.GetField(pos) == '*') goalPosis.Add(pos);
+      if (field.IsGoal(pos)) goalPosis.Add(pos);
       this.incomingPortals = incomingPortals;
       this.outgoingPortals = outgoingPortals;
-
-      stateBoxElement = sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
-                      + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfeldern befinden
-                      + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-      stateBoxData = new Bitter(stateBoxElement * (ulong)fieldPosis.Length * 2UL); // Raum mit einzelnen Kisten-Feld kann nur zwei Zustände annehmen: 1 = leer, 2 = Kiste
-      stateBoxUsed = 0;
 
       statePlayerElement = sizeof(ushort) * 8        // Spieler-Position
                          + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
@@ -130,12 +124,65 @@ namespace SokoWahnLib.Rooms
       statePlayerData = new Bitter(statePlayerElement * 1UL); // Raum mit einzelnen Spieler-Feld kann nur ein Zustand annehmen: 1 = Spieler
       statePlayerUsed = 0;
 
+      stateBoxElement = sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
+                      + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfeldern befinden
+                      + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
+      stateBoxData = new Bitter(stateBoxElement * (ulong)fieldPosis.Length * 2UL); // Raum mit einzelnen Kisten-Feld kann nur zwei Zustände annehmen: 1 = leer, 2 = Kiste
+      stateBoxUsed = 0;
+
       variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
                           + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
                           + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
                           + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
                           + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
       variantsData = new Bitter(variantsDataElement * (4 * 4 + 4 * 4 + 4 + 4)); // (4 in-Kisten * 4 out-Kisten) + (4 in-Spieler * 4 out-Spieler) + (4 Starts) + (4 Ziele)
+      variantsDataUsed = 0;
+    }
+
+    /// <summary>
+    /// Konstruktor um ein neuen Merge-Raum zu erstellen
+    /// </summary>
+    /// <param name="field">gesamtes Spielfeld, welches verwendet wird</param>
+    /// <param name="posis">Enumerable mit allen Felder, worraus der Raum bestehen soll</param>
+    /// <param name="maxPlayerStates">maximale Anzahl der zu erwartenden Zustände mit Spieler</param>
+    /// <param name="maxBoxStates">maximale Anzahl der zu erwartenden Zustände ohne Spieler</param>
+    /// <param name="maxVariants">maximale Anzahl der zu erwartenden Varianten</param>
+    /// <param name="incomingPortals">eingehende Portale von anderen Räumen</param>
+    /// <param name="outgoingPortals">ausgehende Portale nach andere Räume</param>
+    public Room(ISokoField field, IEnumerable<int> posis, uint maxPlayerStates, uint maxBoxStates, uint maxVariants, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
+    {
+      if (field == null) throw new ArgumentNullException("field");
+      if (posis == null) throw new ArgumentOutOfRangeException("posis");
+      fieldPosis = posis.OrderBy(x => x).ToArray();
+      if (!fieldPosis.All(field.ValidPos)) throw new ArgumentOutOfRangeException("posis");
+      if (incomingPortals == null) throw new ArgumentNullException("incomingPortals");
+      if (outgoingPortals == null) throw new ArgumentNullException("outgoingPortals");
+      if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("incomingPortals.Length != outgoingPortals.Length");
+
+      this.field = field;
+      goalPosis = new HashSet<int>(fieldPosis.Where(field.IsGoal));
+      this.incomingPortals = incomingPortals;
+      this.outgoingPortals = outgoingPortals;
+
+      statePlayerElement = sizeof(ushort) * 8        // Spieler-Position
+                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
+                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
+                         + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
+      statePlayerData = new Bitter(maxPlayerStates * statePlayerElement); // maximale Anzahl der Zustände mit Spieler im Raum
+      statePlayerUsed = 0;
+
+      stateBoxElement = sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
+                      + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfeldern befinden
+                      + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
+      stateBoxData = new Bitter(maxBoxStates * stateBoxElement); // maximale Anzahl der Zustände ohne Spieler im Raum
+      stateBoxUsed = 0;
+
+      variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
+                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
+                          + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
+                          + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
+                          + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
+      variantsData = new Bitter(maxVariants * variantsDataElement); // maximale Anzahl der Varianten insgesamt
       variantsDataUsed = 0;
     }
     #endregion

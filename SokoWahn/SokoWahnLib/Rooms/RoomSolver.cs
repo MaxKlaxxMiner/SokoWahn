@@ -429,6 +429,48 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
+    #region # // --- Merger ---
+    /// <summary>
+    /// verschmelzt zwei Räume zu einen größeren Raum
+    /// </summary>
+    /// <param name="roomIndex1">erster Raum</param>
+    /// <param name="roomIndex2">zweiter Raum</param>
+    public void Merge(int roomIndex1 = -1, int roomIndex2 = -1)
+    {
+      if (roomIndex1 < 0 || roomIndex2 < 0) throw new NotImplementedException(); // automatische Suche passender Räume durchführen
+      Debug.Assert(roomIndex1 < rooms.Length);
+      Debug.Assert(roomIndex2 < rooms.Length);
+      Debug.Assert(roomIndex1 != roomIndex2);
+
+      #region # // --- Portale der beiden Räume suchen ---
+      var room1 = rooms[roomIndex1];
+      var room2 = rooms[roomIndex2];
+      var incomingPortals1 = new HashSet<RoomPortal>();
+      var incomingPortals2 = new HashSet<RoomPortal>();
+      foreach (var portal in room1.incomingPortals)
+      {
+        if (portal.roomFrom == room2) incomingPortals1.Add(portal);
+      }
+      foreach (var portal in room2.incomingPortals)
+      {
+        if (portal.roomFrom == room1) incomingPortals2.Add(portal);
+      }
+      Debug.Assert(incomingPortals1.Count > 0);
+      Debug.Assert(incomingPortals2.Count > 0);
+      Debug.Assert(incomingPortals1.Count == incomingPortals2.Count);
+      Debug.Assert(incomingPortals1.All(p => incomingPortals2.Contains(p.oppositePortal)));
+      Debug.Assert(incomingPortals2.All(p => incomingPortals1.Contains(p.oppositePortal)));
+      #endregion
+
+      var incomingPortals = new RoomPortal[room1.incomingPortals.Where(portal => !incomingPortals1.Contains(portal)).Concat(room2.incomingPortals.Where(portal => !incomingPortals2.Contains(portal))).Count()];
+      var outgoingPortals = new RoomPortal[room1.outgoingPortals.Where(portal => !incomingPortals2.Contains(portal)).Concat(room1.outgoingPortals.Where(portal => !incomingPortals1.Contains(portal))).Count()];
+      uint maxPlayerStates = checked(room1.statePlayerUsed * room2.stateBoxUsed + room2.statePlayerUsed * room1.stateBoxUsed);
+      uint maxBoxStates = checked(room1.stateBoxUsed * room2.stateBoxUsed);
+      uint maxVariants = checked(room1.variantsDataUsed * room2.variantsDataUsed);
+      var newRoom = new Room(field, room1.fieldPosis.Concat(room2.fieldPosis), maxPlayerStates, maxBoxStates, maxVariants, incomingPortals, outgoingPortals);
+    }
+    #endregion
+
     #region # // --- Display ---
     /// <summary>
     /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück

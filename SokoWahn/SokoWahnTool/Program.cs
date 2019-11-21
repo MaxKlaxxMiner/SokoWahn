@@ -113,6 +113,7 @@ namespace SokoWahnTool
       int selectVariant = -1; // ausgewählt Portal-Variante
       int optimizeOffset = 0;
       var lastOptimize = new List<KeyValuePair<string, int>>();
+      while (solver.Optimize(100, lastOptimize) > 0) { }
       for (; ; )
       {
         Console.Clear();
@@ -289,6 +290,17 @@ namespace SokoWahnTool
             selectVariant = -1;
             int count = solver.Optimize(1, lastOptimize);
             if (count == 0) lastOptimize.Add(new KeyValuePair<string, int>("no optimizations found", 0));
+          } break;
+          #endregion
+
+          #region # // --- Merge ---
+          case ConsoleKey.Backspace:
+          {
+            selectRoom = -1;
+            selectState = -1;
+            selectPortal = -1;
+            selectVariant = -1;
+            solver.Merge(0, 1);
           } break;
           #endregion
         }
