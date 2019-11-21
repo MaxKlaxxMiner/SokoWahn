@@ -359,6 +359,72 @@ namespace SokoWahnLib.Rooms
       }
       #endregion
 
+      #region # // --- Zustände aufräumen ---
+      foreach (var room in rooms)
+      {
+        var mapStates = new uint[room.statePlayerUsed + room.stateBoxUsed];
+        for (int i = 0; i < mapStates.Length; i++) mapStates[i] = uint.MaxValue;
+        for (uint v = 0; v < room.variantsDataUsed; v++)
+        {
+          var st = room.GetVariantStates(v);
+          mapStates[st.Key] = st.Key;
+          mapStates[st.Value] = st.Value;
+        }
+        bool find = false;
+        for (int i = 0; i < mapStates.Length; i++)
+        {
+          if (mapStates[i] == uint.MaxValue)
+          {
+            find = true;
+            break;
+          }
+        }
+        if (find) // können die Zustände optimiert werden?
+        {
+          uint count = 0;
+          uint countPlayers = 0;
+          for (int i = 0; i < mapStates.Length; i++)
+          {
+            if (mapStates[i] < uint.MaxValue)
+            {
+              mapStates[i] = count++;
+              if (i < room.statePlayerUsed) countPlayers++;
+            }
+          }
+
+          // --- statePlayer verschieben ---
+          uint oldOffset = room.statePlayerUsed;
+          room.statePlayerUsed = countPlayers;
+          for (uint i = 0, c = 0; c < room.statePlayerUsed; i++)
+          {
+            if (mapStates[i] == uint.MaxValue) continue;
+            room.statePlayerData.MoveBits(c * room.statePlayerElement, i * room.statePlayerElement, room.statePlayerElement);
+            c++;
+          }
+
+          // --- stateBox verschieben ---
+          room.stateBoxUsed = count - countPlayers;
+          for (uint i = 0, c = 0; c < room.stateBoxUsed; i++)
+          {
+            if (mapStates[i + oldOffset] == uint.MaxValue) continue;
+            room.stateBoxData.MoveBits(c * room.stateBoxElement, i * room.stateBoxElement, room.stateBoxElement);
+            c++;
+          }
+
+          // --- Zustände in den Varianten neu mappen ---
+          for (uint v = 0; v < room.variantsDataUsed; v++)
+          {
+            var st = room.GetVariantStates(v);
+            room.SetVariantStates(v, mapStates[st.Key], mapStates[st.Value]);
+          }
+
+          output.Add(new KeyValuePair<string, int>("[States] remove states from room " + room.fieldPosis.First(), mapStates.Length - (int)count));
+          totalCount += mapStates.Length - (int)count;
+          if (totalCount >= maxCount) return totalCount;
+        }
+      }
+      #endregion
+
       return totalCount;
     }
     #endregion

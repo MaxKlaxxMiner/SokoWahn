@@ -519,6 +519,23 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
+    /// setzt den ein- und ausgehenden Zustand einer Variante neu
+    /// </summary>
+    /// <param name="variantIndex">Variante, welche geändert werden soll</param>
+    /// <param name="incomingState">neuer eingehender Zustand</param>
+    /// <param name="outgoingState">neuer ausgehender Zustand</param>
+    public void SetVariantStates(uint variantIndex, uint incomingState, uint outgoingState)
+    {
+      ulong bitPos = variantIndex * variantsDataElement;
+      Debug.Assert(incomingState < uint.MaxValue);
+      Debug.Assert(outgoingState < uint.MaxValue);
+      variantsData.SetUInt(bitPos, incomingState);
+      variantsData.SetUInt(bitPos + 40, outgoingState);
+      Debug.Assert(variantsData.GetUInt(bitPos) == incomingState);
+      Debug.Assert(variantsData.GetUInt(bitPos + 40) == outgoingState);
+    }
+
+    /// <summary>
     /// fragt eine bestimmte Variante ab (für Debug-Zwecke)
     /// </summary>
     /// <param name="variantIndex">Index der Variante</param>
