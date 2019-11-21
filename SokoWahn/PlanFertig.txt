@@ -26,6 +26,9 @@ b: Status-Filter: Spieler können sich nur auf Feldern befinden, wo direkt vorher
 c: Neu: Varianten werden nun als Berechnungsgrundlage verwendet
 d: Filtern von Kisten-Netzwerken (zusammenhängende Räume, welche mit Kisten arbeiten könnten aber nie Kisten enthalten werden)
 
+--- weitere Optimierungen ---
+- Startvarianten mit verbleibenden Spieler entfernen, wenn der Raum nicht mehr für Kisten geeignet ist
+
 
 --- Room-Portals ---
 - Hauptklasse (RoomSolver) erstellen
