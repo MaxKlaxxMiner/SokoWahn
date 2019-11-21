@@ -211,19 +211,31 @@ namespace SokoWahnLib.Rooms
         if (boxNetworks.Any(network => network.Contains(room))) continue; // Raum schon in eins der Netzwerke vorhanden?
         if (!room.HasBoxStates()) continue; // Raum kann nie Kisten enthalten?
 
-        var net = new HashSet<Room> { room };
+        var net = new HashSet<Room>();
         boxNetworks.Add(net);
-        var checkPortals = new Stack<RoomPortal>();
-        foreach (var portal in room.outgoingPortals) checkPortals.Push(portal);
-        while (checkPortals.Count > 0)
+        var checkRooms = new Stack<Room>();
+        checkRooms.Push(room);
+        while (checkRooms.Count > 0)
         {
-          var checkPortal = checkPortals.Pop();
-          if (net.Contains(checkPortal.roomTo)) continue; // benachbarte Raum schon im Netzwerk vorhanden?
-          if (checkPortal.roomToBoxVariants.Count == 0) continue; // keine Variante vorhanden, welche eine Kiste in den benachbarten Raum schieben könnte?
-          Debug.Assert(checkPortal.roomTo.HasBoxStates());
-          // benachbarter Raum kann in das Netzwerk aufgenommen werden
-          net.Add(checkPortal.roomTo);
-          foreach (var portal in checkPortal.roomTo.outgoingPortals) checkPortals.Push(portal); // Portale des zusätzlichen Raumen ebenfalls prüfen
+          var checkRoom = checkRooms.Pop();
+          if (net.Contains(checkRoom)) continue; // Raum schon im Netzwerk vorhanden?
+          net.Add(checkRoom); // Raum in das Netzwerk aufnehmen
+
+          // --- ausgehende Portale prüfen ---
+          foreach (var portal in checkRoom.outgoingPortals)
+          {
+            if (portal.roomToBoxVariants.Count == 0) continue; // ausgehendes Portal hat keine Kisten-Varianten
+            Debug.Assert(portal.roomTo.HasBoxStates());
+            checkRooms.Push(portal.roomTo); // benachbarter Raum kann aufgenommen werden
+          }
+
+          // --- eingehende Portale prüfen ---
+          foreach (var portal in checkRoom.incomingPortals)
+          {
+            if (portal.roomToBoxVariants.Count == 0) continue; // eingehendes Portal hat keine Kisten-Varianten
+            Debug.Assert(portal.roomFrom.HasBoxStates());
+            checkRooms.Push(portal.roomFrom); // benachbarter Raum kann aufgenommen werden
+          }
         }
       }
 

@@ -4,22 +4,27 @@
 a-Test1:   1.944
 b-Test1:     162
 c-Test1: 290.400
+d-Test1: 185.856
 
 a-Start: 6,050e24
 b-Start: 2,626e21
 c-Start: 2,786e48 (2.786.159.986.491.845.798.121.855.837.599.675.001.589.632.860.160)
+d-Start: 6,191e47 (619.146.663.664.854.621.804.856.852.799.927.778.131.029.524.480)
 
 a-Moves: 2,713e30
 b-Moves: 3,768e28
 c-Moves: 8,218e72 (8.217.840.843.879.263.757.211.037.441.362.776.441.322.014.513.862.363.264.105.668.582.939.033.600)
+d-Moves: 8,218e72 (8.217.840.843.879.263.757.211.037.441.362.776.441.322.014.513.862.363.264.105.668.582.939.033.600)
 
 a-Monst: 7,943e314
 b-Monst: 1,569e314
 c-Monst: 6,524e882 (6.524.122.603.693.242.880.661.272.904.118.914.238.602.368.610.159.826.568.012.388.535.613.383.737 ...)
+d-Monst: 6,524e882 (6.524.122.603.693.242.880.661.272.904.118.914.238.602.368.610.159.826.568.012.388.535.613.383.737 ...)
 
 a: Basis-Version
 b: Status-Filter: Spieler können sich nur auf Feldern befinden, wo direkt vorher eine Kiste weggeschoben wurde oder es sich um ein Startfeld handelt
 c: Neu: Varianten werden nun als Berechnungsgrundlage verwendet
+d: Filtern von Kisten-Netzwerken (zusammenhängende Räume, welche mit Kisten arbeiten könnten aber nie Kisten enthalten werden)
 
 
 --- Room-Portals ---
