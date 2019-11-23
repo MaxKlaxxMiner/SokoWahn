@@ -380,7 +380,7 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
-    /// fügt importiert und verschmelzt die Zustände zweier Räume und gibt ein Mapping-Dict für die Zustände zurück
+    /// importiert und verschmelzt die Zustände zweier Räume und gibt ein Mapping-Dict für die Zustände zurück
     /// </summary>
     /// <param name="room1">Raum 1, deren Zustände verwendet werden sollen</param>
     /// <param name="room2">Raum 2, deren Zustände verwendet werden sollen</param>
@@ -642,7 +642,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="outgoingState">erreichbaren End-Zustand</param>
     /// <param name="moves">Anzahl der Laufschritte, welche für den neuen Zustand nötig sind (inkl. Kistenverschiebungen)</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen, welche für den neuen Zustand nötig sind</param>
-    void AddVariant(uint incomingState, int outgoingPortal, uint outgoingState, uint moves, uint pushes)
+    public void AddVariant(uint incomingState, int outgoingPortal, uint outgoingState, uint moves, uint pushes)
     {
       Debug.Assert(incomingState < statePlayerUsed + stateBoxUsed);
       Debug.Assert(outgoingPortal == -1 || (outgoingPortal >= 0 && outgoingPortal < outgoingPortals.Length && outgoingPortal < 0xff));

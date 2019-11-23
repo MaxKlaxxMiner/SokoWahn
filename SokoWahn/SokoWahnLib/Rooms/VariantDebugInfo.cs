@@ -29,7 +29,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly bool incomingBox;
     /// <summary>
-    /// eigehender Anfangs-Zustand
+    /// eingehender Anfangs-Zustand
     /// </summary>
     public readonly uint incomingState;
     /// <summary>

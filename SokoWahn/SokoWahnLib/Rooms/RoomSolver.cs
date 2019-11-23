@@ -428,17 +428,17 @@ namespace SokoWahnLib.Rooms
       #region # // --- Portale der beiden Räume suchen ---
       var room1 = rooms[roomIndex1];
       var room2 = rooms[roomIndex2];
-      var incomingMergePortals1 = new HashSet<RoomPortal>(); // Portale des 1. Raumes, welche verschmolzen werden
-      var incomingMergePortals2 = new HashSet<RoomPortal>(); // Portale des 2. Raumes, welche verschmolzen werden
-      var incomingSkipPortals1 = new HashSet<RoomPortal>(); // Portale des 1. Raumes, welche erhalten bleiben
-      var incomingSkipPortals2 = new HashSet<RoomPortal>(); // Portale des 2. Raumes, welche erhalten bleiben
+      var incomingMergePortals1 = new HashSet<RoomPortal>(); // Portale des 1. Raumes, welche verschmolzen werden (und nachher verschwinden)
+      var incomingMergePortals2 = new HashSet<RoomPortal>(); // Portale des 2. Raumes, welche verschmolzen werden (und nachher verschwinden)
+      var incomingOuterPortals1 = new HashSet<RoomPortal>(); // Portale des 1. Raumes, welche erhalten bleiben
+      var incomingOuterPortals2 = new HashSet<RoomPortal>(); // Portale des 2. Raumes, welche erhalten bleiben
       foreach (var portal in room1.incomingPortals)
       {
-        if (portal.roomFrom == room2) incomingMergePortals1.Add(portal); else incomingSkipPortals1.Add(portal);
+        if (portal.roomFrom == room2) incomingMergePortals1.Add(portal); else incomingOuterPortals1.Add(portal);
       }
       foreach (var portal in room2.incomingPortals)
       {
-        if (portal.roomFrom == room1) incomingMergePortals2.Add(portal); else incomingSkipPortals2.Add(portal);
+        if (portal.roomFrom == room1) incomingMergePortals2.Add(portal); else incomingOuterPortals2.Add(portal);
       }
       Debug.Assert(incomingMergePortals1.Count > 0);
       Debug.Assert(incomingMergePortals2.Count > 0);
@@ -447,15 +447,144 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(incomingMergePortals2.All(p => incomingMergePortals1.Contains(p.oppositePortal)));
       #endregion
 
-      var incomingPortals = new RoomPortal[incomingSkipPortals1.Count + incomingSkipPortals2.Count];
-      var outgoingPortals = new RoomPortal[incomingPortals.Length];
+      var incomingNewPortals = new RoomPortal[incomingOuterPortals1.Count + incomingOuterPortals2.Count];
+      var outgoingNewPortals = new RoomPortal[incomingNewPortals.Length];
       uint maxPlayerStates = checked(room1.statePlayerUsed * room2.stateBoxUsed + room2.statePlayerUsed * room1.stateBoxUsed);
       uint maxBoxStates = checked(room1.stateBoxUsed * room2.stateBoxUsed);
       uint maxVariants = checked(room1.variantsDataUsed * room2.variantsDataUsed);
-      var newRoom = new Room(field, room1.fieldPosis.Concat(room2.fieldPosis), maxPlayerStates, maxBoxStates, maxVariants, incomingPortals, outgoingPortals);
+      var newRoom = new Room(field, room1.fieldPosis.Concat(room2.fieldPosis), maxPlayerStates, maxBoxStates, maxVariants, incomingNewPortals, outgoingNewPortals);
 
       // --- neue Zustände erstellen (Zustände Raum 1 * Zustände Raum 2) ---
       var statesDict = newRoom.AddMergeStates(room1, room2);
+
+      // --- neue eingehende Portale erstellen und die alten ausgehenden Portale verlinken ---
+      int portalCount = 0;
+      foreach (var portal in incomingOuterPortals1.Concat(incomingOuterPortals2))
+      {
+        incomingNewPortals[portalCount] = new RoomPortal(portal.posFrom, portal.posTo, portal.roomFrom, newRoom);
+        outgoingNewPortals[portalCount] = portal.oppositePortal;
+        incomingNewPortals[portalCount].oppositePortal = outgoingNewPortals[portalCount];
+        outgoingNewPortals[portalCount].oppositePortal = incomingNewPortals[portalCount];
+        portalCount++;
+      }
+
+      // --- Start-Varianten verschmelzen ---
+      foreach (var vp1 in room1.startPlayerVariants)
+      {
+        throw new NotImplementedException();
+      }
+      foreach (var vp2 in room2.startPlayerVariants)
+      {
+        throw new NotImplementedException();
+      }
+      foreach (var vb1 in room1.startBoxVariants)
+      {
+        throw new NotImplementedException();
+      }
+      foreach (var vb2 in room2.startBoxVariants)
+      {
+        throw new NotImplementedException();
+      }
+
+      // --- Portal-Varianten verschmelzen ---
+      var knownOutgoingPortals = new HashSet<RoomPortal>(outgoingNewPortals);
+      var mapOutgoingPortals = new Dictionary<RoomPortal, int>();
+      for (int i = 0; i < outgoingNewPortals.Length; i++) mapOutgoingPortals.Add(outgoingNewPortals[i], i);
+
+      // --- Eingänge in Raum 1 ---
+      foreach (var portal1 in incomingOuterPortals1)
+      {
+        foreach (uint ppv1 in portal1.roomToPlayerVariants)
+        {
+          var v1 = room1.GetVariantInfo(ppv1);
+          if (incomingMergePortals2.Contains(v1.outgoingPortal)) // R1 Variante führt durch ein Portal in den benachbarten Raum?
+          {
+            foreach (uint ppv2 in v1.outgoingPortal.roomToPlayerVariants)
+            {
+              var v2 = room2.GetVariantInfo(ppv2);
+              if (knownOutgoingPortals.Contains(v2.outgoingPortal)) // R2 Variante führt aus dem Raum heraus?
+              {
+                uint incomingState = statesDict[(ulong)v1.incomingState << 32 | v2.incomingState];
+                int outgoingPortal = mapOutgoingPortals[v2.outgoingPortal];
+                uint outgoingState = statesDict[(ulong)v1.outgoingState << 32 | v2.outgoingState];
+                uint moves = v1.moves + v2.moves;
+                uint pushes = v1.pushes + v2.pushes;
+                newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
+              }
+              else
+              {
+                throw new NotImplementedException();
+              }
+            }
+            foreach (uint pbv2 in v1.outgoingPortal.roomToBoxVariants)
+            {
+              throw new NotImplementedException();
+            }
+          }
+          else
+          {
+            throw new NotImplementedException();
+          }
+        }
+        foreach (uint pbv1 in portal1.roomToBoxVariants)
+        {
+          throw new NotImplementedException();
+        }
+      }
+
+      // --- Eingänge in Raum 2 ---
+      foreach (var portal2 in incomingOuterPortals2)
+      {
+        foreach (uint ppv2 in portal2.roomToPlayerVariants)
+        {
+          var v2 = room2.GetVariantInfo(ppv2);
+          if (knownOutgoingPortals.Contains(v2.outgoingPortal)) // R2 Variante führt aus dem Raum heraus?
+          {
+            throw new NotImplementedException();
+            //uint incomingState = statesDict[(ulong)v1.incomingState << 32 | v2.incomingState];
+            //int outgoingPortal = mapOutgoingPortals[v1.outgoingPortal];
+            //uint outgoingState = statesDict[(ulong)v1.outgoingState << 32 | v2.outgoingState];
+            //uint moves = v1.moves + v2.moves;
+            //uint pushes = v1.pushes + v2.pushes;
+            //newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
+          }
+          else if (incomingMergePortals1.Contains(v2.outgoingPortal)) // R2 Variante führt durch ein Portal in den benachbarten Raum?
+          {
+            foreach (uint ppv1 in v2.outgoingPortal.roomToPlayerVariants)
+            {
+              var v1 = room1.GetVariantInfo(ppv1);
+              if (knownOutgoingPortals.Contains(v1.outgoingPortal)) // R1 Variante führt aus dem Raum heraus?
+              {
+                uint incomingState = statesDict[(ulong)v1.incomingState << 32 | v2.incomingState];
+                int outgoingPortal = mapOutgoingPortals[v1.outgoingPortal];
+                uint outgoingState = statesDict[(ulong)v1.outgoingState << 32 | v2.outgoingState];
+                uint moves = v1.moves + v2.moves;
+                uint pushes = v1.pushes + v2.pushes;
+                newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
+              }
+              else
+              {
+                throw new NotImplementedException();
+              }
+            }
+            foreach (uint pbv1 in v2.outgoingPortal.roomToBoxVariants)
+            {
+              throw new NotImplementedException();
+            }
+          }
+          else
+          {
+            throw new NotImplementedException();
+          }
+        }
+        foreach (uint pbv2 in portal2.roomToBoxVariants)
+        {
+          throw new NotImplementedException();
+        }
+      }
+
+      // --- Räume-Index aktualisieren ---
+      rooms = rooms.Where(r => r != room1 && r != room2).Concat(Enumerable.Repeat(newRoom, 1)).OrderBy(r => r.fieldPosis.First()).ToArray();
     }
     #endregion
 
