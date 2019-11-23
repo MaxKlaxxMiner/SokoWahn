@@ -285,25 +285,6 @@ namespace SokoWahnLib.Rooms
       #endregion
 
       #region # // --- Varianten aufräumen ---
-      var todo = new HashSet<Room>();
-      foreach (var room in rooms) todo.Add(room);
-
-      while (todo.Count > 0 && totalCount < maxCount)
-      {
-        var nextRoom = todo.First();
-        todo.Remove(nextRoom);
-
-        int optimizeCount = nextRoom.Optimize(maxCount - totalCount, output);
-        if (optimizeCount == 0) continue; // keine Optimierungen gefunden?
-
-        totalCount += optimizeCount;
-        foreach (var portal in nextRoom.outgoingPortals)
-        {
-          todo.Add(portal.roomTo); // benachbarte Räume als Aufgaben hinzufügen
-        }
-      }
-      if (totalCount >= maxCount) return totalCount;
-
       // --- nicht mehr benutzte Varianten entfernen ---
       foreach (var room in rooms)
       {
@@ -437,37 +418,44 @@ namespace SokoWahnLib.Rooms
     /// <param name="roomIndex2">zweiter Raum</param>
     public void Merge(int roomIndex1 = -1, int roomIndex2 = -1)
     {
-      if (roomIndex1 < 0 || roomIndex2 < 0) throw new NotImplementedException(); // automatische Suche passender Räume durchführen
+      if (roomIndex1 < 0 || roomIndex2 < 0) throw new NotImplementedException(); // todo: automatische Suche passender Räume durchführen
       Debug.Assert(roomIndex1 < rooms.Length);
       Debug.Assert(roomIndex2 < rooms.Length);
-      Debug.Assert(roomIndex1 != roomIndex2);
+      Debug.Assert(roomIndex1 < roomIndex2);
+      // --- nächsten 2. Raum suchen, wenn zwischen den beiden Räumen keine Verbindung besteht ---
+      while (rooms[roomIndex1].outgoingPortals.All(portal => !rooms[roomIndex2].fieldPosis.Contains(portal.posTo))) roomIndex2++;
 
       #region # // --- Portale der beiden Räume suchen ---
       var room1 = rooms[roomIndex1];
       var room2 = rooms[roomIndex2];
-      var incomingPortals1 = new HashSet<RoomPortal>();
-      var incomingPortals2 = new HashSet<RoomPortal>();
+      var incomingMergePortals1 = new HashSet<RoomPortal>(); // Portale des 1. Raumes, welche verschmolzen werden
+      var incomingMergePortals2 = new HashSet<RoomPortal>(); // Portale des 2. Raumes, welche verschmolzen werden
+      var incomingSkipPortals1 = new HashSet<RoomPortal>(); // Portale des 1. Raumes, welche erhalten bleiben
+      var incomingSkipPortals2 = new HashSet<RoomPortal>(); // Portale des 2. Raumes, welche erhalten bleiben
       foreach (var portal in room1.incomingPortals)
       {
-        if (portal.roomFrom == room2) incomingPortals1.Add(portal);
+        if (portal.roomFrom == room2) incomingMergePortals1.Add(portal); else incomingSkipPortals1.Add(portal);
       }
       foreach (var portal in room2.incomingPortals)
       {
-        if (portal.roomFrom == room1) incomingPortals2.Add(portal);
+        if (portal.roomFrom == room1) incomingMergePortals2.Add(portal); else incomingSkipPortals2.Add(portal);
       }
-      Debug.Assert(incomingPortals1.Count > 0);
-      Debug.Assert(incomingPortals2.Count > 0);
-      Debug.Assert(incomingPortals1.Count == incomingPortals2.Count);
-      Debug.Assert(incomingPortals1.All(p => incomingPortals2.Contains(p.oppositePortal)));
-      Debug.Assert(incomingPortals2.All(p => incomingPortals1.Contains(p.oppositePortal)));
+      Debug.Assert(incomingMergePortals1.Count > 0);
+      Debug.Assert(incomingMergePortals2.Count > 0);
+      Debug.Assert(incomingMergePortals1.Count == incomingMergePortals2.Count);
+      Debug.Assert(incomingMergePortals1.All(p => incomingMergePortals2.Contains(p.oppositePortal)));
+      Debug.Assert(incomingMergePortals2.All(p => incomingMergePortals1.Contains(p.oppositePortal)));
       #endregion
 
-      var incomingPortals = new RoomPortal[room1.incomingPortals.Where(portal => !incomingPortals1.Contains(portal)).Concat(room2.incomingPortals.Where(portal => !incomingPortals2.Contains(portal))).Count()];
-      var outgoingPortals = new RoomPortal[room1.outgoingPortals.Where(portal => !incomingPortals2.Contains(portal)).Concat(room1.outgoingPortals.Where(portal => !incomingPortals1.Contains(portal))).Count()];
+      var incomingPortals = new RoomPortal[incomingSkipPortals1.Count + incomingSkipPortals2.Count];
+      var outgoingPortals = new RoomPortal[incomingPortals.Length];
       uint maxPlayerStates = checked(room1.statePlayerUsed * room2.stateBoxUsed + room2.statePlayerUsed * room1.stateBoxUsed);
       uint maxBoxStates = checked(room1.stateBoxUsed * room2.stateBoxUsed);
       uint maxVariants = checked(room1.variantsDataUsed * room2.variantsDataUsed);
       var newRoom = new Room(field, room1.fieldPosis.Concat(room2.fieldPosis), maxPlayerStates, maxBoxStates, maxVariants, incomingPortals, outgoingPortals);
+
+      // --- neue Zustände erstellen (Zustände Raum 1 * Zustände Raum 2) ---
+      var statesDict = newRoom.AddMergeStates(room1, room2);
     }
     #endregion
 

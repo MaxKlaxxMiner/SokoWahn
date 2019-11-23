@@ -114,6 +114,7 @@ namespace SokoWahnTool
       int optimizeOffset = 0;
       var lastOptimize = new List<KeyValuePair<string, int>>();
       while (solver.Optimize(100, lastOptimize) > 0) { }
+      solver.Merge(0, 1);
       for (; ; )
       {
         Console.Clear();

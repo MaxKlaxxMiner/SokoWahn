@@ -378,6 +378,120 @@ namespace SokoWahnLib.Rooms
         return GetBoxStateInfo(stateIndex - statePlayerUsed);
       }
     }
+
+    /// <summary>
+    /// fügt importiert und verschmelzt die Zustände zweier Räume und gibt ein Mapping-Dict für die Zustände zurück
+    /// </summary>
+    /// <param name="room1">Raum 1, deren Zustände verwendet werden sollen</param>
+    /// <param name="room2">Raum 2, deren Zustände verwendet werden sollen</param>
+    public Dictionary<ulong, uint> AddMergeStates(Room room1, Room room2)
+    {
+      var newPlayerStates1 = new Dictionary<ulong, uint>();
+      var newPlayerStates2 = new Dictionary<ulong, uint>();
+      var newBoxStates = new Dictionary<ulong, uint>();
+      var newBoxIndexMap = fieldPosis.Select((p, i) => new { p, i }).ToDictionary(x => x.p, x => x.i);
+
+      for (uint sp1 = 0; sp1 < room1.statePlayerUsed; sp1++)
+      {
+        var sp1Info = room1.GetPlayerStateInfo(sp1);
+        for (uint sb2 = 0; sb2 < room2.stateBoxUsed; sb2++)
+        {
+          // --- Spieler-Zustand 1 und Kisten-Zustand 2 verschmelzen (newPlayerStates1) ---
+          var sb2Info = room2.GetBoxStateInfo(sb2);
+          newPlayerStates1.Add((ulong)sp1 << 32 | sb2, statePlayerUsed);
+          var boxBits = new bool[fieldPosis.Length];
+          foreach (var box1 in sp1Info.boxPosis) boxBits[newBoxIndexMap[box1]] = true;
+          foreach (var box2 in sb2Info.boxPosis) boxBits[newBoxIndexMap[box2]] = true;
+          AddPlayerState(sp1Info.playerPos, checked((byte)(sp1Info.boxCount + sb2Info.boxCount)), (byte)(sp1Info.finishedBoxCount + sb2Info.finishedBoxCount), boxBits);
+#if DEBUG
+          var newInfo = GetPlayerStateInfo(statePlayerUsed - 1);
+          Debug.Assert(newInfo.boxCount == sp1Info.boxCount + sb2Info.boxCount);
+          Debug.Assert(newInfo.boxPosis.Length == sp1Info.boxPosis.Length + sb2Info.boxPosis.Length);
+          for (int i = 0; i < newInfo.boxPosis.Length; i++)
+          {
+            Debug.Assert(sp1Info.boxPosis.Contains(newInfo.boxPosis[i]) || sb2Info.boxPosis.Contains(newInfo.boxPosis[i]));
+          }
+          Debug.Assert(newInfo.finishedBoxCount == sp1Info.finishedBoxCount + sb2Info.finishedBoxCount);
+          Debug.Assert(newInfo.playerPos == sp1Info.playerPos);
+          Debug.Assert(newInfo.room == this);
+#endif
+        }
+      }
+
+      for (uint sb1 = 0; sb1 < room1.stateBoxUsed; sb1++)
+      {
+        var sb1Info = room1.GetBoxStateInfo(sb1);
+        for (uint sp2 = 0; sp2 < room2.statePlayerUsed; sp2++)
+        {
+          // --- Kisten-Zustand 1 und Spieler-Zustand 2 verschmelzen (newPlayerStates2) ---
+          var sp2Info = room2.GetPlayerStateInfo(sp2);
+          newPlayerStates2.Add((ulong)sb1 << 32 | sp2, statePlayerUsed);
+          var boxBits = new bool[fieldPosis.Length];
+          foreach (var box1 in sb1Info.boxPosis) boxBits[newBoxIndexMap[box1]] = true;
+          foreach (var box2 in sp2Info.boxPosis) boxBits[newBoxIndexMap[box2]] = true;
+          AddPlayerState(sp2Info.playerPos, checked((byte)(sb1Info.boxCount + sp2Info.boxCount)), (byte)(sb1Info.finishedBoxCount + sp2Info.finishedBoxCount), boxBits);
+#if DEBUG
+          var newInfo = GetPlayerStateInfo(statePlayerUsed - 1);
+          Debug.Assert(newInfo.boxCount == sb1Info.boxCount + sp2Info.boxCount);
+          Debug.Assert(newInfo.boxPosis.Length == sb1Info.boxPosis.Length + sp2Info.boxPosis.Length);
+          for (int i = 0; i < newInfo.boxPosis.Length; i++)
+          {
+            Debug.Assert(sb1Info.boxPosis.Contains(newInfo.boxPosis[i]) || sp2Info.boxPosis.Contains(newInfo.boxPosis[i]));
+          }
+          Debug.Assert(newInfo.finishedBoxCount == sb1Info.finishedBoxCount + sp2Info.finishedBoxCount);
+          Debug.Assert(newInfo.playerPos == sp2Info.playerPos);
+          Debug.Assert(newInfo.room == this);
+#endif
+        }
+        for (uint sb2 = 0; sb2 < room2.stateBoxUsed; sb2++)
+        {
+          // --- Kisten-Zustand 1 und Kisten-Zustand 2 verschmelzen (newBoxStates) ---
+          var sb2Info = room2.GetBoxStateInfo(sb2);
+          newBoxStates.Add((ulong)sb1 << 32 | sb2, stateBoxUsed);
+          var boxBits = new bool[fieldPosis.Length];
+          foreach (var box1 in sb1Info.boxPosis) boxBits[newBoxIndexMap[box1]] = true;
+          foreach (var box2 in sb2Info.boxPosis) boxBits[newBoxIndexMap[box2]] = true;
+          AddBoxState(checked((byte)(sb1Info.boxCount + sb2Info.boxCount)), (byte)(sb1Info.finishedBoxCount + sb2Info.finishedBoxCount), boxBits);
+#if DEBUG
+          var newInfo = GetBoxStateInfo(stateBoxUsed - 1);
+          Debug.Assert(newInfo.boxCount == sb1Info.boxCount + sb2Info.boxCount);
+          Debug.Assert(newInfo.boxPosis.Length == sb1Info.boxPosis.Length + sb2Info.boxPosis.Length);
+          for (int i = 0; i < newInfo.boxPosis.Length; i++)
+          {
+            Debug.Assert(sb1Info.boxPosis.Contains(newInfo.boxPosis[i]) || sb2Info.boxPosis.Contains(newInfo.boxPosis[i]));
+          }
+          Debug.Assert(newInfo.finishedBoxCount == sb1Info.finishedBoxCount + sb2Info.finishedBoxCount);
+          Debug.Assert(newInfo.playerPos == 0);
+          Debug.Assert(newInfo.room == this);
+#endif
+        }
+      }
+
+      // --- neues Zustand-Dictionary aus Kisten-Dict und Spieler-Dict erstellen ---
+      var newStates = new Dictionary<ulong, uint>();
+      foreach (var playerState in newPlayerStates1)
+      {
+        uint k1 = (uint)(playerState.Key >> 32);
+        uint k2 = (uint)playerState.Key + statePlayerUsed;
+        uint st = playerState.Value;
+        newStates.Add((ulong)k1 << 32 | k2, st);
+      }
+      foreach (var playerState in newPlayerStates2)
+      {
+        uint k1 = (uint)(playerState.Key >> 32) + statePlayerUsed;
+        uint k2 = (uint)playerState.Key;
+        uint st = playerState.Value;
+        newStates.Add((ulong)k1 << 32 | k2, st);
+      }
+      foreach (var boxState in newBoxStates)
+      {
+        uint k1 = (uint)(boxState.Key >> 32) + statePlayerUsed;
+        uint k2 = (uint)boxState.Key + statePlayerUsed;
+        uint st = boxState.Value + statePlayerUsed;
+        newStates.Add((ulong)k1 << 32 | k2, st);
+      }
+      return newStates;
+    }
     #endregion
 
     #region # // --- Varianten-Methoden ---
@@ -637,24 +751,6 @@ namespace SokoWahnLib.Rooms
     public bool HasStartBoxes()
     {
       return fieldPosis.Any(pos => field.IsBox(pos));
-    }
-
-    /// <summary>
-    /// optimiert den Raum und deren Verbindungen zu den benachbarten Räumen und gibt die Anzahl der durchgeführten Optimierungen zurück
-    /// </summary>
-    /// <param name="maxCount">maximale Anzahl der erlaubten Optimierungen</param>
-    /// <param name="output">Ausgabe-Liste mit den durchgeführten Optimierungen</param>
-    /// <returns>Anzahl der insgesamt durchgeführten Optimierungen</returns>
-    public int Optimize(int maxCount, List<KeyValuePair<string, int>> output)
-    {
-      if (incomingPortals.Length < 3) return 0;
-
-      foreach (var incomingPortal in incomingPortals)
-      {
-        var outgoingPortal = incomingPortal.oppositePortal;
-      }
-
-      return 0;
     }
     #endregion
 
