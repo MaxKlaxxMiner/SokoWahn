@@ -497,7 +497,6 @@ namespace SokoWahnLib.Rooms
       // --- Eingänge in Raum 1 ---
       foreach (var portal1 in incomingOuterPortals1)
       {
-
         foreach (uint ppv1 in portal1.roomToPlayerVariants)
         {
           var v1 = room1.GetVariantInfo(ppv1);
@@ -646,7 +645,7 @@ namespace SokoWahnLib.Rooms
     {
       // --- Räume auf Doppler prüfen und Basis-Check der Portale ---
       var roomsHash = new HashSet<Room>();
-      var posToRoom = new Dictionary<int,Room>();
+      var posToRoom = new Dictionary<int, Room>();
       foreach (var room in rooms)
       {
         if (roomsHash.Contains(room)) throw new Exception("Raum doppelt vorhanden: " + room);
@@ -953,6 +952,67 @@ namespace SokoWahnLib.Rooms
         Console.WriteLine(indent + " Portals: {0:N0}", rooms.Sum(x => x.incomingPortals.Length));
       }
       Console.WriteLine();
+    }
+
+    /// <summary>
+    /// gibt das Spielfeld in der Konsole aus (mit bestimmten Raum-Zuständen)
+    /// </summary>
+    /// <param name="states">Zustände, welche angezeigt werden sollen</param>
+    /// <param name="displayIndent">optional: gibt an wie weit die Anzeige eingerückt sein soll (Default: 2)</param>
+    public void DisplayRoomStates(uint[] states, int displayIndent = 2)
+    {
+      if (displayIndent < 0) throw new ArgumentOutOfRangeException("displayIndent");
+      string indent = new string(' ', displayIndent);
+
+      if (displayIndent + field.Width >= Console.BufferWidth) throw new IndexOutOfRangeException("Console.BufferWidth too small");
+      if (field.Height >= Console.BufferHeight) throw new IndexOutOfRangeException("Console.BufferHeight too small");
+
+      if (states == null) throw new ArgumentNullException("states");
+      if (states.Length != rooms.Length) throw new ArgumentOutOfRangeException("states");
+
+      // --- Spielfeld anzeigen ---
+      string fieldTxt = ("\r\n" + field.GetText()).Replace("\r\n", "\r\n" + indent); // Spielfeld (mit Indent) berechnen
+
+      int cTop = Console.CursorTop + 1; // Anfangs-Position des Spielfeldes merken
+      Console.WriteLine(fieldTxt);      // Spielfeld ausgeben
+
+      int oldTop = Console.CursorTop; // alte Cursor-Position merken
+
+      for (int r = 0; r < rooms.Length; r++)
+      {
+        var room = rooms[r];
+        if (states[r] >= room.StateUsed) throw new Exception("states[" + r + "] > room[" + r + "].states");
+        var state = room.GetStateInfo(states[r]);
+
+        // --- alle Felder leeren ---
+        foreach (int pos in room.fieldPosis)
+        {
+          Console.CursorTop = cTop + pos / field.Width;
+          Console.CursorLeft = indent.Length + pos % field.Width;
+          Console.Write(field.IsGoal(pos) ? '.' : ' ');
+        }
+
+        // --- Spieler hinzufügen ---
+        if (state.playerPos > 0)
+        {
+          Console.CursorTop = cTop + state.playerPos / field.Width;
+          Console.CursorLeft = indent.Length + state.playerPos % field.Width;
+          Console.Write(field.IsGoal(state.playerPos) ? '+' : '@');
+        }
+
+        // --- Kisten hinzufügen ---
+        foreach (int pos in state.boxPosis)
+        {
+          Console.CursorTop = cTop + pos / field.Width;
+          Console.CursorLeft = indent.Length + pos % field.Width;
+          Console.Write(field.IsGoal(pos) ? '*' : '$');
+        }
+      }
+
+      Console.CursorTop = oldTop;     // alte Cursor-Position zurück setzen
+      Console.CursorLeft = 0;
+      Console.ForegroundColor = ConsoleColor.Gray;  // Standard-Farben setzen
+      Console.BackgroundColor = ConsoleColor.Black;
     }
     #endregion
 

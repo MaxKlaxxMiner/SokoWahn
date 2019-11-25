@@ -107,14 +107,17 @@ namespace SokoWahnTool
       //var solver = new RoomSolver(Field628);
       //var solver = new RoomSolver(FieldMonster);
 
+      RoomSearchForward search = null;
+
       int selectRoom = -1;
       int selectState = -1;  // ausgewählter Zustand (Konflikt mit selectPortal)
       int selectPortal = -1; // ausgewähltes Portal  (Konflikt mit selectState)
       int selectVariant = -1; // ausgewählt Portal-Variante
       int optimizeOffset = 0;
       var lastOptimize = new List<KeyValuePair<string, int>>();
-      while (solver.Optimize(100, lastOptimize) > 0) { }
-      solver.Merge(0, 1);
+      //while (solver.Optimize(100, lastOptimize) > 0) { }
+      //solver.Merge(0, 1);
+      search = new RoomSearchForward(solver);
       for (; ; )
       {
         Console.Clear();
@@ -291,6 +294,20 @@ namespace SokoWahnTool
             selectVariant = -1;
             int count = solver.Optimize(1, lastOptimize);
             if (count == 0) lastOptimize.Add(new KeyValuePair<string, int>("no optimizations found", 0));
+          } break;
+          #endregion
+
+          #region # // --- Suche ---
+          case ConsoleKey.NumPad0:
+          {
+            if (search != null)
+            {
+              search.Tick(1);
+            }
+            else
+            {
+              search = new RoomSearchForward(solver);
+            }
           } break;
           #endregion
 
