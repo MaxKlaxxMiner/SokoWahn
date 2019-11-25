@@ -594,6 +594,114 @@ namespace SokoWahnLib.Rooms
 
       // --- Räume-Index aktualisieren ---
       rooms = rooms.Where(r => r != room1 && r != room2).Concat(Enumerable.Repeat(newRoom, 1)).OrderBy(r => r.fieldPosis.First()).ToArray();
+
+      // --- Räume der eingehende Portale von den benachbarten Räume anpassen ---
+      foreach (var room in rooms)
+      {
+        if (room == newRoom) continue; // eigener Raum muss nicht angefasst werden
+        for (int p = 0; p < room.incomingPortals.Length; p++)
+        {
+          var portal = room.incomingPortals[p];
+          if (newRoom.fieldPosis.Contains(portal.posFrom))
+          {
+            var newPortal = new RoomPortal(portal.posFrom, portal.posTo, newRoom, room);
+            room.incomingPortals[p] = newPortal;
+            newPortal.oppositePortal = newRoom.incomingPortals.First(x => x.posFrom == newPortal.posTo);
+            newPortal.oppositePortal.oppositePortal = room.incomingPortals[p];
+          }
+        }
+      }
+
+      // --- alle ausgehenden Portal neu verlinken ---
+      foreach (var r in rooms)
+      {
+        for (int p = 0; p < r.outgoingPortals.Length; p++)
+        {
+          var oPortal = r.outgoingPortals[p];
+          foreach (var r2 in rooms)
+          {
+            foreach (var p2 in r2.incomingPortals)
+            {
+              if (p2.posTo == oPortal.posTo && p2.posFrom == oPortal.posFrom)
+              {
+                r.outgoingPortals[p] = p2;
+              }
+            }
+          }
+        }
+      }
+
+      // --- Prüfung der Portale durchführen ---
+      FullPortalCheck();
+    }
+    #endregion
+
+    #region # // --- Checks ---
+    /// <summary>
+    /// prüft alle Portale, ob diese untereinander richtig verknüpft sind
+    /// </summary>
+    public void FullPortalCheck()
+    {
+      // --- Räume auf Doppler prüfen und Basis-Check der Portale ---
+      var roomsHash = new HashSet<Room>();
+      var posToRoom = new Dictionary<int,Room>();
+      foreach (var room in rooms)
+      {
+        if (roomsHash.Contains(room)) throw new Exception("Raum doppelt vorhanden: " + room);
+
+        if (room.incomingPortals.Length != room.outgoingPortals.Length)
+        {
+          throw new Exception("Anzahl der ein- und ausgehenden Portale stimmen nicht: " + room.incomingPortals.Length + " != " + room.outgoingPortals.Length + " bei: " + room);
+        }
+
+        foreach (var pos in room.fieldPosis)
+        {
+          if (posToRoom.ContainsKey(pos)) throw new Exception("Feld " + pos + " wird in zwei Räumen gleichzeitig verwendet: " + posToRoom[pos] + " und " + room);
+          posToRoom.Add(pos, room);
+        }
+
+        for (int p = 0; p < room.incomingPortals.Length; p++)
+        {
+          if (room.incomingPortals[p] == null) throw new Exception("eingehendes Portal = null [" + p + "] bei: " + room);
+          if (room.outgoingPortals[p] == null) throw new Exception("ausgehendes Portal = null [" + p + "] bei: " + room);
+        }
+
+        roomsHash.Add(room);
+      }
+
+      // --- eingehende Portale aller Räume prüfen ---
+      var portals = new HashSet<RoomPortal>();
+      foreach (var room in rooms)
+      {
+        for (int p = 0; p < room.incomingPortals.Length; p++)
+        {
+          var portal = room.incomingPortals[p];
+          if (portals.Contains(portal)) throw new Exception("Portal wird doppelt benutzt: " + portal);
+          portals.Add(portal);
+
+          if (portal.roomTo != room) throw new Exception("eingehendes Portal [" + p + "] verlinkt nicht zum eigenen Raum, bei: " + room);
+          if (!roomsHash.Contains(portal.roomFrom)) throw new Exception("eingehendes Portal [" + p + "] hat einen unbekannten Quell-Raum verlinkt, bei: " + room);
+
+          if (posToRoom[portal.posFrom] != portal.roomFrom) throw new Exception("posFrom passt nicht zu roomFrom, bei: " + room);
+          if (posToRoom[portal.posTo] != portal.roomTo) throw new Exception("posTo passt nicht zu roomTo, bei: " + room);
+        }
+      }
+
+      // --- ausgehende Portale alle Räume prüfen inkl. Rückverweise ---
+      var outPortals = new HashSet<RoomPortal>();
+      foreach (var room in rooms)
+      {
+        for (int p = 0; p < room.outgoingPortals.Length; p++)
+        {
+          var portal = room.outgoingPortals[p];
+          if (!portals.Contains(portal)) throw new Exception("Out-Portal wurde nicht bei den eingehenden Portalen gefunden: " + portal);
+          if (outPortals.Contains(portal)) throw new Exception("Out-Portal wird doppelt benutzt: " + portal);
+          outPortals.Add(portal);
+
+          if (portal.oppositePortal != room.incomingPortals[p]) throw new Exception("Rückverweis des Portals passt nicht: " + portal);
+          if (portal.oppositePortal.oppositePortal != portal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + portal);
+        }
+      }
     }
     #endregion
 
