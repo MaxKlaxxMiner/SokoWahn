@@ -604,10 +604,12 @@ namespace SokoWahnLib.Rooms
           var portal = room.incomingPortals[p];
           if (newRoom.fieldPosis.Contains(portal.posFrom))
           {
-            var newPortal = new RoomPortal(portal.posFrom, portal.posTo, newRoom, room);
-            room.incomingPortals[p] = newPortal;
-            newPortal.oppositePortal = newRoom.incomingPortals.First(x => x.posFrom == newPortal.posTo);
-            newPortal.oppositePortal.oppositePortal = room.incomingPortals[p];
+            var newPortal = new RoomPortal(portal.posFrom, portal.posTo, newRoom, room);           // neues Portal erstellen
+            newPortal.roomToPlayerVariants.AddRange(room.incomingPortals[p].roomToPlayerVariants); // alle Spieler-Varianten übertragen
+            newPortal.roomToBoxVariants.AddRange(room.incomingPortals[p].roomToBoxVariants);       // alle Kisten-Varianten übertragen
+            room.incomingPortals[p] = newPortal;                                                   // neues eingehendes Portal setzen
+            newPortal.oppositePortal = newRoom.incomingPortals.First(x => x.posFrom == newPortal.posTo && x.posTo == newPortal.posFrom); // Rückverweis setzen
+            newPortal.oppositePortal.oppositePortal = room.incomingPortals[p];                     // doppelten Rückverweis setzen
           }
         }
       }
