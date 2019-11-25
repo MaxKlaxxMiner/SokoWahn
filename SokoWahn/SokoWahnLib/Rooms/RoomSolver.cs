@@ -490,10 +490,14 @@ namespace SokoWahnLib.Rooms
       var knownOutgoingPortals = new HashSet<RoomPortal>(outgoingNewPortals);
       var mapOutgoingPortals = new Dictionary<RoomPortal, int>();
       for (int i = 0; i < outgoingNewPortals.Length; i++) mapOutgoingPortals.Add(outgoingNewPortals[i], i);
+      var mapIncomingPortals = new Dictionary<RoomPortal, RoomPortal>();
+      foreach (var portal in incomingOuterPortals1) mapIncomingPortals.Add(portal, incomingNewPortals.First(p => p.posFrom == portal.posFrom && p.posTo == portal.posTo));
+      foreach (var portal in incomingOuterPortals2) mapIncomingPortals.Add(portal, incomingNewPortals.First(p => p.posFrom == portal.posFrom && p.posTo == portal.posTo));
 
       // --- Eingänge in Raum 1 ---
       foreach (var portal1 in incomingOuterPortals1)
       {
+
         foreach (uint ppv1 in portal1.roomToPlayerVariants)
         {
           var v1 = room1.GetVariantInfo(ppv1);
@@ -509,6 +513,7 @@ namespace SokoWahnLib.Rooms
                 uint outgoingState = statesDict[(ulong)v1.outgoingState << 32 | v2.outgoingState];
                 uint moves = v1.moves + v2.moves;
                 uint pushes = v1.pushes + v2.pushes;
+                mapIncomingPortals[portal1].roomToPlayerVariants.Add(newRoom.variantsDataUsed);
                 newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
               }
               else
@@ -540,13 +545,16 @@ namespace SokoWahnLib.Rooms
           var v2 = room2.GetVariantInfo(ppv2);
           if (knownOutgoingPortals.Contains(v2.outgoingPortal)) // R2 Variante führt aus dem Raum heraus?
           {
-            throw new NotImplementedException();
-            //uint incomingState = statesDict[(ulong)v1.incomingState << 32 | v2.incomingState];
-            //int outgoingPortal = mapOutgoingPortals[v1.outgoingPortal];
-            //uint outgoingState = statesDict[(ulong)v1.outgoingState << 32 | v2.outgoingState];
-            //uint moves = v1.moves + v2.moves;
-            //uint pushes = v1.pushes + v2.pushes;
-            //newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
+            for (uint st1 = 0; st1 < room1.stateBoxUsed; st1++)
+            {
+              uint incomingState = statesDict[(ulong)st1 << 32 | v2.incomingState];
+              int outgoingPortal = mapOutgoingPortals[v2.outgoingPortal];
+              uint outgoingState = statesDict[(ulong)st1 << 32 | v2.outgoingState];
+              uint moves = v2.moves;
+              uint pushes = v2.pushes;
+              mapIncomingPortals[portal2].roomToPlayerVariants.Add(newRoom.variantsDataUsed);
+              newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
+            }
           }
           else if (incomingMergePortals1.Contains(v2.outgoingPortal)) // R2 Variante führt durch ein Portal in den benachbarten Raum?
           {
@@ -560,6 +568,7 @@ namespace SokoWahnLib.Rooms
                 uint outgoingState = statesDict[(ulong)v1.outgoingState << 32 | v2.outgoingState];
                 uint moves = v1.moves + v2.moves;
                 uint pushes = v1.pushes + v2.pushes;
+                mapIncomingPortals[portal2].roomToPlayerVariants.Add(newRoom.variantsDataUsed);
                 newRoom.AddVariant(incomingState, outgoingPortal, outgoingState, moves, pushes);
               }
               else
