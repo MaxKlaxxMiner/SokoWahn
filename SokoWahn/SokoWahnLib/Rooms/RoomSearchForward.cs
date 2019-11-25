@@ -19,6 +19,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     readonly Room[] rooms;
     /// <summary>
+    /// merkt sich das Spielfeld
+    /// </summary>
+    readonly ISokoField field;
+    /// <summary>
     /// merkt sich die Zustände, welche ein fertig gelösten Spiel darstellen
     /// </summary>
     readonly HashSet<ulong> finishStates = new HashSet<ulong>();
@@ -31,7 +35,7 @@ namespace SokoWahnLib.Rooms
     {
       this.roomSolver = roomSolver;
       rooms = roomSolver.rooms;
-      var field = roomSolver.field;
+      field = roomSolver.field;
 
       var states = new uint[rooms.Length]; // aktuelle Zustände
       for (int i = 0; i < states.Length; i++) states[i] = uint.MaxValue;
@@ -54,10 +58,14 @@ namespace SokoWahnLib.Rooms
 
         if (state.playerPos > 0)
         {
-          if (hasPlayer >= 0) continue; // Spieler-Zustand ist bereits vorhanden?
-          int pos = state.playerPos; // Spielerposition
-          // prüfen, ob die Spielerposition neben einem Zielfeld liegt (sonst wäre es kein gültiges Ziel)
-          if (!field.IsGoal(pos - 1) && !field.IsGoal(pos + 1) && !field.IsGoal(pos - field.Width) && !field.IsGoal(pos + field.Width)) continue;
+          if (hasPlayer >= 0) continue; // ein anderer Raum mit Spieler-Zustand ist bereits vorhanden?
+          int pos = state.playerPos;    // Spielerposition abfragen
+          // --- prüfen, ob die Spielerposition eine End-Stellung darstellen kann ---
+          if ((!field.IsGoal(pos - 1) || field.IsGoal(pos + 1) || field.GetField(pos + 1) == '#')
+           && (!field.IsGoal(pos + 1) || field.IsGoal(pos - 1) || field.GetField(pos - 1) == '#')
+           && (!field.IsGoal(pos - field.Width) || field.IsGoal(pos + field.Width) || field.GetField(pos + field.Width) == '#')
+           && (!field.IsGoal(pos + field.Width) || field.IsGoal(pos - field.Width) || field.GetField(pos - field.Width) == '#')
+          ) continue;
           hasPlayer = roomIndex;
         }
 
