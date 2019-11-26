@@ -958,8 +958,9 @@ namespace SokoWahnLib.Rooms
     /// gibt das Spielfeld in der Konsole aus (mit bestimmten Raum-Zuständen)
     /// </summary>
     /// <param name="states">Zustände, welche angezeigt werden sollen</param>
+    /// <param name="fixPlayerPos">optional: Angabe einer festen Spieler-Position</param>
     /// <param name="displayIndent">optional: gibt an wie weit die Anzeige eingerückt sein soll (Default: 2)</param>
-    public void DisplayRoomStates(uint[] states, int displayIndent = 2)
+    public void DisplayRoomStates(uint[] states, int fixPlayerPos = -1, int displayIndent = 2)
     {
       if (displayIndent < 0) throw new ArgumentOutOfRangeException("displayIndent");
       string indent = new string(' ', displayIndent);
@@ -993,7 +994,7 @@ namespace SokoWahnLib.Rooms
         }
 
         // --- Spieler hinzufügen ---
-        if (state.playerPos > 0)
+        if (state.playerPos > 0 && fixPlayerPos < 0)
         {
           Console.CursorTop = cTop + state.playerPos / field.Width;
           Console.CursorLeft = indent.Length + state.playerPos % field.Width;
@@ -1007,6 +1008,13 @@ namespace SokoWahnLib.Rooms
           Console.CursorLeft = indent.Length + pos % field.Width;
           Console.Write(field.IsGoal(pos) ? '*' : '$');
         }
+      }
+
+      if (fixPlayerPos > 0) // fixe Spieler-Position überschreiben
+      {
+        Console.CursorTop = cTop + fixPlayerPos / field.Width;
+        Console.CursorLeft = indent.Length + fixPlayerPos % field.Width;
+        Console.Write(field.IsGoal(fixPlayerPos) ? '+' : '@');
       }
 
       Console.CursorTop = oldTop;     // alte Cursor-Position zurück setzen

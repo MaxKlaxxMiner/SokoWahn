@@ -118,6 +118,8 @@ namespace SokoWahnTool
       //while (solver.Optimize(100, lastOptimize) > 0) { }
       //solver.Merge(0, 1);
       search = new RoomSearchForward(solver);
+      for (; ; ) search.Tick(1);
+
       for (; ; )
       {
         Console.Clear();
