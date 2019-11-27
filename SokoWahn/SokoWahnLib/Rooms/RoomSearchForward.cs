@@ -196,7 +196,14 @@ namespace SokoWahnLib.Rooms
           var vst = room.GetVariantStates(vp);
           if (vst.Key != state[nextStateIndex]) continue; // Variante passt nicht zum Status, Todo: optimieren durch sortierte Liste
           var vs = room.GetVariantInfo(vp);
-          nextPlayerScan(vs, state, nextStateIndex, moves);
+          if (vs.outgoingBox)
+          {
+            throw new Exception("box variant?");
+          }
+          else
+          {
+            nextPlayerScan(vs, state, nextStateIndex, moves);
+          }
         }
 
         foreach (uint vb in portal.roomToBoxVariants) // Varianten durcharbeiten, wo nur eine Kiste den Raum verlässt
