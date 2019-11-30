@@ -750,15 +750,11 @@
 //      Console.WriteLine();
 //    }
 
-//    /// <summary>
-//    /// gibt das Spielfeld in der Konsole aus
-//    /// </summary>
 //    /// <param name="selectRoom">optional: Raum, welcher dargestellt werden soll</param>
 //    /// <param name="selectState">optional: Status des Raums, welcher dargestellt werden soll (Konflikt mit selectPortal)</param>
 //    /// <param name="selectPortal">optional: Portal des Raums, welches dargestellt werden soll (Konflikt mit selectState)</param>
 //    /// <param name="selectVariant">optionsl: Portal-Variante, welche drargestellt werden soll</param>
-//    /// <param name="displayIndent">optional: gibt an wie weit die Anzeige eingerückt sein soll (Default: 2)</param>
-//    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int selectPortal = -1, int selectVariant = -1, int displayIndent = 2)
+//    public void DisplayConsole(int selectRoom = -1, int selectState = -1, int selectPortal = -1, int selectVariant = -1)
 //    {
 //      if (selectRoom >= rooms.Length) throw new ArgumentOutOfRangeException("selectRoom");
 //      if (selectState >= 0 && selectPortal >= 0) throw new ArgumentException("conflicted: selectState and selectPortal");
@@ -769,17 +765,9 @@
 //      if (selectPortal >= 0 && selectRoom < 0) throw new ArgumentOutOfRangeException("selectPortal");
 //      //      if (selectRoom >= 0 && selectPortal >= rooms
 
-//      if (displayIndent < 0) throw new ArgumentOutOfRangeException("displayIndent");
-//      string indent = new string(' ', displayIndent);
 
-//      if (displayIndent + field.Width >= Console.BufferWidth) throw new IndexOutOfRangeException("Console.BufferWidth too small");
-//      if (field.Height >= Console.BufferHeight) throw new IndexOutOfRangeException("Console.BufferHeight too small");
 
-//      // --- Spielfeld anzeigen ---
-//      string fieldTxt = ("\r\n" + field.GetText()).Replace("\r\n", "\r\n" + indent); // Spielfeld (mit Indent) berechnen
 
-//      int cTop = Console.CursorTop + 1; // Anfangs-Position des Spielfeldes merken
-//      Console.WriteLine(fieldTxt);      // Spielfeld ausgeben
 
 //      DisplayEffort(indent);
 

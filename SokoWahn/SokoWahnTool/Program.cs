@@ -101,10 +101,10 @@ namespace SokoWahnTool
       //MiniGame(FieldTest1);
 
       var solver = new RoomNetwork(FieldTest1);
-      //var solver = new RoomsNetwork(FieldStart);
-      //var solver = new RoomsNetwork(FieldMoves105022);
-      //var solver = new RoomsNetwork(Field628);
-      //var solver = new RoomsNetwork(FieldMonster);
+      //var solver = new RoomNetwork(FieldStart);
+      //var solver = new RoomNetwork(FieldMoves105022);
+      //var solver = new RoomNetwork(Field628);
+      //var solver = new RoomNetwork(FieldMonster);
 
       //todo RoomSearchForward search = null;
 
@@ -121,6 +121,7 @@ namespace SokoWahnTool
       for (; ; )
       {
         Console.Clear();
+        solver.DisplayConsole();
         //todo solver.DisplayConsole(selectRoom, selectState, selectPortal, selectVariant);
         while (lastOptimize.Count > 1 && lastOptimize.Count > (Console.WindowHeight - Console.CursorTop) - 2) { lastOptimize.RemoveAt(0); optimizeOffset++; }
         for (int i = 0; i < lastOptimize.Count; i++)
