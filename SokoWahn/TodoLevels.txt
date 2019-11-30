@@ -1,0 +1,62 @@
+
+Todo: http://www.game-sokoban.com/
+Name: SokoWahn.Solver
+
+  146: aenigma :: soko 02
+  102: aenigma :: soko 04
+  361: aenigma :: soko 05
+  136: aenigma :: soko 07
+  293: aenigma :: soko 08
+  211: aenigma :: soko 10
+  189: aenigma :: soko 16
+  220: aenigma :: soko 17
+  628: aenigma :: soko 18
+  204: aenigma :: soko 19
+  315: aenigma :: soko 20
+  302: aenigma :: soko 21
+  212: aenigma :: soko 22
+  211: aenigma :: soko 24
+  101: aenigma :: soko 25
+  321: aenigma :: soko 26
+  278: aenigma :: soko 27
+  307: aenigma :: soko 28
+  258: aenigma :: soko 29
+  326: aenigma :: soko 30
+  312: aenigma :: soko 31
+  360: aenigma :: soko 32
+  180: aenigma :: soko 33
+  227: aenigma :: soko 34
+  426: aenigma :: soko 35
+  287: aenigma :: soko 36
+   90: aenigma :: soko 38
+  640: aenigma :: soko 39
+  259: aenigma :: soko 40
+  691: aenigma :: soko 41
+  729: aenigma :: soko 42
+  262: aenigma :: soko 43
+  332: aenigma :: soko 45
+  401: aenigma :: soko 47
+  797: aenigma :: soko 48
+  275: A.K.K. Informatika :: level 06
+  640: A.K.K. Informatika :: level 07
+  474: A.K.K. Informatika :: level 10
+  606: A.K.K. Informatika :: level 11
+  266: A.K.K. Informatika :: level 13
+  510: A.K.K. Informatika :: level 14
+  251: A.K.K. Informatika :: level 15
+  662: A.K.K. Informatika :: level 16
+  304: A.K.K. Informatika :: level 17
+  420: A.K.K. Informatika :: level 18
+  514: A.K.K. Informatika :: level 19
+  808: A.K.K. Informatika :: level 20
+  223: A.K.K. Informatika :: level 21
+  893: A.K.K. Informatika :: level 22
+1.053: A.K.K. Informatika :: level 23
+  689: A.K.K. Informatika :: level 25
+  327: A.K.K. Informatika :: level 26
+  243: A.K.K. Informatika :: level 27
+  530: A.K.K. Informatika :: level 28
+1.606: A.K.K. Informatika :: level 29
+  764: A.K.K. Informatika :: level 30
+  340: A.K.K. Informatika :: level 31
+  698: A.K.K. Informatika :: level 32
