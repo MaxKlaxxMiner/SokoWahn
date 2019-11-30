@@ -1,17 +1,4 @@
-﻿//#region # using *.*
-//using System;
-//using System.Collections.Generic;
-//using System.Diagnostics;
-//using System.Linq;
-//// ReSharper disable UnusedMember.Global
-//// ReSharper disable MemberCanBePrivate.Global
-//// ReSharper disable NotAccessedField.Global
-//// ReSharper disable RedundantIfElseBlock
-//// ReSharper disable CollectionNeverQueried.Global
-//// ReSharper disable CollectionNeverUpdated.Global
-//// ReSharper disable MemberCanBeMadeStatic.Global
-//#endregion
-
+﻿
 //namespace SokoWahnLib.Rooms
 //{
 //  /// <summary>
@@ -21,25 +8,9 @@
 //  {
 //    #region # // --- Variablen ---
 //    /// <summary>
-//    /// merkt sich das gesamte Spiel, welches verwendet wird
-//    /// </summary>
-//    public readonly ISokoField field;
-//    /// <summary>
-//    /// merkt sich alle Felder, welche zum Raum gehören
-//    /// </summary>
-//    public readonly int[] fieldPosis;
-//    /// <summary>
 //    /// merkt sich alle Zielfelder, welche zum Raum gehören
 //    /// </summary>
 //    public readonly HashSet<int> goalPosis;
-//    /// <summary>
-//    /// merkt sich die eigenden Portale von den anderen Räumen
-//    /// </summary>
-//    public readonly RoomPortal[] incomingPortals;
-//    /// <summary>
-//    /// merkt sich die ausgehenden Portal in andere Räume
-//    /// </summary>
-//    public readonly RoomPortal[] outgoingPortals;
 
 //    /// <summary>
 //    /// merkt sich die Daten der Zustände mit Spieler

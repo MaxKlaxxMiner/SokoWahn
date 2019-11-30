@@ -46,11 +46,13 @@
     <Compile Include="ISokoField.cs" />
     <Compile Include="MoveType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Rooms\RoomPortal.cs" />
+    <Compile Include="Rooms\Room.cs" />
     <Compile Include="Rooms\Crc64.cs" />
-    <Compile Include="Rooms\old\Room.cs" />
-    <Compile Include="Rooms\old\RoomPortal.cs" />
-    <Compile Include="Rooms\old\RoomSearchForward.cs" />
-    <Compile Include="Rooms\old\RoomSolver.cs" />
+    <Compile Include="Rooms\old\Room_old.cs" />
+    <Compile Include="Rooms\old\RoomPortal_old.cs" />
+    <Compile Include="Rooms\old\RoomSearchForward_old.cs" />
+    <Compile Include="Rooms\old\RoomSolver_old.cs" />
     <Compile Include="Rooms\old\StateDebugInfo.cs" />
     <Compile Include="Rooms\old\VariantDebugInfo.cs" />
     <Compile Include="Rooms\RoomNetwork.cs" />

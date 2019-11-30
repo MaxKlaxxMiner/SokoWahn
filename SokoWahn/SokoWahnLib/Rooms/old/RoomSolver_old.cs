@@ -18,19 +18,6 @@
 //    /// <param name="field">Spielfeld, welches gelöst werden soll</param>
 //    public RoomSolver(ISokoField field)
 //    {
-//      #region # // --- Räume erstellen ---
-//      // --- begehbare Felder ermitteln und Basis-Räume erstellen ---
-//      var walkFields = field.GetWalkPosis();
-//      rooms = walkFields.OrderBy(pos => pos).Select(pos =>
-//      {
-//        int portals = (walkFields.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
-//                      (walkFields.Contains(pos + 1) ? 1 : 0) + // eingegendes Portal von der rechten Seite
-//                      (walkFields.Contains(pos - field.Width) ? 1 : 0) + // eingehendes Portal von oben
-//                      (walkFields.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
-//        return new Room(field, pos, new RoomPortal[portals], new RoomPortal[portals]);
-//      }).ToArray();
-//      #endregion
-
 //      #region # // --- Portale erstellen ---
 //      // --- eingehende Portale in den Basis-Räumen erstellen und hinzufügen ---
 //      foreach (var room in rooms)
