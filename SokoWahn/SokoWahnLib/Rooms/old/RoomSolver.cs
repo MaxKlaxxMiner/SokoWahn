@@ -1,20 +1,4 @@
-﻿//#region # using *.*
-//// ReSharper disable RedundantUsingDirective
-//using System;
-//using System.Collections.Generic;
-//using System.Diagnostics;
-//using System.Globalization;
-//using System.Linq;
-//using System.Numerics;
-//using System.Text;
-//using System.Threading.Tasks;
-//// ReSharper disable UnusedMember.Global
-//// ReSharper disable NotAccessedField.Local
-//// ReSharper disable MemberCanBePrivate.Global
-//// ReSharper disable FieldCanBeMadeReadOnly.Global
-//// ReSharper disable UnusedMethodReturnValue.Global
-//#endregion
-
+﻿
 //namespace SokoWahnLib.Rooms
 //{
 //  /// <summary>
@@ -22,11 +6,6 @@
 //  /// </summary>
 //  public class RoomSolver : IDisposable
 //  {
-//    /// <summary>
-//    /// merkt sich das zu lösende Spielfeld
-//    /// </summary>
-//    public readonly ISokoField field;
-
 //    /// <summary>
 //    /// merkt sich alle Räume
 //    /// </summary>
@@ -39,9 +18,6 @@
 //    /// <param name="field">Spielfeld, welches gelöst werden soll</param>
 //    public RoomSolver(ISokoField field)
 //    {
-//      if (field == null) throw new ArgumentNullException("field");
-//      this.field = field;
-
 //      #region # // --- Räume erstellen ---
 //      // --- begehbare Felder ermitteln und Basis-Räume erstellen ---
 //      var walkFields = field.GetWalkPosis();

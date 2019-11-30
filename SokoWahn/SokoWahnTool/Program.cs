@@ -100,7 +100,7 @@ namespace SokoWahnTool
     {
       //MiniGame(FieldTest1);
 
-      //var solver = new RoomsNetwork(FieldTest1);
+      var solver = new RoomNetwork(FieldTest1);
       //var solver = new RoomsNetwork(FieldStart);
       //var solver = new RoomsNetwork(FieldMoves105022);
       //var solver = new RoomsNetwork(Field628);
