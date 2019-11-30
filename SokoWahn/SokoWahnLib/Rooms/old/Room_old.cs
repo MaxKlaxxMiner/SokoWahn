@@ -122,18 +122,7 @@
 //    /// <param name="outgoingPortals">ausgehende Portale nach andere Räume</param>
 //    public Room(ISokoField field, IEnumerable<int> posis, uint maxPlayerStates, uint maxBoxStates, uint maxVariants, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
 //    {
-//      if (field == null) throw new ArgumentNullException("field");
-//      if (posis == null) throw new ArgumentOutOfRangeException("posis");
-//      fieldPosis = posis.OrderBy(x => x).ToArray();
-//      if (!fieldPosis.All(field.ValidPos)) throw new ArgumentOutOfRangeException("posis");
-//      if (incomingPortals == null) throw new ArgumentNullException("incomingPortals");
-//      if (outgoingPortals == null) throw new ArgumentNullException("outgoingPortals");
-//      if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("incomingPortals.Length != outgoingPortals.Length");
-
-//      this.field = field;
-//      goalPosis = new HashSet<int>(fieldPosis.Where(field.IsGoal));
-//      this.incomingPortals = incomingPortals;
-//      this.outgoingPortals = outgoingPortals;
+//      this.goalPosis = new HashSet<int>(fieldPosis.Where(field.IsGoal));
 
 //      statePlayerElement = sizeof(ushort) * 8        // Spieler-Position
 //                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
@@ -722,28 +711,6 @@
 //    public bool HasStartBoxes()
 //    {
 //      return fieldPosis.Any(pos => field.IsBox(pos));
-//    }
-//    #endregion
-
-//    #region # // --- Dispose ---
-//    /// <summary>
-//    /// gibt alle Ressourcen wieder frei
-//    /// </summary>
-//    public void Dispose()
-//    {
-//      for (int i = 0; i < incomingPortals.Length; i++)
-//      {
-//        if (incomingPortals[i] != null) incomingPortals[i].Dispose();
-//        incomingPortals[i] = null;
-//      }
-//    }
-
-//    /// <summary>
-//    /// Destructor
-//    /// </summary>
-//    ~Room()
-//    {
-//      Dispose();
 //    }
 //    #endregion
 

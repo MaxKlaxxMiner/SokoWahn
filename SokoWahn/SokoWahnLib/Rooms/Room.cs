@@ -18,15 +18,15 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Positionen der Spielfelder, welche dem Raum zugeordnet sind
     /// </summary>
-    public readonly uint[] fieldPosis;
+    public readonly int[] fieldPosis;
     /// <summary>
     /// eingehende Portale, welche zum eigenen Raum gehören
     /// </summary>
-    public readonly RoomPortal[] inPortals;
+    public readonly RoomPortal[] incomingPortals;
     /// <summary>
     /// ausgehende Portale, welche zu anderen Räumen gehören
     /// </summary>
-    public readonly RoomPortal[] outPortals;
+    public readonly RoomPortal[] outgoingPortals;
 
     #region # // --- Konstruktor ---
     /// <summary>
@@ -34,9 +34,9 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="field">Spielfeld, welches verwendet werden soll</param>
     /// <param name="fieldPosis">Positionen der Spielfelder, welche dem Raum zugeordnet werden</param>
-    /// <param name="inPortals">eingehende Portale, welche zum eigenen Raum gehören</param>
-    /// <param name="outPortals">ausgehende Portale, welche zu anderen Räumen gehören</param>
-    public Room(ISokoField field, uint[] fieldPosis, RoomPortal[] inPortals, RoomPortal[] outPortals)
+    /// <param name="incomingPortals">eingehende Portale, welche zum eigenen Raum gehören</param>
+    /// <param name="outgoingPortals">ausgehende Portale, welche zu anderen Räumen gehören</param>
+    public Room(ISokoField field, int[] fieldPosis, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
     {
       #region # // --- Parameter prüfen ---
       if (field == null) throw new ArgumentNullException("field");
@@ -44,14 +44,14 @@ namespace SokoWahnLib.Rooms
 
       if (fieldPosis == null || fieldPosis.Length == 0) throw new ArgumentNullException("fieldPosis");
       var walkPosis = field.GetWalkPosis();
-      if (fieldPosis.Any(pos => !walkPosis.Contains((int)pos))) throw new ArgumentOutOfRangeException("fieldPosis");
+      if (fieldPosis.Any(pos => !walkPosis.Contains(pos))) throw new ArgumentOutOfRangeException("fieldPosis");
       this.fieldPosis = fieldPosis;
 
-      if (inPortals == null || inPortals.Length == 0) throw new ArgumentNullException("inPortals");
-      this.inPortals = inPortals;
-      if (outPortals == null || outPortals.Length == 0) throw new ArgumentNullException("outPortals");
-      this.outPortals = outPortals;
-      if (inPortals.Length != outPortals.Length) throw new ArgumentException("inPortals.Length != outPortals.Length");
+      if (incomingPortals == null || incomingPortals.Length == 0) throw new ArgumentNullException("incomingPortals");
+      this.incomingPortals = incomingPortals;
+      if (outgoingPortals == null || outgoingPortals.Length == 0) throw new ArgumentNullException("outgoingPortals");
+      this.outgoingPortals = outgoingPortals;
+      if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("iPortals.Length != oPortals.Length");
       #endregion
     }
     #endregion
@@ -62,14 +62,23 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public void Dispose()
     {
-      if (inPortals != null)
+      // --- nur die eingehenden Portale auflösen, welche zum eigenen Raum gehören ---
+      if (incomingPortals != null)
       {
-        for (int p = 0; p < inPortals.Length; p++)
+        for (int p = 0; p < incomingPortals.Length; p++)
         {
-          if (inPortals[p] != null) inPortals[p].Dispose();
-          inPortals[p] = null;
+          if (incomingPortals[p] != null) incomingPortals[p].Dispose();
+          incomingPortals[p] = null;
         }
       }
+    }
+
+    /// <summary>
+    /// Destructor
+    /// </summary>
+    ~Room()
+    {
+      Dispose();
     }
     #endregion
   }

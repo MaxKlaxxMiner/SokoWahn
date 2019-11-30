@@ -18,59 +18,6 @@
 //    /// <param name="field">Spielfeld, welches gelöst werden soll</param>
 //    public RoomSolver(ISokoField field)
 //    {
-//      #region # // --- Portale erstellen ---
-//      // --- eingehende Portale in den Basis-Räumen erstellen und hinzufügen ---
-//      foreach (var room in rooms)
-//      {
-//        int pos = room.fieldPosis.First();
-//        var portals = room.incomingPortals;
-//        int pIndex = 0;
-
-//        // eingehendes Portal von der linken Seite
-//        if (walkFields.Contains(pos - 1))
-//        {
-//          portals[pIndex++] = new RoomPortal(pos - 1, pos, rooms.First(r => r.fieldPosis.First() == pos - 1), room); // eingehend
-//        }
-
-//        // eingehendes Portal von der rechten Seite
-//        if (walkFields.Contains(pos + 1))
-//        {
-//          portals[pIndex++] = new RoomPortal(pos + 1, pos, rooms.First(r => r.fieldPosis.First() == pos + 1), room);
-//        }
-
-//        // eingehendes Portal von oben
-//        if (walkFields.Contains(pos - field.Width))
-//        {
-//          portals[pIndex++] = new RoomPortal(pos - field.Width, pos, rooms.First(r => r.fieldPosis.First() == pos - field.Width), room);
-//        }
-
-//        // eingehendes Portal von unten
-//        if (walkFields.Contains(pos + field.Width))
-//        {
-//          portals[pIndex++] = new RoomPortal(pos + field.Width, pos, rooms.First(r => r.fieldPosis.First() == pos + field.Width), room);
-//        }
-
-//        Debug.Assert(pIndex == portals.Length);
-//      }
-
-//      // --- ausgehende Portale in den Basis-Räumen referenzieren (bestehende verwenden) ---
-//      foreach (var room in rooms)
-//      {
-//        var iPortals = room.incomingPortals;
-//        var oPortals = room.outgoingPortals;
-//        Debug.Assert(iPortals.Length == oPortals.Length);
-//        for (int pIndex = 0; pIndex < iPortals.Length; pIndex++)
-//        {
-//          oPortals[pIndex] = iPortals[pIndex].roomFrom.incomingPortals.First(p => p.posFrom == iPortals[pIndex].posTo);
-//          iPortals[pIndex].oppositePortal = oPortals[pIndex];
-//          Debug.Assert(iPortals[pIndex].posFrom == oPortals[pIndex].posTo);
-//          Debug.Assert(iPortals[pIndex].posTo == oPortals[pIndex].posFrom);
-//          Debug.Assert(iPortals[pIndex].roomFrom == oPortals[pIndex].roomTo);
-//          Debug.Assert(iPortals[pIndex].roomTo == oPortals[pIndex].roomFrom);
-//        }
-//      }
-//      #endregion
-
 //      #region # // --- Zustände erstellen ---
 //      foreach (var room in rooms)
 //      {
@@ -753,9 +700,6 @@
 //      //      if (selectRoom >= 0 && selectPortal >= rooms
 
 
-
-
-
 //      DisplayEffort(indent);
 
 //      // --- Spielfeld wieder mit Inhalt befüllen ---
@@ -974,29 +918,6 @@
 //      Console.CursorLeft = 0;
 //      Console.ForegroundColor = ConsoleColor.Gray;  // Standard-Farben setzen
 //      Console.BackgroundColor = ConsoleColor.Black;
-//    }
-//    #endregion
-
-//    #region # // --- Dispose ---
-//    /// <summary>
-//    /// gibt alle Ressourcen wieder frei
-//    /// </summary>
-//    public void Dispose()
-//    {
-//      if (rooms == null) return;
-//      foreach (var room in rooms)
-//      {
-//        room.Dispose();
-//      }
-//      rooms = null;
-//    }
-
-//    /// <summary>
-//    /// Destructor
-//    /// </summary>
-//    ~RoomSolver()
-//    {
-//      Dispose();
 //    }
 //    #endregion
 //  }
