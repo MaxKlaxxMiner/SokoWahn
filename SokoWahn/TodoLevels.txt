@@ -60,3 +60,544 @@ Name: SokoWahn.Solver
   764: A.K.K. Informatika :: level 30
   340: A.K.K. Informatika :: level 31
   698: A.K.K. Informatika :: level 32
+  393: ABHT 01 :: level 01 - A Bit Harder Than Original 5
+  279: ABHT 01 :: level 02 - A Bit Harder Than Original 7
+1.979: ABHT 01 :: level 03 - A Bit Harder Than Original 20
+1.165: ABHT 01 :: level 04 - A Bit Harder Than Original 23
+1.398: ABHT 01 :: level 05 - A Bit Harder Than Original 24
+1.286: ABHT 01 :: level 06 - A Bit Harder Than Original 27
+  596: ABHT 01 :: level 07 - A Bit Harder Than Original 34
+1.277: ABHT 01 :: level 08 - A Bit Harder Than Original 35
+  930: ABHT 01 :: level 09 - A Bit Harder Than Original 37
+  458: ABHT 01 :: level 10 - A Bit Harder Than Original 48
+1.348: ABHT 01 :: level 11 - A Bit Harder Than Original 50
+1.258: ABHT 01 :: level 12 - A Bit Harder Than SokoMan 1 21
+1.046: ABHT 01 :: level 13 - A Bit Harder Than SokoMan 1 37
+1.334: ABHT 01 :: level 14 - A Bit Harder Than SokoMan 1 24
+1.123: ABHT 01 :: level 15 - A Bit Harder Than SokoMan 1 42
+1.337: ABHT 01 :: level 16 - A Bit Harder Than SokoMan 1 43
+  795: ABHT 01 :: level 17 - A Bit Harder Than SokoMan 1 47
+  747: ABHT 01 :: level 18 - A Bit Harder Than SokoMan 2 14
+  577: ABHT 01 :: level 19 - A Bit Harder Than SokoMan 2 18
+  636: ABHT 01 :: level 20 - A Bit Harder Than SokoMan 2 17
+  395: ABHT 01 :: level 21 - A Bit Harder Than SokoMan 2 20
+  956: ABHT 01 :: level 22 - A Bit Harder Than SokoMan 2 21
+  778: ABHT 01 :: level 23 - A Bit Harder Than SokoMan 2 28
+1.314: ABHT 01 :: level 24 - A Bit Harder Than SokoMan 2 44
+  773: ABHT 01 :: level 25 - A Bit Harder Than SokoMan 2 46
+  631: ABHT 01 :: level 26 - A Bit Harder Than SokoMan 3 4
+  775: ABHT 01 :: level 27 - A Bit Harder Than SokoMan 3 13
+  438: ABHT 01 :: level 28 - A Bit Harder Than SokoMan 3 15
+1.288: ABHT 01 :: level 29 - A Bit Harder Than SokoMan 3 25
+  724: ABHT 01 :: level 30 - A Bit Harder Than SokoMan 3 26
+1.045: ABHT 01 :: level 31 - A Bit Harder Than SokoMan 3 27
+  518: ABHT 01 :: level 32 - A Bit Harder Than SokoMan 3 28
+  832: ABHT 01 :: level 33 - A Bit Harder Than SokoMan 3 29
+1.308: ABHT 01 :: level 34 - A Bit Harder Than SokoMan 3 30
+  703: ABHT 01 :: level 35 - A Bit Harder Than SokoMan 3 31
+1.544: ABHT 01 :: level 36 - A Bit Harder Than SokoMan 3 34
+  702: ABHT 01 :: level 37 - A Bit Harder Than SokoMan 3 35
+  555: ABHT 01 :: level 38 - A Bit Harder Than SokoMan 3 36
+  799: ABHT 01 :: level 39 - A Bit Harder Than SokoMan 3 38
+  590: ABHT 01 :: level 40 - A Bit Harder Than SokoMan 3 39
+  476: ABHT 01 :: level 41 - A Bit Harder Than SokoMan 3 40
+  789: ABHT 01 :: level 42 - A Bit Harder Than SokoMan 3 42
+  691: ABHT 01 :: level 43 - A Bit Harder Than SokoMan 3 45
+  735: ABHT 01 :: level 44 - A Bit Harder Than SokoMan 3 46
+  731: ABHT 01 :: level 45 - A Bit Harder Than SokoMan 3 47
+1.605: ABHT 01 :: level 46 - A Bit Harder Than SokoMan 3 50
+  533: ABHT 01 :: level 47 - A Bit Harder Than SokoMan 4 1
+  483: ABHT 01 :: level 48 - A Bit Harder Than SokoMan 4 2
+  918: ABHT 01 :: level 49 - A Bit Harder Than SokoMan 4 4
+  569: ABHT 01 :: level 50 - A Bit Harder Than SokoMan 4 6
+  740: ABHT 01 :: level 51 - A Bit Harder Than SokoMan 4 7
+  619: ABHT 01 :: level 52 - A Bit Harder Than SokoMan 4 10
+  682: ABHT 01 :: level 53 - A Bit Harder Than SokoMan 4 11
+  698: ABHT 01 :: level 54 - A Bit Harder Than SokoMan 4 16
+1.035: ABHT 01 :: level 55 - A Bit Harder Than SokoMan 4 18
+  552: ABHT 01 :: level 56 - A Bit Harder Than SokoMan 4 24
+  608: ABHT 01 :: level 57 - A Bit Harder Than SokoMan 4 19
+  740: ABHT 01 :: level 58 - A Bit Harder Than SokoMan 4 26
+  368: ABHT 01 :: level 59 - A Bit Harder Than SokoMan 4 29
+  522: ABHT 01 :: level 60 - A Bit Harder Than SokoMan 4 30
+  530: ABHT 01 :: level 61 - A Bit Harder Than SokoMan 4 31
+  884: ABHT 01 :: level 62 - A Bit Harder Than SokoMan 4 33
+1.123: ABHT 01 :: level 63 - A Bit Harder Than SokoMan 4 35
+  474: ABHT 01 :: level 64 - A Bit Harder Than SokoMan 4 43
+  741: ABHT 01 :: level 65 - A Bit Harder Than SokoMan 4 44
+  383: ABHT 01 :: level 66 - A Bit Harder Than SokoMan 4 45
+  646: ABHT 01 :: level 67 - A Bit Harder Than SokoMan 4 46
+1.197: ABHT 01 :: level 68 - Rocket
+1.894: ABHT 01 :: level 69 - Almost square
+3.438: ABHT 01 :: level 70 - Level 231 Christmas Edition
+  404: ABHT 01 :: level 71 - A Bit Harder Than Roland 1
+  339: ABHT 01 :: level 72 - A Bit Harder Than Bugs collection 3 122
+1.793: ABHT 01 :: level 73 - MilliSeconds gradus ad Olympo 62
+1.224: ABHT 01 :: level 74 - Bermuda
+  558: ABHT 01 :: level 75 - Premysl Zika #130
+  968: ABHT 01 :: level 76 - Bermuda #2
+1.085: ABHT 01 :: level 77 - Mondrian
+1.071: ABHT 01 :: level 78 - Tower of chameleon
+2.489: ABHT 01 :: level 79 - Tower of chameleon #2
+  359: ABHT 01 :: level 80 - Shuriken
+  470: ABHT 01 :: level 81 - Thug Life
+1.125: ABHT 01 :: level 82 - A Bit Harder Than Recreation 552
+  202: ABHT 01 :: level 83 - A Bit Harder Than Chrysalis 10 48
+  736: ABHT 01 :: level 84 - A
+  157: ABHT 01 :: level 85 - Z©¤ERO
+  136: ABHT 01 :: level 86 - Snowflake
+  302: ABHT 01 :: level 87 - three lines
+  220: ABHT 01 :: level 88 - Sands of times
+  495: ABHT 01 :: level 89 - A Bit Harder Than MacTommy inventions 45
+  295: ABHT 01 :: level 90 - A Bit Harder Than Master Head 5
+  695: ABHT 01 :: level 91 - A Bit Harder Than Master Head 25
+  799: ABHT 01 :: level 92 - A Bit Harder Than Master Head 28
+  990: ABHT 01 :: level 93 - A Bit Harder Than Master Head 31
+  864: ABHT 01 :: level 94 - A Bit Harder Than Master Head 36
+1.258: ABHT 01 :: level 95 - A Bit Harder Than Master Head 39
+1.784: ABHT 01 :: level 96 - A Bit Harder Than Master Head 43
+1.353: ABHT 01 :: level 97 - A Bit Harder Than Jean Pierre Kent 35
+1.075: ABHT 01 :: level 98 - A Bit Harder Than Jean Pierre Kent 62
+  786: ABHT 01 :: level 99 - A Bit Harder Than Excalibur
+1.512: ABHT 01 :: level 100 - Back to tradition once again
+  230: ABHT 02 :: level 02
+  125: ABHT 02 :: level 04
+  260: ABHT 02 :: level 05
+  356: ABHT 02 :: level 06
+  150: ABHT 02 :: level 07
+  214: ABHT 02 :: level 08
+  313: ABHT 02 :: level 09
+  274: ABHT 02 :: level 10
+  721: ABHT 02 :: level 11
+  264: ABHT 02 :: level 12
+  368: ABHT 02 :: level 13
+  138: ABHT 02 :: level 14
+  331: ABHT 02 :: level 15
+  391: ABHT 02 :: level 16
+1.338: ABHT 02 :: level 17
+  290: ABHT 02 :: level 18
+  554: ABHT 02 :: level 19
+  469: ABHT 02 :: level 20
+  301: ABHT 02 :: level 21
+  493: ABHT 02 :: level 22
+  711: ABHT 02 :: level 23
+  431: ABHT 02 :: level 24
+  912: ABHT 02 :: level 25
+2.548: ABHT 02 :: level 26
+  478: ABHT 02 :: level 27
+  623: ABHT 02 :: level 28
+  942: ABHT 02 :: level 29
+2.170: ABHT 02 :: level 30
+  406: ABHT 02 :: level 31
+1.013: ABHT 02 :: level 32
+2.473: ABHT 02 :: level 33
+1.369: ABHT 02 :: level 34
+  404: ABHT 02 :: level 35
+  801: ABHT 02 :: level 36
+  837: ABHT 02 :: level 37
+  401: ABHT 02 :: level 38
+  856: ABHT 02 :: level 39
+   88: ABHT 02 :: level 40
+  264: ABHT 02 :: level 41
+  121: ABHT 02 :: level 42
+  194: ABHT 02 :: level 43
+  581: ABHT 02 :: level 44
+  368: ABHT 02 :: level 45
+  403: ABHT 02 :: level 46
+  624: ABHT 02 :: level 47
+  544: ABHT 02 :: level 48
+1.224: ABHT 02 :: level 49
+  458: ABHT 02 :: level 50
+1.759: ABHT 02 :: level 51
+  286: ABHT 02 :: level 52
+  160: ABHT 02 :: level 53
+  370: ABHT 02 :: level 54
+  272: ABHT 02 :: level 55
+  464: ABHT 02 :: level 56
+  335: ABHT 02 :: level 57
+  125: ABHT 02 :: level 58
+  669: ABHT 02 :: level 59
+  982: ABHT 02 :: level 60
+5.328: ABHT 02 :: level 61
+1.348: ABHT 02 :: level 62
+2.417: ABHT 02 :: level 63
+4.077: ABHT 02 :: level 64
+5.087: ABHT 02 :: level 65
+  441: ABHT 02 :: level 66
+1.580: ABHT 02 :: level 67
+1.138: ABHT 02 :: level 68
+4.643: ABHT 02 :: level 69
+  182: ABHT 02 :: level 70
+3.004: ABHT 02 :: level 71
+  593: ABHT 02 :: level 72
+2.991: ABHT 02 :: level 73
+  686: ABHT 02 :: level 74
+  286: ABHT 02 :: level 75
+  786: ABHT 02 :: level 76
+  886: ABHT 02 :: level 77
+  414: ABHT 02 :: level 78
+  235: ABHT 02 :: level 79
+2.877: ABHT 02 :: level 80
+  339: ABHT 02 :: level 81
+2.291: ABHT 02 :: level 82
+  353: ABHT 02 :: level 83
+2.489: ABHT 02 :: level 84
+  163: ABHT 02 :: level 85
+  323: ABHT 02 :: level 86
+  965: ABHT 02 :: level 87
+  371: ABHT 02 :: level 88
+  430: ABHT 02 :: level 89
+  452: ABHT 02 :: level 90
+1.753: ABHT 02 :: level 91
+  143: ABHT 02 :: level 92
+1.020: ABHT 02 :: level 93
+  511: ABHT 02 :: level 94
+  703: ABHT 02 :: level 95
+  828: ABHT 02 :: level 96
+  556: ABHT 02 :: level 97
+  442: ABHT 02 :: level 98
+  296: ABHT 02 :: level 99
+3.097: AC Easy :: level 05
+   98: AC Easy :: level 14
+1.813: AC Easy :: level 16
+  351: AC Easy :: level 17
+  122: AC Easy :: level 18
+1.553: AC Easy :: level 19
+  437: AC Smileys :: smileys 2.02
+  369: AC Smileys :: smileys 2.03
+1.068: AC Smileys :: smileys 2.05
+  502: AC Smileys :: smileys 2.07
+  523: AC Smileys :: smileys 2.08
+  418: AC Smileys :: smileys 2.09
+  588: AC Smileys :: smileys 2.10
+  521: AC Smileys :: smileys 2.11
+  705: AC Smileys :: smileys 2.12
+  476: AC Smileys :: smileys 2.13
+  608: AC Smileys :: smileys 2.14
+  789: AC Smileys :: smileys 2.15
+  859: AC Smileys :: smileys 2.16
+  411: AC Smileys :: smileys 2.17
+  637: AC Smileys :: smileys 2.18
+  497: AC Smileys :: smileys 2.19
+  379: AC Smileys :: smileys 2.20
+  580: AC Smileys :: smileys 2.21
+  392: AC Smileys :: smileys 2.22
+  320: AC Smileys :: smileys 2.23
+  288: AC Smileys :: smileys 2.25
+  594: AC Smileys :: smileys 2.26
+  199: AC Smileys :: smileys 2.27
+  565: AC Smileys :: smileys 2.28
+  724: AC Smileys :: smileys 2.29
+  658: AC Smileys :: smileys 2.30
+1.163: AC Smileys :: smileys 2.31
+  835: AC Smileys :: smileys 2.32
+  258: AC Smileys :: smileys 2.33
+  622: AC Smileys :: smileys 2.34
+  628: AC Smileys :: smileys 2.35
+  189: AC Smileys :: smileys 2.36
+  636: AC Smileys :: smileys 2.37
+  189: AC Smileys :: smileys 2.38
+  609: AC Smileys :: smileys 2.39
+  616: AC Smileys :: smileys 2.40
+  420: AC Smileys :: smileys 2.41
+  261: AC Smileys :: smileys 2.42
+  307: AC Smileys :: smileys 2.43
+  272: AC Smileys :: smileys 2.44
+  329: AC Smileys :: smileys 2.45
+  722: AC Smileys :: smileys 2.46
+  273: AC Smileys :: smileys 2.47
+  291: AC Smileys :: smileys 2.48
+  294: AC Smileys :: smileys 2.49
+  363: AC Smileys :: smileys 2.50
+  369: AC Smileys :: smileys 2.51
+  402: AC Smileys :: smileys 2.52
+  392: AC Smileys :: smileys 2.53
+  420: AC Smileys :: smileys 2.57
+  228: AC Smileys :: smileys 2.58
+  296: AC Smileys :: smileys 2.59
+  468: AC Smileys :: smileys 2.60
+  749: AC Smileys :: smileys 2.61
+  403: AC Smileys :: smileys 2.62
+  288: AC Smileys :: smileys 2.63
+  207: AC Smileys :: smileys 2.64
+  704: AC Smileys :: smileys 2.65
+  524: AC Smileys :: smileys 2.66
+  477: AC Smileys :: smileys 2.67
+  381: AC Smileys :: smileys 2.68
+  342: AC Smileys :: smileys 2.69
+  350: AC Smileys :: smileys 2.70
+  549: AC Smileys :: smileys 2.71
+  526: AC Smileys :: smileys 2.72
+  672: AC Smileys :: smileys 2.73
+  590: AC Smileys :: smileys 2.74
+  643: AC Smileys :: smileys 2.75
+1.255: AC Smileys :: smileys 2.76
+  742: AC Smileys :: smileys 2.77
+  813: AC Smileys :: smileys 2.78
+  487: AC Smileys :: smileys 2.79
+  857: AC Smileys :: smileys 2.80
+  428: AC Smileys :: smileys 2.81
+  895: AC Smileys :: smileys 2.82
+  576: AC Smileys :: smileys 2.83
+  669: AC Smileys :: smileys 2.84
+1.054: AC Smileys :: smileys 2.85
+  600: AC Smileys :: smileys 2.86
+  758: AC Smileys :: smileys 2.87
+  432: AC Smileys :: smileys 2.88
+  406: AC Smileys :: smileys 2.89
+  996: AC Smileys :: smileys 2.90
+  967: AC Smileys :: smileys 2.91
+  979: AC Smileys :: smileys 2.92
+  560: AC Smileys :: smileys 2.93
+  366: AC Smileys :: smileys 2.94
+  315: AC Smileys :: smileys 2.95
+  313: AC Smileys :: smileys 2.96
+  562: AC Smileys :: smileys 2.97
+  615: AC Smileys :: smileys 2.98
+  712: AC Smileys :: smileys 2.99
+  853: AC Smileys :: smileys 2.100
+  143: AC Smileys :: smileys 2.101
+  219: AC Smileys :: smileys 2.102
+2.736: AC Smileys :: smileys 2.103
+   81: AC Smileys :: smileys 2.104
+  109: AC Smileys :: smileys 2.105
+  947: AC Smileys :: smileys 3.001
+1.211: AC Smileys :: smileys 3.002
+  488: AC Smileys :: smileys 3.003
+  440: AC Smileys :: smileys 3.004
+  515: AC Smileys :: smileys 3.005
+  749: AC Smileys :: smileys 3.007
+  360: AC Smileys :: smileys 3.008
+  380: AC Smileys :: smileys 3.009
+  562: AC Smileys :: smileys 3.010
+  628: AC Smileys :: smileys 3.011
+  188: AC Smileys :: smileys 3.012
+  190: AC Smileys :: smileys 3.013
+  633: AC Smileys :: smileys 3.014
+  628: AC Smileys :: smileys 3.015
+  385: AC Smileys :: smileys 3.016
+  468: AC Smileys :: smileys 3.017
+  634: AC Smileys :: smileys 3.018
+  855: AC Smileys :: smileys 3.019
+  460: AC Smileys :: smileys 3.020
+  898: AC Smileys :: smileys 3.021
+  558: AC Smileys :: smileys 3.022
+  978: AC Smileys :: smileys 3.023
+  619: AC Smileys :: smileys 3.024
+  613: AC Smileys :: smileys 3.025
+  420: AC Smileys :: smileys 3.026
+  648: AC Smileys :: smileys 3.027
+  430: AC Smileys :: smileys 3.028
+  563: AC Smileys :: smileys 3.029
+  254: AC Smileys :: smileys 3.030
+  648: AC Smileys :: smileys 3.031
+  872: AC Smileys :: smileys 3.032
+1.018: AC Smileys :: smileys 3.033
+  714: AC Smileys :: smileys 3.034
+  601: AC Smileys :: smileys 3.035
+  561: AC Smileys :: smileys 3.036
+  621: AC Smileys :: smileys 3.037
+  686: AC Smileys :: smileys 3.038
+  720: AC Smileys :: smileys 3.039
+  840: AC Smileys :: smileys 3.040
+  794: AC Smileys :: smileys 3.041
+  719: AC Smileys :: smileys 3.042
+  657: AC Smileys :: smileys 3.043
+  641: AC Smileys :: smileys 3.044
+  181: AC Smileys :: smileys 3.045
+  222: AC Smileys :: smileys 3.046
+  874: AC Smileys :: smileys 3.047
+1.217: AC Smileys :: smileys 3.048
+  519: AC Smileys :: smileys 3.049
+  562: AC Smileys :: smileys 3.050
+  638: AC Smileys :: smileys 3.051
+  205: AC Smileys :: smileys 3.052
+  223: AC Smileys :: smileys 3.053
+  291: AC Smileys :: smileys 3.054
+  781: AC Smileys :: smileys 3.055
+  647: AC Smileys :: smileys 3.056
+  506: AC Smileys :: smileys 3.057
+  672: AC Smileys :: smileys 3.058
+  836: AC Smileys :: smileys 3.059
+  841: AC Smileys :: smileys 3.060
+  877: AC Smileys :: smileys 3.061
+  278: AC Smileys :: smileys 3.062
+  284: AC Smileys :: smileys 3.063
+  354: AC Smileys :: smileys 3.064
+  595: AC Smileys :: smileys 3.065
+  557: AC Smileys :: smileys 3.066
+  600: AC Smileys :: smileys 3.067
+  640: AC Smileys :: smileys 3.068
+  352: AC Smileys :: smileys 3.069
+  406: AC Smileys :: smileys 3.070
+  311: AC Smileys :: smileys 3.071
+  247: AC Smileys :: smileys 3.072
+  164: AC Smileys :: smileys 3.073
+  136: AC Smileys :: smileys 3.074
+  259: AC Smileys :: smileys 3.075
+  291: AC Smileys :: smileys 3.076
+  236: AC Smileys :: smileys 3.077
+  251: AC Smileys :: smileys 3.078
+  231: AC Smileys :: smileys 3.079
+  119: AC Smileys :: smileys 3.080
+  203: AC Smileys :: smileys 3.081
+  589: AC Smileys :: smileys 3.082
+  646: AC Smileys :: smileys 3.083
+  484: AC Smileys :: smileys 3.084
+  464: AC Smileys :: smileys 3.085
+  294: AC Smileys :: smileys 3.086
+  602: AC Smileys :: smileys 3.087
+  337: AC Smileys :: smileys 3.088
+  331: AC Smileys :: smileys 3.089
+  451: AC Smileys :: smileys 3.090
+  622: AC Smileys :: smileys 3.091
+  691: AC Smileys :: smileys 3.092
+  670: AC Smileys :: smileys 3.093
+  519: AC Smileys :: smileys 3.094
+  720: AC Smileys :: smileys 3.095
+  395: AC Smileys :: smileys 3.096
+  643: AC Smileys :: smileys 3.097
+  533: AC Smileys :: smileys 3.098
+  545: AC Smileys :: smileys 3.099
+  728: AC Smileys :: smileys 3.100
+  778: AC Smileys :: smileys 3.101
+  908: AC Smileys :: smileys 3.102
+  793: AC Smileys :: smileys 3.103
+  729: AC Smileys :: smileys 3.104
+  184: AC Smileys :: smileys 3.105
+  616: AC Smileys :: smileys 3.106
+  689: AC Smileys :: smileys 3.107
+  775: AC Smileys :: smileys 3.108
+  607: AC Smileys :: smileys 3.109
+  570: AC Smileys :: smileys 3.110
+  741: AC Smileys :: smileys 3.111
+  118: AC Smileys :: smileys 3.112
+  603: AC Smileys :: smileys 3.113
+  531: AC Smileys :: smileys 3.114
+  395: AC Smileys :: smileys 3.116
+1.059: AC Smileys :: smileys 3.117
+1.092: AC Smileys :: smileys 3.118
+  655: AC Smileys :: smileys 3.119
+  885: AC Smileys :: smileys 3.120
+  981: AC Smileys :: smileys 3.121
+  778: AC Smileys :: smileys 3.122
+  792: AC Smileys :: smileys 3.123
+1.018: AC Smileys :: smileys 3.124
+  396: AC Smileys :: smileys 3.125
+  827: AC Smileys :: smileys 3.126
+  712: AC Smileys :: smileys 3.127
+  309: AC Smileys :: smileys 3.128
+  281: AC Smileys :: smileys 3.129
+  869: AC Smileys :: smileys 3.130
+  993: AC Smileys :: smileys 3.131
+  534: AC Smileys :: smileys 3.132
+  537: AC Smileys :: smileys 3.133
+  693: AC Smileys :: smileys 3.134
+  294: AC Smileys :: smileys 3.135
+  321: AC Smileys :: smileys 3.136
+  421: AC Smileys :: smileys 3.137
+  543: AC Smileys :: smileys 3.138
+  718: AC Smileys :: smileys 3.139
+  664: AC Smileys :: smileys 3.140
+  764: AC Smileys :: smileys 3.141
+  701: AC Smileys :: smileys 3.142
+  347: AC Smileys :: smileys 3.143
+  462: AC Smileys :: smileys 3.144
+  913: AC Smileys :: smileys 3.145
+  609: AC Smileys :: smileys 3.146
+  711: AC Smileys :: smileys 3.147
+  998: AC Smileys :: smileys 3.148
+  746: AC Smileys :: smileys 3.149
+  812: AC Smileys :: smileys 3.150
+  800: AC Smileys :: smileys 3.151
+  728: AC Smileys :: smileys 3.152
+  431: AC Smileys :: smileys 3.153
+1.236: AC Smileys :: smileys 3.154
+  751: AC Smileys :: smileys 3.155
+  479: AC Smileys :: smileys 3.156
+  875: AC Smileys :: smileys 3.157
+  902: AC Smileys :: smileys 3.158
+  282: AC Smileys :: smileys 3.159
+  672: AC Smileys :: smileys 3.160
+1.314: AC Smileys :: smileys 3.161
+  638: AC Smileys :: smileys 3.162
+  547: AC Smileys :: smileys 3.163
+  812: AC Smileys :: smileys 3.164
+  300: AC Smileys :: smileys 3.165
+1.015: AC Smileys :: smileys 3.166
+  229: AC Smileys :: smileys 3.167
+  110: AC Smileys :: smileys 3.168
+  390: AC Smileys :: smileys 3.169
+  996: AC Smileys :: smileys 3.170
+1.192: AC Smileys :: smileys 3.171
+  357: AC Smileys :: smileys 3.172
+  640: AC Smileys :: smileys 3.173
+  666: AC Smileys :: smileys 3.174
+  838: AC Smileys :: smileys 3.175
+  784: AC Smileys :: smileys 3.176
+  845: AC Smileys :: smileys 3.177
+  657: AC Smileys :: smileys 3.178
+  395: AC Smileys :: smileys 3.179
+  872: AC Smileys :: smileys 3.180
+  514: AC Smileys :: smileys 3.181
+  625: AC Smileys :: smileys 3.182
+  832: AC Smileys :: smileys 3.183
+  314: AC Smileys :: smileys 3.184
+  781: AC Smileys :: smileys 3.185
+1.005: AC Smileys :: smileys 3.186
+1.224: AC Smileys :: smileys 3.187
+1.103: AC Smileys :: smileys 3.188
+  472: AC Smileys :: smileys 3.189
+  886: AC Smileys :: smileys 3.190
+1.173: AC Smileys :: smileys 3.191
+  314: AC Smileys :: smileys 3.192
+  696: AC Smileys :: smileys 3.193
+  507: AC Smileys :: smileys 3.194
+  711: AC Smileys :: smileys 3.195
+  416: AC Smileys :: smileys 3.196
+  555: AC Smileys :: smileys 3.197
+  675: AC Smileys :: smileys 3.198
+  499: AC Smileys :: smileys 3.199
+  133: AC Smileys :: smileys 3.200
+  838: AC Smileys :: smileys 3.201
+4.168: AC Smileys :: smileys 3.202
+  207: Aenigma arranged :: level 02
+  185: Aenigma arranged :: level 04
+  695: Aenigma arranged :: level 05
+  274: Aenigma arranged :: level 07
+  329: Aenigma arranged :: level 08
+  565: Aenigma arranged :: level 10
+  223: Aenigma arranged :: level 16
+  417: Aenigma arranged :: level 17
+  907: Aenigma arranged :: level 18
+  319: Aenigma arranged :: level 19
+  445: Aenigma arranged :: level 20
+  398: Aenigma arranged :: level 21
+  307: Aenigma arranged :: level 22
+  349: Aenigma arranged :: level 24
+  115: Aenigma arranged :: level 25
+  447: Aenigma arranged :: level 26
+  367: Aenigma arranged :: level 27
+  349: Aenigma arranged :: level 28
+  328: Aenigma arranged :: level 29
+  697: Aenigma arranged :: level 30
+  388: Aenigma arranged :: level 31
+  554: Aenigma arranged :: level 32
+  326: Aenigma arranged :: level 33
+  287: Aenigma arranged :: level 34
+  875: Aenigma arranged :: level 35
+  449: Aenigma arranged :: level 36
+  131: Aenigma arranged :: level 39
+  846: Aenigma arranged :: level 40
+  485: Aenigma arranged :: level 41
+  876: Aenigma arranged :: level 42
+  527: Aenigma arranged :: level 44
+  185: Aenigma arranged :: level 45
+  441: Aenigma arranged :: level 46
+  511: Aenigma arranged :: level 47
+  251: Aerie :: level 11
+  304: Aerie :: level 12
+  215: Aerie :: level 13
+  348: Alberto :: level 16
+  220: Alberto :: level 28
+  724: Alberto :: level 32
