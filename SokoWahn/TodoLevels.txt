@@ -601,3 +601,47 @@ Name: SokoWahn.Solver
   348: Alberto :: level 16
   220: Alberto :: level 28
   724: Alberto :: level 32
+  458: Alberto Borella :: level 06
+  460: Alberto Borella :: level 07
+  512: Alberto Borella :: level 08
+  180: Alberto Borella :: level 09
+  189: Alberto Borella :: level 10
+  396: Alberto Borella :: level 11
+  218: Alberto Borella :: level 12
+  318: Alberto Borella :: level 13
+  296: Alberto Borella :: level 14
+  298: Alberto Borella :: level 15
+   88: Alberto Borella :: level 16
+  201: Alberto Borella :: level 17
+  256: Alberto Borella :: level 18
+  339: Alberto Borella :: level 19
+  294: Alberto Borella :: level 20
+  206: Alberto Borella :: level 21
+1.021: Alberto Borella :: level 25
+  114: Alberto Borella :: level 26
+  150: Alberto Borella :: level 27
+  348: Alberto Borella :: level 28
+  545: Alberto Borella :: level 29
+  387: Alberto Borella :: level 31
+  642: Alberto Borella :: level 32
+  148: Alberto Borella :: level 33
+  362: Alberto Borella :: level 34
+  296: Alberto Borella :: level 35
+  135: Alberto Borella :: level 36
+  491: Alberto Borella :: level 37
+  546: Alberto Borella :: level 38
+  605: Alberto Borella :: level 39
+1.721: Alberto Borella :: level 40
+  863: Alberto Borella :: level 41
+1.175: Alberto Borella :: level 42
+1.057: Alberto Borella :: level 43
+1.141: Alberto Borella :: level 44
+1.285: Alberto Borella :: level 45
+  409: Alberto Borella :: level 47
+  181: Alberto Borella :: level 52
+  307: Alberto Borella :: level 54
+  116: Alberto Borella :: level 55
+  138: Alberto Borella :: level 56
+  313: Alberto Borella :: level 57
+3.057: Alberto Borella :: level 58
+  198: Alberto Borella :: level 60
