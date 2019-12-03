@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+// ReSharper disable AccessToModifiedClosure
 #endregion
 
 namespace Sokosolver.SokowahnTools
@@ -439,6 +440,283 @@ namespace Sokosolver.SokowahnTools
       for (int i = 0; i < kistenAnzahl; i++) datenArray[off++] = (ushort)kistenZuRaum[i];
     }
     #endregion
+
+    /// <summary>
+    /// berechnet die Lauf-Schritte bis zur nächsten Kisten-Bewegung
+    /// </summary>
+    /// <param name="next">nachfolgendes Spielfeld</param>
+    /// <returns>Schritte um das Spielfeld zu erreichen</returns>
+    public string GetSteps(SokowahnRaum next)
+    {
+      string findSteps = "";
+      int spielerZiel = next.raumSpielerPos;
+      int checkRaumVon = 0;
+      int checkRaumBis = 0;
+
+      Array.Clear(tmpRaumCheckFertig, 0, raumAnzahl);
+
+      // erste Spielerposition hinzufügen
+      tmpRaumCheckFertig[raumSpielerPos] = true;
+      tmpCheckRaumPosis[checkRaumBis] = raumSpielerPos;
+      tmpCheckRaumTiefe[checkRaumBis] = spielerZugTiefe;
+      checkRaumBis++;
+
+      Func<int, int, int> vorherFeld = (pp, tt) =>
+      {
+        if (raumLinks[pp] < raumAnzahl)
+        {
+          int index = -1;
+          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumLinks[pp]) index = i;
+          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          {
+            if (tt > 0 || index == 0)
+            {
+              findSteps = "r" + findSteps;
+              return raumLinks[pp];
+            }
+          }
+        }
+
+        if (raumRechts[pp] < raumAnzahl)
+        {
+          int index = -1;
+          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumRechts[pp]) index = i;
+          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          {
+            if (tt > 0 || index == 0)
+            {
+              findSteps = "l" + findSteps;
+              return raumRechts[pp];
+            }
+          }
+        }
+
+        if (raumOben[pp] < raumAnzahl)
+        {
+          int index = -1;
+          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumOben[pp]) index = i;
+          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          {
+            if (tt > 0 || index == 0)
+            {
+              findSteps = "d" + findSteps;
+              return raumOben[pp];
+            }
+          }
+        }
+
+        if (raumUnten[pp] < raumAnzahl)
+        {
+          int index = -1;
+          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumUnten[pp]) index = i;
+          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          {
+            if (tt > 0 || index == 0)
+            {
+              findSteps = "u" + findSteps;
+              return raumUnten[pp];
+            }
+          }
+        }
+
+        return tmpCheckRaumPosis[0];
+      };
+
+      // alle möglichen Spielerposition berechnen
+      while (checkRaumVon < checkRaumBis)
+      {
+        raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];
+        int pTiefe = tmpCheckRaumTiefe[checkRaumVon] + 1;
+
+        int p, p2;
+
+        #region # // --- links ---
+        if (!tmpRaumCheckFertig[p = raumLinks[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl) // steht eine Kiste auf den benachbarten Feld?
+          {
+            if (raumZuKisten[p2 = raumLinks[p]] == kistenAnzahl && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            {
+              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = kistenAnzahl; // linke Kiste weiter nach links schieben
+              raumSpielerPos = p;                                                                    // Spieler nach links bewegen
+
+              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, kistenAnzahl).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              {
+                int pp = raumRechts[p];
+                int tt = pTiefe - 1;
+                findSteps = "L";
+                while (pp != tmpCheckRaumPosis[0])
+                {
+                  tt--;
+                  pp = vorherFeld(pp, tt);
+                }
+              }
+
+              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach rechts bewegen
+              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = kistenAnzahl; // linke Kiste eins zurück nach rechts schieben
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- rechts ---
+        if (!tmpRaumCheckFertig[p = raumRechts[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl) // steht eine Kiste auf den benachbarten Feld?
+          {
+            if (raumZuKisten[p2 = raumRechts[p]] == kistenAnzahl && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            {
+              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = kistenAnzahl; // rechte Kiste weiter nach rechts schieben
+              raumSpielerPos = p;                                                                    // Spieler nach rechts bewegen
+
+              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, kistenAnzahl).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              {
+                int pp = raumLinks[p];
+                int tt = pTiefe - 1;
+                findSteps = "R";
+                while (pp != tmpCheckRaumPosis[0])
+                {
+                  tt--;
+                  pp = vorherFeld(pp, tt);
+                }
+              }
+
+              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach links bewegen
+              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = kistenAnzahl; // rechte Kiste eins zurück nach links schieben
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- oben ---
+        if (!tmpRaumCheckFertig[p = raumOben[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl) // steht eine Kiste auf den benachbarten Feld?
+          {
+            if (raumZuKisten[p2 = raumOben[p]] == kistenAnzahl && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            {
+              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = kistenAnzahl; // obere Kiste weiter nach oben schieben
+              raumSpielerPos = p;                                                                    // Spieler nach oben bewegen
+
+              #region # // Kisten sortieren (sofern notwendig)
+              while (raumZuKisten[p2] > 0 && kistenZuRaum[raumZuKisten[p2] - 1] > p2 && raumZuKisten[p2] < kistenAnzahl)
+              {
+                int tmp = kistenZuRaum[raumZuKisten[p2] - 1];
+                kistenZuRaum[raumZuKisten[p2]--] = tmp;
+                kistenZuRaum[raumZuKisten[tmp]++] = p2;
+              }
+              #endregion
+
+              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, kistenAnzahl).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              {
+                int pp = raumUnten[p];
+                int tt = pTiefe - 1;
+                findSteps = "U";
+                while (pp != tmpCheckRaumPosis[0])
+                {
+                  tt--;
+                  pp = vorherFeld(pp, tt);
+                }
+              }
+
+              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach unten bewegen
+              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = kistenAnzahl; // obere Kiste eins zurück nach unten schieben
+
+              #region # // Kisten zurück sortieren (sofern notwendig)
+              while (raumZuKisten[p] < kistenAnzahl - 1 && kistenZuRaum[raumZuKisten[p] + 1] < p)
+              {
+                int tmp = kistenZuRaum[raumZuKisten[p] + 1];
+                kistenZuRaum[raumZuKisten[p]++] = tmp;
+                kistenZuRaum[raumZuKisten[tmp]--] = p;
+              }
+              #endregion
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- unten ---
+        if (!tmpRaumCheckFertig[p = raumUnten[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl) // steht eine Kiste auf den benachbarten Feld?
+          {
+            if (raumZuKisten[p2 = raumUnten[p]] == kistenAnzahl && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            {
+              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = kistenAnzahl; // untere Kiste weiter nach unten schieben
+              raumSpielerPos = p;                                                                    // Spieler nach unten bewegen
+
+              #region # // Kisten sortieren (sofern notwendig)
+              while (raumZuKisten[p2] < kistenAnzahl - 1 && kistenZuRaum[raumZuKisten[p2] + 1] < p2)
+              {
+                int tmp = kistenZuRaum[raumZuKisten[p2] + 1];
+                kistenZuRaum[raumZuKisten[p2]++] = tmp;
+                kistenZuRaum[raumZuKisten[tmp]--] = p2;
+              }
+              #endregion
+
+              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, kistenAnzahl).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              {
+                int pp = raumOben[p];
+                int tt = pTiefe - 1;
+                findSteps = "D";
+                while (pp != tmpCheckRaumPosis[0])
+                {
+                  tt--;
+                  pp = vorherFeld(pp, tt);
+                }
+              }
+
+              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach oben bewegen
+              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = kistenAnzahl; // untere Kiste eins zurück nach oben schieben
+
+              #region # // Kisten zurück sortieren (sofern notwendig)
+              while (raumZuKisten[p] > 0 && kistenZuRaum[raumZuKisten[p] - 1] > p && raumZuKisten[p] < kistenAnzahl)
+              {
+                int tmp = kistenZuRaum[raumZuKisten[p] - 1];
+                kistenZuRaum[raumZuKisten[p]--] = tmp;
+                kistenZuRaum[raumZuKisten[tmp]++] = p;
+              }
+              #endregion
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        checkRaumVon++;
+      }
+
+      raumSpielerPos = tmpCheckRaumPosis[0]; // alte Spielerposition wieder herstellen
+
+      return findSteps;
+    }
 
     #region # public IEnumerable<SokowahnStellung> GetVarianten() // ermittelt alle möglichen Zugvarianten und gibt deren Stellungen zurück
     /// <summary>

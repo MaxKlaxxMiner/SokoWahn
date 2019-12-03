@@ -11,6 +11,8 @@ using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 using System.Diagnostics;
+using Sokosolver.SokowahnTools;
+
 #endregion
 
 namespace Sokosolver
@@ -117,7 +119,33 @@ namespace Sokosolver
           button2.Text = "Next";
           return;
         }
-        textBox4.Text = string.Concat(sokoWahn.GetLösungsweg().Select(x => x + "\r\n"));
+        if (sokoWahn.GetType().ToString().Contains("SokoWahn_4th"))
+        {
+          int w = 0;
+          var weg = sokoWahn.GetLösungsweg().Select(x =>
+          {
+            w = x.IndexOf('\r');
+            int p = x.IndexOf(" - Tiefe:", StringComparison.Ordinal);
+            if (p < 0) p = x.Length - 2;
+            string str = x.Substring(0, p);
+            str += new string(' ', w - str.Split('\n').Last().Length);
+            return str.Replace("\r", "").Replace("\n", "");
+          }).Reverse().ToArray();
+          var last = new SokowahnRaum(weg[0].ToArray(), w);
+          string steps = "";
+          for (int i = 1; i < weg.Length; i++)
+          {
+            var next = new SokowahnRaum(weg[i].ToArray(), w);
+            steps += last.GetSteps(next);
+            last = next;
+          }
+          textBox4.Text = new SokowahnRaum(weg[0].ToArray(), w) + "\r\n" + steps + "\r\n";
+          //"\r\n" + string.Concat(sokoWahn.GetLösungsweg().Select(x => x + "\r\n"));
+        }
+        else
+        {
+          textBox4.Text = string.Concat(sokoWahn.GetLösungsweg().Select(x => x + "\r\n"));
+        }
         if (textBox4.Text == "") textBox4.Text = sokoWahn.ToString();
         timer1.Enabled = false;
         button4.Text = "Auto";
@@ -161,20 +189,20 @@ namespace Sokosolver
 
     private void Form1_Load(object sender, EventArgs e)
     {
-//      textBox4.Text = @"     #### 
-//     #  ##
-//     # $ #
-//   ### # #
-//  ##     #
-//###   $ ##
-//#  . $### 
-//# @.  #   
-//# #.#$#   
-//#  .  #   
-//#######   ";
+      //      textBox4.Text = @"     #### 
+      //     #  ##
+      //     # $ #
+      //   ### # #
+      //  ##     #
+      //###   $ ##
+      //#  . $### 
+      //# @.  #   
+      //# #.#$#   
+      //#  .  #   
+      //#######   ";
 
       //textBox4.Text = "214";
-      textBox4.Text = "261";
+      //textBox4.Text = "261";
       //textBox4.Text = "216";
 
 #if DEBUG
