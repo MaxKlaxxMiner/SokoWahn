@@ -3,7 +3,9 @@ Todo: http://www.game-sokoban.com/
 Name: SokoWahn.Solver
 
   146: aenigma :: soko 02
-  102: aenigma :: soko 04
+
+--------------------------------------------------
+
   361: aenigma :: soko 05
   136: aenigma :: soko 07
   293: aenigma :: soko 08

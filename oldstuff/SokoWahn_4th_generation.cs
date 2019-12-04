@@ -21,7 +21,7 @@ namespace Sokosolver
 #if byteModus
   public class SokoWahn_4th_ByteModus : SokoWahnInterface
 #else
- public class SokoWahn_4th : SokoWahnInterface
+  public class SokoWahn_4th : SokoWahnInterface
 #endif
   {
     #region # // --- statische Variablen ---
@@ -68,10 +68,10 @@ namespace Sokosolver
     /// </summary>
     SokowahnLinearListByte[] vorwärtsSucher;
 #else
-  /// <summary>
-  /// Listen mit den noch zu prüfenden Stellungen für die vorwärts gerichtete Suche
-  /// </summary>
-  SokowahnLinearList[] vorwärtsSucher;
+    /// <summary>
+    /// Listen mit den noch zu prüfenden Stellungen für die vorwärts gerichtete Suche
+    /// </summary>
+    SokowahnLinearList[] vorwärtsSucher;
 #endif
 
     /// <summary>
@@ -91,10 +91,10 @@ namespace Sokosolver
     /// </summary>
     SokowahnLinearListByte[] rückwärtsSucher;
 #else
-  /// <summary>
-  /// Listen mit den noch zu prüfenden Stellungen für die rückwärts gerichtete Suche
-  /// </summary>
-  SokowahnLinearList[] rückwärtsSucher;
+    /// <summary>
+    /// Listen mit den noch zu prüfenden Stellungen für die rückwärts gerichtete Suche
+    /// </summary>
+    SokowahnLinearList[] rückwärtsSucher;
 #endif
 
     /// <summary>
@@ -126,11 +126,11 @@ namespace Sokosolver
     /// <param name="spielFeld">Spielfeld als Textzeilen</param>
     public SokoWahn_4th_ByteModus(string spielFeld)
 #else
-  /// <summary>
-  /// Konstruktor
-  /// </summary>
-  /// <param name="spielFeld">Spielfeld als Textzeilen</param>
-  public SokoWahn_4th(string spielFeld)
+    /// <summary>
+    /// Konstruktor
+    /// </summary>
+    /// <param name="spielFeld">Spielfeld als Textzeilen</param>
+    public SokoWahn_4th(string spielFeld)
 #endif
     {
       SokowahnStaticTools.SpielfeldEinlesen(spielFeld, out feldBreite, out feldHöhe, out feldSpielerStartPos, out feldData, out feldDataLeer);
@@ -150,7 +150,7 @@ namespace Sokosolver
 #if byteModus
       vorwärtsSucher = new SokowahnLinearListByte[0];
 #else
-   vorwärtsSucher = new SokowahnLinearList[0];
+      vorwärtsSucher = new SokowahnLinearList[0];
 #endif
       VorwärtsAdd(raumBasis.GetStellung());
 
@@ -160,7 +160,7 @@ namespace Sokosolver
 #if byteModus
       rückwärtsSucher = new SokowahnLinearListByte[0];
 #else
-   rückwärtsSucher = new SokowahnLinearList[0];
+      rückwärtsSucher = new SokowahnLinearList[0];
 #endif
 
       foreach (SokowahnStellung stellung in SokowahnStaticTools.SucheZielStellungen(raumBasis))
@@ -225,7 +225,7 @@ namespace Sokosolver
 #if byteModus
         vorwärtsSucher[vorwärtsSucher.Length - 1] = new SokowahnLinearListByte(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #else
-    vorwärtsSucher[vorwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
+        vorwärtsSucher[vorwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #endif
       }
 
@@ -246,7 +246,7 @@ namespace Sokosolver
 #if byteModus
         vorwärtsSucher[vorwärtsSucher.Length - 1] = new SokowahnLinearListByte(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #else
-    vorwärtsSucher[vorwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
+        vorwärtsSucher[vorwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #endif
       }
 
@@ -267,7 +267,7 @@ namespace Sokosolver
 #if byteModus
         rückwärtsSucher[rückwärtsSucher.Length - 1] = new SokowahnLinearListByte(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #else
-    rückwärtsSucher[rückwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
+        rückwärtsSucher[rückwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #endif
       }
 
@@ -288,7 +288,7 @@ namespace Sokosolver
 #if byteModus
         rückwärtsSucher[rückwärtsSucher.Length - 1] = new SokowahnLinearListByte(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #else
-    rückwärtsSucher[rückwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
+        rückwärtsSucher[rückwärtsSucher.Length - 1] = new SokowahnLinearList(raumBasis.KistenAnzahl + 1, ListBufferGröße, TempOrdner);
 #endif
       }
 
@@ -469,6 +469,10 @@ namespace Sokosolver
     #endregion
 
     #region # // --- Public Methoden ---
+
+    int aktuelleZugwahlTiefe = -1;
+    bool aktuelleZugwahl = false;
+
     /// <summary>
     /// berechnet den nächsten Schritt
     /// </summary>
@@ -512,8 +516,15 @@ namespace Sokosolver
           return false;
         }
 
-        if (vorwärtsSucher[vorwärtsTiefe].SatzAnzahl <= rückwärtsSucher[rückwärtsTiefe].SatzAnzahl)
+        if (vorwärtsTiefe + rückwärtsTiefe != aktuelleZugwahlTiefe)
+        {
+          aktuelleZugwahlTiefe = vorwärtsTiefe + rückwärtsTiefe;
+          aktuelleZugwahl = bekannteStellungen.HashAnzahl < zielStellungen.HashAnzahl;
+        }
+
+        //if (vorwärtsSucher[vorwärtsTiefe].SatzAnzahl <= rückwärtsSucher[rückwärtsTiefe].SatzAnzahl)
         //if (bekannteStellungen.HashAnzahl < zielStellungen.HashAnzahl)
+        if (aktuelleZugwahl)
         {
           return SucheVorwärts(limit);
         }

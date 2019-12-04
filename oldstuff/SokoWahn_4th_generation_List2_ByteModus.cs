@@ -335,12 +335,12 @@ namespace Sokosolver
 #endif
 #endif
 .SelectMany(stellung =>
-   {
-     SokowahnRaum raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
-     raum.LadeStellung(stellungen, stellung * satzGröße, vorwärtsTiefe);
-     if (bekannteStellungen.Get(raum.Crc) < vorwärtsTiefe) return Enumerable.Empty<SokowahnStellungRun>();
-     return raum.GetVariantenRun();
-   }).ToArray();
+{
+  SokowahnRaum raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
+  raum.LadeStellung(stellungen, stellung * satzGröße, vorwärtsTiefe);
+  if (bekannteStellungen.Get(raum.Crc) < vorwärtsTiefe) return Enumerable.Empty<SokowahnStellungRun>();
+  return raum.GetVariantenRun();
+}).ToArray();
 
       foreach (var variante in ergebnisse)
       {
@@ -419,11 +419,11 @@ namespace Sokosolver
 #endif
 #endif
 .SelectMany(stellung =>
-   {
-     SokowahnRaum raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
-     raum.LadeStellung(stellungen, stellung * satzGröße, 60000 - rückwärtsTiefe);
-     return raum.GetVariantenRückwärtsRun();
-   }).Where(x => { int find = zielStellungen.Get(x.crc64); return find == 65535 || find < x.zugTiefe; }).ToArray();
+{
+  SokowahnRaum raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
+  raum.LadeStellung(stellungen, stellung * satzGröße, 60000 - rückwärtsTiefe);
+  return raum.GetVariantenRückwärtsRun();
+}).Where(x => { int find = zielStellungen.Get(x.crc64); return find == 65535 || find < x.zugTiefe; }).ToArray();
 
       foreach (var variante in ergebnisse)
       {
@@ -475,6 +475,13 @@ namespace Sokosolver
     #endregion
 
     #region # // --- Public Methoden ---
+
+    int aktuelleZugwahlTiefe = -1;
+    bool aktuelleZugwahl = false;
+    List<long> hashNutzung = new List<long>();
+    List<long> hashVorwärtsNutzung = new List<long>();
+    List<long> hashRückwärtsNutzung = new List<long>();
+
     /// <summary>
     /// berechnet den nächsten Schritt
     /// </summary>
@@ -518,8 +525,26 @@ namespace Sokosolver
           return false;
         }
 
-        if (vorwärtsSucher[vorwärtsTiefe].SatzAnzahl <= rückwärtsSucher[rückwärtsTiefe].SatzAnzahl)
+        if (SuchTiefe != aktuelleZugwahlTiefe)
+        {
+          aktuelleZugwahlTiefe = SuchTiefe;
+          aktuelleZugwahl = bekannteStellungen.HashAnzahl < zielStellungen.HashAnzahl;
+
+          if (vorwärtsTiefe > hashVorwärtsNutzung.Count) hashVorwärtsNutzung.Add(bekannteStellungen.HashAnzahl);
+          if (rückwärtsTiefe > hashRückwärtsNutzung.Count) hashRückwärtsNutzung.Add(zielStellungen.HashAnzahl);
+          hashNutzung.Add(bekannteStellungen.HashAnzahl + zielStellungen.HashAnzahl);
+
+          if (vorwärtsTiefe > 10 && rückwärtsTiefe > 10)
+          {
+            long letzteVorwärts10 = hashVorwärtsNutzung[hashVorwärtsNutzung.Count - 1] - hashVorwärtsNutzung[hashVorwärtsNutzung.Count - 11];
+            long letzteRückwärts10 = hashRückwärtsNutzung[hashRückwärtsNutzung.Count - 1] - hashRückwärtsNutzung[hashRückwärtsNutzung.Count - 11];
+            aktuelleZugwahl = letzteVorwärts10 < letzteRückwärts10;
+          }
+        }
+
+        //if (vorwärtsSucher[vorwärtsTiefe].SatzAnzahl <= rückwärtsSucher[rückwärtsTiefe].SatzAnzahl)
         //if (bekannteStellungen.HashAnzahl < zielStellungen.HashAnzahl)
+        if (aktuelleZugwahl)
         {
           return SucheVorwärts(limit);
         }
@@ -724,7 +749,27 @@ namespace Sokosolver
             }
             sumRückwärts -= rückwärtsSucher[i].SatzAnzahl;
           }
-          ausgabe.AppendLine("Tiefe: " + (vorwärtsTiefe + rückwärtsTiefe).ToString("#,##0") + " - " + (vorwärtsSucher.Length + rückwärtsSucher.Length).ToString("#,##0") + " (" + (tiefeVorwärts + tiefeRückwärts).ToString("#,##0.00") + ")").AppendLine();
+          ausgabe.Append("Tiefe: " + (vorwärtsTiefe + rückwärtsTiefe).ToString("#,##0") + " - " + (vorwärtsSucher.Length + rückwärtsSucher.Length).ToString("#,##0") + " (" + (tiefeVorwärts + tiefeRückwärts).ToString("#,##0.00") + ")");
+          if (hashNutzung.Count > 20 && hashNutzung.Last() > 1000000 && hashNutzung.Last() < 1000000000)
+          {
+            double anstiegLetzte = hashNutzung[hashNutzung.Count - 1] - hashNutzung[hashNutzung.Count - 11];
+            double anstiegDavor = hashNutzung[hashNutzung.Count - 11] - hashNutzung[hashNutzung.Count - 21];
+            double mulProTiefe = Math.Pow(anstiegLetzte / anstiegDavor, 1 / 10.0);
+            if (mulProTiefe > 1.0001)
+            {
+              int tiefe = hashNutzung.Count;
+              double hashErwartung = hashNutzung[hashNutzung.Count - 1];
+              double hashAnstieg = anstiegLetzte * 0.1;
+              while (hashErwartung < 1000000000)
+              {
+                tiefe++;
+                hashErwartung += hashAnstieg;
+                hashAnstieg *= mulProTiefe;
+              }
+              ausgabe.Append(" - max: " + tiefe.ToString("N0") + " (1 G-Hash)");
+            }
+          }
+          ausgabe.AppendLine().AppendLine();
         }
 
         string[] vorwärtsZeilen = Enumerable.Range(0, vorwärtsSucher.Length).Where(i => vorwärtsSucher[i].SatzAnzahl > 0 || i >= vorwärtsTiefe).Select(i => "[" + i + "] " + vorwärtsSucher[i].ToString()).ToArray();
