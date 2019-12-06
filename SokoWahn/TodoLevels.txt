@@ -3,12 +3,7 @@ Todo: http://www.game-sokoban.com/
 Name: SokoWahn.Solver
 
   146: aenigma :: soko 02
-
---------------------------------------------------
-
   361: aenigma :: soko 05
-  136: aenigma :: soko 07
-  293: aenigma :: soko 08
   211: aenigma :: soko 10
   189: aenigma :: soko 16
   220: aenigma :: soko 17
@@ -17,8 +12,7 @@ Name: SokoWahn.Solver
   315: aenigma :: soko 20
   302: aenigma :: soko 21
   212: aenigma :: soko 22
-  211: aenigma :: soko 24
-  101: aenigma :: soko 25
+  221: aenigma :: soko 24
   321: aenigma :: soko 26
   278: aenigma :: soko 27
   307: aenigma :: soko 28
@@ -26,7 +20,6 @@ Name: SokoWahn.Solver
   326: aenigma :: soko 30
   312: aenigma :: soko 31
   360: aenigma :: soko 32
-  180: aenigma :: soko 33
   227: aenigma :: soko 34
   426: aenigma :: soko 35
   287: aenigma :: soko 36
@@ -37,11 +30,9 @@ Name: SokoWahn.Solver
   729: aenigma :: soko 42
   262: aenigma :: soko 43
   332: aenigma :: soko 45
-  401: aenigma :: soko 47
   797: aenigma :: soko 48
   275: A.K.K. Informatika :: level 06
   640: A.K.K. Informatika :: level 07
-  474: A.K.K. Informatika :: level 10
   606: A.K.K. Informatika :: level 11
   266: A.K.K. Informatika :: level 13
   510: A.K.K. Informatika :: level 14
@@ -51,7 +42,6 @@ Name: SokoWahn.Solver
   420: A.K.K. Informatika :: level 18
   514: A.K.K. Informatika :: level 19
   808: A.K.K. Informatika :: level 20
-  223: A.K.K. Informatika :: level 21
   893: A.K.K. Informatika :: level 22
 1.053: A.K.K. Informatika :: level 23
   689: A.K.K. Informatika :: level 25
@@ -141,7 +131,6 @@ Name: SokoWahn.Solver
 1.085: ABHT 01 :: level 77 - Mondrian
 1.071: ABHT 01 :: level 78 - Tower of chameleon
 2.489: ABHT 01 :: level 79 - Tower of chameleon #2
-  359: ABHT 01 :: level 80 - Shuriken
   470: ABHT 01 :: level 81 - Thug Life
 1.125: ABHT 01 :: level 82 - A Bit Harder Than Recreation 552
   202: ABHT 01 :: level 83 - A Bit Harder Than Chrysalis 10 48
@@ -166,7 +155,6 @@ Name: SokoWahn.Solver
   125: ABHT 02 :: level 04
   260: ABHT 02 :: level 05
   356: ABHT 02 :: level 06
-  150: ABHT 02 :: level 07
   214: ABHT 02 :: level 08
   313: ABHT 02 :: level 09
   274: ABHT 02 :: level 10
@@ -199,7 +187,6 @@ Name: SokoWahn.Solver
   837: ABHT 02 :: level 37
   401: ABHT 02 :: level 38
   856: ABHT 02 :: level 39
-   88: ABHT 02 :: level 40
   264: ABHT 02 :: level 41
   121: ABHT 02 :: level 42
   194: ABHT 02 :: level 43
@@ -251,7 +238,6 @@ Name: SokoWahn.Solver
   430: ABHT 02 :: level 89
   452: ABHT 02 :: level 90
 1.753: ABHT 02 :: level 91
-  143: ABHT 02 :: level 92
 1.020: ABHT 02 :: level 93
   511: ABHT 02 :: level 94
   703: ABHT 02 :: level 95
@@ -285,7 +271,6 @@ Name: SokoWahn.Solver
   580: AC Smileys :: smileys 2.21
   392: AC Smileys :: smileys 2.22
   320: AC Smileys :: smileys 2.23
-  288: AC Smileys :: smileys 2.25
   594: AC Smileys :: smileys 2.26
   199: AC Smileys :: smileys 2.27
   565: AC Smileys :: smileys 2.28
@@ -296,13 +281,11 @@ Name: SokoWahn.Solver
   258: AC Smileys :: smileys 2.33
   622: AC Smileys :: smileys 2.34
   628: AC Smileys :: smileys 2.35
-  189: AC Smileys :: smileys 2.36
   636: AC Smileys :: smileys 2.37
   189: AC Smileys :: smileys 2.38
   609: AC Smileys :: smileys 2.39
   616: AC Smileys :: smileys 2.40
   420: AC Smileys :: smileys 2.41
-  261: AC Smileys :: smileys 2.42
   307: AC Smileys :: smileys 2.43
   272: AC Smileys :: smileys 2.44
   329: AC Smileys :: smileys 2.45
@@ -316,17 +299,11 @@ Name: SokoWahn.Solver
   392: AC Smileys :: smileys 2.53
   420: AC Smileys :: smileys 2.57
   228: AC Smileys :: smileys 2.58
-  296: AC Smileys :: smileys 2.59
-  468: AC Smileys :: smileys 2.60
   749: AC Smileys :: smileys 2.61
   403: AC Smileys :: smileys 2.62
   288: AC Smileys :: smileys 2.63
-  207: AC Smileys :: smileys 2.64
   704: AC Smileys :: smileys 2.65
-  524: AC Smileys :: smileys 2.66
   477: AC Smileys :: smileys 2.67
-  381: AC Smileys :: smileys 2.68
-  342: AC Smileys :: smileys 2.69
   350: AC Smileys :: smileys 2.70
   549: AC Smileys :: smileys 2.71
   526: AC Smileys :: smileys 2.72
@@ -352,8 +329,6 @@ Name: SokoWahn.Solver
   979: AC Smileys :: smileys 2.92
   560: AC Smileys :: smileys 2.93
   366: AC Smileys :: smileys 2.94
-  315: AC Smileys :: smileys 2.95
-  313: AC Smileys :: smileys 2.96
   562: AC Smileys :: smileys 2.97
   615: AC Smileys :: smileys 2.98
   712: AC Smileys :: smileys 2.99
@@ -361,8 +336,6 @@ Name: SokoWahn.Solver
   143: AC Smileys :: smileys 2.101
   219: AC Smileys :: smileys 2.102
 2.736: AC Smileys :: smileys 2.103
-   81: AC Smileys :: smileys 2.104
-  109: AC Smileys :: smileys 2.105
   947: AC Smileys :: smileys 3.001
 1.211: AC Smileys :: smileys 3.002
   488: AC Smileys :: smileys 3.003

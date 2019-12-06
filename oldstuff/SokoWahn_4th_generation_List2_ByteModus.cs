@@ -755,18 +755,22 @@ namespace Sokosolver
             double anstiegLetzte = hashNutzung[hashNutzung.Count - 1] - hashNutzung[hashNutzung.Count - 11];
             double anstiegDavor = hashNutzung[hashNutzung.Count - 11] - hashNutzung[hashNutzung.Count - 21];
             double mulProTiefe = Math.Pow(anstiegLetzte / anstiegDavor, 1 / 10.0);
-            if (mulProTiefe > 1.0001)
+            if (mulProTiefe > 1.00000001)
             {
-              int tiefe = hashNutzung.Count;
+              int tiefe1 = hashNutzung.Count;
+              int tiefe2 = hashNutzung.Count;
+              int tiefe3 = hashNutzung.Count;
               double hashErwartung = hashNutzung[hashNutzung.Count - 1];
               double hashAnstieg = anstiegLetzte * 0.1;
-              while (hashErwartung < 1000000000)
+              while (hashErwartung < 3000000000 && tiefe3 < 99999)
               {
-                tiefe++;
+                if (hashErwartung < 100000000) tiefe1++;
+                if (hashErwartung < 1000000000) tiefe2++;
+                tiefe3++;
                 hashErwartung += hashAnstieg;
                 hashAnstieg *= mulProTiefe;
               }
-              ausgabe.Append(" - max: " + tiefe.ToString("N0") + " (1 G-Hash)");
+              ausgabe.Append(" - max: " + tiefe1.ToString("N0") + " / " + tiefe2.ToString("N0") + " / " + tiefe3.ToString("N0") + " (100M, 1G, 3G)");
             }
           }
           ausgabe.AppendLine().AppendLine();
