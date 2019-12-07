@@ -337,7 +337,6 @@ Name: SokoWahn.Solver
   219: AC Smileys :: smileys 2.102
 2.736: AC Smileys :: smileys 2.103
   947: AC Smileys :: smileys 3.001
-1.211: AC Smileys :: smileys 3.002
   488: AC Smileys :: smileys 3.003
   440: AC Smileys :: smileys 3.004
   515: AC Smileys :: smileys 3.005
@@ -378,7 +377,6 @@ Name: SokoWahn.Solver
   794: AC Smileys :: smileys 3.041
   719: AC Smileys :: smileys 3.042
   657: AC Smileys :: smileys 3.043
-  641: AC Smileys :: smileys 3.044
   181: AC Smileys :: smileys 3.045
   222: AC Smileys :: smileys 3.046
   874: AC Smileys :: smileys 3.047
@@ -392,7 +390,6 @@ Name: SokoWahn.Solver
   781: AC Smileys :: smileys 3.055
   647: AC Smileys :: smileys 3.056
   506: AC Smileys :: smileys 3.057
-  672: AC Smileys :: smileys 3.058
   836: AC Smileys :: smileys 3.059
   841: AC Smileys :: smileys 3.060
   877: AC Smileys :: smileys 3.061
@@ -442,11 +439,9 @@ Name: SokoWahn.Solver
   184: AC Smileys :: smileys 3.105
   616: AC Smileys :: smileys 3.106
   689: AC Smileys :: smileys 3.107
-  775: AC Smileys :: smileys 3.108
   607: AC Smileys :: smileys 3.109
   570: AC Smileys :: smileys 3.110
   741: AC Smileys :: smileys 3.111
-  118: AC Smileys :: smileys 3.112
   603: AC Smileys :: smileys 3.113
   531: AC Smileys :: smileys 3.114
   395: AC Smileys :: smileys 3.116
@@ -467,14 +462,9 @@ Name: SokoWahn.Solver
   993: AC Smileys :: smileys 3.131
   534: AC Smileys :: smileys 3.132
   537: AC Smileys :: smileys 3.133
-  693: AC Smileys :: smileys 3.134
-  294: AC Smileys :: smileys 3.135
-  321: AC Smileys :: smileys 3.136
-  421: AC Smileys :: smileys 3.137
   543: AC Smileys :: smileys 3.138
   718: AC Smileys :: smileys 3.139
   664: AC Smileys :: smileys 3.140
-  764: AC Smileys :: smileys 3.141
   701: AC Smileys :: smileys 3.142
   347: AC Smileys :: smileys 3.143
   462: AC Smileys :: smileys 3.144
@@ -501,7 +491,6 @@ Name: SokoWahn.Solver
   300: AC Smileys :: smileys 3.165
 1.015: AC Smileys :: smileys 3.166
   229: AC Smileys :: smileys 3.167
-  110: AC Smileys :: smileys 3.168
   390: AC Smileys :: smileys 3.169
   996: AC Smileys :: smileys 3.170
 1.192: AC Smileys :: smileys 3.171
@@ -510,7 +499,6 @@ Name: SokoWahn.Solver
   666: AC Smileys :: smileys 3.174
   838: AC Smileys :: smileys 3.175
   784: AC Smileys :: smileys 3.176
-  845: AC Smileys :: smileys 3.177
   657: AC Smileys :: smileys 3.178
   395: AC Smileys :: smileys 3.179
   872: AC Smileys :: smileys 3.180
@@ -527,7 +515,6 @@ Name: SokoWahn.Solver
 1.173: AC Smileys :: smileys 3.191
   314: AC Smileys :: smileys 3.192
   696: AC Smileys :: smileys 3.193
-  507: AC Smileys :: smileys 3.194
   711: AC Smileys :: smileys 3.195
   416: AC Smileys :: smileys 3.196
   555: AC Smileys :: smileys 3.197
@@ -550,7 +537,6 @@ Name: SokoWahn.Solver
   398: Aenigma arranged :: level 21
   307: Aenigma arranged :: level 22
   349: Aenigma arranged :: level 24
-  115: Aenigma arranged :: level 25
   447: Aenigma arranged :: level 26
   367: Aenigma arranged :: level 27
   349: Aenigma arranged :: level 28

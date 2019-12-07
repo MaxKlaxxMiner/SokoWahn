@@ -608,10 +608,13 @@ namespace Sokosolver
     /// <returns>Lösungsweg als einzelne Spielfelder</returns>
     public IEnumerable<string> GetLösungsweg()
     {
-      if (lösungGefunden) // Lösung gefunden?
+      if (lösungGefunden || gefundenTiefe < 65535) // Lösung gefunden?
       {
-        if (vorwärtsSucher != null) for (int i = 0; i < vorwärtsSucher.Length; i++) if (vorwärtsSucher[i] != null) vorwärtsSucher[i].Dispose();
-        if (rückwärtsSucher != null) for (int i = 0; i < rückwärtsSucher.Length; i++) if (rückwärtsSucher[i] != null) rückwärtsSucher[i].Dispose();
+        if (lösungGefunden)
+        {
+          if (vorwärtsSucher != null) for (int i = 0; i < vorwärtsSucher.Length; i++) if (vorwärtsSucher[i] != null) vorwärtsSucher[i].Dispose();
+          if (rückwärtsSucher != null) for (int i = 0; i < rückwärtsSucher.Length; i++) if (rückwärtsSucher[i] != null) rückwärtsSucher[i].Dispose();
+        }
 
         SokowahnRaum tmpRaum = new SokowahnRaum(raumBasis);
 
@@ -697,6 +700,15 @@ namespace Sokosolver
     }
 
     /// <summary>
+    /// merkt sich den temporären Lösungsweg
+    /// </summary>
+    string tmpLösung = "";
+    /// <summary>
+    /// merkt sich die Tiefe der temporären Lösung
+    /// </summary>
+    int tmpLösungTiefe;
+
+    /// <summary>
     /// gibt das gesamte Spielfeld als lesbaren (genormten) Inhalt aus (Format siehe: <see cref="http://de.wikipedia.org/wiki/Sokoban#Levelnotation">Wikipedia</see> )
     /// </summary>
     /// <returns>lesbarer Inhalt</returns>
@@ -719,6 +731,14 @@ namespace Sokosolver
 
         if (gefundenTiefe < 65535)
         {
+          ausgabe.Clear();
+          if (tmpLösungTiefe != gefundenTiefe)
+          {
+            tmpLösung = SokowahnStaticTools.LösungswegZuSteps(GetLösungsweg());
+            tmpLösungTiefe = gefundenTiefe;
+          }
+          ausgabe.AppendLine(tmpLösung);
+
           int pos = gefundenStellung.zugTiefe;
           if (pos > 30000) pos = gefundenTiefe - (60000 - pos);
           ausgabe.AppendLine("Gefunden: " + gefundenTiefe.ToString("#,##0") + " (" + (pos - vorwärtsTiefe).ToString("#,##0") + " / " + (gefundenTiefe - vorwärtsTiefe - rückwärtsTiefe) + ")").AppendLine();
