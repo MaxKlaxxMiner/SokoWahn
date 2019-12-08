@@ -462,6 +462,11 @@ namespace Sokosolver.SokowahnTools
     string blockerDatei;
 
     /// <summary>
+    /// gitb an, ob eine Blocker-Datei geladen wurde
+    /// </summary>
+    bool blockerGeladen = false;
+
+    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="blockerDatei">Pfad zur Datei, worin sich eventuell archivierte Blocker-Daten befinden</param>
@@ -476,6 +481,7 @@ namespace Sokosolver.SokowahnTools
       if (File.Exists(blockerDatei))
       {
         LadeAlleBlocker();
+        blockerGeladen = true;
       }
     }
 
@@ -928,10 +934,13 @@ namespace Sokosolver.SokowahnTools
         #region # case BlockerStatus.Init: // Start einer Blocker-Sucher (eine neue Kistenanzahl wird ausprobiert)
         case BlockerStatus.Init:
         {
-          if (suchKistenAnzahl + 1 >= maxKisten)
+          bool abbruch = suchKistenAnzahl + 1 >= maxKisten; // Kisten-Limit erreicht?
+          if (!abbruch && !blockerGeladen && (suchKistenAnzahl >= 3 && NextSchätzen > 15000000 || suchKistenAnzahl >= 4 && NextSchätzen > 5000000)) abbruch = true; // Limit für automatischen Stop erreicht?
+
+          if (abbruch)
           {
             Abbruch();
-            return false; // Kisten-Limit erreicht
+            return false;
           }
 
           suchKistenAnzahl++;

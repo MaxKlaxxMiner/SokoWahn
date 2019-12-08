@@ -599,10 +599,37 @@ Name: SokoWahn.Solver
 1.141: Alberto Borella :: level 44
 1.285: Alberto Borella :: level 45
   409: Alberto Borella :: level 47
-  181: Alberto Borella :: level 52
   307: Alberto Borella :: level 54
   116: Alberto Borella :: level 55
   138: Alberto Borella :: level 56
   313: Alberto Borella :: level 57
 3.057: Alberto Borella :: level 58
   198: Alberto Borella :: level 60
+  737: Alberto Garcia 1 :: 1. soko 7
+  876: Alberto Garcia 1 :: 1. soko 13
+  563: Alberto Garcia 1 :: 1. soko 16
+1.587: Alberto Garcia 1 :: 1. soko 17
+  315: Alberto Garcia 1 :: 1. soko 18
+  569: Alberto Garcia 1 :: 1. soko 23
+  788: Alberto Garcia 1 :: 1. soko 27
+3.387: Alberto Garcia 1 :: 1. soko 30
+1.262: Alberto Garcia 1 :: 1. soko 31
+  336: Alberto Garcia 1 :: 1. soko 35
+  483: Alberto Garcia 1 :: 1. soko 37
+  845: Alberto Garcia 1 :: 1. soko 38
+  386: Alberto Garcia 1 :: 1. soko 39
+1.898: Alberto Garcia 1 :: 1. soko 40
+  810: Alberto Garcia 1 :: 1. soko 42
+  681: Alberto Garcia 1 :: 1. soko 45
+3.184: Alberto Garcia 1 :: 1. soko 46
+  816: Alberto Garcia 1 :: 1. soko 48
+  913: Alberto Garcia 1 :: 1. soko 49
+  504: Alberto Garcia 1 :: 2. soko 3
+2.609: Alberto Garcia 1 :: 2. soko 4
+  772: Alberto Garcia 1 :: 2. soko 8
+  721: Alberto Garcia 1 :: 2. soko 10
+  329: Alberto Garcia 1 :: 2. soko 27
+  466: Alberto Garcia 1 :: 2. soko 33
+  717: Alberto Garcia 1 :: 2. soko 35
+  370: Alberto Garcia 1 :: 2. soko 41
+  353: Alberto Garcia 1 :: 2. soko 45

@@ -193,7 +193,9 @@ namespace Sokosolver
         spielFeldCrc = (spielFeldCrc ^ (ulong)zeichen) * 0x100000001b3;
       }
 
-      blocker = new SokowahnBlockerB(Environment.CurrentDirectory + "\\temp\\blockerB_x" + spielFeldCrc.ToString("x").PadLeft(16, '0') + ".gz", raumBasis);
+      string blockerPath = Environment.CurrentDirectory + "\\blocker\\";
+      Directory.CreateDirectory(blockerPath);
+      blocker = new SokowahnBlockerB(blockerPath + "blockerB_x" + spielFeldCrc.ToString("x").PadLeft(16, '0') + ".gz", raumBasis);
     }
     #endregion
 
@@ -770,28 +772,25 @@ namespace Sokosolver
             sumRückwärts -= rückwärtsSucher[i].SatzAnzahl;
           }
           ausgabe.Append("Tiefe: " + (vorwärtsTiefe + rückwärtsTiefe).ToString("#,##0") + " - " + (vorwärtsSucher.Length + rückwärtsSucher.Length).ToString("#,##0") + " (" + (tiefeVorwärts + tiefeRückwärts).ToString("#,##0.00") + ")");
-          if (hashNutzung.Count > 20 && hashNutzung.Last() > 1000000 && hashNutzung.Last() < 1000000000)
+          if (hashNutzung.Count > 20 && hashNutzung.Last() > 1000000 && hashNutzung.Last() < 3000000000)
           {
             double anstiegLetzte = hashNutzung[hashNutzung.Count - 1] - hashNutzung[hashNutzung.Count - 11];
             double anstiegDavor = hashNutzung[hashNutzung.Count - 11] - hashNutzung[hashNutzung.Count - 21];
-            double mulProTiefe = Math.Pow(anstiegLetzte / anstiegDavor, 1 / 10.0);
-            if (mulProTiefe > 1.00000001)
+            double mulProTiefe = Math.Max(1, Math.Pow(anstiegLetzte / anstiegDavor, 1 / 10.0));
+            int tiefe1 = hashNutzung.Count;
+            int tiefe2 = hashNutzung.Count;
+            int tiefe3 = hashNutzung.Count;
+            double hashErwartung = hashNutzung[hashNutzung.Count - 1];
+            double hashAnstieg = anstiegLetzte * 0.1;
+            while (hashErwartung < 3000000000 && tiefe3 < 9999)
             {
-              int tiefe1 = hashNutzung.Count;
-              int tiefe2 = hashNutzung.Count;
-              int tiefe3 = hashNutzung.Count;
-              double hashErwartung = hashNutzung[hashNutzung.Count - 1];
-              double hashAnstieg = anstiegLetzte * 0.1;
-              while (hashErwartung < 3000000000 && tiefe3 < 99999)
-              {
-                if (hashErwartung < 100000000) tiefe1++;
-                if (hashErwartung < 1000000000) tiefe2++;
-                tiefe3++;
-                hashErwartung += hashAnstieg;
-                hashAnstieg *= mulProTiefe;
-              }
-              ausgabe.Append(" - max: " + tiefe1.ToString("N0") + " / " + tiefe2.ToString("N0") + " / " + tiefe3.ToString("N0") + " (100M, 1G, 3G)");
+              if (hashErwartung < 100000000) tiefe1++;
+              if (hashErwartung < 1000000000) tiefe2++;
+              tiefe3++;
+              hashErwartung += hashAnstieg;
+              hashAnstieg *= mulProTiefe;
             }
+            ausgabe.Append(" - max: " + tiefe1.ToString("N0") + " / " + tiefe2.ToString("N0") + " / " + tiefe3.ToString("N0") + " (100M, 1G, 3G)");
           }
           ausgabe.AppendLine().AppendLine();
         }
