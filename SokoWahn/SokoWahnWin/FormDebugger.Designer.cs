@@ -30,6 +30,8 @@
     {
       this.button1 = new System.Windows.Forms.Button();
       this.listRooms = new System.Windows.Forms.ListBox();
+      this.pictureBoxField = new System.Windows.Forms.PictureBox();
+      ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       this.SuspendLayout();
       // 
       // button1
@@ -55,21 +57,34 @@
       this.listRooms.Location = new System.Drawing.Point(1, 1);
       this.listRooms.Name = "listRooms";
       this.listRooms.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
-      this.listRooms.Size = new System.Drawing.Size(132, 514);
+      this.listRooms.Size = new System.Drawing.Size(132, 724);
       this.listRooms.TabIndex = 1;
       this.listRooms.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      // 
+      // pictureBoxField
+      // 
+      this.pictureBoxField.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+      this.pictureBoxField.Location = new System.Drawing.Point(139, 7);
+      this.pictureBoxField.Name = "pictureBoxField";
+      this.pictureBoxField.Size = new System.Drawing.Size(909, 720);
+      this.pictureBoxField.TabIndex = 2;
+      this.pictureBoxField.TabStop = false;
       // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
-      this.ClientSize = new System.Drawing.Size(1252, 516);
+      this.ClientSize = new System.Drawing.Size(1252, 735);
+      this.Controls.Add(this.pictureBoxField);
       this.Controls.Add(this.listRooms);
       this.Controls.Add(this.button1);
       this.Name = "FormDebugger";
       this.Text = "Form1";
       this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).EndInit();
       this.ResumeLayout(false);
 
     }
@@ -78,6 +93,7 @@
 
     private System.Windows.Forms.Button button1;
     private System.Windows.Forms.ListBox listRooms;
+    private System.Windows.Forms.PictureBox pictureBoxField;
   }
 }
 

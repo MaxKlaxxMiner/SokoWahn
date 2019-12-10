@@ -169,12 +169,16 @@ namespace SokoWahnWin
     ");
     #endregion
 
+    readonly FieldDisplay fieldDisplay;
+
     /// <summary>
     /// Kostruktor
     /// </summary>
     public FormDebugger()
     {
       InitializeComponent();
+      fieldDisplay = new FieldDisplay(pictureBoxField);
+
       network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
       //network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
@@ -182,6 +186,7 @@ namespace SokoWahnWin
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
       //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situationen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
+
       DisplayUpdate();
     }
 
@@ -204,6 +209,8 @@ namespace SokoWahnWin
         listRooms.EndUpdate();
       }
       #endregion
+
+      fieldDisplay.Update(network);
     }
 
     /// <summary>
