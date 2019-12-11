@@ -179,8 +179,8 @@ namespace SokoWahnWin
       InitializeComponent();
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
-      //network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      //network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
+      network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
@@ -224,6 +224,15 @@ namespace SokoWahnWin
       {
         case Keys.Escape: Close(); break;
       }
+    }
+
+    bool innerTimer;
+    void timerDisplay_Tick(object sender, EventArgs e)
+    {
+      if (innerTimer) return;
+      innerTimer = true;
+      DisplayUpdate();
+      innerTimer = false;
     }
   }
 }

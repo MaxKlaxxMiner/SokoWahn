@@ -214,12 +214,24 @@ namespace SokoWahnLib
     /// </summary>
     /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
     /// <param name="pos">Position, welche geprüft werden soll</param>
-    /// <returns>true, wenn fas Feld frei ist</returns>
+    /// <returns>true, wenn das Feld frei ist</returns>
     public static bool IsFree(this ISokoField field, int pos)
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
       char c = field.GetField(pos);
       return c == ' ' || c == '.';
+    }
+
+    /// <summary>
+    /// prüft, ob ein bestimmtes Feld aus einer Wand besteht
+    /// </summary>
+    /// <param name="field">Spielfeld, welches abgefragt werden soll</param>
+    /// <param name="pos">Position, welche geprüft werden soll</param>
+    /// <returns>true, wenn das Feld eine Wand darstellt</returns>
+    public static bool IsWall(this ISokoField field, int pos)
+    {
+      if (pos < 0 || pos >= field.Width * field.Height) return false;
+      return field.GetField(pos) == '#';
     }
   }
 }

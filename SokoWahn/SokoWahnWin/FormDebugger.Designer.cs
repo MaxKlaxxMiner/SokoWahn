@@ -28,9 +28,11 @@
     /// </summary>
     private void InitializeComponent()
     {
+      this.components = new System.ComponentModel.Container();
       this.button1 = new System.Windows.Forms.Button();
       this.listRooms = new System.Windows.Forms.ListBox();
       this.pictureBoxField = new System.Windows.Forms.PictureBox();
+      this.timerDisplay = new System.Windows.Forms.Timer(this.components);
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       this.SuspendLayout();
       // 
@@ -72,6 +74,12 @@
       this.pictureBoxField.TabIndex = 2;
       this.pictureBoxField.TabStop = false;
       // 
+      // timerDisplay
+      // 
+      this.timerDisplay.Enabled = true;
+      this.timerDisplay.Interval = 1;
+      this.timerDisplay.Tick += new System.EventHandler(this.timerDisplay_Tick);
+      // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -94,6 +102,7 @@
     private System.Windows.Forms.Button button1;
     private System.Windows.Forms.ListBox listRooms;
     private System.Windows.Forms.PictureBox pictureBoxField;
+    private System.Windows.Forms.Timer timerDisplay;
   }
 }
 
