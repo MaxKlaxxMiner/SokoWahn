@@ -58,10 +58,10 @@ namespace SokoWahnWin
     {
       float scale = field.Width / (double)background.Width > field.Height / (double)background.Height ? (float)background.Width / field.Width : (float)background.Height / field.Height;
       using (var g = Graphics.FromImage(background))
-      using (var wall = new HatchBrush(HatchStyle.DiagonalBrick, Color.FromArgb(0x333333 - 16777216)))
-      using (var wallBorderL = new Pen(Color.FromArgb(0x555555 - 16777216), 0.8f / scale))
-      using (var wallBorderD = new Pen(Color.FromArgb(0x333333 - 16777216), 0.8f / scale))
-      using (var way = new HatchBrush(HatchStyle.ZigZag, Color.FromArgb(0x331100 - 16777216)))
+      using (var wall = new HatchBrush(HatchStyle.DiagonalBrick, Color.FromArgb(0x666666 - 16777216)))
+      using (var wallBorderL = new Pen(Color.FromArgb(0x888888 - 16777216), 0.8f / scale))
+      using (var wallBorderD = new Pen(Color.FromArgb(0x444444 - 16777216), 0.8f / scale))
+      using (var way = new HatchBrush(HatchStyle.ZigZag, Color.FromArgb(0x442200 - 16777216)))
       {
         g.CompositingQuality = CompositingQuality.HighQuality;
         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
@@ -130,14 +130,17 @@ namespace SokoWahnWin
 
         // --- Vordergrund erstellen ---
         foreground = new Bitmap(newWidth, newHeight, PixelFormat.Format32bppRgb);
-        graphics = Graphics.FromImage(foreground);
-        graphics.DrawImageUnscaled(background, 0, 0);
-
         pictureBox.Image = foreground;
+        graphics = Graphics.FromImage(foreground);
+
         doDraw = true;
       }
 
-      if (doDraw) pictureBox.Refresh();
+      if (doDraw)
+      {
+        graphics.DrawImageUnscaled(background, 0, 0);
+        pictureBox.Refresh();
+      }
 
       isUpdate = false;
     }
