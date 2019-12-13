@@ -633,3 +633,85 @@ Name: SokoWahn.Solver
   717: Alberto Garcia 1 :: 2. soko 35
   370: Alberto Garcia 1 :: 2. soko 41
   353: Alberto Garcia 1 :: 2. soko 45
+  785: Alberto Garcia Arranged :: level 06
+  473: Alberto Garcia Arranged :: level 15
+  704: Alberto Garcia Arranged :: level 23
+  678: Alberto Garcia Arranged :: level 24
+  750: Alberto Garcia Arranged :: level 26
+  769: Alberto Garcia Arranged :: level 29
+  699: Alberto Garcia Arranged :: level 31
+  626: Alberto Garcia Arranged :: level 37
+  666: Alberto Garcia Arranged :: level 38
+  632: Alberto Garcia Arranged :: level 39
+  851: Alberto Garcia Arranged :: level 45
+  707: Alberto Garcia Arranged :: level 58
+  686: Alberto Garcia Arranged :: level 62
+1.440: Alberto Garcia Arranged :: level 64
+1.242: Alberto Garcia Arranged :: level 65
+1.568: Alberto Garcia Arranged :: level 66
+  874: Alberto Garcia Arranged :: level 72
+  849: Alberto Garcia Arranged :: level 74
+  525: Alberto Garcia Arranged :: level 77
+  845: Alberto Garcia Arranged :: level 78
+  615: Alberto Garcia Arranged :: level 80
+  682: Alberto Garcia Arranged :: level 81
+  858: Alberto Garcia Arranged :: level 84
+  364: Alberto Garcia Arranged :: level 85
+  726: Alberto Garcia Arranged :: level 86
+  851: Alberto Garcia Arranged :: level 87
+  955: Alberto Garcia Arranged :: level 89
+  980: Alberto Garcia Arranged :: level 90
+  527: Alberto Garcia Arranged :: level 92
+  168: Alberto Garcia Arranged :: level 93
+  653: Alberto Garcia Arranged :: level 94
+  806: Alberto Garcia Arranged :: level 97
+  357: Alberto Garcia Arranged :: level 107
+  473: Alberto Garcia Arranged :: level 108
+  278: Alberto Garcia Arranged :: level 109
+  224: Alberto Garcia Arranged :: level 110
+  540: Alberto Garcia Arranged :: level 112
+  914: Alberto Garcia Arranged :: level 119
+  865: Alberto Garcia Arranged :: level 122
+  896: Alberto Garcia Arranged :: level 128
+  989: Alberto Garcia Arranged :: level 132
+  477: Alberto Garcia Arranged :: level 135
+  296: Alberto Garcia Arranged :: level 137
+  274: Alberto Garcia Arranged :: level 139
+  781: Alberto Garcia Arranged :: level 142
+  394: Alberto Garcia Arranged :: level 143
+  857: Alberto Garcia Arranged :: level 146
+  262: Alberto Garcia Arranged :: level 147
+  178: Alberto Garcia Arranged :: level 148
+  805: Alberto Garcia Arranged :: level 149
+  107: Alberto Garcia Arranged :: level 154
+  108: Alberto Garcia Arranged :: level 155
+  127: Alberto Garcia Arranged :: level 156
+  171: Alberto Garcia Arranged :: level 161
+  153: Alberto Garcia Arranged :: level 162
+  162: Alberto Garcia Arranged :: level 165
+  324: Alberto Garcia Arranged :: level 166
+  325: Alberto Garcia Arranged :: level 167
+  805: Alberto Garcia Arranged :: level 180
+  804: Alberto Garcia Arranged :: level 181
+  522: Alberto Garcia Arranged :: level 185
+  473: Alberto Garcia Arranged :: level 208
+  405: Alberto Garcia Arranged :: level 209
+  402: Alberto Garcia Arranged :: level 210
+  530: Alberto Garcia Arranged :: level 212
+  597: Alberto Garcia Arranged :: level 213
+  372: Alberto Garcia Arranged :: level 225
+  530: Alberto Garcia Arranged :: level 227
+  242: Alberto Garcia Arranged :: level 234
+  357: Alberto Garcia Arranged :: level 235
+1.099: Alberto Garcia Arranged :: level 236
+  687: Alberto Garcia Arranged :: level 237
+  826: Alberto Garcia Arranged :: level 238
+  622: Alberto Garcia Arranged :: level 242
+  170: Alberto Garcia Arranged :: level 243
+  180: Alberto Garcia Arranged :: level 244
+  491: Alberto Garcia Arranged :: level 245
+  388: Alberto Garcia Best 4 U :: soko 5
+  512: Alberto Garcia Best 4 U :: soko 27
+  268: Alberto Garcia Best 4 U :: soko 34
+  527: Alberto Garcia Best 4 U :: soko 35
+   99: Alberto Garcia Best 4 U :: soko 47
