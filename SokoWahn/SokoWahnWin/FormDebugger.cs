@@ -186,8 +186,6 @@ namespace SokoWahnWin
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
       //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situationen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
-
-      DisplayUpdate();
     }
 
     /// <summary>
@@ -228,6 +226,14 @@ namespace SokoWahnWin
 
     bool innerTimer;
     void timerDisplay_Tick(object sender, EventArgs e)
+    {
+      if (innerTimer) return;
+      innerTimer = true;
+      DisplayUpdate();
+      innerTimer = false;
+    }
+
+    void FormDebugger_Resize(object sender, EventArgs e)
     {
       if (innerTimer) return;
       innerTimer = true;

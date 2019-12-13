@@ -92,6 +92,7 @@
       this.Name = "FormDebugger";
       this.Text = "Form1";
       this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      this.Resize += new System.EventHandler(this.FormDebugger_Resize);
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).EndInit();
       this.ResumeLayout(false);
 
