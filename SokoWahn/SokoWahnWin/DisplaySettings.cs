@@ -1,4 +1,5 @@
-﻿using SokoWahnLib;
+﻿using System.Linq;
+using SokoWahnLib;
 // ReSharper disable MemberCanBePrivate.Global
 
 namespace SokoWahnWin
@@ -11,13 +12,20 @@ namespace SokoWahnWin
     /// <summary>
     /// merkt sich die Spielerposition auf dem Spielfeld (-1 = wird nicht angezeigt)
     /// </summary>
-    public int playerPos = -1;
+    public int playerPos;
+
+    /// <summary>
+    /// merkt sich die Positionen der Kisten
+    /// </summary>
+    public int[] boxes;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
     public DisplaySettings()
     {
+      playerPos = -1;
+      boxes = new int[0];
     }
 
     /// <summary>
@@ -27,6 +35,7 @@ namespace SokoWahnWin
     public DisplaySettings(ISokoField field)
     {
       playerPos = field.PlayerPos;
+      boxes = Enumerable.Range(0, field.Width * field.Height).Where(field.IsBox).ToArray();
     }
 
     /// <summary>
@@ -37,7 +46,8 @@ namespace SokoWahnWin
     {
       return new DisplaySettings
       {
-        playerPos = playerPos
+        playerPos = playerPos,
+        boxes = boxes.ToArray()
       };
     }
 
@@ -49,7 +59,8 @@ namespace SokoWahnWin
     {
       return new
       {
-        playerPos
+        playerPos,
+        boxes = string.Join(",", boxes)
       }.ToString();
     }
   }
