@@ -258,5 +258,21 @@ namespace SokoWahnWin
       DisplayUpdate();
       innerTimer = false;
     }
+
+    void pictureBoxField_Mouse(object sender, MouseEventArgs e)
+    {
+      if (e.Button == MouseButtons.None) return;
+      int pos = fieldDisplay.GetFieldPos(e.X, e.Y);
+      if (pos >= 0)
+      {
+        int roomIndex = -1;
+        for (int i = 0; i < network.rooms.Length; i++) if (network.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
+        if (roomIndex >= 0)
+        {
+          if (e.Button == MouseButtons.Left) listRooms.SelectedIndices.Add(roomIndex);
+          if (e.Button == MouseButtons.Right) listRooms.SelectedIndices.Remove(roomIndex);
+        }
+      }
+    }
   }
 }

@@ -85,6 +85,7 @@ namespace SokoWahnWin
       this.pictureBox = pictureBox;
     }
 
+    #region # // --- Zeichen-Methoden ---
     /// <summary>
     /// erstellt einen neuen Pinsel
     /// </summary>
@@ -285,6 +286,7 @@ namespace SokoWahnWin
       pictureBox.Refresh();
     }
     #endregion
+    #endregion
 
     #region # // --- Update - aktualisiert die Anzeige ---
     /// <summary>
@@ -366,5 +368,29 @@ namespace SokoWahnWin
       isUpdate = false;
     }
     #endregion
+
+    /// <summary>
+    /// wandelt die Pixel-Koordinate in eine Spielfeld-Position um und gibt diese zurück (oder -1, wenn außerhalb des Spielfeldes)
+    /// </summary>
+    /// <param name="x">X-Position in Pixeln</param>
+    /// <param name="y">Y-Position in Pixeln</param>
+    /// <returns>fertige Spielfeld-Position oder -1 wenn außerhalb</returns>
+    public int GetFieldPos(int x, int y)
+    {
+      if (x < 0 || y < 0 || x >= background.Width || y >= background.Height) return -1;
+
+      var m = graphics.Transform.Clone();
+      m.Invert();
+
+      var p = new[] { new PointF(x, y) };
+      m.TransformPoints(p);
+
+      int px = (int)p[0].X;
+      int py = (int)p[0].Y;
+
+      if (px < 0 || px >= network.field.Width || py < 0 || py >= network.field.Height) return -1;
+
+      return px + py * network.field.Width;
+    }
   }
 }

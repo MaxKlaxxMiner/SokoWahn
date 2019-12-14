@@ -74,6 +74,8 @@
       this.pictureBoxField.Size = new System.Drawing.Size(909, 720);
       this.pictureBoxField.TabIndex = 2;
       this.pictureBoxField.TabStop = false;
+      this.pictureBoxField.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_Mouse);
+      this.pictureBoxField.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_Mouse);
       // 
       // timerDisplay
       // 
