@@ -105,28 +105,6 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
-    #region # // --- DisplayConsole ---
-    /// <summary>
-    /// gibt das Spielfeld mit bestimmten Auswahl-Kriterien in der Console aus
-    /// </summary>
-    public void DisplayConsole()
-    {
-      const string Indent = "  ";
-
-      if (Indent.Length * 2 + field.Width >= Console.BufferWidth || field.Height + 10 >= Console.BufferHeight) // Console zur klein für die Ausgabe?
-      {
-        Console.WriteLine("Console-Size problem");
-        return;
-      }
-
-      // --- Basis-Spielfeld anzeigen ---
-      string fieldTxt = ("\r\n" + field.GetText()).Replace("\r\n", "\r\n" + Indent); // Spielfeld (mit Indent) einrücken
-
-      int cTop = Console.CursorTop + 1; // Anfangs-Position des Spielfeldes merken
-      Console.WriteLine(fieldTxt);      // Basis-Spielfeld ausgeben
-    }
-    #endregion
-
     #region # // --- Validate ---
     /// <summary>
     /// Methode zum Prüfen der Konsistenz aller Daten und Verlinkungen
