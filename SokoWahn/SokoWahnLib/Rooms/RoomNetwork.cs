@@ -100,6 +100,13 @@ namespace SokoWahnLib.Rooms
       }
       #endregion
 
+      #region # // --- Raumzustände erstellen ---
+      foreach (var room in rooms)
+      {
+        room.InitStates();
+      }
+      #endregion
+
       // --- zum Schluss alles überprüfen ---
       Validate(true);
     }

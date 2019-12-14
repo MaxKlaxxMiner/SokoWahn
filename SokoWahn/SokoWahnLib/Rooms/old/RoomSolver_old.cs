@@ -6,11 +6,6 @@
 //  /// </summary>
 //  public class RoomSolver : IDisposable
 //  {
-//    /// <summary>
-//    /// merkt sich alle Räume
-//    /// </summary>
-//    public Room[] rooms;
-
 //    #region # // --- Konstruktor ---
 //    /// <summary>
 //    /// Konstruktor
@@ -18,13 +13,6 @@
 //    /// <param name="field">Spielfeld, welches gelöst werden soll</param>
 //    public RoomSolver(ISokoField field)
 //    {
-//      #region # // --- Zustände erstellen ---
-//      foreach (var room in rooms)
-//      {
-//        room.InitStates();
-//      }
-//      #endregion
-
 //      #region # // --- Varianten erstellen ---
 //      foreach (var room in rooms)
 //      {

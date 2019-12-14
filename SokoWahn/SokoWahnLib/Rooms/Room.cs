@@ -1,5 +1,6 @@
 ﻿#region # using *.*
 using System;
+using System.Diagnostics;
 using System.Linq;
 // ReSharper disable MemberCanBePrivate.Global
 #endregion
@@ -27,6 +28,10 @@ namespace SokoWahnLib.Rooms
     /// ausgehende Portale, welche zu anderen Räumen gehören
     /// </summary>
     public readonly RoomPortal[] outgoingPortals;
+    /// <summary>
+    /// Liste mit allen Zuständen, welche der Raum annehmen kann
+    /// </summary>
+    public readonly StateList stateList;
 
     #region # // --- Konstruktor ---
     /// <summary>
@@ -53,6 +58,82 @@ namespace SokoWahnLib.Rooms
       this.outgoingPortals = outgoingPortals;
       if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("iPortals.Length != oPortals.Length");
       #endregion
+
+      stateList = new StateListNormal();
+    }
+    #endregion
+
+    #region # // --- States ---
+    /// <summary>
+    /// erstellt die ersten Zustände
+    /// </summary>
+    public void InitStates()
+    {
+      Debug.Assert(fieldPosis.Length == 1);
+      Debug.Assert(stateList.Count == 0);
+      //Debug.Assert( todo: check variant lists
+
+      int pos = fieldPosis.First();
+
+      switch (field.GetField(pos))
+      {
+        //        case '@': // Spieler auf einem leeren Feld
+        //        {
+        //          AddPlayerState(pos, 0, 0, false);   // | Start | Ende | Spieler auf einem Feld
+        //          AddBoxState(0, 0, false);           // |     - | Ende | leeres Feld
+        //          if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
+        //          {
+        //            AddBoxState(1, 0, true);          // |     - |    - | Kiste auf einem Feld
+        //          }
+        //        } break;
+
+        //        case '+': // Spieler auf einem Zielfeld
+        //        {
+        //          AddPlayerState(pos, 0, 0, false);   // | Start |    - | Spieler auf einem Zielfeld
+        //          AddBoxState(0, 0, false);           // |     - |    - | leeres Zielfeld
+        //          AddBoxState(1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
+        //        } break;
+
+        //        case ' ': // leeres Feld
+        //        {
+        //          AddBoxState(0, 0, false);           // | Start | Ende | leeres Feld
+        //          if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
+        //          {
+        //            AddPlayerState(pos, 0, 0, false); // |     - | Ende | Spieler auf einem Feld
+        //            AddBoxState(1, 0, true);          // |     - |    - | Kiste auf einem Feld
+        //          }
+        //        } break;
+
+        //        case '.': // Zielfeld
+        //        {
+        //          AddBoxState(0, 0, false);           // | Start |    - | leeres Zielfeld
+        //          AddBoxState(1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
+        //          if (!field.CheckCorner(pos)) // Spieler kann sich nur auf dem Feld befinden, wenn die Kiste rausgeschoben wurde (was bei einer Ecke nicht möglich ist)
+        //          {
+        //            AddPlayerState(pos, 0, 0, false); // |     - |    - | Spieler auf einem Zielfeld
+        //          }
+        //        } break;
+
+        //        case '$': // Feld mit Kiste
+        //        {
+        //          AddBoxState(1, 0, true);            // | Start |    - | Kiste auf einem Feld
+        //          AddBoxState(0, 0, false);           // |     - | Ende | leeres Feld
+        //          AddPlayerState(pos, 0, 0, false);   // |     - | Ende | Spieler auf einem leeren Feld
+        //          if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
+        //        } break;
+
+        //        case '*': // Kiste auf einem Zielfeld
+        //        {
+        //          AddBoxState(1, 1, true);            // | Start | Ende | Kiste auf einem Zielfeld
+        //          if (!field.CheckCorner(pos)) // Kiste kann weggeschoben werden?
+        //          {
+        //            AddBoxState(0, 0, false);         // |     - |    - | leeres Feld
+        //            AddPlayerState(pos, 0, 0, false); // |     - |    - | Spieler auf einem leeren Feld
+        //          }
+        //        } break;
+
+        default: throw new NotSupportedException("char: " + field.GetField(pos));
+      }
     }
     #endregion
 

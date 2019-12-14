@@ -181,13 +181,15 @@ namespace SokoWahnWin
       InitializeComponent();
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      //network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
-      network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
+      //network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
       //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situationen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
+
+      displaySettings = new DisplaySettings(network.field);
     }
 
     /// <summary>
@@ -208,16 +210,14 @@ namespace SokoWahnWin
         listRooms.SelectedIndex = Math.Min(oldSelected, network.rooms.Length - 1);
         listRooms.EndUpdate();
 
-        displaySettings = new DisplaySettings
-        {
-          hBack = network.rooms.Select(room => new Highlight(0x004080, 0.7f, room.fieldPosis)).ToArray()
-        };
+        displaySettings.hBack = network.rooms.Select(room => new Highlight(0x004080, 0.7f, room.fieldPosis)).ToArray();
       }
       #endregion
 
       fieldDisplay.Update(network, displaySettings);
     }
 
+    #region # // --- Form-Handling ---
     /// <summary>
     /// Event, wenn die Raum-Auswahl geändert wurde
     /// </summary>
@@ -274,5 +274,6 @@ namespace SokoWahnWin
         }
       }
     }
+    #endregion
   }
 }
