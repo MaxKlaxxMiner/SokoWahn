@@ -234,6 +234,38 @@ namespace SokoWahnLib.Rooms
     /// <param name="crc64">ursprünglicher Crc64-Wert</param>
     /// <param name="value">Datenwert, welcher einberechnet werden soll</param>
     /// <returns>neuer Crc64-Wert</returns>
+    public static ulong Crc64Update(this ulong crc64, int[] value)
+    {
+      for (int i = 0; i < value.Length; i++)
+      {
+        crc64 = (crc64 ^ (uint)value[i]) * Mul;
+      }
+      return crc64;
+    }
+
+    /// <summary>
+    /// aktualisiert die Prüfsumme
+    /// </summary>
+    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
+    /// <param name="value">Datenwert, welcher einberechnet werden soll</param>
+    /// <param name="offset">Startposition im Array</param>
+    /// <param name="length">Länge der Daten</param>
+    /// <returns>neuer Crc64-Wert</returns>
+    public static ulong Crc64Update(this ulong crc64, int[] value, int offset, int length)
+    {
+      for (int i = 0; i < length; i++)
+      {
+        crc64 = (crc64 ^ (uint)value[offset++]) * Mul;
+      }
+      return crc64;
+    }
+
+    /// <summary>
+    /// aktualisiert die Prüfsumme
+    /// </summary>
+    /// <param name="crc64">ursprünglicher Crc64-Wert</param>
+    /// <param name="value">Datenwert, welcher einberechnet werden soll</param>
+    /// <returns>neuer Crc64-Wert</returns>
     public static unsafe ulong Crc64Update(this ulong crc64, string value)
     {
       ulong tmp = crc64;

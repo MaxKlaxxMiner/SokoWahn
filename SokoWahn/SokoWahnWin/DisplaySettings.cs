@@ -1,6 +1,9 @@
 ﻿using System.Linq;
 using SokoWahnLib;
+using SokoWahnLib.Rooms;
+// ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable LoopCanBeConvertedToQuery
 
 namespace SokoWahnWin
 {
@@ -15,9 +18,18 @@ namespace SokoWahnWin
     public int playerPos;
 
     /// <summary>
-    /// merkt sich die Positionen der Kisten
+    /// merkt sich die Positionen der anzuzeigenden Kisten
     /// </summary>
     public int[] boxes;
+
+    /// <summary>
+    /// aufleuchtende Farben im Vordergrund
+    /// </summary>
+    public Highlight[] hFront;
+    /// <summary>
+    /// aufleuchtende Farbe im Hintergrund
+    /// </summary>
+    public Highlight[] hBack;
 
     /// <summary>
     /// Konstruktor
@@ -26,6 +38,8 @@ namespace SokoWahnWin
     {
       playerPos = -1;
       boxes = new int[0];
+      hFront = new Highlight[0];
+      hBack = new Highlight[0];
     }
 
     /// <summary>
@@ -36,6 +50,8 @@ namespace SokoWahnWin
     {
       playerPos = field.PlayerPos;
       boxes = Enumerable.Range(0, field.Width * field.Height).Where(field.IsBox).ToArray();
+      hFront = new Highlight[0];
+      hBack = new Highlight[0];
     }
 
     /// <summary>
@@ -47,21 +63,38 @@ namespace SokoWahnWin
       return new DisplaySettings
       {
         playerPos = playerPos,
-        boxes = boxes.ToArray()
+        boxes = boxes.ToArray(),
+        hFront = hFront.ToArray(),
+        hBack = hBack.ToArray()
       };
     }
 
     /// <summary>
-    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// berechnet die CRC-Prüfsumme für Vordergrund-Änderungen der Anzeige
     /// </summary>
-    /// <returns>lesbare Zeichenkette</returns>
-    public override string ToString()
+    /// <returns>CRC-Prüfsumme</returns>
+    public ulong CrcFront()
     {
-      return new
-      {
-        playerPos,
-        boxes = string.Join(",", boxes)
-      }.ToString();
+      ulong crc = Crc64.Start
+        .Crc64Update(playerPos)
+        .Crc64Update(boxes);
+
+      foreach (var h in hFront) crc = h.Crc(crc);
+
+      return crc;
+    }
+
+    /// <summary>
+    /// berechnet die CRC-Prüfsumme für Hintergund-Änderungen der Anzeige
+    /// </summary>
+    /// <returns>CRC-Prüfsumme</returns>
+    public ulong CrcBack()
+    {
+      ulong crc = Crc64.Start;
+
+      foreach (var h in hBack) crc = h.Crc(crc);
+
+      return crc;
     }
   }
 }

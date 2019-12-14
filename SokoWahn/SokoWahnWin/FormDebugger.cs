@@ -13,6 +13,7 @@ using SokoWahnLib;
 using SokoWahnLib.Rooms;
 // ReSharper disable FieldCanBeMadeReadOnly.Local
 // ReSharper disable UnusedMember.Local
+// ReSharper disable RedundantCommaInInitializer
 #endregion
 
 namespace SokoWahnWin
@@ -169,6 +170,7 @@ namespace SokoWahnWin
     ");
     #endregion
 
+    DisplaySettings displaySettings = new DisplaySettings();
     readonly FieldDisplay fieldDisplay;
 
     /// <summary>
@@ -205,10 +207,26 @@ namespace SokoWahnWin
         }
         listRooms.SelectedIndex = Math.Min(oldSelected, network.rooms.Length - 1);
         listRooms.EndUpdate();
+
+        displaySettings = new DisplaySettings
+        {
+          hBack = network.rooms.Select(room => new Highlight(0x004080, 0.7f, room.fieldPosis)).ToArray()
+        };
       }
       #endregion
 
-      fieldDisplay.Update(network);
+      fieldDisplay.Update(network, displaySettings);
+    }
+
+    /// <summary>
+    /// Event, wenn die Raum-Auswahl geändert wurde
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Event-Infos</param>
+    void listRooms_SelectedIndexChanged(object sender, EventArgs e)
+    {
+      displaySettings.hFront = listRooms.SelectedIndices.Cast<int>().Select(i => network.rooms[i])
+        .Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
     }
 
     /// <summary>

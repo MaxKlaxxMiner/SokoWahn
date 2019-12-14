@@ -61,6 +61,7 @@
       this.listRooms.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
       this.listRooms.Size = new System.Drawing.Size(132, 724);
       this.listRooms.TabIndex = 1;
+      this.listRooms.SelectedIndexChanged += new System.EventHandler(this.listRooms_SelectedIndexChanged);
       this.listRooms.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // pictureBoxField

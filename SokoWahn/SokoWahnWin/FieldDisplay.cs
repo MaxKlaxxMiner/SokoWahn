@@ -8,10 +8,12 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using SokoWahnLib;
 using SokoWahnLib.Rooms;
 // ReSharper disable PossibleLossOfFraction
+// ReSharper disable InvertIf
 
 #endregion
 
@@ -104,6 +106,42 @@ namespace SokoWahnWin
       return new SolidBrush(Color.FromArgb(color - 16777216));
     }
 
+    /// <summary>
+    /// zeichnet eine Markierungs-Kette
+    /// </summary>
+    /// <param name="g">Graphics-Objekt, welches zum zeichnen verwendet werden soll</param>
+    /// <param name="w">Breite des Spielfeldes</param>
+    /// <param name="highlight">High-Objekt, welches gezeichnet werden soll</param>
+    static void DrawHighlight(Graphics g, int w, Highlight highlight)
+    {
+      using (var pen = GetPen(highlight.color))
+      {
+        var posis = new HashSet<int>(highlight.fields);
+        float hStartSize = (0.5f - highlight.size / 2);
+        foreach (int f in highlight.fields)
+        {
+          int x = f % w;
+          int y = f / w;
+          bool l = posis.Contains(f - 1);
+          bool r = posis.Contains(f + 1);
+          bool u = posis.Contains(f - w);
+          bool d = posis.Contains(f + w);
+          float x1 = x + hStartSize;
+          float x2 = x1 + highlight.size;
+          float y1 = y + hStartSize;
+          float y2 = y1 + highlight.size;
+          if (!l) g.DrawLine(pen, x1, u ? y : y1, x1, d ? y + 1 : y2);
+          if (!r) g.DrawLine(pen, x2, u ? y : y1, x2, d ? y + 1 : y2);
+          if (!u) g.DrawLine(pen, l ? x : x1, y1, r ? x + 1 : x2, y1);
+          if (!d) g.DrawLine(pen, l ? x : x1, y2, r ? x + 1 : x2, y2);
+          if (l && u) { g.DrawLine(pen, x, y1, x1, y1); g.DrawLine(pen, x1, y1, x1, y); }
+          if (l && d) { g.DrawLine(pen, x, y2, x1, y2); g.DrawLine(pen, x1, y2, x1, y + 1); }
+          if (r && u) { g.DrawLine(pen, x + 1, y1, x2, y1); g.DrawLine(pen, x2, y1, x2, y); }
+          if (r && d) { g.DrawLine(pen, x + 1, y2, x2, y2); g.DrawLine(pen, x2, y2, x2, y + 1); }
+        }
+      }
+    }
+
     #region # void DrawBackground() // zeichnet den gesamten Hintergrund
     /// <summary>
     /// zeichnet den gesamten Hintergrund
@@ -155,6 +193,11 @@ namespace SokoWahnWin
             }
           }
         }
+
+        foreach (var highlight in settings.hBack)
+        {
+          DrawHighlight(g, field.Width, highlight);
+        }
       }
     }
     #endregion
@@ -167,6 +210,7 @@ namespace SokoWahnWin
     {
       UnsafeHelper.CopyBitmap(background, foreground);
       var field = network.field;
+      int w = field.Width;
       var g = graphics;
       g.CompositingQuality = CompositingQuality.HighQuality;
       g.SmoothingMode = SmoothingMode.HighQuality;
@@ -184,8 +228,6 @@ namespace SokoWahnWin
       using (var boxGoalF = GetBrush(0x333311))
       using (var boxGoalH = GetBrush(0x666633))
       {
-        int w = field.Width;
-
         // --- Spieler zeichnen ---
         if (settings.playerPos >= 0)
         {
@@ -235,6 +277,11 @@ namespace SokoWahnWin
         }
       }
 
+      foreach (var highlight in settings.hFront)
+      {
+        DrawHighlight(g, field.Width, highlight);
+      }
+
       pictureBox.Refresh();
     }
     #endregion
@@ -257,14 +304,26 @@ namespace SokoWahnWin
       if (isUpdate) return;
       isUpdate = true;
 
+      // --- zu zeichnenden Aufgaben ermitteln ---
       if (settings == null) settings = this.settings ?? new DisplaySettings(network.field);
 
+      bool doDrawF = false;
+      bool doDrawB = false;
+      if (this.settings == null)
+      {
+        doDrawF = true;
+        doDrawB = true;
+      }
+      else
+      {
+        if (this.settings.CrcFront() != settings.CrcFront()) doDrawF = true;
+        if (this.settings.CrcBack() != settings.CrcBack()) doDrawB = true;
+      }
+
+      // --- Hintergrund neu berechnen + zeichnen (sofern notwendig) ---
       int newWidth = Math.Max(16, pictureBox.Width);
       int newHeight = Math.Max(16, pictureBox.Height);
 
-      bool doDraw = false;
-
-      // --- Hintergrund neu berechnen + zeichnen (sofern notwendig) ---
       if (network != this.network || network.rooms.Length != networkRooms // neues oder geändertes Spielfeld?
        || newWidth != background.Width || newHeight != background.Height) // oder Größenänderung? -> alles neu zeichnen
       {
@@ -292,22 +351,17 @@ namespace SokoWahnWin
         // --- neuen Hintergrund erstellen und zeichnen ---
         if (background != null) background.Dispose();
         background = new Bitmap(newWidth, newHeight, PixelFormat.Format32bppRgb);
+        this.settings = settings.Clone();
         DrawBackground();
 
-        doDraw = true;
+        doDrawB = false;
+        doDrawF = true;
       }
 
-      if (this.settings == null || settings.ToString() != this.settings.ToString())
-      {
-        this.settings = settings.Clone();
-        doDraw = true;
-      }
+      if (doDrawF || doDrawB) this.settings = settings.Clone();
 
-      // --- Bild neu zeichnen und aktualisieren (sofern notwendig) ---
-      if (doDraw)
-      {
-        DrawForeground();
-      }
+      if (doDrawB) DrawBackground();
+      if (doDrawF) DrawForeground();
 
       isUpdate = false;
     }
