@@ -6,7 +6,7 @@ using System.Linq;
 namespace SokoWahnLib.Rooms
 {
   /// <summary>
-  /// einfachste Version einer Status-Liste
+  /// einfachste Version einer Zustände-Liste
   /// </summary>
   public sealed class StateListNormal : StateList
   {

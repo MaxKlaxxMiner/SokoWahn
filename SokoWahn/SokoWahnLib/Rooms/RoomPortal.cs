@@ -79,5 +79,25 @@ namespace SokoWahnLib.Rooms
       Dispose();
     }
     #endregion
+
+    #region # // --- Compare ---
+    /// <summary>
+    /// Hash-Code für einfachen Vergleich
+    /// </summary>
+    /// <returns>eindeutiger Hash-Code</returns>
+    public override int GetHashCode()
+    {
+      return fromPos << 16 | toPos;
+    }
+    /// <summary>
+    /// direkter Vergleich der Objekte
+    /// </summary>
+    /// <param name="obj">Objekt, welches verglichen werden soll</param>
+    /// <returns>true, wenn Beide identisch sind</returns>
+    public override bool Equals(object obj)
+    {
+      return ReferenceEquals(obj, this);
+    }
+    #endregion
   }
 }

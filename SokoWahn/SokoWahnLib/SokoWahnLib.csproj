@@ -59,6 +59,7 @@
     <Compile Include="Rooms\old\VariantDebugInfo.cs" />
     <Compile Include="Rooms\RoomNetwork.cs" />
     <Compile Include="Rooms\States\StateListNormal.cs" />
+    <Compile Include="Rooms\Variants\VariantData.cs" />
     <Compile Include="Rooms\Variants\VariantListNormal.cs" />
     <Compile Include="Rooms\Variants\VariantList.cs" />
     <Compile Include="SokoFieldExtensions.cs" />

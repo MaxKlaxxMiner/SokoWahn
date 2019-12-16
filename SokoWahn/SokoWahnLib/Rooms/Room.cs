@@ -32,6 +32,14 @@ namespace SokoWahnLib.Rooms
     /// Liste mit allen Zuständen, welche der Raum annehmen kann
     /// </summary>
     public readonly StateList stateList;
+    /// <summary>
+    /// Liste mit allen Varianten, welche innerhalb des Raumes durchgeführt werden können
+    /// </summary>
+    public readonly VariantList variantList;
+    /// <summary>
+    /// merkt sich die Anzahl der vorhandenen Start-Varianten (nur wenn der Spieler in diesem Raum startet)
+    /// </summary>
+    public ulong startVariantCount;
 
     #region # // --- Konstruktor ---
     /// <summary>
@@ -60,6 +68,8 @@ namespace SokoWahnLib.Rooms
       #endregion
 
       stateList = new StateListNormal(fieldPosis, fieldPosis.Where(field.IsGoal).ToArray());
+
+      variantList = new VariantListNormal((uint)incomingPortals.Length);
     }
     #endregion
 
@@ -109,6 +119,56 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
+    #region # // --- Variants ---
+    /// <summary>
+    /// initialisiert die ersten Varianten
+    /// </summary>
+    public void InitVariants()
+    {
+      Debug.Assert(fieldPosis.Length == 1);
+      Debug.Assert(stateList.Count > 0);
+      Debug.Assert(variantList.Count == 0);
+
+      int pos = fieldPosis[0];
+      Debug.Assert(field.ValidPos(pos));
+
+      #region # // --- Portale und deren Richtungen ermitteln ---
+      int portalL = -1;
+      int portalR = -2;
+      int portalU = -3;
+      int portalD = -4;
+
+      for (int p = 0; p < incomingPortals.Length; p++)
+      {
+        int posFrom = incomingPortals[p].fromPos;
+        if (posFrom == pos - 1) portalL = p;
+        if (posFrom == pos + 1) portalR = p;
+        if (posFrom == pos - field.Width) portalU = p;
+        if (posFrom == pos + field.Width) portalD = p;
+      }
+
+      Debug.Assert(portalL >= 0 || portalR >= 0 || portalU >= 0 || portalD >= 0);
+      Debug.Assert(portalL != portalR && portalL != portalU && portalL != portalD && portalR != portalU && portalR != portalD && portalU != portalD);
+      Debug.Assert((portalL >= 0 ? 1 : 0) + (portalR >= 0 ? 1 : 0) + (portalU >= 0 ? 1 : 0) + (portalD >= 0 ? 1 : 0) == incomingPortals.Length);
+      #endregion
+
+      #region # // Start-Varianten hinzufügen
+      if (field.IsPlayer(pos))
+      {
+        ulong oldState = field.IsGoal(pos) ? 1UL : 0UL;
+        ulong newState = field.IsGoal(pos) ? 0UL : 1UL;
+
+        if (portalL >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalL, newState, "l"); startVariantCount++; }
+        if (portalR >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalR, newState, "r"); startVariantCount++; }
+        if (portalU >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalU, newState, "u"); startVariantCount++; }
+        if (portalD >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalD, newState, "d"); startVariantCount++; }
+
+        Debug.Assert(variantList.Count == startVariantCount);
+      }
+      #endregion
+    }
+    #endregion
+
     #region # // --- Dispose ---
     /// <summary>
     /// gibt alle verwendeten Ressourcen wieder frei
@@ -132,6 +192,26 @@ namespace SokoWahnLib.Rooms
     ~Room()
     {
       Dispose();
+    }
+    #endregion
+
+    #region # // --- Compare ---
+    /// <summary>
+    /// Hash-Code für einfachen Vergleich
+    /// </summary>
+    /// <returns>eindeutiger Hash-Code</returns>
+    public override int GetHashCode()
+    {
+      return fieldPosis[0];
+    }
+    /// <summary>
+    /// direkter Vergleich der Objekte
+    /// </summary>
+    /// <param name="obj">Objekt, welches verglichen werden soll</param>
+    /// <returns>true, wenn Beide identisch sind</returns>
+    public override bool Equals(object obj)
+    {
+      return ReferenceEquals(obj, this);
     }
     #endregion
   }

@@ -107,6 +107,13 @@ namespace SokoWahnLib.Rooms
       }
       #endregion
 
+      #region # // --- Varianten erstellen ---
+      foreach (var room in rooms)
+      {
+        room.InitVariants();
+      }
+      #endregion
+
       // --- zum Schluss alles überprüfen ---
       Validate(true);
     }

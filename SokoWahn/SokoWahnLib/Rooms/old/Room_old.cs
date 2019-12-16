@@ -13,37 +13,6 @@
 //    public readonly HashSet<int> goalPosis;
 
 //    /// <summary>
-//    /// merkt sich die Daten der Zustände mit Spieler
-//    /// </summary>
-//    public readonly Bitter statePlayerData;
-//    /// <summary>
-//    /// Größe eines einzelnen Zustand-Elementes mit Spieler (in Bits)
-//    /// </summary>
-//    public readonly ulong statePlayerElement;
-//    /// <summary>
-//    /// Anzahl der benutzten Zustand-Elemente mit Spieler
-//    /// </summary>
-//    public uint statePlayerUsed;
-
-//    /// <summary>
-//    /// merkt sich die Daten der Zustände ohne Spieler
-//    /// </summary>
-//    public readonly Bitter stateBoxData;
-//    /// <summary>
-//    /// Größe eines einzelnen Zustand-Elementes ohne Spieler (in Bits)
-//    /// </summary>
-//    public readonly ulong stateBoxElement;
-//    /// <summary>
-//    /// Anzahl der benutzen Zustand-Elemente ohne Spieler
-//    /// </summary>
-//    public uint stateBoxUsed;
-
-//    /// <summary>
-//    /// gibt die Gesamtzahl der gespeicherten Zustände zurück
-//    /// </summary>
-//    public uint StateUsed { get { return statePlayerUsed + stateBoxUsed; } }
-
-//    /// <summary>
 //    /// merkt sich die Daten der Varianten
 //    /// </summary>
 //    public readonly Bitter variantsData;
@@ -88,19 +57,6 @@
 //      this.incomingPortals = incomingPortals;
 //      this.outgoingPortals = outgoingPortals;
 
-//      statePlayerElement = sizeof(ushort) * 8        // Spieler-Position
-//                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
-//                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
-//                         + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-//      statePlayerData = new Bitter(statePlayerElement * 1UL); // Raum mit einzelnen Spieler-Feld kann nur ein Zustand annehmen: 1 = Spieler
-//      statePlayerUsed = 0;
-
-//      stateBoxElement = sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
-//                      + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfeldern befinden
-//                      + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-//      stateBoxData = new Bitter(stateBoxElement * (ulong)fieldPosis.Length * 2UL); // Raum mit einzelnen Kisten-Feld kann nur zwei Zustände annehmen: 1 = leer, 2 = Kiste
-//      stateBoxUsed = 0;
-
 //      variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
 //                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
 //                          + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
@@ -124,19 +80,6 @@
 //    {
 //      this.goalPosis = new HashSet<int>(fieldPosis.Where(field.IsGoal));
 
-//      statePlayerElement = sizeof(ushort) * 8        // Spieler-Position
-//                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
-//                         + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfelder befinden
-//                         + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-//      statePlayerData = new Bitter(maxPlayerStates * statePlayerElement); // maximale Anzahl der Zustände mit Spieler im Raum
-//      statePlayerUsed = 0;
-
-//      stateBoxElement = sizeof(byte) * 8          // Anzahl der Kisten, welche sich auf dem Spielfeld befinden
-//                      + sizeof(byte) * 8          // Anzahl der Kisten, welche sich bereits auf Zielfeldern befinden
-//                      + (ulong)fieldPosis.Length; // Bit-markierte Felder, welche mit Kisten belegt sind
-//      stateBoxData = new Bitter(maxBoxStates * stateBoxElement); // maximale Anzahl der Zustände ohne Spieler im Raum
-//      stateBoxUsed = 0;
-
 //      variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
 //                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
 //                          + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
@@ -148,125 +91,6 @@
 //    #endregion
 
 //    #region # // --- Zustand-Methoden ---
-
-//    /// <summary>
-//    /// fügt einen weiteren Raum-Zustand mit Spieler hinzu
-//    /// </summary>
-//    /// <param name="playerPos">Spieler-Position</param>
-//    /// <param name="boxCount">Anzahl der enthaltenen Kisten</param>
-//    /// <param name="finishedBoxCount">Anzahl der enthalten Kisten, welche auf Zielfeldern stehen</param>
-//    /// <param name="boxBits">Bits der Felder für markierten Kisten</param>
-//    void AddPlayerState(int playerPos, byte boxCount, byte finishedBoxCount, params bool[] boxBits)
-//    {
-//      Debug.Assert(field.ValidPos(playerPos) && playerPos < ushort.MaxValue);
-//      Debug.Assert(fieldPosis.Any(pos => playerPos == pos));
-//      Debug.Assert(boxCount <= fieldPosis.Length);
-//      Debug.Assert(finishedBoxCount <= boxCount);
-//      Debug.Assert(boxBits.Length == fieldPosis.Length);
-//      Debug.Assert(boxBits.Count(x => x) == boxCount);
-
-//      ulong bitPos = statePlayerUsed * statePlayerElement;
-//      statePlayerData.SetUShort(bitPos, (ushort)playerPos);
-//      statePlayerData.SetByte(bitPos + 16, boxCount);
-//      statePlayerData.SetByte(bitPos + 24, finishedBoxCount);
-//      statePlayerData.ClearBits(bitPos + 32, (uint)boxBits.Length);
-//      for (uint i = 0; i < boxBits.Length; i++)
-//      {
-//        if (boxBits[i]) statePlayerData.SetBit(bitPos + 32 + i);
-//        Debug.Assert(statePlayerData.GetBit(bitPos + 32 + i) == boxBits[i]);
-//      }
-//      Debug.Assert(statePlayerData.GetUShort(bitPos) == playerPos);
-//      Debug.Assert(statePlayerData.GetByte(bitPos + 16) == boxCount);
-//      Debug.Assert(statePlayerData.GetByte(bitPos + 24) == finishedBoxCount);
-//      statePlayerUsed++;
-//    }
-
-//    /// <summary>
-//    /// fügt einen weiteren Raum-Zustand ohne Spieler hinzu
-//    /// </summary>
-//    /// <param name="boxCount">Anzahl der enthaltenen Kisten</param>
-//    /// <param name="finishedBoxCount">Anzahl der enthalten Kisten, welche auf Zielfeldern stehen</param>
-//    /// <param name="boxBits">Bits der Felder für markierten Kisten</param>
-//    void AddBoxState(byte boxCount, byte finishedBoxCount, params bool[] boxBits)
-//    {
-//      Debug.Assert(boxCount <= fieldPosis.Length);
-//      Debug.Assert(finishedBoxCount <= boxCount);
-//      Debug.Assert(boxBits.Length == fieldPosis.Length);
-//      Debug.Assert(boxBits.Count(x => x) == boxCount);
-
-//      ulong bitPos = stateBoxUsed * stateBoxElement;
-//      stateBoxData.SetByte(bitPos, boxCount);
-//      stateBoxData.SetByte(bitPos + 8, finishedBoxCount);
-//      stateBoxData.ClearBits(bitPos + 16, (uint)boxBits.Length);
-//      for (uint i = 0; i < boxBits.Length; i++)
-//      {
-//        if (boxBits[i]) stateBoxData.SetBit(bitPos + 16 + i);
-//        Debug.Assert(stateBoxData.GetBit(bitPos + 16 + i) == boxBits[i]);
-//      }
-//      Debug.Assert(stateBoxData.GetByte(bitPos) == boxCount);
-//      Debug.Assert(stateBoxData.GetByte(bitPos + 8) == finishedBoxCount);
-//      stateBoxUsed++;
-//    }
-
-//    /// <summary>
-//    /// gibt einen bestimmten Raumzustand mit Spieler zurück (für Debug-Zwecke)
-//    /// </summary>
-//    /// <param name="statePlayerIndex">Zustand-Index, welcher ausgewählt wird (muss kleiner als statePlayerUsed sein)</param>
-//    /// <returns>Zustand des Raumes mit Spieler</returns>
-//    public StateDebugInfo GetPlayerStateInfo(uint statePlayerIndex)
-//    {
-//      Debug.Assert(statePlayerIndex < statePlayerUsed);
-
-//      ulong bitPos = statePlayerIndex * statePlayerElement;
-
-//      return new StateDebugInfo(
-//        this, // Room
-//        statePlayerData.GetUShort(bitPos),    // Player-Pos
-//        statePlayerData.GetByte(bitPos + 16), // Box-Count
-//        statePlayerData.GetByte(bitPos + 24), // Box-Count (finished)
-//        Enumerable.Range(0, fieldPosis.Length).Where(i => statePlayerData.GetBit(bitPos + 32 + (ulong)i)).Select(i => fieldPosis[i]).ToArray() // Box-Positions
-//      );
-//    }
-
-//    /// <summary>
-//    /// gibt einen bestimmten Raumzustand ohne Spieler zurück (für Debug-Zwecke)
-//    /// </summary>
-//    /// <param name="stateBoxIndex">Zustand-Index, welcher ausgewählt wird (muss kleiner als stateBoxUsed sein)</param>
-//    /// <returns>Zustand des Raumes ohne Spieler</returns>
-//    public StateDebugInfo GetBoxStateInfo(uint stateBoxIndex)
-//    {
-//      Debug.Assert(stateBoxIndex < stateBoxUsed);
-
-//      ulong bitPos = stateBoxIndex * stateBoxElement;
-
-//      return new StateDebugInfo(
-//        this, // Room
-//        0,    // Player-Pos = null
-//        stateBoxData.GetByte(bitPos), // Box-Count
-//        stateBoxData.GetByte(bitPos + 8), // Box-Count (finished)
-//        Enumerable.Range(0, fieldPosis.Length).Where(i => stateBoxData.GetBit(bitPos + 16 + (ulong)i)).Select(i => fieldPosis[i]).ToArray() // Box-Positions
-//      );
-//    }
-
-//    /// <summary>
-//    /// fragt einen bestimmten Raumzustand ab (für Debug-Zwecke)
-//    /// </summary>
-//    /// <param name="stateIndex">Zustand, welcher ausgewählt wird (muss kleiner als stateDataUsed sein)</param>
-//    /// <returns>Zustand des Raumes</returns>
-//    public StateDebugInfo GetStateInfo(uint stateIndex)
-//    {
-//      if (stateIndex >= statePlayerUsed + stateBoxUsed) throw new ArgumentOutOfRangeException("stateIndex");
-
-//      if (stateIndex < statePlayerUsed)
-//      {
-//        return GetPlayerStateInfo(stateIndex);
-//      }
-//      else
-//      {
-//        return GetBoxStateInfo(stateIndex - statePlayerUsed);
-//      }
-//    }
-
 //    /// <summary>
 //    /// importiert und verschmelzt die Zustände zweier Räume und gibt ein Mapping-Dict für die Zustände zurück
 //    /// </summary>
@@ -388,67 +212,6 @@
 //    /// </summary>
 //    public void InitVariants()
 //    {
-//      Debug.Assert(fieldPosis.Length == 1);
-//      Debug.Assert(statePlayerUsed + stateBoxUsed > 0);
-//      Debug.Assert(variantsDataUsed == 0);
-
-//      int pos = fieldPosis.First();
-//      Debug.Assert(field.ValidPos(pos));
-
-//      // --- Start-Varianten hinzufügen, wo der Spieler sich im Raum befindet ---
-//      if (field.IsPlayer(pos)) // Spieler befindet sich am Anfang des Spiels im Raum
-//      {
-//        Debug.Assert(GetStateInfo(0).playerPos == pos);
-//        Debug.Assert(GetBoxStateInfo(0).boxCount == 0);
-//        for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
-//        {
-//          int nextPos = outgoingPortals[outgoingPortal].posTo;
-//          if (field.IsBox(nextPos)) // Kiste zum verschieben am Anfang erkannt?
-//          {
-//            nextPos += nextPos - pos;
-//            if (field.CheckCorner(nextPos) && field.GetField(nextPos) != '.') continue; // Kiste würde in die Ecke geschoben werden und ist kein Zielfeld
-//            if (!field.IsFree(nextPos)) continue; // dahinter liegendes Feld ist am Anfang blockiert
-//          }
-
-//          // Variante hinzufügen: Spieler steht zu Spielbegin auf dem Feld und verlässt nun den Raum (Moves: 1, Pushes: 0)
-//          startBoxVariants.Add(variantsDataUsed);
-//          AddVariant(0, outgoingPortal, statePlayerUsed, 1, 0);
-//        }
-//      }
-//      else // Spieler befindet sich im Raum, weil vorher eine Kiste rausgeschoben wurde
-//      {
-//        for (uint startState = 0; startState < statePlayerUsed; startState++)
-//        {
-//          var startSt = GetPlayerStateInfo(startState); Debug.Assert(startSt.playerPos == pos); Debug.Assert(startSt.boxCount == 0);
-//          var foundBoxVariants = new List<int>(); // theoretische Box-Varianten ermitteln (wohin eventuell eine Kiste geschoben wurde)
-//          if (field.ValidPos(pos - 1) && (field.IsGoal(pos + 1) || !field.CheckCorner(pos + 1))) foundBoxVariants.Add(pos + 1); // Kiste nach rechts geschoben
-//          if (field.ValidPos(pos + 1) && (field.IsGoal(pos - 1) || !field.CheckCorner(pos - 1))) foundBoxVariants.Add(pos - 1); // Kiste nach links geschoben
-//          if (field.ValidPos(pos - field.Width) && (field.IsGoal(pos + field.Width) || !field.CheckCorner(pos + field.Width))) foundBoxVariants.Add(pos + field.Width); // Kiste nach unten geschoben
-//          if (field.ValidPos(pos + field.Width) && (field.IsGoal(pos - field.Width) || !field.CheckCorner(pos - field.Width))) foundBoxVariants.Add(pos - field.Width); // Kiste nach oben geschoben
-//          if (foundBoxVariants.Count == 0) continue; // keine Variante mit rausgeschobener Kiste gefunden
-
-//          for (int outgoingPortal = 0; outgoingPortal < outgoingPortals.Length; outgoingPortal++)
-//          {
-//            // prüfen, ob bei der einzigen Kisten-Variante die Kiste nicht mehr weitergeschoben werden darf
-//            if (foundBoxVariants.Count == 1 && outgoingPortals[outgoingPortal].posTo == foundBoxVariants[0]) // einzige Kisten-Variante erkannt
-//            {
-//              int nextPos = foundBoxVariants[0] + foundBoxVariants[0] - pos;
-//              if (field.CheckCorner(nextPos) && !field.IsGoal(nextPos)) continue; // Kiste darf nicht in eine Ecke geschoben werden
-//            }
-
-//            for (uint endState = 0; endState < stateBoxUsed; endState++)
-//            {
-//              var endSt = GetBoxStateInfo(endState); Debug.Assert(endSt.playerPos == 0);
-//              if (endSt.boxCount > 0) continue; // Feld muss nach dem Verlassen leer sein
-
-//              // Variante hinzufügen: Spieler hatte mit dem betreten eine Kiste aus dem Raum geschoben und verlässt nun den Raum wieder (Moves: 1, Pushes: 0)
-//              startBoxVariants.Add(variantsDataUsed);
-//              AddVariant(startState, outgoingPortal, endState + statePlayerUsed, 1, 0);
-//            }
-//          }
-//        }
-//      }
-
 //      // --- Varianten hinzufügen, wo der Spieler im Raum bleibt ---
 //      for (uint endState = 0; endState < statePlayerUsed; endState++) // Zustände durcharbeiten, wo der Spieler im Raum verbleibt
 //      {
