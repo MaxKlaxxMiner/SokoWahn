@@ -339,13 +339,18 @@ namespace SokoWahnWin
     }
 
     /// <summary>
+    /// gitb an, ob in das Spielfeld gerade aktiv geklickt wird (Maustaste gehalten)
+    /// </summary>
+    bool fieldMouseActive;
+    /// <summary>
     /// Mausklick in das Spielfeld
     /// </summary>
     /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzlich Maus-Infos</param>
-    void pictureBoxField_Mouse(object sender, MouseEventArgs e)
+    /// <param name="e">zusätzliche Maus-Infos</param>
+    void pictureBoxField_MouseDown(object sender, MouseEventArgs e)
     {
       if (e.Button == MouseButtons.None) return;
+      fieldMouseActive = true;
       int pos = fieldDisplay.GetFieldPos(e.X, e.Y);
       if (pos >= 0)
       {
@@ -358,6 +363,37 @@ namespace SokoWahnWin
         }
       }
     }
+    /// <summary>
+    /// bewegte Maus über das Spielfeld
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Maus-Infos</param>
+    void pictureBoxField_MouseMove(object sender, MouseEventArgs e)
+    {
+      if (!fieldMouseActive) return;
+      int pos = fieldDisplay.GetFieldPos(e.X, e.Y);
+      if (pos >= 0)
+      {
+        int roomIndex = -1;
+        for (int i = 0; i < network.rooms.Length; i++) if (network.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
+        if (roomIndex >= 0)
+        {
+          if (e.Button == MouseButtons.Left) listRooms.SelectedIndices.Add(roomIndex);
+          if (e.Button == MouseButtons.Right) listRooms.SelectedIndices.Remove(roomIndex);
+        }
+      }
+    }
+    /// <summary>
+    /// Maustaste über dem Spielfeld wieder losgelassen
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Maus-Infos</param>
+    void pictureBoxField_MouseUp(object sender, MouseEventArgs e)
+    {
+      fieldMouseActive = false;
+    }
     #endregion
+
+
   }
 }

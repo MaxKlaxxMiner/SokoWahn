@@ -75,8 +75,9 @@
       this.pictureBoxField.Size = new System.Drawing.Size(865, 720);
       this.pictureBoxField.TabIndex = 2;
       this.pictureBoxField.TabStop = false;
-      this.pictureBoxField.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_Mouse);
-      this.pictureBoxField.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_Mouse);
+      this.pictureBoxField.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_MouseDown);
+      this.pictureBoxField.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_MouseMove);
+      this.pictureBoxField.MouseUp += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_MouseUp);
       // 
       // timerDisplay
       // 
@@ -98,6 +99,7 @@
       this.listStates.Size = new System.Drawing.Size(132, 724);
       this.listStates.TabIndex = 3;
       this.listStates.SelectedIndexChanged += new System.EventHandler(this.listStates_SelectedIndexChanged);
+      this.listStates.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // FormDebugger
       // 
