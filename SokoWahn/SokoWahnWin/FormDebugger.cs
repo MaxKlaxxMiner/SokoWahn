@@ -170,7 +170,7 @@ namespace SokoWahnWin
     ");
     #endregion
 
-    DisplaySettings displaySettings = new DisplaySettings();
+    DisplaySettings displaySettings;
     readonly FieldDisplay fieldDisplay;
 
     /// <summary>
@@ -210,7 +210,28 @@ namespace SokoWahnWin
         listRooms.SelectedIndex = Math.Min(oldSelected, network.rooms.Length - 1);
         listRooms.EndUpdate();
 
-        displaySettings.hBack = network.rooms.Select(room => new Highlight(0x004080, 0.7f, room.fieldPosis)).ToArray();
+        displaySettings.hBack = network.rooms.Select(room => new Highlight(0x003366, 0.7f, room.fieldPosis)).ToArray();
+
+        listStates.BeginUpdate();
+        listStates.Items.Clear();
+        listStates.EndUpdate();
+      }
+      #endregion
+
+      #region # // --- States-Liste erneuern (falls notwendig) ---
+      if (listStates.Items.Count == 0 && listRooms.SelectedIndex >= 0)
+      {
+        listStates.BeginUpdate();
+        foreach (int roomIndex in listRooms.SelectedIndices.Cast<int>())
+        {
+          listStates.Items.Add("-- Room " + (roomIndex + 1) + " --");
+          ulong stateCount = network.rooms[roomIndex].stateList.Count;
+          for (ulong i = 0; i < stateCount; i++)
+          {
+            listStates.Items.Add(new StateListItem(roomIndex, i));
+          }
+        }
+        listStates.EndUpdate();
       }
       #endregion
 
@@ -227,6 +248,51 @@ namespace SokoWahnWin
     {
       displaySettings.hFront = listRooms.SelectedIndices.Cast<int>().Select(i => network.rooms[i])
         .Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
+
+      listStates.BeginUpdate();
+      listStates.Items.Clear();
+      listStates.EndUpdate();
+
+      displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
+      displaySettings.playerPos = network.field.PlayerPos;
+    }
+
+    /// <summary>
+    /// Event, wenn ein bestimmter Zustand ausgewählt wurde
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Event-Infos</param>
+    void listStates_SelectedIndexChanged(object sender, EventArgs e)
+    {
+      for (int i = 0; i < displaySettings.hFront.Length; i++)
+      {
+        if (displaySettings.hFront[i].color == 0xffff00)
+        {
+          displaySettings.hFront[i].color = 0x0080ff;
+        }
+      }
+
+      if (listStates.SelectedIndex >= 0)
+      {
+        if (listStates.Items[listStates.SelectedIndex] is StateListItem)
+        {
+          var selected = (StateListItem)listStates.Items[listStates.SelectedIndex];
+          displaySettings.boxes = network.rooms[selected.roomIndex].stateList.Get(selected.stateId);
+          displaySettings.playerPos = -1;
+          for (int i = 0; i < displaySettings.hFront.Length; i++)
+          {
+            if (displaySettings.hFront[i].fields.Contains(network.rooms[selected.roomIndex].fieldPosis[0]))
+            {
+              displaySettings.hFront[i].color = 0xffff00;
+            }
+          }
+        }
+        else
+        {
+          displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
+          displaySettings.playerPos = network.field.PlayerPos;
+        }
+      }
     }
 
     /// <summary>
@@ -242,7 +308,15 @@ namespace SokoWahnWin
       }
     }
 
+    /// <summary>
+    /// merkt sich, ob ein Bild-Update gerade durchgeführt wird
+    /// </summary>
     bool innerTimer;
+    /// <summary>
+    /// automatischer Timmer für Bild-Updates
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Event-Infos</param>
     void timerDisplay_Tick(object sender, EventArgs e)
     {
       if (innerTimer) return;
@@ -251,6 +325,11 @@ namespace SokoWahnWin
       innerTimer = false;
     }
 
+    /// <summary>
+    /// Event, wenn die Fenstergröße geändert wird
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Event-Infos</param>
     void FormDebugger_Resize(object sender, EventArgs e)
     {
       if (innerTimer) return;
@@ -259,6 +338,11 @@ namespace SokoWahnWin
       innerTimer = false;
     }
 
+    /// <summary>
+    /// Mausklick in das Spielfeld
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzlich Maus-Infos</param>
     void pictureBoxField_Mouse(object sender, MouseEventArgs e)
     {
       if (e.Button == MouseButtons.None) return;

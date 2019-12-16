@@ -1,6 +1,7 @@
 ﻿using SokoWahnLib.Rooms;
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable UnusedMember.Global
+// ReSharper disable FieldCanBeMadeReadOnly.Global
 
 namespace SokoWahnWin
 {
@@ -12,15 +13,15 @@ namespace SokoWahnWin
     /// <summary>
     /// Farbe des Elementes
     /// </summary>
-    public readonly int color;
+    public int color;
     /// <summary>
     /// Größe eines Feldes
     /// </summary>
-    public readonly float size;
+    public float size;
     /// <summary>
     /// zugehörige Spielfelder, welche aufleuchten sollen
     /// </summary>
-    public readonly int[] fields;
+    public int[] fields;
 
     /// <summary>
     /// Konstruktor

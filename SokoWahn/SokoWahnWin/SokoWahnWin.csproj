@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="StateListItem.cs" />
     <Compile Include="Highlight.cs" />
     <Compile Include="DisplaySettings.cs" />
     <Compile Include="FieldDisplay.cs" />

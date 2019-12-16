@@ -33,15 +33,16 @@
       this.listRooms = new System.Windows.Forms.ListBox();
       this.pictureBoxField = new System.Windows.Forms.PictureBox();
       this.timerDisplay = new System.Windows.Forms.Timer(this.components);
+      this.listStates = new System.Windows.Forms.ListBox();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       this.SuspendLayout();
       // 
       // button1
       // 
       this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.button1.Location = new System.Drawing.Point(1054, 12);
+      this.button1.Location = new System.Drawing.Point(1148, 12);
       this.button1.Name = "button1";
-      this.button1.Size = new System.Drawing.Size(186, 36);
+      this.button1.Size = new System.Drawing.Size(92, 36);
       this.button1.TabIndex = 0;
       this.button1.Text = "Step";
       this.button1.UseVisualStyleBackColor = true;
@@ -69,9 +70,9 @@
       this.pictureBoxField.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-      this.pictureBoxField.Location = new System.Drawing.Point(139, 7);
+      this.pictureBoxField.Location = new System.Drawing.Point(277, 7);
       this.pictureBoxField.Name = "pictureBoxField";
-      this.pictureBoxField.Size = new System.Drawing.Size(909, 720);
+      this.pictureBoxField.Size = new System.Drawing.Size(865, 720);
       this.pictureBoxField.TabIndex = 2;
       this.pictureBoxField.TabStop = false;
       this.pictureBoxField.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_Mouse);
@@ -83,12 +84,28 @@
       this.timerDisplay.Interval = 1;
       this.timerDisplay.Tick += new System.EventHandler(this.timerDisplay_Tick);
       // 
+      // listStates
+      // 
+      this.listStates.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+      this.listStates.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
+      this.listStates.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+      this.listStates.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(86)))), ((int)(((byte)(156)))), ((int)(((byte)(214)))));
+      this.listStates.FormattingEnabled = true;
+      this.listStates.ItemHeight = 15;
+      this.listStates.Location = new System.Drawing.Point(139, 1);
+      this.listStates.Name = "listStates";
+      this.listStates.Size = new System.Drawing.Size(132, 724);
+      this.listStates.TabIndex = 3;
+      this.listStates.SelectedIndexChanged += new System.EventHandler(this.listStates_SelectedIndexChanged);
+      // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1252, 735);
+      this.Controls.Add(this.listStates);
       this.Controls.Add(this.pictureBoxField);
       this.Controls.Add(this.listRooms);
       this.Controls.Add(this.button1);
@@ -107,6 +124,7 @@
     private System.Windows.Forms.ListBox listRooms;
     private System.Windows.Forms.PictureBox pictureBoxField;
     private System.Windows.Forms.Timer timerDisplay;
+    private System.Windows.Forms.ListBox listStates;
   }
 }
 

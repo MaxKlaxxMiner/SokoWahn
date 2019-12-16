@@ -59,7 +59,7 @@ namespace SokoWahnLib.Rooms
       if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("iPortals.Length != oPortals.Length");
       #endregion
 
-      stateList = new StateListNormal();
+      stateList = new StateListNormal(fieldPosis, fieldPosis.Where(field.IsGoal).ToArray());
     }
     #endregion
 
@@ -77,60 +77,32 @@ namespace SokoWahnLib.Rooms
 
       switch (field.GetField(pos))
       {
-        //        case '@': // Spieler auf einem leeren Feld
-        //        {
-        //          AddPlayerState(pos, 0, 0, false);   // | Start | Ende | Spieler auf einem Feld
-        //          AddBoxState(0, 0, false);           // |     - | Ende | leeres Feld
-        //          if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
-        //          {
-        //            AddBoxState(1, 0, true);          // |     - |    - | Kiste auf einem Feld
-        //          }
-        //        } break;
+        case '@': // Spieler auf einem leeren Feld
+        case ' ': // leeres Feld
+        {
+          stateList.Add(new int[0]); // End-Zustand: leeres Feld
+          if (!field.CheckCorner(pos)) stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen (sofern diese nicht in einer Ecke steht)
+        } break;
 
-        //        case '+': // Spieler auf einem Zielfeld
-        //        {
-        //          AddPlayerState(pos, 0, 0, false);   // | Start |    - | Spieler auf einem Zielfeld
-        //          AddBoxState(0, 0, false);           // |     - |    - | leeres Zielfeld
-        //          AddBoxState(1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
-        //        } break;
+        case '+': // Spieler auf einem Zielfeld
+        case '.': // Zielfeld
+        {
+          stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
+          stateList.Add(new int[0]); // Zwischen-Zustand: leeres Zielfeld
+        } break;
 
-        //        case ' ': // leeres Feld
-        //        {
-        //          AddBoxState(0, 0, false);           // | Start | Ende | leeres Feld
-        //          if (!field.CheckCorner(pos)) // Kiste darf nicht in einer Ecke stehen
-        //          {
-        //            AddPlayerState(pos, 0, 0, false); // |     - | Ende | Spieler auf einem Feld
-        //            AddBoxState(1, 0, true);          // |     - |    - | Kiste auf einem Feld
-        //          }
-        //        } break;
+        case '$': // Feld mit Kiste
+        {
+          if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
+          stateList.Add(new int[0]); // End-Zustand: leeres Feld
+          stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
+        } break;
 
-        //        case '.': // Zielfeld
-        //        {
-        //          AddBoxState(0, 0, false);           // | Start |    - | leeres Zielfeld
-        //          AddBoxState(1, 1, true);            // |     - | Ende | Kiste auf einem Zielfeld
-        //          if (!field.CheckCorner(pos)) // Spieler kann sich nur auf dem Feld befinden, wenn die Kiste rausgeschoben wurde (was bei einer Ecke nicht möglich ist)
-        //          {
-        //            AddPlayerState(pos, 0, 0, false); // |     - |    - | Spieler auf einem Zielfeld
-        //          }
-        //        } break;
-
-        //        case '$': // Feld mit Kiste
-        //        {
-        //          AddBoxState(1, 0, true);            // | Start |    - | Kiste auf einem Feld
-        //          AddBoxState(0, 0, false);           // |     - | Ende | leeres Feld
-        //          AddPlayerState(pos, 0, 0, false);   // |     - | Ende | Spieler auf einem leeren Feld
-        //          if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
-        //        } break;
-
-        //        case '*': // Kiste auf einem Zielfeld
-        //        {
-        //          AddBoxState(1, 1, true);            // | Start | Ende | Kiste auf einem Zielfeld
-        //          if (!field.CheckCorner(pos)) // Kiste kann weggeschoben werden?
-        //          {
-        //            AddBoxState(0, 0, false);         // |     - |    - | leeres Feld
-        //            AddPlayerState(pos, 0, 0, false); // |     - |    - | Spieler auf einem leeren Feld
-        //          }
-        //        } break;
+        case '*': // Kiste auf einem Zielfeld
+        {
+          stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
+          if (!field.CheckCorner(pos)) stateList.Add(new int[0]); // Zustand ohne Kiste hinzufügen (nur wenn die Kiste herausgeschoben werden kann)
+        } break;
 
         default: throw new NotSupportedException("char: " + field.GetField(pos));
       }
