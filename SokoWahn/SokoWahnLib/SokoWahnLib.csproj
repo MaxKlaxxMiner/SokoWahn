@@ -60,8 +60,10 @@
     <Compile Include="Rooms\RoomNetwork.cs" />
     <Compile Include="Rooms\States\StateListNormal.cs" />
     <Compile Include="Rooms\Variants\VariantData.cs" />
+    <Compile Include="Rooms\Variants\VariantStateDict.cs" />
     <Compile Include="Rooms\Variants\VariantListNormal.cs" />
     <Compile Include="Rooms\Variants\VariantList.cs" />
+    <Compile Include="Rooms\Variants\VariantStateDictNormal.cs" />
     <Compile Include="SokoFieldExtensions.cs" />
     <Compile Include="SokoField.cs" />
     <Compile Include="SokoFieldException.cs" />

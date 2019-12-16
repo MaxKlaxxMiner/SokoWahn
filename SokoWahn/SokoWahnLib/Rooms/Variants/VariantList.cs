@@ -1,6 +1,7 @@
 ﻿// ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable MemberCanBeProtected.Global
+// ReSharper disable UnusedMethodReturnValue.Global
 using System.Diagnostics;
 
 namespace SokoWahnLib.Rooms

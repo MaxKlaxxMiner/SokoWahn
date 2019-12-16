@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+// ReSharper disable PossibleUnintendedReferenceComparison
 
 // ReSharper disable MemberCanBePrivate.Global
 #endregion
@@ -154,39 +155,39 @@ namespace SokoWahnLib.Rooms
       }
       if (field.GetWalkPosis().Count != posToRoom.Count) throw new Exception("nicht alle begehbaren Felder werden von allen Räumen abgedeckt");
 
-      //      //// --- eingehende Portale aller Räume prüfen ---
-      //      //var portals = new HashSet<RoomPortal>();
-      //      //foreach (var room in rooms)
-      //      //{
-      //      //  for (int p = 0; p < room.incomingPortals.Length; p++)
-      //      //  {
-      //      //    var portal = room.incomingPortals[p];
-      //      //    if (portals.Contains(portal)) throw new Exception("Portal wird doppelt benutzt: " + portal);
-      //      //    portals.Add(portal);
+      // --- eingehende Portale aller Räume prüfen ---
+      var portals = new HashSet<RoomPortal>();
+      foreach (var room in rooms)
+      {
+        for (int p = 0; p < room.incomingPortals.Length; p++)
+        {
+          var portal = room.incomingPortals[p];
+          if (portals.Contains(portal)) throw new Exception("Portal wird doppelt benutzt: " + portal);
+          portals.Add(portal);
 
-      //      //    if (portal.roomTo != room) throw new Exception("eingehendes Portal [" + p + "] verlinkt nicht zum eigenen Raum, bei: " + room);
-      //      //    if (!roomsHash.Contains(portal.roomFrom)) throw new Exception("eingehendes Portal [" + p + "] hat einen unbekannten Quell-Raum verlinkt, bei: " + room);
+          if (portal.toRoom != room) throw new Exception("eingehendes Portal [" + p + "] verlinkt nicht zum eigenen Raum, bei: " + room);
+          if (!roomsHash.Contains(portal.fromRoom)) throw new Exception("eingehendes Portal [" + p + "] hat einen unbekannten Quell-Raum verlinkt, bei: " + room);
 
-      //      //    if (posToRoom[portal.posFrom] != portal.roomFrom) throw new Exception("posFrom passt nicht zu roomFrom, bei: " + room);
-      //      //    if (posToRoom[portal.posTo] != portal.roomTo) throw new Exception("posTo passt nicht zu roomTo, bei: " + room);
-      //      //  }
-      //      //}
+          if (posToRoom[portal.fromPos] != portal.fromRoom) throw new Exception("posFrom passt nicht zu roomFrom, bei: " + room);
+          if (posToRoom[portal.toPos] != portal.toRoom) throw new Exception("posTo passt nicht zu roomTo, bei: " + room);
+        }
+      }
 
-      //      //// --- ausgehende Portale alle Räume prüfen inkl. Rückverweise ---
-      //      //var outPortals = new HashSet<RoomPortal>();
-      //      //foreach (var room in rooms)
-      //      //{
-      //      //  for (int p = 0; p < room.outgoingPortals.Length; p++)
-      //      //  {
-      //      //    var portal = room.outgoingPortals[p];
-      //      //    if (!portals.Contains(portal)) throw new Exception("Out-Portal wurde nicht bei den eingehenden Portalen gefunden: " + portal);
-      //      //    if (outPortals.Contains(portal)) throw new Exception("Out-Portal wird doppelt benutzt: " + portal);
-      //      //    outPortals.Add(portal);
+      // --- ausgehende Portale alle Räume prüfen inkl. Rückverweise ---
+      var outPortals = new HashSet<RoomPortal>();
+      foreach (var room in rooms)
+      {
+        for (int p = 0; p < room.outgoingPortals.Length; p++)
+        {
+          var portal = room.outgoingPortals[p];
+          if (!portals.Contains(portal)) throw new Exception("Out-Portal wurde nicht bei den eingehenden Portalen gefunden: " + portal);
+          if (outPortals.Contains(portal)) throw new Exception("Out-Portal wird doppelt benutzt: " + portal);
+          outPortals.Add(portal);
 
-      //      //    if (portal.oppositePortal != room.incomingPortals[p]) throw new Exception("Rückverweis des Portals passt nicht: " + portal);
-      //      //    if (portal.oppositePortal.oppositePortal != portal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + portal);
-      //      //  }
-      //      //}
+          if (portal.oppositePortal != room.incomingPortals[p]) throw new Exception("Rückverweis des Portals passt nicht: " + portal);
+          if (portal.oppositePortal.oppositePortal != portal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + portal);
+        }
+      }
     }
     #endregion
 

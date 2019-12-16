@@ -6,22 +6,6 @@
 //  /// </summary>
 //  public class RoomSolver : IDisposable
 //  {
-//    #region # // --- Konstruktor ---
-//    /// <summary>
-//    /// Konstruktor
-//    /// </summary>
-//    /// <param name="field">Spielfeld, welches gelöst werden soll</param>
-//    public RoomSolver(ISokoField field)
-//    {
-//      #region # // --- Varianten erstellen ---
-//      foreach (var room in rooms)
-//      {
-//        room.InitVariants();
-//      }
-//      #endregion
-//    }
-//    #endregion
-
 //    #region # // --- Optimizer ---
 //    /// <summary>
 //    /// entfernt alle Kisten-Varianten eines Raumes

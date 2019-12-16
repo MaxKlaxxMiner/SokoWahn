@@ -32,6 +32,10 @@ namespace SokoWahnLib.Rooms
     /// das gegenüberliegende/zurückführende Portal
     /// </summary>
     public RoomPortal oppositePortal;
+    /// <summary>
+    /// merkt sich das Inhaltsverzeichnis für alle Raumzustände und deren Varianten
+    /// </summary>
+    public VariantStateDict variantStateDict;
 
     #region # // --- Konstruktor ---
     /// <summary>

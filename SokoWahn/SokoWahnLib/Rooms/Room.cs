@@ -81,7 +81,7 @@ namespace SokoWahnLib.Rooms
     {
       Debug.Assert(fieldPosis.Length == 1);
       Debug.Assert(stateList.Count == 0);
-      //Debug.Assert( todo: check variant lists
+      Debug.Assert(variantList.Count == 0);
 
       int pos = fieldPosis.First();
 
@@ -152,7 +152,7 @@ namespace SokoWahnLib.Rooms
       Debug.Assert((portalL >= 0 ? 1 : 0) + (portalR >= 0 ? 1 : 0) + (portalU >= 0 ? 1 : 0) + (portalD >= 0 ? 1 : 0) == incomingPortals.Length);
       #endregion
 
-      #region # // Start-Varianten hinzufügen
+      #region # // --- Start-Varianten hinzufügen ---
       if (field.IsPlayer(pos))
       {
         ulong oldState = field.IsGoal(pos) ? 1UL : 0UL;
@@ -164,6 +164,62 @@ namespace SokoWahnLib.Rooms
         if (portalD >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalD, newState, "d"); startVariantCount++; }
 
         Debug.Assert(variantList.Count == startVariantCount);
+      }
+
+      var portalDirections = Enumerable.Range(0, incomingPortals.Length).Select(portalIndex =>
+      {
+        if (portalIndex == portalL) return "l";
+        if (portalIndex == portalR) return "r";
+        if (portalIndex == portalU) return "u";
+        if (portalIndex == portalD) return "d";
+        throw new Exception("portal not found?");
+      }).ToArray();
+      #endregion
+
+      #region # // --- Portal-Varianten hinzufügen ---
+      for (uint iPortal = 0; iPortal < incomingPortals.Length; iPortal++)
+      {
+        var portal = incomingPortals[iPortal];
+        portal.variantStateDict = new VariantStateDictNormal(stateList, variantList); // Inhalstverzeichnis initialisieren
+
+        switch (field.GetField(pos))
+        {
+          case '@': // Spieler auf einem leeren Feld
+          case ' ': // leeres Feld
+          {
+            for (uint oPortal = 0; oPortal < outgoingPortals.Length; oPortal++)
+            {
+              if (iPortal == oPortal) continue; // nur Durchlaufen vom gleichen Portal macht keinen Sinn
+              portal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortal, 0, portalDirections[oPortal]));
+              if (!field.CheckCorner(pos)) // Variante mit Kiste hinzufügen?
+              {
+                //todo: verschiebbarkeit der Kiste prüfen
+              }
+            }
+          } break;
+
+          //case '+': // Spieler auf einem Zielfeld
+          //case '.': // Zielfeld
+          //{
+          //  stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
+          //  stateList.Add(new int[0]); // Zwischen-Zustand: leeres Zielfeld
+          //} break;
+
+          //case '$': // Feld mit Kiste
+          //{
+          //  if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
+          //  stateList.Add(new int[0]); // End-Zustand: leeres Feld
+          //  stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
+          //} break;
+
+          //case '*': // Kiste auf einem Zielfeld
+          //{
+          //  stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
+          //  if (!field.CheckCorner(pos)) stateList.Add(new int[0]); // Zustand ohne Kiste hinzufügen (nur wenn die Kiste herausgeschoben werden kann)
+          //} break;
+
+          default: throw new NotSupportedException("char: " + field.GetField(pos));
+        }
       }
       #endregion
     }
