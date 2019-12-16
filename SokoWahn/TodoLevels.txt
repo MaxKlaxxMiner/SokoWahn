@@ -715,3 +715,7 @@ Name: SokoWahn.Solver
   268: Alberto Garcia Best 4 U :: soko 34
   527: Alberto Garcia Best 4 U :: soko 35
    99: Alberto Garcia Best 4 U :: soko 47
+  690: Alberto Garcia Plus 2 :: sokoboxes plus 22
+  710: Alberto Garcia Plus 2 :: sokoboxes plus 27
+  177: Alberto Garcia Plus 2 :: sokomania plus 11
+  105: Alberto Garcia Plus 2 :: sokomania plus 13
