@@ -28,39 +28,39 @@ namespace Sokosolver
     /// <summary>
     /// Breite des Spielfeldes in Zeichen
     /// </summary>
-    int feldBreite;
+    readonly int feldBreite;
 
     /// <summary>
     /// Höhe des Spielfeldes in Zeichen
     /// </summary>
-    int feldHöhe;
+    readonly int feldHöhe;
 
     /// <summary>
     /// Startposition des Spieler auf dem Spielfeld
     /// </summary>
-    int feldSpielerStartPos;
+    readonly int feldSpielerStartPos;
 
     /// <summary>
     /// Inhalt des Spielfeldes (Größe: feldBreite * feldHöhe)
     /// </summary>
-    char[] feldData;
+    readonly char[] feldData;
 
     /// <summary>
     /// Inhalt des Spielfeldes, ohne Kisten und ohne Spieler (Größe: feldBreite * feldHöhe)
     /// </summary>
-    char[] feldDataLeer;
+    readonly char[] feldDataLeer;
 
     /// <summary>
     /// merkt sich die Basis-Daten und Startaufstellung der Kisten
     /// </summary>
-    SokowahnRaum raumBasis;
+    readonly SokowahnRaum raumBasis;
     #endregion
 
     #region # // --- dynamische Variablen ---
     /// <summary>
     /// Hashtabelle aller bekannten Stellungen
     /// </summary>
-    ISokowahnHash bekannteStellungen;
+    readonly ISokowahnHash bekannteStellungen;
 
 #if byteModus
     /// <summary>
@@ -83,7 +83,7 @@ namespace Sokosolver
     /// <summary>
     /// Hashtabelle aller bekannten Zielstellungen
     /// </summary>
-    ISokowahnHash zielStellungen;
+    readonly ISokowahnHash zielStellungen;
 
 #if byteModus
     /// <summary>
@@ -111,6 +111,10 @@ namespace Sokosolver
     /// beste gefundene Tiefe 
     /// </summary>
     int gefundenTiefe;
+    /// <summary>
+    /// zugehörige Pushes
+    /// </summary>
+    int gefundenPushes;
 
     /// <summary>
     /// merkt sich die Knoten-Stellung der gefundenen Variante
@@ -120,7 +124,7 @@ namespace Sokosolver
     /// <summary>
     /// gibt an, ob die Endlösung gefunden wurde
     /// </summary>
-    bool lösungGefunden = false;
+    bool lösungGefunden;
     #endregion
 
     #region # // --- Konstruktor ---
@@ -179,8 +183,8 @@ namespace Sokosolver
       }
 
       gefundenTiefe = 65535;
-      gefundenStellung = new SokowahnStellung();
-      gefundenStellung.crc64 = 123;
+      gefundenPushes = 65535;
+      gefundenStellung = new SokowahnStellung { crc64 = 123 };
 
 
       ulong spielFeldCrc = 0xcbf29ce484222325u;
@@ -190,7 +194,7 @@ namespace Sokosolver
 
       foreach (char zeichen in raumBasis.FeldData)
       {
-        spielFeldCrc = (spielFeldCrc ^ (ulong)zeichen) * 0x100000001b3;
+        spielFeldCrc = (spielFeldCrc ^ zeichen) * 0x100000001b3;
       }
 
       string blockerPath = Environment.CurrentDirectory + "\\blocker\\";
@@ -203,7 +207,7 @@ namespace Sokosolver
     /// <summary>
     /// gibt den temporären Ordner zurück
     /// </summary>
-    string TempOrdner
+    static string TempOrdner
     {
       get
       {
@@ -301,12 +305,60 @@ namespace Sokosolver
     /// <summary>
     /// merkt sich alle Blocker-Stellungen (um bei der Vorwärtssuche sinnlose Stellungen auszulassen)
     /// </summary>
-    SokowahnBlockerB blocker;
+    readonly SokowahnBlockerB blocker;
 
     /// <summary>
     /// merkt sich alle Thread-Räume (für Multi-Threading)
     /// </summary>
-    SokowahnRaum[] threadRäume = null;
+    SokowahnRaum[] threadRäume;
+
+    #region # int CountPushes(SokowahnStellung stellung, int tiefe) // ermittelt die Anzahl der Pushes bei einer gefundenen Lösung
+    /// <summary>
+    /// ermittelt die Anzahl der Pushes bei einer gefundenen Lösung
+    /// </summary>
+    /// <param name="stellung">mittlere Stellung, welche gefunden wurde</param>
+    /// <param name="tiefe">gesamte gefundene Spieltiefe in Moves</param>
+    /// <returns>Anzahl der durchgeführten Pushes</returns>
+    int CountPushes(SokowahnStellung stellung, int tiefe)
+    {
+      int pushes = 0;
+      var tmpRaum = new SokowahnRaum(raumBasis);
+
+      if (stellung.zugTiefe > 30000) stellung.zugTiefe = tiefe - (60000 - stellung.zugTiefe);
+      int tmpTiefe = stellung.zugTiefe;
+      tmpRaum.LadeStellung(stellung);
+
+      while (tmpTiefe < tiefe)
+      {
+        var alleNachfolger = tmpRaum.GetVarianten().ToArray();
+        var nachfolger = alleNachfolger.Where(x => zielStellungen.Get(x.crc64) == 60000 - (tiefe - x.zugTiefe)).OrderBy(x => x.zugTiefe).FirstOrDefault();
+
+        pushes++;
+        tmpRaum.LadeStellung(nachfolger);
+        tmpTiefe = nachfolger.zugTiefe;
+      }
+
+      tmpTiefe = stellung.zugTiefe;
+      tmpRaum.LadeStellung(stellung);
+
+      if (tmpTiefe > 0)
+      {
+        for (; ; )
+        {
+          pushes++;
+          var alleVorgänger = tmpRaum.GetVariantenRückwärts().ToArray();
+
+          var vorgänger = alleVorgänger.Where(x => bekannteStellungen.Get(x.crc64) == x.zugTiefe).OrderBy(x => x.zugTiefe).FirstOrDefault();
+
+          if (vorgänger.zugTiefe == 0) return pushes;
+
+          tmpRaum.LadeStellung(vorgänger);
+        }
+      }
+
+      return pushes;
+    }
+    #endregion
 
     #region # bool SucheVorwärts(int limit) // Normale Suche nach vorne (von der Startstellung aus beginnend)
     /// <summary>
@@ -324,7 +376,7 @@ namespace Sokosolver
 
       var liste = vorwärtsSucher[vorwärtsTiefe];
 
-      limit = (int)Math.Min((long)limit, liste.SatzAnzahl);
+      limit = (int)Math.Min(limit, liste.SatzAnzahl);
 
       var stellungen = liste.Pop(limit);
       int satzGröße = liste.SatzGröße;
@@ -365,6 +417,7 @@ namespace Sokosolver
             {
               gefundenTiefe -= findQuelle - variante.zugTiefe;
               gefundenStellung.zugTiefe = variante.zugTiefe;
+              gefundenPushes = CountPushes(gefundenStellung, gefundenTiefe);
             }
             if (variante.zugTiefe + rückwärtsTiefe + 1 < gefundenTiefe) VorwärtsAdd(variante); // zum weiteren Durchsuchen hinzufügen
           }
@@ -375,10 +428,24 @@ namespace Sokosolver
 
         int findTiefe = 60000 - variante.findHash + variante.zugTiefe; // aktuelle Gesamttiefe der Lösung ermitteln
 
-        if (findTiefe < gefundenTiefe) // bessere Lösung gefunden?
+        if (findTiefe <= gefundenTiefe) // eventuell bessere Lösung gefunden?
         {
-          gefundenTiefe = findTiefe;
-          gefundenStellung = new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe };
+          if (findTiefe < gefundenTiefe) // definitiv bessere Lösung gefunden?
+          {
+            gefundenTiefe = findTiefe;
+            gefundenStellung = new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe };
+            gefundenPushes = CountPushes(gefundenStellung, gefundenTiefe);
+          }
+          else
+          {
+            int newPushes = CountPushes(new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe }, findTiefe);
+            if (newPushes < gefundenPushes) // gleiche Lösung mit weniger Pushes gefunden?
+            {
+              gefundenTiefe = findTiefe;
+              gefundenStellung = new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe };
+              gefundenPushes = CountPushes(gefundenStellung, gefundenTiefe);
+            }
+          }
         }
       }
 
@@ -408,7 +475,7 @@ namespace Sokosolver
 
       var liste = rückwärtsSucher[rückwärtsTiefe];
 
-      limit = (int)Math.Min((long)limit, liste.SatzAnzahl);
+      limit = (int)Math.Min(limit, liste.SatzAnzahl);
 
       var stellungen = liste.Pop(limit);
       int satzGröße = liste.SatzGröße;
@@ -447,7 +514,7 @@ namespace Sokosolver
             if (variante.crc64 == gefundenStellung.crc64)
             {
               gefundenTiefe -= variante.zugTiefe - findZiel;
-              //       gefundenStellung.zugTiefe = variante.zugTiefe;
+              gefundenPushes = CountPushes(gefundenStellung, gefundenTiefe);
             }
             if (60000 - variante.zugTiefe + vorwärtsTiefe + 1 < gefundenTiefe) RückwärtsAdd(variante); // zum weiteren Durchsuchen hinzufügen
           }
@@ -458,11 +525,26 @@ namespace Sokosolver
 
         int findTiefe = 60000 - variante.zugTiefe + variante.findHash; // aktuelle Gesamttiefe der Lösung ermitteln
 
-        if (findTiefe < gefundenTiefe) // bessere Lösung gefunden?
+        if (findTiefe <= gefundenTiefe) // eventuell bessere Lösung gefunden?
         {
-          gefundenTiefe = findTiefe;
-          gefundenStellung = new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe };
-          gefundenStellung.zugTiefe = variante.findHash;
+          if (findTiefe < gefundenTiefe) // definitiv bessere Lösung gefunden?
+          {
+            gefundenTiefe = findTiefe;
+            gefundenStellung = new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe };
+            gefundenStellung.zugTiefe = variante.findHash;
+            gefundenPushes = CountPushes(gefundenStellung, gefundenTiefe);
+          }
+          else
+          {
+            int newPushes = CountPushes(new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe }, findTiefe);
+            if (newPushes < gefundenPushes) // gleiche Lösung mit weniger Pushes gefunden?
+            {
+              gefundenTiefe = findTiefe;
+              gefundenStellung = new SokowahnStellung { raumSpielerPos = variante.raumSpielerPos, kistenZuRaum = variante.kistenZuRaum, crc64 = variante.crc64, zugTiefe = variante.zugTiefe };
+              gefundenStellung.zugTiefe = variante.findHash;
+              gefundenPushes = CountPushes(gefundenStellung, gefundenTiefe);
+            }
+          }
         }
       }
 
@@ -479,10 +561,10 @@ namespace Sokosolver
     #region # // --- Public Methoden ---
 
     int aktuelleZugwahlTiefe = -1;
-    bool aktuelleZugwahl = false;
-    List<long> hashNutzung = new List<long>();
-    List<long> hashVorwärtsNutzung = new List<long>();
-    List<long> hashRückwärtsNutzung = new List<long>();
+    bool aktuelleZugwahl;
+    readonly List<long> hashNutzung = new List<long>();
+    readonly List<long> hashVorwärtsNutzung = new List<long>();
+    readonly List<long> hashRückwärtsNutzung = new List<long>();
 
     /// <summary>
     /// berechnet den nächsten Schritt
@@ -618,18 +700,18 @@ namespace Sokosolver
           if (rückwärtsSucher != null) for (int i = 0; i < rückwärtsSucher.Length; i++) if (rückwärtsSucher[i] != null) rückwärtsSucher[i].Dispose();
         }
 
-        SokowahnRaum tmpRaum = new SokowahnRaum(raumBasis);
+        var tmpRaum = new SokowahnRaum(raumBasis);
 
         if (gefundenStellung.zugTiefe > 30000) gefundenStellung.zugTiefe = gefundenTiefe - (60000 - gefundenStellung.zugTiefe);
         int tmpTiefe = gefundenStellung.zugTiefe;
         tmpRaum.LadeStellung(gefundenStellung);
 
-        List<SokowahnStellung> merkListe = new List<SokowahnStellung>();
+        var merkListe = new List<SokowahnStellung>();
 
         while (tmpTiefe < gefundenTiefe)
         {
           var alleNachfolger = tmpRaum.GetVarianten().ToArray();
-          var nachfolger = alleNachfolger.Where(x => zielStellungen.Get(x.crc64) == 60000 - (gefundenTiefe - x.zugTiefe)).FirstOrDefault();
+          var nachfolger = alleNachfolger.Where(x => zielStellungen.Get(x.crc64) == 60000 - (gefundenTiefe - x.zugTiefe)).OrderBy(x => x.zugTiefe).FirstOrDefault();
 
           merkListe.Add(nachfolger);
           tmpRaum.LadeStellung(nachfolger);
@@ -646,7 +728,7 @@ namespace Sokosolver
           yield return tmpRaum.ToString();
           var alleVorgänger = tmpRaum.GetVariantenRückwärts().ToArray();
 
-          var vorgänger = alleVorgänger.Where(x => bekannteStellungen.Get(x.crc64) == x.zugTiefe).FirstOrDefault();
+          var vorgänger = alleVorgänger.Where(x => bekannteStellungen.Get(x.crc64) == x.zugTiefe).OrderBy(x => x.zugTiefe).FirstOrDefault();
 
           if (vorgänger.zugTiefe == 0)
           {
@@ -709,6 +791,10 @@ namespace Sokosolver
     /// merkt sich die Tiefe der temporären Lösung
     /// </summary>
     int tmpLösungTiefe;
+    /// <summary>
+    /// merkt sich die Pushes der temporären Lösung
+    /// </summary>
+    int tmpLösungPushes;
 
     /// <summary>
     /// gibt das gesamte Spielfeld als lesbaren (genormten) Inhalt aus (Format siehe: <see cref="http://de.wikipedia.org/wiki/Sokoban#Levelnotation">Wikipedia</see> )
@@ -734,16 +820,17 @@ namespace Sokosolver
         if (gefundenTiefe < 65535)
         {
           ausgabe.Clear();
-          if (tmpLösungTiefe != gefundenTiefe)
+          if (tmpLösungTiefe != gefundenTiefe || tmpLösungPushes != gefundenPushes)
           {
             tmpLösung = SokowahnStaticTools.LösungswegZuSteps(GetLösungsweg());
             tmpLösungTiefe = gefundenTiefe;
+            tmpLösungPushes = gefundenPushes;
           }
           ausgabe.AppendLine(tmpLösung);
 
           int pos = gefundenStellung.zugTiefe;
           if (pos > 30000) pos = gefundenTiefe - (60000 - pos);
-          ausgabe.AppendLine("Gefunden: " + gefundenTiefe.ToString("#,##0") + " (" + (pos - vorwärtsTiefe).ToString("#,##0") + " / " + (gefundenTiefe - vorwärtsTiefe - rückwärtsTiefe) + ")").AppendLine();
+          ausgabe.AppendLine("Gefunden: " + gefundenTiefe.ToString("#,##0") + " (" + (pos - vorwärtsTiefe).ToString("#,##0") + " / " + (gefundenTiefe - vorwärtsTiefe - rückwärtsTiefe) + "), Pushes: " + gefundenPushes).AppendLine();
         }
         else
         {
@@ -756,7 +843,7 @@ namespace Sokosolver
             if (vorwärtsSucher[i] == null) continue;
             if (vorwärtsSucher[i].SatzAnzahl > sumVorwärts)
             {
-              tiefeVorwärts = (double)i + ((double)sumVorwärts / (double)vorwärtsSucher[i].SatzAnzahl);
+              tiefeVorwärts = i + (sumVorwärts / (double)vorwärtsSucher[i].SatzAnzahl);
               break;
             }
             sumVorwärts -= vorwärtsSucher[i].SatzAnzahl;
@@ -766,7 +853,7 @@ namespace Sokosolver
             if (rückwärtsSucher[i] == null) continue;
             if (rückwärtsSucher[i].SatzAnzahl > sumRückwärts)
             {
-              tiefeRückwärts = (double)i + ((double)sumRückwärts / (double)rückwärtsSucher[i].SatzAnzahl);
+              tiefeRückwärts = i + (sumRückwärts / (double)rückwärtsSucher[i].SatzAnzahl);
               break;
             }
             sumRückwärts -= rückwärtsSucher[i].SatzAnzahl;
@@ -795,8 +882,8 @@ namespace Sokosolver
           ausgabe.AppendLine().AppendLine();
         }
 
-        string[] vorwärtsZeilen = Enumerable.Range(0, vorwärtsSucher.Length).Where(i => vorwärtsSucher[i].SatzAnzahl > 0 || i >= vorwärtsTiefe).Select(i => "[" + i + "] " + vorwärtsSucher[i].ToString()).ToArray();
-        string[] rückwärtsZeilen = Enumerable.Range(0, rückwärtsSucher.Length).Where(i => rückwärtsSucher[i].SatzAnzahl > 0 || i >= rückwärtsTiefe).Select(i => "[" + i + "] " + rückwärtsSucher[i].ToString()).ToArray();
+        var vorwärtsZeilen = Enumerable.Range(0, vorwärtsSucher.Length).Where(i => vorwärtsSucher[i].SatzAnzahl > 0 || i >= vorwärtsTiefe).Select(i => "[" + i + "] " + vorwärtsSucher[i].ToString()).ToArray();
+        var rückwärtsZeilen = Enumerable.Range(0, rückwärtsSucher.Length).Where(i => rückwärtsSucher[i].SatzAnzahl > 0 || i >= rückwärtsTiefe).Select(i => "[" + i + "] " + rückwärtsSucher[i].ToString()).ToArray();
 
         int bis = Math.Max(vorwärtsZeilen.Length, rückwärtsZeilen.Length);
 
