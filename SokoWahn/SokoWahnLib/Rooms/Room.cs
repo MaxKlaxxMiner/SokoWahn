@@ -176,6 +176,21 @@ namespace SokoWahnLib.Rooms
       }).ToArray();
       #endregion
 
+      #region # // --- Portal-Kisten-Zustandsänderungen hinzufügen ---
+      foreach (var incomingPortal in incomingPortals)
+      {
+        incomingPortal.stateBoxSwap = new StateBoxSwapNormal(stateList);
+
+        var st1 = stateList.FirstOrDefault(st => st.Value.Length == 0); // Zustand ohne Kiste suchen
+        var st2 = stateList.FirstOrDefault(st => st.Value.Length == 1); // Zustand mit Kiste suchen
+
+        if (st1.Value != null && st2.Value != null) // möglichen Zustandswechsel mit neuer Kiste gefunden?
+        {
+          incomingPortal.stateBoxSwap.Add(st1.Key, st2.Key);
+        }
+      }
+      #endregion
+
       #region # // --- Portal-Varianten hinzufügen ---
       for (uint iPortal = 0; iPortal < incomingPortals.Length; iPortal++)
       {
@@ -193,7 +208,7 @@ namespace SokoWahnLib.Rooms
               portal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortal, 0, portalDirections[oPortal]));
               if (!field.CheckCorner(pos)) // Variante mit Kiste hinzufügen?
               {
-                //todo: verschiebbarkeit der Kiste prüfen
+                //todo: tatsächliche Verschiebbarkeit der Kiste prüfen
               }
             }
           } break;
@@ -218,7 +233,7 @@ namespace SokoWahnLib.Rooms
           //  if (!field.CheckCorner(pos)) stateList.Add(new int[0]); // Zustand ohne Kiste hinzufügen (nur wenn die Kiste herausgeschoben werden kann)
           //} break;
 
-          default: throw new NotSupportedException("char: " + field.GetField(pos));
+          //default: throw new NotSupportedException("char: " + field.GetField(pos));
         }
       }
       #endregion

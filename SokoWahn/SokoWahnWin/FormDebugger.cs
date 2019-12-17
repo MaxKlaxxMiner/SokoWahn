@@ -197,6 +197,8 @@ namespace SokoWahnWin
     /// </summary>
     void DisplayUpdate()
     {
+      if (network == null) return; // Räume noch nicht initialisiert?
+
       #region # // --- Room-Liste erneuern (falls notwendig) ---
       if (listRooms.Items.Count != network.rooms.Length)
       {

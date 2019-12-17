@@ -33,7 +33,11 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public RoomPortal oppositePortal;
     /// <summary>
-    /// merkt sich das Inhaltsverzeichnis für alle Raumzustände und deren Varianten
+    /// merkt sich die Zustandsänderungen, wenn eine Kiste in den Raum geschoben wird
+    /// </summary>
+    public StateBoxSwap stateBoxSwap;
+    /// <summary>
+    /// merkt sich das Inhaltsverzeichnis für alle inneren Raumzustände und deren Varianten
     /// </summary>
     public VariantStateDict variantStateDict;
 
