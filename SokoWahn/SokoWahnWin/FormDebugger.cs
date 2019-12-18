@@ -179,6 +179,8 @@ namespace SokoWahnWin
     public FormDebugger()
     {
       InitializeComponent();
+      splitContainer1_Resize(splitContainer1, null);
+
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
       network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
@@ -234,6 +236,47 @@ namespace SokoWahnWin
           }
         }
         listStates.EndUpdate();
+
+        listVariants.BeginUpdate();
+        listVariants.Items.Clear();
+        listVariants.EndUpdate();
+      }
+      #endregion
+
+      #region # // --- Variants-Liste erneuern (falls notwendig) ---
+      if (listVariants.Items.Count == 0 && listStates.SelectedItem is StateListItem)
+      {
+        listVariants.BeginUpdate();
+        var stateItem = (StateListItem)listStates.SelectedItem;
+        var incomingPortals = network.rooms[stateItem.roomIndex].incomingPortals;
+        for (int portalIndex = 0; portalIndex < incomingPortals.Length; portalIndex++)
+        {
+          var portal = incomingPortals[portalIndex];
+          listVariants.Items.Add("-- Portal " + (portalIndex + 1) + " --");
+          int variantCount = 0;
+
+          foreach (ulong variantId in portal.variantStateDict.GetVariants(stateItem.stateId))
+          {
+            variantCount++;
+            var variant = portal.variantStateDict.variantList.GetData(variantId);
+            string path = variant.path;
+            if (path != null)
+            {
+              path = " (" + portal.dirChar + path + ")";
+            }
+            else
+            {
+              path = "";
+            }
+            listVariants.Items.Add("Variant " + variantCount + path);
+          }
+
+          if (variantCount == 0)
+          {
+            listVariants.Items.Add("no variants");
+          }
+        }
+        listVariants.EndUpdate();
       }
       #endregion
 
@@ -294,6 +337,12 @@ namespace SokoWahnWin
           displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
           displaySettings.playerPos = network.field.PlayerPos;
         }
+
+        listVariants.BeginUpdate();
+        listVariants.Items.Clear();
+        listVariants.EndUpdate();
+
+        DisplayUpdate();
       }
     }
 
@@ -394,8 +443,16 @@ namespace SokoWahnWin
     {
       fieldMouseActive = false;
     }
+
+    /// <summary>
+    /// passt die Größenverhältnisse der Zustandliste und Variantenliste an
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">Event-Infos</param>
+    void splitContainer1_Resize(object sender, EventArgs e)
+    {
+      splitContainer1.SplitterDistance = (int)(splitContainer1.ClientSize.Height * 0.618);
+    }
     #endregion
-
-
   }
 }

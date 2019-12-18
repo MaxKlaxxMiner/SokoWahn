@@ -13,6 +13,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly ISokoField field;
     /// <summary>
+    /// gibt die Richtung an, wohin das Portal zeigt (l, r, u, d)
+    /// </summary>
+    public readonly char dirChar;
+    /// <summary>
     /// Quell-Raum, wo das Portal startet
     /// </summary>
     public readonly Room fromRoom;
@@ -67,6 +71,12 @@ namespace SokoWahnLib.Rooms
 
       if (!field.ValidPos(toPos) || !toRoom.fieldPosis.Contains(toPos)) throw new ArgumentOutOfRangeException("toPos");
       this.toPos = toPos;
+
+      if (toPos == fromPos - 1) dirChar = 'l';
+      else if (toPos == fromPos + 1) dirChar = 'r';
+      else if (toPos == fromPos - field.Width) dirChar = 'u';
+      else if (toPos == fromPos + field.Width) dirChar = 'd';
+      else throw new ArgumentException("invalid from/to pos");
       #endregion
     }
     #endregion

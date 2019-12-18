@@ -2,6 +2,7 @@
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable UnusedMember.Global
 using System;
+using System.Collections.Generic;
 
 namespace SokoWahnLib.Rooms
 {
@@ -39,5 +40,12 @@ namespace SokoWahnLib.Rooms
     /// <param name="stateId">Raumzustand, welcher betroffen ist</param>
     /// <param name="variantId">Variante, welche hinzugefügt werden soll</param>
     public abstract void Add(ulong stateId, ulong variantId);
+
+    /// <summary>
+    /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
+    /// </summary>
+    /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>
+    /// <returns>Enumerable der zugehörigen Varianten</returns>
+    public abstract IEnumerable<ulong> GetVariants(ulong stateId);
   }
 }

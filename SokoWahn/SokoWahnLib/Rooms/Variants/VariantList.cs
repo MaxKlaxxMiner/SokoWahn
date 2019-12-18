@@ -1,8 +1,9 @@
-﻿// ReSharper disable MemberCanBePrivate.Global
+﻿using System.Diagnostics;
+// ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable MemberCanBeProtected.Global
 // ReSharper disable UnusedMethodReturnValue.Global
-using System.Diagnostics;
+// ReSharper disable UnusedMember.Global
 
 namespace SokoWahnLib.Rooms
 {
@@ -44,5 +45,12 @@ namespace SokoWahnLib.Rooms
     /// <param name="path">optionaler Pfad in XSB-Schreibweise (lrudLRUD bzw. auch RLE komprimiert erlaubt)</param>
     /// <returns>neue Varianten-ID</returns>
     public abstract ulong Add(ulong oldStateId, ulong moves, ulong pushes, uint[] boxPortals, uint playerPortal, ulong newStateId, string path = null);
+
+    /// <summary>
+    /// fragt die Daten einer bestimmten Variante ab
+    /// </summary>
+    /// <param name="variantId">ID der Variante, welche abgefragt werden soll</param>
+    /// <returns>Daten der abgefragten Variante</returns>
+    public abstract VariantData GetData(ulong variantId);
   }
 }

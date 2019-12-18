@@ -51,5 +51,17 @@ namespace SokoWahnLib.Rooms
       variantData.Add(new VariantData { oldStateId = oldStateId, moves = moves, pushes = pushes, boxPortals = boxPortals, playerPortal = playerPortal, newStateId = newStateId, path = path });
       return id;
     }
+
+    /// <summary>
+    /// fragt die Daten einer bestimmten Variante ab
+    /// </summary>
+    /// <param name="variantId">ID der Variante, welche abgefragt werden soll</param>
+    /// <returns>Daten der abgefragten Variante</returns>
+    public override VariantData GetData(ulong variantId)
+    {
+      Debug.Assert(variantId < Count);
+
+      return variantData[(int)(uint)variantId];
+    }
   }
 }

@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -8,7 +10,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// einfachstes Inhaltsverzeichnis für Varianten
   /// </summary>
-  public class VariantStateDictNormal : VariantStateDict
+  public sealed class VariantStateDictNormal : VariantStateDict
   {
     /// <summary>
     /// merkt sich alle Zustand/Varianten Kombinationen
@@ -43,6 +45,20 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(!list.Contains(variantId));
 
       list.Add(variantId);
+    }
+
+    /// <summary>
+    /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
+    /// </summary>
+    /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>
+    /// <returns>Enumerable der zugehörigen Varianten</returns>
+    public override IEnumerable<ulong> GetVariants(ulong stateId)
+    {
+      Debug.Assert(stateId < stateList.Count);
+
+      List<ulong> list;
+
+      return data.TryGetValue(stateId, out list) ? list : Enumerable.Empty<ulong>();
     }
   }
 }
