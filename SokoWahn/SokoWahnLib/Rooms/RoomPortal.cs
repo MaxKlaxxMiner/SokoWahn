@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace SokoWahnLib.Rooms
 {
-  public class RoomPortal : IDisposable
+  public sealed class RoomPortal : IDisposable
   {
     /// <summary>
     /// Spielfeld, welches verwendet wird
@@ -33,11 +33,11 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public RoomPortal oppositePortal;
     /// <summary>
-    /// merkt sich die Zustandsänderungen, wenn eine Kiste in den Raum geschoben wird
+    /// mögliche Zustandsänderungen, wenn eine Kiste über das Portal in den Raum geschoben wird
     /// </summary>
     public StateBoxSwap stateBoxSwap;
     /// <summary>
-    /// merkt sich das Inhaltsverzeichnis für alle inneren Raumzustände und deren Varianten
+    /// Inhaltsverzeichnis für alle möglichen Varianten (value) bezogen auf den vorherigen Raumzustand (key)
     /// </summary>
     public VariantStateDict variantStateDict;
 

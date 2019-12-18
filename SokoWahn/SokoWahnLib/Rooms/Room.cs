@@ -201,39 +201,63 @@ namespace SokoWahnLib.Rooms
         {
           case '@': // Spieler auf einem leeren Feld
           case ' ': // leeres Feld
+          case '$': // Feld mit Kiste
           {
             for (uint oPortal = 0; oPortal < outgoingPortals.Length; oPortal++)
             {
-              if (iPortal == oPortal) continue; // nur Durchlaufen vom gleichen Portal macht keinen Sinn
-              portal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortal, 0, portalDirections[oPortal]));
+              if (iPortal != oPortal) // nur Durchlaufen aber nicht zum gleichen Portal zurück
+              {
+                portal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortal, 0, portalDirections[oPortal]));
+              }
+
               if (!field.CheckCorner(pos)) // Variante mit Kiste hinzufügen?
               {
-                //todo: tatsächliche Verschiebbarkeit der Kiste prüfen
+                int boxPortal = -1; // ausgehendes Portal suchen (für die rausgeschobene Kiste)
+                for (int bPortal = 0; bPortal < outgoingPortals.Length; bPortal++)
+                {
+                  if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
+                  {
+                    Debug.Assert(boxPortal == -1);
+                    boxPortal = bPortal;
+                  }
+                }
+                if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
+
+                portal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortal }, oPortal, 0, portalDirections[oPortal]));
               }
             }
           } break;
 
-          //case '+': // Spieler auf einem Zielfeld
-          //case '.': // Zielfeld
-          //{
-          //  stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
-          //  stateList.Add(new int[0]); // Zwischen-Zustand: leeres Zielfeld
-          //} break;
+          case '+': // Spieler auf einem Zielfeld
+          case '.': // leeres Zielfeld
+          case '*': // Kiste auf einem Zielfeld 
+          {
+            for (uint oPortal = 0; oPortal < outgoingPortals.Length; oPortal++)
+            {
+              if (iPortal != oPortal) // nur Durchlaufen aber nicht zum gleichen Portal zurück
+              {
+                portal.variantStateDict.Add(1, variantList.Add(1, 1, 0, new uint[0], oPortal, 1, portalDirections[oPortal]));
+              }
 
-          //case '$': // Feld mit Kiste
-          //{
-          //  if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
-          //  stateList.Add(new int[0]); // End-Zustand: leeres Feld
-          //  stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
-          //} break;
+              if (!field.CheckCorner(pos)) // Variante mit Kiste hinzufügen?
+              {
+                int boxPortal = -1; // ausgehendes Portal suchen (für die rausgeschobene Kiste)
+                for (int bPortal = 0; bPortal < outgoingPortals.Length; bPortal++)
+                {
+                  if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
+                  {
+                    Debug.Assert(boxPortal == -1);
+                    boxPortal = bPortal;
+                  }
+                }
+                if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
-          //case '*': // Kiste auf einem Zielfeld
-          //{
-          //  stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
-          //  if (!field.CheckCorner(pos)) stateList.Add(new int[0]); // Zustand ohne Kiste hinzufügen (nur wenn die Kiste herausgeschoben werden kann)
-          //} break;
+                portal.variantStateDict.Add(0, variantList.Add(0, 1, 1, new[] { (uint)boxPortal }, oPortal, 1, portalDirections[oPortal]));
+              }
+            }
+          } break;
 
-          //default: throw new NotSupportedException("char: " + field.GetField(pos));
+          default: throw new NotSupportedException("char: " + field.GetField(pos));
         }
       }
       #endregion
