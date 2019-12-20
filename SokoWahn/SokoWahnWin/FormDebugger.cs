@@ -174,6 +174,11 @@ namespace SokoWahnWin
     readonly FieldDisplay fieldDisplay;
 
     /// <summary>
+    /// Geschwindigkeit der Varianten-Anzeige (Millisekunden pro Schritt)
+    /// </summary>
+    const int VariantDelay = 300;
+
+    /// <summary>
     /// Kostruktor
     /// </summary>
     public FormDebugger()
@@ -193,6 +198,11 @@ namespace SokoWahnWin
 
       displaySettings = new DisplaySettings(network.field);
     }
+
+    /// <summary>
+    /// aktuelle angezeigte Varianten-Position
+    /// </summary>
+    int variantTime;
 
     /// <summary>
     /// aktualisiert die Anzeige
@@ -255,6 +265,16 @@ namespace SokoWahnWin
           listVariants.Items.Add("-- Portal " + (portalIndex + 1) + " --");
           int variantCount = 0;
 
+          var boxState = portal.stateBoxSwap.Get(stateItem.stateId);
+          if (boxState != stateItem.stateId) // Variante mit reinschiebbarer Kiste vorhanden?
+          {
+            listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ")", new[]
+            {
+              new VariantPathElement(portal.fromPos + portal.fromPos - portal.toPos, new [] { portal.fromPos }),
+              new VariantPathElement(portal.fromPos, new [] { portal.toPos }),
+            }));
+          }
+
           foreach (ulong variantId in portal.variantStateDict.GetVariants(stateItem.stateId))
           {
             variantCount++;
@@ -262,13 +282,40 @@ namespace SokoWahnWin
             string path = variant.path;
             if (path != null)
             {
-              path = " (" + portal.dirChar + path + ")";
+              var el = new VariantPathElement(portal.fromPos, portal.toRoom.stateList.Get(variant.oldStateId)); // Start-Stellung erzeugen
+              var variantPath = new List<VariantPathElement> { el };
+
+              path = portal.dirChar + path; // ersten Schritt durch das eingehende Portal hinzufügen
+
+              foreach (char c in path)
+              {
+                int newPlayerPos;
+                switch (char.ToLower(c))
+                {
+                  case 'l': newPlayerPos = el.playerPos - 1; break; // nach links
+                  case 'r': newPlayerPos = el.playerPos + 1; break; // nach rechts
+                  case 'u': newPlayerPos = el.playerPos - portal.field.Width; break; // nach oben
+                  case 'd': newPlayerPos = el.playerPos + portal.field.Width; break; // nach unten
+                  default: throw new Exception("invalid Path-Char: " + c);
+                }
+                if (el.boxes.Any(pos => pos == newPlayerPos)) // wurde eine Kiste verschoben?
+                {
+                  el = new VariantPathElement(newPlayerPos, el.boxes.Select(pos => pos == newPlayerPos ? newPlayerPos - el.playerPos + pos : pos).ToArray());
+                }
+                else
+                {
+                  el = new VariantPathElement(newPlayerPos, el.boxes);
+                }
+
+                variantPath.Add(el);
+              }
+
+              listVariants.Items.Add(new VariantListItem("Variant " + variantCount + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
-              path = "";
+              listVariants.Items.Add("Variant " + variantCount);
             }
-            listVariants.Items.Add("Variant " + variantCount + path);
           }
 
           if (variantCount == 0)
@@ -277,6 +324,31 @@ namespace SokoWahnWin
           }
         }
         listVariants.EndUpdate();
+      }
+      #endregion
+
+      #region # // --- Varianten-Animation (sofern eine ausgewählt wurde) ---
+      if (listVariants.SelectedItem is VariantListItem)
+      {
+        var variantPath = ((VariantListItem)listVariants.SelectedItem).variantPath;
+
+        int time = Environment.TickCount;
+
+        int timePos = (time - variantTime) / VariantDelay;
+        if (timePos < 0)
+        {
+          variantTime = time;
+          timePos = 0;
+        }
+        if (timePos >= variantPath.Length)
+        {
+          if (timePos > variantPath.Length + 1) variantTime = time;
+          if (timePos == variantPath.Length) timePos = variantPath.Length - 1; else timePos = 0;
+        }
+
+        var el = variantPath[timePos];
+        displaySettings.playerPos = el.playerPos;
+        displaySettings.boxes = el.boxes;
       }
       #endregion
 
@@ -319,9 +391,9 @@ namespace SokoWahnWin
 
       if (listStates.SelectedIndex >= 0)
       {
-        if (listStates.Items[listStates.SelectedIndex] is StateListItem)
+        if (listStates.SelectedItem is StateListItem)
         {
-          var selected = (StateListItem)listStates.Items[listStates.SelectedIndex];
+          var selected = (StateListItem)listStates.SelectedItem;
           displaySettings.boxes = network.rooms[selected.roomIndex].stateList.Get(selected.stateId);
           displaySettings.playerPos = -1;
           for (int i = 0; i < displaySettings.hFront.Length; i++)
@@ -343,6 +415,34 @@ namespace SokoWahnWin
         listVariants.EndUpdate();
 
         DisplayUpdate();
+      }
+    }
+
+    /// <summary>
+    /// neue Variante ausgewählt
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Event-Infos</param>
+    void listVariants_SelectedIndexChanged(object sender, EventArgs e)
+    {
+      variantTime = 0;
+      if (listStates.SelectedItem is StateListItem)
+      {
+        var selected = (StateListItem)listStates.SelectedItem;
+        displaySettings.boxes = network.rooms[selected.roomIndex].stateList.Get(selected.stateId);
+        displaySettings.playerPos = -1;
+        for (int i = 0; i < displaySettings.hFront.Length; i++)
+        {
+          if (displaySettings.hFront[i].fields.Contains(network.rooms[selected.roomIndex].fieldPosis[0]))
+          {
+            displaySettings.hFront[i].color = 0xffff00;
+          }
+        }
+      }
+      else
+      {
+        displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
+        displaySettings.playerPos = network.field.PlayerPos;
       }
     }
 

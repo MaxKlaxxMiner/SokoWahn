@@ -137,6 +137,7 @@
       this.listVariants.Name = "listVariants";
       this.listVariants.Size = new System.Drawing.Size(137, 322);
       this.listVariants.TabIndex = 4;
+      this.listVariants.SelectedIndexChanged += new System.EventHandler(this.listVariants_SelectedIndexChanged);
       this.listVariants.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // FormDebugger
