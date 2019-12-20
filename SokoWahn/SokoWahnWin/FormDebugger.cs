@@ -258,12 +258,65 @@ namespace SokoWahnWin
       {
         listVariants.BeginUpdate();
         var stateItem = (StateListItem)listStates.SelectedItem;
-        var incomingPortals = network.rooms[stateItem.roomIndex].incomingPortals;
+        var room = network.rooms[stateItem.roomIndex];
+        var stateList = room.stateList;
+        var variantList = room.variantList;
+        var incomingPortals = room.incomingPortals;
+
+        // --- Start-Varianten des Raums auflisten ---
+        ulong startVariants = room.startVariantCount;
+        if (startVariants > 0 && variantList.GetData(0).oldStateId == stateItem.stateId)
+        {
+          listVariants.Items.Add("-- Starts --");
+
+          int variantCount = 0;
+          for (ulong variantId = 0; variantId < startVariants; variantId++)
+          {
+            variantCount++;
+            var variant = variantList.GetData(variantId);
+            string path = variant.path;
+            if (path != null)
+            {
+              var el = new VariantPathElement(room.field.PlayerPos, stateList.Get(variant.oldStateId)); // Start-Stellung erzeugen
+              var variantPath = new List<VariantPathElement> { el };
+
+              foreach (char c in path)
+              {
+                int newPlayerPos;
+                switch (char.ToLower(c))
+                {
+                  case 'l': newPlayerPos = el.playerPos - 1; break; // nach links
+                  case 'r': newPlayerPos = el.playerPos + 1; break; // nach rechts
+                  case 'u': newPlayerPos = el.playerPos - room.field.Width; break; // nach oben
+                  case 'd': newPlayerPos = el.playerPos + room.field.Width; break; // nach unten
+                  default: throw new Exception("invalid Path-Char: " + c);
+                }
+                if (el.boxes.Any(pos => pos == newPlayerPos)) // wurde eine Kiste verschoben?
+                {
+                  el = new VariantPathElement(newPlayerPos, el.boxes.Select(pos => pos == newPlayerPos ? newPlayerPos - el.playerPos + pos : pos).ToArray());
+                }
+                else
+                {
+                  el = new VariantPathElement(newPlayerPos, el.boxes);
+                }
+
+                variantPath.Add(el);
+              }
+
+              listVariants.Items.Add(new VariantListItem("Variant " + variantCount + " (" + path + ")", variantPath.ToArray()));
+            }
+            else
+            {
+              listVariants.Items.Add("Variant " + variantCount);
+            }
+          }
+        }
+
+        // --- Varianten der Portale auflisten ---
         for (int portalIndex = 0; portalIndex < incomingPortals.Length; portalIndex++)
         {
           var portal = incomingPortals[portalIndex];
           listVariants.Items.Add("-- Portal " + (portalIndex + 1) + " --");
-          int variantCount = 0;
 
           var boxState = portal.stateBoxSwap.Get(stateItem.stateId);
           if (boxState != stateItem.stateId) // Variante mit reinschiebbarer Kiste vorhanden?
@@ -275,14 +328,15 @@ namespace SokoWahnWin
             }));
           }
 
+          int variantCount = 0;
           foreach (ulong variantId in portal.variantStateDict.GetVariants(stateItem.stateId))
           {
             variantCount++;
-            var variant = portal.variantStateDict.variantList.GetData(variantId);
+            var variant = variantList.GetData(variantId);
             string path = variant.path;
             if (path != null)
             {
-              var el = new VariantPathElement(portal.fromPos, portal.toRoom.stateList.Get(variant.oldStateId)); // Start-Stellung erzeugen
+              var el = new VariantPathElement(portal.fromPos, stateList.Get(variant.oldStateId)); // Start-Stellung erzeugen
               var variantPath = new List<VariantPathElement> { el };
 
               path = portal.dirChar + path; // ersten Schritt durch das eingehende Portal hinzufügen
@@ -294,8 +348,8 @@ namespace SokoWahnWin
                 {
                   case 'l': newPlayerPos = el.playerPos - 1; break; // nach links
                   case 'r': newPlayerPos = el.playerPos + 1; break; // nach rechts
-                  case 'u': newPlayerPos = el.playerPos - portal.field.Width; break; // nach oben
-                  case 'd': newPlayerPos = el.playerPos + portal.field.Width; break; // nach unten
+                  case 'u': newPlayerPos = el.playerPos - room.field.Width; break; // nach oben
+                  case 'd': newPlayerPos = el.playerPos + room.field.Width; break; // nach unten
                   default: throw new Exception("invalid Path-Char: " + c);
                 }
                 if (el.boxes.Any(pos => pos == newPlayerPos)) // wurde eine Kiste verschoben?
