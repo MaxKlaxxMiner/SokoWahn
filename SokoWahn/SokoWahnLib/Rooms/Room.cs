@@ -132,61 +132,36 @@ namespace SokoWahnLib.Rooms
       int pos = fieldPosis[0];
       Debug.Assert(field.ValidPos(pos));
 
-      #region # // --- Portale und deren Richtungen ermitteln ---
-      int portalL = -1;
-      int portalR = -2;
-      int portalU = -3;
-      int portalD = -4;
-
-      for (int p = 0; p < incomingPortals.Length; p++)
-      {
-        int posFrom = incomingPortals[p].fromPos;
-        if (posFrom == pos - 1) portalL = p;
-        if (posFrom == pos + 1) portalR = p;
-        if (posFrom == pos - field.Width) portalU = p;
-        if (posFrom == pos + field.Width) portalD = p;
-      }
-
-      Debug.Assert(portalL >= 0 || portalR >= 0 || portalU >= 0 || portalD >= 0);
-      Debug.Assert(portalL != portalR && portalL != portalU && portalL != portalD && portalR != portalU && portalR != portalD && portalU != portalD);
-      Debug.Assert((portalL >= 0 ? 1 : 0) + (portalR >= 0 ? 1 : 0) + (portalU >= 0 ? 1 : 0) + (portalD >= 0 ? 1 : 0) == incomingPortals.Length);
-      #endregion
-
       #region # // --- Start-Varianten hinzufügen ---
       if (field.IsPlayer(pos))
       {
         ulong oldState = field.IsGoal(pos) ? 1UL : 0UL;
         ulong newState = field.IsGoal(pos) ? 0UL : 1UL;
 
-        if (portalL >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalL, newState, "l"); startVariantCount++; }
-        if (portalR >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalR, newState, "r"); startVariantCount++; }
-        if (portalU >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalU, newState, "u"); startVariantCount++; }
-        if (portalD >= 0) { variantList.Add(oldState, 1, 0, new uint[0], (uint)portalD, newState, "d"); startVariantCount++; }
-
-        Debug.Assert(variantList.Count == startVariantCount);
+        for (int p = 0; p < incomingPortals.Length; p++)
+        {
+          variantList.Add(oldState, 1, 0, new uint[0], (uint)p, newState, outgoingPortals[p].dirChar.ToString());
+          startVariantCount++;
+        }
       }
 
-      var portalDirections = Enumerable.Range(0, incomingPortals.Length).Select(portalIndex =>
-      {
-        if (portalIndex == portalL) return "l";
-        if (portalIndex == portalR) return "r";
-        if (portalIndex == portalU) return "u";
-        if (portalIndex == portalD) return "d";
-        throw new Exception("portal not found?");
-      }).ToArray();
+      Debug.Assert(variantList.Count == startVariantCount);
       #endregion
 
       #region # // --- Portal-Kisten-Zustandsänderungen hinzufügen ---
-      foreach (var incomingPortal in incomingPortals)
+      foreach (var portal in incomingPortals)
       {
-        incomingPortal.stateBoxSwap = new StateBoxSwapNormal(stateList);
+        portal.stateBoxSwap = new StateBoxSwapNormal(stateList);
 
         var st1 = stateList.FirstOrDefault(st => st.Value.Length == 0); // Zustand ohne Kiste suchen
         var st2 = stateList.FirstOrDefault(st => st.Value.Length == 1); // Zustand mit Kiste suchen
 
-        if (st1.Value != null && st2.Value != null) // möglichen Zustandswechsel mit neuer Kiste gefunden?
+        if (st1.Value != null && st2.Value != null // möglichen Zustandswechsel mit neuer Kiste gefunden?
+          && !field.CheckCorner(portal.fromPos) // Kiste steht vorher nicht in einer Ecke?
+          && !field.IsWall(portal.fromPos + portal.fromPos - portal.toPos) // Spieler stand vorher nicht in der Wand?
+          )
         {
-          incomingPortal.stateBoxSwap.Add(st1.Key, st2.Key);
+          portal.stateBoxSwap.Add(st1.Key, st2.Key);
         }
       }
       #endregion
@@ -207,7 +182,7 @@ namespace SokoWahnLib.Rooms
             {
               if (iPortal != oPortal) // nur Durchlaufen aber nicht zum gleichen Portal zurück
               {
-                portal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortal, 0, portalDirections[oPortal]));
+                portal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortal, 0, outgoingPortals[oPortal].dirChar.ToString()));
               }
 
               if (!field.CheckCorner(pos)) // Variante mit Kiste hinzufügen?
@@ -223,7 +198,7 @@ namespace SokoWahnLib.Rooms
                 }
                 if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
-                portal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortal }, oPortal, 0, portalDirections[oPortal]));
+                portal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortal }, oPortal, 0, outgoingPortals[oPortal].dirChar.ToString()));
               }
             }
           } break;
@@ -236,7 +211,7 @@ namespace SokoWahnLib.Rooms
             {
               if (iPortal != oPortal) // nur Durchlaufen aber nicht zum gleichen Portal zurück
               {
-                portal.variantStateDict.Add(1, variantList.Add(1, 1, 0, new uint[0], oPortal, 1, portalDirections[oPortal]));
+                portal.variantStateDict.Add(1, variantList.Add(1, 1, 0, new uint[0], oPortal, 1, outgoingPortals[oPortal].dirChar.ToString()));
               }
 
               if (!field.CheckCorner(pos)) // Variante mit Kiste hinzufügen?
@@ -252,7 +227,7 @@ namespace SokoWahnLib.Rooms
                 }
                 if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
-                portal.variantStateDict.Add(0, variantList.Add(0, 1, 1, new[] { (uint)boxPortal }, oPortal, 1, portalDirections[oPortal]));
+                portal.variantStateDict.Add(0, variantList.Add(0, 1, 1, new[] { (uint)boxPortal }, oPortal, 1, outgoingPortals[oPortal].dirChar.ToString()));
               }
             }
           } break;
