@@ -192,11 +192,15 @@ namespace SokoWahnLib.Rooms
                 {
                   if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
                   {
+                    if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
                     Debug.Assert(boxPortal == -1);
                     boxPortal = bPortal;
                   }
                 }
                 if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
+
+                int checkPos = outgoingPortals[oPortal].toPos + outgoingPortals[oPortal].toPos - outgoingPortals[oPortal].fromPos;
+                if (boxPortal == oPortal && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde in eine Ecke geschoben werden
 
                 portal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortal }, oPortal, 0, outgoingPortals[oPortal].dirChar.ToString()));
               }
@@ -221,11 +225,15 @@ namespace SokoWahnLib.Rooms
                 {
                   if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
                   {
+                    if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
                     Debug.Assert(boxPortal == -1);
                     boxPortal = bPortal;
                   }
                 }
                 if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
+
+                int checkPos = outgoingPortals[oPortal].toPos + outgoingPortals[oPortal].toPos - outgoingPortals[oPortal].fromPos;
+                if (boxPortal == oPortal && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde in eine Ecke geschoben werden
 
                 portal.variantStateDict.Add(0, variantList.Add(0, 1, 1, new[] { (uint)boxPortal }, oPortal, 1, outgoingPortals[oPortal].dirChar.ToString()));
               }

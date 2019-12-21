@@ -34,62 +34,6 @@
 //    public readonly List<uint> startBoxVariants = new List<uint>();
 //    #endregion
 
-//    #region # // --- Konstruktor ---
-//    /// <summary>
-//    /// Konstruktor um ein Raum aus einem einzelnen Feld zu erstellen
-//    /// </summary>
-//    /// <param name="field">gesamtes Spielfeld, welches verwendet wird</param>
-//    /// <param name="pos">Position des Feldes, worraus der Raum generiert werden soll</param>
-//    /// <param name="incomingPortals">eingehende Portale von anderen Räumen</param>
-//    /// <param name="outgoingPortals">ausgehende Portale nach andere Räume</param>
-//    public Room(ISokoField field, int pos, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
-//    {
-//      if (field == null) throw new ArgumentNullException("field");
-//      if (!field.ValidPos(pos)) throw new ArgumentOutOfRangeException("pos");
-//      if (incomingPortals == null) throw new ArgumentNullException("incomingPortals");
-//      if (outgoingPortals == null) throw new ArgumentNullException("outgoingPortals");
-//      if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("incomingPortals.Length != outgoingPortals.Length");
-
-//      this.field = field;
-//      fieldPosis = new[] { pos };
-//      goalPosis = new HashSet<int>();
-//      if (field.IsGoal(pos)) goalPosis.Add(pos);
-//      this.incomingPortals = incomingPortals;
-//      this.outgoingPortals = outgoingPortals;
-
-//      variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
-//                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
-//                          + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
-//                          + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
-//                          + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
-//      variantsData = new Bitter(variantsDataElement * (4 * 4 + 4 * 4 + 4 + 4)); // (4 in-Kisten * 4 out-Kisten) + (4 in-Spieler * 4 out-Spieler) + (4 Starts) + (4 Ziele)
-//      variantsDataUsed = 0;
-//    }
-
-//    /// <summary>
-//    /// Konstruktor um ein neuen Merge-Raum zu erstellen
-//    /// </summary>
-//    /// <param name="field">gesamtes Spielfeld, welches verwendet wird</param>
-//    /// <param name="posis">Enumerable mit allen Felder, worraus der Raum bestehen soll</param>
-//    /// <param name="maxPlayerStates">maximale Anzahl der zu erwartenden Zustände mit Spieler</param>
-//    /// <param name="maxBoxStates">maximale Anzahl der zu erwartenden Zustände ohne Spieler</param>
-//    /// <param name="maxVariants">maximale Anzahl der zu erwartenden Varianten</param>
-//    /// <param name="incomingPortals">eingehende Portale von anderen Räumen</param>
-//    /// <param name="outgoingPortals">ausgehende Portale nach andere Räume</param>
-//    public Room(ISokoField field, IEnumerable<int> posis, uint maxPlayerStates, uint maxBoxStates, uint maxVariants, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
-//    {
-//      this.goalPosis = new HashSet<int>(fieldPosis.Where(field.IsGoal));
-
-//      variantsDataElement = sizeof(uint) * 8  // vorheriger Raum-Zustand
-//                          + sizeof(byte) * 8  // das verwendete ausgehende Portal (0xff == kein Ausgang benutzt)
-//                          + sizeof(uint) * 8  // Raum-Zustand, welcher erreicht werden kann
-//                          + 3 * 8             // Anzahl der Laufschritte, welche benötigt werden (inkl. Kistenverschiebungen)
-//                          + 3 * 8;            // Anzahl der Kistenverschiebungen, welche benötigt werden
-//      variantsData = new Bitter(maxVariants * variantsDataElement); // maximale Anzahl der Varianten insgesamt
-//      variantsDataUsed = 0;
-//    }
-//    #endregion
-
 //    #region # // --- Zustand-Methoden ---
 //    /// <summary>
 //    /// importiert und verschmelzt die Zustände zweier Räume und gibt ein Mapping-Dict für die Zustände zurück
