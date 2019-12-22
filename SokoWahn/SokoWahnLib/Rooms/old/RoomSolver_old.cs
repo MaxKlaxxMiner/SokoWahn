@@ -523,61 +523,6 @@
 
 //    #region # // --- Display ---
 //    /// <summary>
-//    /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück
-//    /// </summary>
-//    /// <param name="values">Werte, welche miteinander multipliziert werden sollen</param>
-//    /// <returns>fertiges Ergebnis</returns>
-//    static string MulNumber(IEnumerable<ulong> values)
-//    {
-//      var mul = new BigInteger(1);
-//      ulong mulTmp = 1;
-//      foreach (var val in values)
-//      {
-//        if (val > uint.MaxValue)
-//        {
-//          mul *= val;
-//          continue;
-//        }
-//        mulTmp *= val;
-//        if (mulTmp > uint.MaxValue)
-//        {
-//          mul *= mulTmp;
-//          mulTmp = 1;
-//        }
-//      }
-//      if (mulTmp > 1) mul *= mulTmp;
-
-//      string tmp = "";
-//      var txt = mul.ToString();
-//      if (txt.Length > 12)
-//      {
-//        tmp = txt.Substring(0, 4);
-//        if (int.Parse(txt.Substring(4, 5)) >= 50000) // Nachkommastelle aufrunden?
-//        {
-//          tmp = (int.Parse(txt.Substring(0, 4)) + 1).ToString();
-//        }
-//        tmp = tmp.Insert(1, CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator) + "e" + (txt.Length - 1);
-//      }
-
-//      string separator = CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator;
-//      int c = 0;
-//      while (txt.Length > c + 3)
-//      {
-//        txt = txt.Insert(txt.Length - c - 3, separator);
-//        c += 3 + separator.Length;
-//      }
-
-//      if (tmp != "")
-//      {
-//        int max = Console.BufferWidth - tmp.Length - 16;
-//        if (txt.Length > max) txt = txt.Substring(0, max - 4) + " ...";
-//        txt = tmp + " (" + txt + ")";
-//      }
-
-//      return txt;
-//    }
-
-//    /// <summary>
 //    /// zeigt den maximalen Aufwand zum lösen des gesamten Feldes an
 //    /// </summary>
 //    /// <param name="indent">Leerzeichen zum einrücken der Zeilen</param>

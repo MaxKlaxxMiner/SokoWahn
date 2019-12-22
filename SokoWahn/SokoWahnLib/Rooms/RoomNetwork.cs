@@ -2,9 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Numerics;
 // ReSharper disable PossibleUnintendedReferenceComparison
-
 // ReSharper disable MemberCanBePrivate.Global
 #endregion
 
@@ -188,6 +189,68 @@ namespace SokoWahnLib.Rooms
           if (portal.oppositePortal.oppositePortal != portal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + portal);
         }
       }
+    }
+    #endregion
+
+    #region # // --- Effort ---
+    /// <summary>
+    /// gibt den theoretischen Rechenaufwand als Zeichenkettenzahl zurück
+    /// </summary>
+    /// <returns>Rechenaufwand als Zeichenkette</returns>
+    public string Effort(int maxLen = 16777216)
+    {
+      return MulNumber(rooms.Select(room => room.variantList.Count), maxLen);
+    }
+
+    /// <summary>
+    /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <param name="values">Werte, welche miteinander multipliziert werden sollen</param>
+    /// <param name="maxLen">maximale Länge der Ergebnis-Zeichenkette</param>
+    /// <returns>fertiges Ergebnis</returns>
+    static string MulNumber(IEnumerable<ulong> values, int maxLen = 16777216)
+    {
+      var mul = new BigInteger(1);
+      ulong mulTmp = 1;
+      foreach (var val in values)
+      {
+        if (val == 0) continue;
+        if (val > uint.MaxValue) { mul *= val; continue; }
+        mulTmp *= val;
+        if (mulTmp < uint.MaxValue) continue;
+        mul *= mulTmp;
+        mulTmp = 1;
+      }
+      if (mulTmp > 1) mul *= mulTmp;
+
+      string tmp = "";
+      var txt = mul.ToString();
+      if (txt.Length > 12)
+      {
+        tmp = txt.Substring(0, 4);
+        if (int.Parse(txt.Substring(4, 5)) >= 50000) // Nachkommastelle aufrunden?
+        {
+          tmp = (int.Parse(txt.Substring(0, 4)) + 1).ToString();
+        }
+        tmp = tmp.Insert(1, CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator) + "e" + (txt.Length - 1);
+      }
+
+      string separator = CultureInfo.CurrentCulture.NumberFormat.NumberGroupSeparator;
+      int c = 0;
+      while (txt.Length > c + 3)
+      {
+        txt = txt.Insert(txt.Length - c - 3, separator);
+        c += 3 + separator.Length;
+      }
+
+      if (tmp != "")
+      {
+        int max = maxLen - 16;
+        if (txt.Length > max) txt = txt.Substring(0, max - 4) + " ...";
+        txt = tmp + " (" + txt + ")";
+      }
+
+      return txt;
     }
     #endregion
 

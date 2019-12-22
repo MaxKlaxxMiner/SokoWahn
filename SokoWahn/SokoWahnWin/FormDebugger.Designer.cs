@@ -36,6 +36,7 @@
       this.listStates = new System.Windows.Forms.ListBox();
       this.splitContainer1 = new System.Windows.Forms.SplitContainer();
       this.listVariants = new System.Windows.Forms.ListBox();
+      this.textBoxInfo = new System.Windows.Forms.TextBox();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
       this.splitContainer1.Panel1.SuspendLayout();
@@ -77,7 +78,7 @@
             | System.Windows.Forms.AnchorStyles.Right)));
       this.pictureBoxField.Location = new System.Drawing.Point(274, 2);
       this.pictureBoxField.Name = "pictureBoxField";
-      this.pictureBoxField.Size = new System.Drawing.Size(879, 629);
+      this.pictureBoxField.Size = new System.Drawing.Size(879, 600);
       this.pictureBoxField.TabIndex = 2;
       this.pictureBoxField.TabStop = false;
       this.pictureBoxField.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_MouseDown);
@@ -140,12 +141,25 @@
       this.listVariants.SelectedIndexChanged += new System.EventHandler(this.listVariants_SelectedIndexChanged);
       this.listVariants.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
+      // textBoxInfo
+      // 
+      this.textBoxInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+      this.textBoxInfo.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
+      this.textBoxInfo.Font = new System.Drawing.Font("Consolas", 9.75F);
+      this.textBoxInfo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(86)))), ((int)(((byte)(156)))), ((int)(((byte)(214)))));
+      this.textBoxInfo.Location = new System.Drawing.Point(278, 603);
+      this.textBoxInfo.Name = "textBoxInfo";
+      this.textBoxInfo.Size = new System.Drawing.Size(976, 23);
+      this.textBoxInfo.TabIndex = 5;
+      // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.textBoxInfo);
       this.Controls.Add(this.splitContainer1);
       this.Controls.Add(this.pictureBoxField);
       this.Controls.Add(this.listRooms);
@@ -160,6 +174,7 @@
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
       this.splitContainer1.ResumeLayout(false);
       this.ResumeLayout(false);
+      this.PerformLayout();
 
     }
 
@@ -172,6 +187,7 @@
     private System.Windows.Forms.ListBox listStates;
     private System.Windows.Forms.SplitContainer splitContainer1;
     private System.Windows.Forms.ListBox listVariants;
+    private System.Windows.Forms.TextBox textBoxInfo;
   }
 }
 

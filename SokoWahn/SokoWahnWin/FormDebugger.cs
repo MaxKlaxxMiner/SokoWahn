@@ -193,9 +193,10 @@ namespace SokoWahnWin
       //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
-      //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situationen
+      //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
 
+      textBoxInfo.Text = "Effort: " + network.Effort();
       displaySettings = new DisplaySettings(network.field);
     }
 
