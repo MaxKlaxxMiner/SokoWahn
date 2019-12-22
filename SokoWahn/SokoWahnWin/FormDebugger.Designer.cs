@@ -37,6 +37,7 @@
       this.splitContainer1 = new System.Windows.Forms.SplitContainer();
       this.listVariants = new System.Windows.Forms.ListBox();
       this.textBoxInfo = new System.Windows.Forms.TextBox();
+      this.buttonValidate = new System.Windows.Forms.Button();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
       this.splitContainer1.Panel1.SuspendLayout();
@@ -53,6 +54,7 @@
       this.button1.TabIndex = 0;
       this.button1.Text = "Step";
       this.button1.UseVisualStyleBackColor = true;
+      this.button1.Click += new System.EventHandler(this.button1_Click);
       this.button1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // listRooms
@@ -153,12 +155,24 @@
       this.textBoxInfo.Size = new System.Drawing.Size(976, 23);
       this.textBoxInfo.TabIndex = 5;
       // 
+      // buttonValidate
+      // 
+      this.buttonValidate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonValidate.Location = new System.Drawing.Point(1162, 54);
+      this.buttonValidate.Name = "buttonValidate";
+      this.buttonValidate.Size = new System.Drawing.Size(92, 36);
+      this.buttonValidate.TabIndex = 6;
+      this.buttonValidate.Text = "Validate";
+      this.buttonValidate.UseVisualStyleBackColor = true;
+      this.buttonValidate.Click += new System.EventHandler(this.buttonValidate_Click);
+      // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.buttonValidate);
       this.Controls.Add(this.textBoxInfo);
       this.Controls.Add(this.splitContainer1);
       this.Controls.Add(this.pictureBoxField);
@@ -188,6 +202,7 @@
     private System.Windows.Forms.SplitContainer splitContainer1;
     private System.Windows.Forms.ListBox listVariants;
     private System.Windows.Forms.TextBox textBoxInfo;
+    private System.Windows.Forms.Button buttonValidate;
   }
 }
 

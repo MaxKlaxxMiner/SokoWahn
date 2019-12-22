@@ -39,6 +39,7 @@ namespace SokoWahnLib.Rooms
       #region # // --- Räume erstellen ---
       // --- begehbare Felder abfragen und daraus Basis-Räume erstellen ---
       var walkFields = field.GetWalkPosis();
+
       rooms = walkFields.OrderBy(pos => pos).Select(pos =>
       {
         int portals = (walkFields.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
@@ -47,6 +48,8 @@ namespace SokoWahnLib.Rooms
                       (walkFields.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
         return new Room(field, new[] { pos }, new RoomPortal[portals], new RoomPortal[portals]);
       }).ToArray();
+
+      if (rooms.Sum(room => room.goalPosis.Length) != rooms.Sum(room => room.startBoxPosis.Length)) throw new SokoFieldException("goal count != box count");
       #endregion
 
       #region # // --- Portale erstellen ---
@@ -116,8 +119,8 @@ namespace SokoWahnLib.Rooms
       }
       #endregion
 
-      // --- zum Schluss alles überprüfen ---
-      Validate(true);
+      // --- zum Schluss prüfen ---
+      Validate();
     }
     #endregion
 
@@ -128,7 +131,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="checkVariants">gibt an, ob auch alle Varianten geprüft werden sollen (kann sehr lange dauern)</param>
     public void Validate(bool checkVariants = false)
     {
-      // --- Räume auf Doppler prüfen und Basis-Check der Portale ---
+      #region # // --- Räume auf Doppler prüfen und Basis-Check der Portale ---
       var roomsHash = new HashSet<Room>();
       var posToRoom = new Dictionary<int, Room>();
       foreach (var room in rooms)
@@ -155,8 +158,9 @@ namespace SokoWahnLib.Rooms
         roomsHash.Add(room);
       }
       if (field.GetWalkPosis().Count != posToRoom.Count) throw new Exception("nicht alle begehbaren Felder werden von allen Räumen abgedeckt");
+      #endregion
 
-      // --- eingehende Portale aller Räume prüfen ---
+      #region # // --- eingehende Portale aller Räume prüfen ---
       var portals = new HashSet<RoomPortal>();
       foreach (var room in rooms)
       {
@@ -173,8 +177,9 @@ namespace SokoWahnLib.Rooms
           if (posToRoom[portal.toPos] != portal.toRoom) throw new Exception("posTo passt nicht zu roomTo, bei: " + room);
         }
       }
+      #endregion
 
-      // --- ausgehende Portale alle Räume prüfen inkl. Rückverweise ---
+      #region # // --- ausgehende Portale alle Räume prüfen inkl. Rückverweise ---
       var outPortals = new HashSet<RoomPortal>();
       foreach (var room in rooms)
       {
@@ -189,6 +194,70 @@ namespace SokoWahnLib.Rooms
           if (portal.oppositePortal.oppositePortal != portal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + portal);
         }
       }
+      #endregion
+
+      #region # // --- Zustände und Varianten prüfen ---
+      if (checkVariants)
+      {
+        for (int roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
+        {
+          var room = rooms[roomIndex];
+          var stateList = room.stateList;
+          var variantList = room.variantList;
+          using (var usingStates = new Bitter(stateList.Count))
+          using (var usingVariants = new Bitter(variantList.Count))
+          {
+            usingStates.SetBit(0); // ersten Zustand immer pauschal markieren
+
+            // Start-Varianten markieren
+            for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+            {
+              if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
+              usingVariants.SetBit(variantId);
+
+              var v = variantList.GetData(variantId);
+
+              if (v.oldStateId >= usingStates.Length) throw new IndexOutOfRangeException();
+              usingStates.SetBit(v.oldStateId);
+
+              if (v.newStateId >= usingStates.Length) throw new IndexOutOfRangeException();
+              usingStates.SetBit(v.newStateId);
+            }
+
+            // Portal-Varianten markieren
+            foreach (var portal in room.incomingPortals)
+            {
+              foreach (var stateId in portal.variantStateDict.GetAllStates())
+              {
+                if (stateId >= usingStates.Length) throw new IndexOutOfRangeException();
+                foreach (var variantId in portal.variantStateDict.GetVariants(stateId))
+                {
+                  if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
+                  if (usingVariants.GetBit(variantId)) throw new Exception("mehrfach benutzte Varianten erkannt, Room: " + (roomIndex + 1));
+                  usingVariants.SetBit(variantId);
+                  usingStates.SetBit(stateId);
+                }
+              }
+            }
+
+            // Zustandänderungen durch eingehende Kisten markieren
+            foreach (var portal in room.incomingPortals)
+            {
+              foreach (var boxSwap in portal.stateBoxSwap)
+              {
+                if (boxSwap.Key >= usingStates.Length) throw new IndexOutOfRangeException();
+                if (boxSwap.Value >= usingStates.Length) throw new IndexOutOfRangeException();
+                if (boxSwap.Key == boxSwap.Value) throw new Exception("unnötige BoxSwap erkannt, Room: " + (roomIndex + 1));
+                //usingStates.SetBit(boxSwap.Value); -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
+              }
+            }
+
+            if (usingStates.CountMarkedBits(0) != usingStates.Length) throw new Exception("nicht alle Zustände sind in Verwendung, Room: " + (roomIndex + 1));
+            if (usingVariants.CountMarkedBits(0) != usingVariants.Length) throw new Exception("nicht alle Varianten sind in Verwendung, Room: " + (roomIndex + 1));
+          }
+        }
+      }
+      #endregion
     }
     #endregion
 

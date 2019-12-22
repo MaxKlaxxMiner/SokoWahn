@@ -3,6 +3,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 // ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable NotAccessedField.Global
 #endregion
 
 namespace SokoWahnLib.Rooms
@@ -20,6 +21,14 @@ namespace SokoWahnLib.Rooms
     /// Positionen der Spielfelder, welche dem Raum zugeordnet sind
     /// </summary>
     public readonly int[] fieldPosis;
+    /// <summary>
+    /// Positionen der Zielfelder, welche dem Raum zugeordnet sind 
+    /// </summary>
+    public readonly int[] goalPosis;
+    /// <summary>
+    /// Positionen der Kisten am Start, welche sich am Anfang im Raum befinden
+    /// </summary>
+    public readonly int[] startBoxPosis;
     /// <summary>
     /// eingehende Portale, welche zum eigenen Raum gehören
     /// </summary>
@@ -66,6 +75,9 @@ namespace SokoWahnLib.Rooms
       this.outgoingPortals = outgoingPortals;
       if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("iPortals.Length != oPortals.Length");
       #endregion
+
+      goalPosis = fieldPosis.Where(field.IsGoal).ToArray();
+      startBoxPosis = fieldPosis.Where(field.IsBox).ToArray();
 
       stateList = new StateListNormal(fieldPosis, fieldPosis.Where(field.IsGoal).ToArray());
 

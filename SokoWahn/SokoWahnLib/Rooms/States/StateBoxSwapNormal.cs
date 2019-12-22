@@ -24,6 +24,11 @@ namespace SokoWahnLib.Rooms
     public StateBoxSwapNormal(StateList stateList) : base(stateList) { }
 
     /// <summary>
+    /// gibt die Anzahl der gespeicherten Einträge zurück
+    /// </summary>
+    public override ulong Count { get { return (uint)data.Count; } }
+
+    /// <summary>
     /// fügt eine weitere Variante pro Raumzustand hinzu
     /// </summary>
     /// <param name="oldStateId">vorheriger Raum-Zustand</param>

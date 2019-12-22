@@ -42,6 +42,12 @@ namespace SokoWahnLib.Rooms
     public abstract void Add(ulong stateId, ulong variantId);
 
     /// <summary>
+    /// gibt alle Zustände zurück, wofür Varianten bekannt sind
+    /// </summary>
+    /// <returns>Enumerable der bekannten Zustände</returns>
+    public abstract IEnumerable<ulong> GetAllStates();
+
+    /// <summary>
     /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
     /// </summary>
     /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>

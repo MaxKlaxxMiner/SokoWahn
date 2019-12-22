@@ -48,6 +48,15 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
+    /// gibt alle Zustände zurück, wofür Varianten bekannt sind
+    /// </summary>
+    /// <returns>Enumerable der bekannten Zustände</returns>
+    public override IEnumerable<ulong> GetAllStates()
+    {
+      return data.Keys;
+    }
+
+    /// <summary>
     /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
     /// </summary>
     /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>

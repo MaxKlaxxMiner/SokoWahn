@@ -10,7 +10,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// abstrakte Klasse, welche sich Zustandswechel merkt, wenn eine Kiste in einen Raum geschoben wurde
   /// </summary>
-  public abstract class StateBoxSwap : IEnumerable<KeyValuePair<ulong,ulong>>
+  public abstract class StateBoxSwap : IEnumerable<KeyValuePair<ulong, ulong>>
   {
     /// <summary>
     /// Liste mit allen Zuständen im Raum
@@ -27,6 +27,11 @@ namespace SokoWahnLib.Rooms
 
       this.stateList = stateList;
     }
+
+    /// <summary>
+    /// gibt die Anzahl der gespeicherten Einträge zurück
+    /// </summary>
+    public abstract ulong Count { get; }
 
     /// <summary>
     /// fügt eine weitere Variante pro Raumzustand hinzu

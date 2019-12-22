@@ -196,7 +196,6 @@ namespace SokoWahnWin
       //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
 
-      textBoxInfo.Text = "Effort: " + network.Effort();
       displaySettings = new DisplaySettings(network.field);
     }
 
@@ -230,6 +229,8 @@ namespace SokoWahnWin
         listStates.BeginUpdate();
         listStates.Items.Clear();
         listStates.EndUpdate();
+
+        textBoxInfo.Text = "Effort: " + network.Effort();
       }
       #endregion
 
@@ -609,5 +610,120 @@ namespace SokoWahnWin
       splitContainer1.SplitterDistance = (int)(splitContainer1.ClientSize.Height * 0.618);
     }
     #endregion
+
+    /// <summary>
+    /// erster Optimierungsschritt
+    /// </summary>
+    /// <param name="room">Raum, welches optimiert werden soll</param>
+    /// <returns>true, wenn etwas optimiert werden konnte</returns>
+    static bool OptimizeStep1(Room room)
+    {
+      var stateList = room.stateList;
+      var variantList = room.variantList;
+
+      var boxPortals = new HashSet<uint>(); // merkt sich die Portale, wohin Kisten geschoben wurden
+
+      #region # // --- befüllen: boxPortals ---
+      // --- alle Varianten prüfen (inkl. Start-Varianten) ---
+      for (ulong variantId = 0; variantId < variantList.Count; variantId++)
+      {
+        var v = variantList.GetData(variantId);
+        if (v.boxPortals.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+        foreach (var boxPortal in v.boxPortals) boxPortals.Add(boxPortal);
+      }
+      #endregion
+
+      #region # // --- Kisten-Varianten entfernen, wenn der benachbarte Raum keine Kiste aufnehmen kann ---
+      using (var killVariants = new Bitter(variantList.Count))
+      {
+        // --- Start-Varianten prüfen ---
+        for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+        {
+          var v = variantList.GetData(variantId);
+          if (v.boxPortals.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+
+          foreach (var boxPortal in v.boxPortals)
+          {
+            var oPortal = room.outgoingPortals[boxPortal];
+            if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
+            {
+              killVariants.SetBit(variantId); // Variante als löschbar markieren
+            }
+          }
+        }
+
+        foreach (var st in stateList)
+        {
+          if (st.Value.Length == 0) continue; // keine Kisten-Zustände im Raum vorhanden
+
+          // --- Varianten der Portale prüfen ---
+          foreach (var portal in room.incomingPortals)
+          {
+            foreach (var variantId in portal.variantStateDict.GetVariants(st.Key))
+            {
+              var v = variantList.GetData(variantId);
+              if (v.boxPortals.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+
+              foreach (var boxPortal in v.boxPortals)
+              {
+                var oPortal = room.outgoingPortals[boxPortal];
+                if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
+                {
+                  killVariants.SetBit(variantId); // Variante als löschbar markieren
+                }
+              }
+            }
+          }
+        }
+
+        ulong freeBits = killVariants.CountFreeBits(0);
+        if (freeBits < killVariants.Length) // als gelöscht markierte Varianten erkannt?
+        {
+          throw new NotImplementedException("todo");
+        }
+      }
+      #endregion
+
+      return false;
+    }
+
+    /// <summary>
+    /// Step-Button
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">Event-Infos</param>
+    void button1_Click(object sender, EventArgs e)
+    {
+      listRooms.BeginUpdate();
+      listRooms.Items.Clear();
+      listRooms.EndUpdate();
+
+      foreach (var room in network.rooms)
+      {
+        if (OptimizeStep1(room)) return;
+      }
+    }
+
+    /// <summary>
+    /// Validate-Button
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">Event-Infos</param>
+    void buttonValidate_Click(object sender, EventArgs e)
+    {
+      try
+      {
+        network.Validate(true);
+        MessageBox.Show("Validate: ok.\r\n\r\n" +
+                        "Rooms: " + network.rooms.Length.ToString("N0") + "\r\n\r\n" +
+                        "States: " + network.rooms.Sum(room => (double)room.stateList.Count).ToString("N0") + "\r\n\r\n" +
+                        "Variants: " + network.rooms.Sum(room => (double)room.variantList.Count).ToString("N0"),
+                        "Validation", MessageBoxButtons.OK, MessageBoxIcon.Information);
+      }
+      catch (Exception exc)
+      {
+        MessageBox.Show(exc.ToString().Replace("System.Exception: ", ""), "Validation", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
+    }
   }
 }
