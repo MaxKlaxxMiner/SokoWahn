@@ -199,62 +199,98 @@ namespace SokoWahnLib.Rooms
       #region # // --- Zustände und Varianten prüfen ---
       if (checkVariants)
       {
-        for (int roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
+        int currentRoom = -1;
+        int currentPortal = -1;
+        ulong currentState = ulong.MaxValue;
+        ulong currentVariant = ulong.MaxValue;
+
+        try
         {
-          var room = rooms[roomIndex];
-          var stateList = room.stateList;
-          var variantList = room.variantList;
-          using (var usingStates = new Bitter(stateList.Count))
-          using (var usingVariants = new Bitter(variantList.Count))
+          for (int roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
           {
-            usingStates.SetBit(0); // ersten Zustand immer pauschal markieren
-
-            // Start-Varianten markieren
-            for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+            currentRoom = roomIndex;
+            var room = rooms[roomIndex];
+            var stateList = room.stateList;
+            var variantList = room.variantList;
+            using (var usingStates = new Bitter(stateList.Count))
+            using (var usingVariants = new Bitter(variantList.Count))
             {
-              if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
-              usingVariants.SetBit(variantId);
+              usingStates.SetBit(0); // ersten Zustand immer pauschal markieren
 
-              var v = variantList.GetData(variantId);
-
-              if (v.oldStateId >= usingStates.Length) throw new IndexOutOfRangeException();
-              usingStates.SetBit(v.oldStateId);
-
-              if (v.newStateId >= usingStates.Length) throw new IndexOutOfRangeException();
-              usingStates.SetBit(v.newStateId);
-            }
-
-            // Portal-Varianten markieren
-            foreach (var portal in room.incomingPortals)
-            {
-              foreach (var stateId in portal.variantStateDict.GetAllStates())
+              // Start-Varianten markieren
+              for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
               {
-                if (stateId >= usingStates.Length) throw new IndexOutOfRangeException();
-                foreach (var variantId in portal.variantStateDict.GetVariants(stateId))
+                currentVariant = variantId;
+                if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
+                usingVariants.SetBit(variantId);
+
+                var v = variantList.GetData(variantId);
+
+                if (v.oldStateId >= usingStates.Length) throw new IndexOutOfRangeException();
+                usingStates.SetBit(v.oldStateId);
+
+                if (v.newStateId >= usingStates.Length) throw new IndexOutOfRangeException();
+                usingStates.SetBit(v.newStateId);
+              }
+              currentVariant = ulong.MaxValue;
+
+              // Portal-Varianten markieren
+              currentPortal = 0;
+              foreach (var portal in room.incomingPortals)
+              {
+                foreach (var stateId in portal.variantStateDict.GetAllStates())
                 {
-                  if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
-                  if (usingVariants.GetBit(variantId)) throw new Exception("mehrfach benutzte Varianten erkannt, Room: " + (roomIndex + 1));
-                  usingVariants.SetBit(variantId);
-                  usingStates.SetBit(stateId);
+                  currentState = stateId;
+                  if (stateId >= usingStates.Length) throw new IndexOutOfRangeException();
+                  foreach (var variantId in portal.variantStateDict.GetVariants(stateId))
+                  {
+                    currentVariant = variantId;
+                    if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
+                    if (usingVariants.GetBit(variantId)) throw new Exception("mehrfach benutzte Varianten erkannt");
+                    usingVariants.SetBit(variantId);
+                    usingStates.SetBit(stateId);
+                  }
+                  currentVariant = ulong.MaxValue;
                 }
+                currentPortal++;
               }
-            }
+              currentState = ulong.MaxValue;
 
-            // Zustandänderungen durch eingehende Kisten markieren
-            foreach (var portal in room.incomingPortals)
-            {
-              foreach (var boxSwap in portal.stateBoxSwap)
+              // Zustandänderungen durch eingehende Kisten markieren
+              currentPortal = 0;
+              foreach (var portal in room.incomingPortals)
               {
-                if (boxSwap.Key >= usingStates.Length) throw new IndexOutOfRangeException();
-                if (boxSwap.Value >= usingStates.Length) throw new IndexOutOfRangeException();
-                if (boxSwap.Key == boxSwap.Value) throw new Exception("unnötige BoxSwap erkannt, Room: " + (roomIndex + 1));
-                //usingStates.SetBit(boxSwap.Value); -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
+                foreach (var boxSwap in portal.stateBoxSwap)
+                {
+                  if (boxSwap.Key >= usingStates.Length) throw new IndexOutOfRangeException();
+                  if (boxSwap.Value >= usingStates.Length) throw new IndexOutOfRangeException();
+                  if (boxSwap.Key == boxSwap.Value) throw new Exception("unnötige BoxSwap erkannt");
+                  //usingStates.SetBit(boxSwap.Value); -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
+                }
+                currentPortal++;
+              }
+              currentPortal = -1;
+
+              if (usingStates.CountMarkedBits(0) != usingStates.Length)
+              {
+                currentState = usingStates.CountMarkedBits(0);
+                throw new Exception("nicht alle Zustände werden verwendet");
+              }
+              if (usingVariants.CountMarkedBits(0) != usingVariants.Length)
+              {
+                currentVariant = usingVariants.CountMarkedBits(0);
+                throw new Exception("nicht alle Varianten werden verwendet");
               }
             }
-
-            if (usingStates.CountMarkedBits(0) != usingStates.Length) throw new Exception("nicht alle Zustände sind in Verwendung, Room: " + (roomIndex + 1));
-            if (usingVariants.CountMarkedBits(0) != usingVariants.Length) throw new Exception("nicht alle Varianten sind in Verwendung, Room: " + (roomIndex + 1));
           }
+        }
+        catch (Exception exc)
+        {
+          string txt = exc.Message + "\r\n\r\nRoom " + (currentRoom + 1);
+          if (currentState < ulong.MaxValue) txt += "\r\nState " + (currentState == 0 ? "finish" : currentState.ToString());
+          if (currentPortal >= 0) txt += "\r\nPortal " + (currentPortal + 1);
+          if (currentVariant < ulong.MaxValue) txt += "\r\nVariant " + (currentVariant + 1);
+          throw new Exception(txt + "\r\n");
         }
       }
       #endregion
