@@ -743,6 +743,57 @@ namespace SokoWahnWin
     }
 
     /// <summary>
+    /// entfernt alle Kistenzustände aus einem Raum
+    /// </summary>
+    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
+    /// <returns>true, wenn Kisten-Zustände entfernt wurden</returns>
+    static bool RemoveBoxStates(Room room)
+    {
+      Debug.Assert(room.fieldPosis.All(pos => !room.field.IsGoal(pos)));
+
+      var stateList = room.stateList;
+      var variantList = room.variantList;
+
+      using (var usingStates = new Bitter(stateList.Count))
+      {
+        for (ulong stateId = 0; stateId < stateList.Count; stateId++)
+        {
+          if (stateList.Get(stateId).Length == 0) usingStates.SetBit(stateId);
+        }
+
+        if (usingStates.CountMarkedBits(0) != usingStates.Length)
+        {
+          var skipStates = new SkipMapper(usingStates);
+          Debug.Assert(skipStates.map[0] < usingStates.Length);
+
+          using (var usingVariants = new Bitter(variantList.Count))
+          {
+            for (ulong variantId = 0; variantId < variantList.Count; variantId++)
+            {
+              var v = variantList.GetData(variantId);
+              if (v.boxPortals.Length == 0 && skipStates.map[v.oldStateId] != ulong.MaxValue && skipStates.map[v.newStateId] != ulong.MaxValue)
+              {
+                usingVariants.SetBit(variantId);
+              }
+            }
+
+            ulong markedBits = usingVariants.CountMarkedBits(0);
+            if (markedBits < usingVariants.Length)
+            {
+              var skipVariants = new SkipMapper(usingVariants);
+              RenewVariants(room, skipVariants);
+            }
+          }
+
+          RenewStates(room, skipStates);
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    /// <summary>
     /// erneuert die Varianten im Raum und deren Verlinkungen
     /// </summary>
     /// <param name="room">Raum, welcher bearbeitet werden soll</param>
@@ -898,18 +949,68 @@ namespace SokoWahnWin
       listRooms.Items.Clear();
       listRooms.EndUpdate();
 
+      // --- Kisten-Netzwerke filtern ---
+      var roomsBoxesStart = new HashSet<Room>();  // Räume mit Kisten am Anfang
+      var roomsBoxesGoals = new HashSet<Room>();  // Räume mit Kisten-Zielfeldern
+      var roomsBoxesPass = new HashSet<Room>();   // Räume mit Kisten
+      var roomsBoxesEmpty = new HashSet<Room>();  // Räume ohne Kisten
+      var roomsCheck = new Stack<Room>(); // Räume, welche noch geprüft werden müssen
+
+      // --- roomsBoxesStart und roomsBoxesGoals befüllen ---
+      foreach (var room in network.rooms)
+      {
+        if (room.startBoxPosis.Length > 0) { roomsBoxesStart.Add(room); roomsCheck.Push(room); }
+        if (room.goalPosis.Length > 0) { roomsBoxesGoals.Add(room); roomsCheck.Push(room); }
+      }
+
+      // --- roomsBoxesPass befüllen ---
+      while (roomsCheck.Count > 0)
+      {
+        var checkRoom = roomsCheck.Pop();
+        if (roomsBoxesPass.Contains(checkRoom)) continue;
+
+        var variantList = checkRoom.variantList;
+        var outgoingBoxPortals = new bool[checkRoom.incomingPortals.Length];
+        for (ulong variantId = 0; variantId < variantList.Count; variantId++)
+        {
+          var v = variantList.GetData(variantId);
+          foreach (uint p in v.boxPortals) outgoingBoxPortals[p] = true;
+        }
+        if (outgoingBoxPortals.Any(x => x)) roomsBoxesPass.Add(checkRoom);
+        for (uint p = 0; p < outgoingBoxPortals.Length; p++)
+        {
+          if (outgoingBoxPortals[p]) roomsCheck.Push(checkRoom.outgoingPortals[p].toRoom);
+        }
+      }
+
+      foreach (var room in network.rooms)
+      {
+        if (roomsBoxesStart.Contains(room)) continue;
+        if (roomsBoxesGoals.Contains(room)) continue;
+        if (roomsBoxesPass.Contains(room)) continue;
+        roomsBoxesEmpty.Add(room);
+      }
+
       int roomIndex = 0;
       foreach (var room in network.rooms)
       {
         roomIndex++;
+        if (roomsBoxesEmpty.Contains(room))
+        {
+          if (RemoveBoxStates(room))
+          {
+            button1.Text = "B-Room " + roomIndex;
+            return;
+          }
+        }
         if (OptimizeStep1(room))
         {
-          button1.Text = "Room " + roomIndex;
+          button1.Text = "1-Room " + roomIndex;
           return;
         }
         if (OptimizeUnusedStates(room))
         {
-          button1.Text = "Room " + roomIndex;
+          button1.Text = "S-Room " + roomIndex;
           return;
         }
       }
