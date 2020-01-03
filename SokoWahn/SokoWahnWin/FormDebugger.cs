@@ -680,7 +680,9 @@ namespace SokoWahnWin
         ulong freeBits = killVariants.CountFreeBits(0);
         if (freeBits < killVariants.Length) // als gelöscht markierte Varianten erkannt?
         {
-          //throw new NotImplementedException("todo");
+          var skip = new SkipMapper(killVariants, false);
+          RenewVariants(room, skip);
+          return true;
         }
       }
       #endregion
@@ -741,9 +743,69 @@ namespace SokoWahnWin
     }
 
     /// <summary>
+    /// erneuert die Varianten im Raum und deren Verlinkungen
+    /// </summary>
+    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
+    /// <param name="skip">Liste mit allen überspringbaren bzw. weiter zu verwendenden Varianten</param>
+    static void RenewVariants(Room room, SkipMapper skip)
+    {
+      Debug.Assert(skip.usedCount > 0);
+      Debug.Assert(skip.usedCount < (uint)skip.map.Length);
+
+      // --- Variantenliste neu erstellen und gefiltert befüllen ---
+      var oldVariants = room.variantList;
+      var newVariants = new VariantListNormal((uint)room.incomingPortals.Length);
+      for (ulong variantId = 0; variantId < oldVariants.Count; variantId++)
+      {
+        ulong map = skip.map[variantId];
+        if (map == ulong.MaxValue) continue;
+        Debug.Assert(map == newVariants.Count);
+        var v = oldVariants.GetData(variantId);
+        newVariants.Add(v.oldStateId, v.moves, v.pushes, v.boxPortals, v.playerPortal, v.newStateId, v.path);
+      }
+      Debug.Assert(newVariants.Count == skip.usedCount);
+      oldVariants.Dispose();
+      room.variantList = newVariants;
+
+      // --- Start-Varianten neu zählen ---
+      ulong newStartVariants = 0;
+      for (ulong i = room.startVariantCount - 1; i < room.startVariantCount; i--)
+      {
+        if (skip.map[i] < ulong.MaxValue) newStartVariants++;
+      }
+      room.startVariantCount = newStartVariants;
+
+      // --- verlinkte Varianten in den Portalen neu setzen ---
+      foreach (var portal in room.incomingPortals)
+      {
+        // --- variantStateDict übertragen ---
+        var oldDict = portal.variantStateDict;
+        var newDict = new VariantStateDictNormal(room.stateList, room.variantList);
+        foreach (ulong state in oldDict.GetAllStates())
+        {
+          ulong skipVariants = 0;
+          foreach (ulong variantId in oldDict.GetVariants(state))
+          {
+            Debug.Assert(variantId < (uint)skip.map.Length);
+            if (skip.map[variantId] == ulong.MaxValue) // Variante wird nicht mehr verwendet?
+            {
+              skipVariants++;
+              continue;
+            }
+            Debug.Assert(skip.map[variantId] < room.variantList.Count);
+            newDict.Add(state, skip.map[variantId]);
+          }
+          Debug.Assert(oldDict.GetVariants(state).Count() == newDict.GetVariants(state).Count() + (int)skipVariants);
+        }
+        oldDict.Dispose();
+        portal.variantStateDict = newDict;
+      }
+    }
+
+    /// <summary>
     /// erneuert die Zustände im Raum und deren Verlinkungen
     /// </summary>
-    /// <param name="room">Raum, welche bearbeitet werden soll</param>
+    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
     /// <param name="skip">Liste mit allen überpringbaren bzw. weiter zu verwendenden Zuständen</param>
     static void RenewStates(Room room, SkipMapper skip)
     {
