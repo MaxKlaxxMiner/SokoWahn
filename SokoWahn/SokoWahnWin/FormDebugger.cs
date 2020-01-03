@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -614,7 +615,7 @@ namespace SokoWahnWin
     /// <summary>
     /// erster Optimierungsschritt
     /// </summary>
-    /// <param name="room">Raum, welches optimiert werden soll</param>
+    /// <param name="room">Raum, welcher optimiert werden soll</param>
     /// <returns>true, wenn etwas optimiert werden konnte</returns>
     static bool OptimizeStep1(Room room)
     {
@@ -688,6 +689,140 @@ namespace SokoWahnWin
     }
 
     /// <summary>
+    /// Optimierung: entfernt nicht mehr benutzte/verlinkte Zustände
+    /// </summary>
+    /// <param name="room">Raum, welcher optimiert werden soll</param>
+    /// <returns>true, wenn veraltete Zustände erkannt und entfernt wurden</returns>
+    static bool OptimizeUnusedStates(Room room)
+    {
+      var stateList = room.stateList;
+      var variantList = room.variantList;
+
+      using (var usingStates = new Bitter(stateList.Count))
+      {
+        usingStates.SetBit(0); // ersten Zustand immer pauschal markieren
+
+        // Start-Varianten durchsuchen
+        for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+        {
+          Debug.Assert(variantId < variantList.Count);
+          var v = variantList.GetData(variantId);
+
+          Debug.Assert(v.oldStateId < stateList.Count);
+          usingStates.SetBit(v.oldStateId);
+
+          Debug.Assert(v.newStateId < stateList.Count);
+          usingStates.SetBit(v.newStateId);
+        }
+
+        // Portal-Varianten durchsuchen
+        foreach (var portal in room.incomingPortals)
+        {
+          foreach (var stateId in portal.variantStateDict.GetAllStates())
+          {
+            Debug.Assert(stateId < usingStates.Length);
+            foreach (var variantId in portal.variantStateDict.GetVariants(stateId))
+            {
+              Debug.Assert(variantId < variantList.Count);
+              usingStates.SetBit(stateId);
+            }
+          }
+        }
+
+        if (usingStates.CountMarkedBits(0) != usingStates.Length)
+        {
+          var skip = new SkipMapper(usingStates);
+          RenewStates(room, skip);
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    /// <summary>
+    /// erneuert die Zustände im Raum und deren Verlinkungen
+    /// </summary>
+    /// <param name="room">Raum, welche bearbeitet werden soll</param>
+    /// <param name="skip">Liste mit allen überpringbaren bzw. weiter zu verwendenden Zuständen</param>
+    static void RenewStates(Room room, SkipMapper skip)
+    {
+      Debug.Assert(skip.usedCount > 0);
+      Debug.Assert(skip.usedCount < (uint)skip.map.Length);
+
+      // --- Zustandsliste neu erstellen und gefiltert befüllen ---
+      var oldStates = room.stateList;
+      var newStates = new StateListNormal(room.fieldPosis, room.goalPosis);
+      for (ulong stateId = 0; stateId < oldStates.Count; stateId++)
+      {
+        ulong map = skip.map[stateId];
+        if (map == ulong.MaxValue) continue;
+        Debug.Assert(map == newStates.Count);
+        newStates.Add(oldStates.Get(stateId));
+        Debug.Assert(newStates.Get(map).Length == oldStates.Get(stateId).Length);
+      }
+      Debug.Assert(newStates.Count == skip.usedCount);
+      oldStates.Dispose();
+      room.stateList = newStates;
+
+      // --- verlinkte Zustände innerhalb der Varianten neu setzen ---
+      var oldVariants = room.variantList;
+      var newVariants = new VariantListNormal(oldVariants.portalCount);
+      for (ulong variantId = 0; variantId < oldVariants.Count; variantId++)
+      {
+        var v = oldVariants.GetData(variantId);
+        Debug.Assert(v.oldStateId < oldStates.Count);
+        Debug.Assert(skip.map[v.oldStateId] < newStates.Count);
+        Debug.Assert(v.newStateId < oldStates.Count);
+        Debug.Assert(skip.map[v.newStateId] < newStates.Count);
+        Debug.Assert(variantId == newVariants.Count);
+        newVariants.Add(skip.map[v.oldStateId], v.moves, v.pushes, v.boxPortals, v.playerPortal, skip.map[v.newStateId], v.path);
+      }
+      oldVariants.Dispose();
+      Debug.Assert(newVariants.Count == oldVariants.Count);
+
+      // --- verlinkte Zustände in den Portalen neu setzen ---
+      foreach (var portal in room.incomingPortals)
+      {
+        // --- stateBoxSwap übertragen ---
+        var oldSwap = portal.stateBoxSwap;
+        var newSwap = new StateBoxSwapNormal(room.stateList);
+        foreach (ulong oldKey in oldSwap.GetAllKeys())
+        {
+          ulong newKey = skip.map[oldKey];
+          Debug.Assert(newKey < room.stateList.Count);
+          ulong oldState = oldSwap.Get(oldKey);
+          Debug.Assert(oldState != oldKey);
+          ulong newState = skip.map[oldState];
+          Debug.Assert(newState < room.stateList.Count);
+          newSwap.Add(newKey, newState); // TODO: überflüssig gewordene Swaps überspringen
+        }
+        Debug.Assert(newSwap.Count == oldSwap.Count);
+        oldSwap.Dispose();
+        portal.stateBoxSwap = newSwap;
+
+        // --- variantStateDict übertragen ---
+        var oldDict = portal.variantStateDict;
+        var newDict = new VariantStateDictNormal(room.stateList, room.variantList);
+        foreach (ulong oldState in oldDict.GetAllStates())
+        {
+          Debug.Assert(oldState < (uint)skip.map.Length);
+          ulong newState = skip.map[oldState];
+          Debug.Assert(newState < room.stateList.Count);
+          foreach (ulong variantId in oldDict.GetVariants(oldState))
+          {
+            Debug.Assert(variantId < room.variantList.Count);
+            newDict.Add(newState, variantId);
+          }
+          Debug.Assert(oldDict.GetVariants(oldState).Count() == newDict.GetVariants(newState).Count());
+        }
+        Debug.Assert(newDict.GetAllStates().Count() == oldDict.GetAllStates().Count());
+        oldDict.Dispose();
+        portal.variantStateDict = newDict;
+      }
+    }
+
+    /// <summary>
     /// Step-Button
     /// </summary>
     /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
@@ -701,6 +836,7 @@ namespace SokoWahnWin
       foreach (var room in network.rooms)
       {
         if (OptimizeStep1(room)) return;
+        if (OptimizeUnusedStates(room)) return;
       }
     }
 
