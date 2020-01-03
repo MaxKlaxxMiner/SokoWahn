@@ -9,7 +9,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// Inhaltsverzeichnis für mehrere Varianten pro Raumzustand
   /// </summary>
-  public abstract class VariantStateDict
+  public abstract class VariantStateDict : IDisposable
   {
     /// <summary>
     /// Liste mit allen Zuständen im Raum
@@ -53,5 +53,20 @@ namespace SokoWahnLib.Rooms
     /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>
     /// <returns>Enumerable der zugehörigen Varianten</returns>
     public abstract IEnumerable<ulong> GetVariants(ulong stateId);
+
+    #region # // --- Dispose ---
+    /// <summary>
+    /// Destruktor
+    /// </summary>
+    ~VariantStateDict()
+    {
+      Dispose();
+    }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public abstract void Dispose();
+    #endregion
   }
 }

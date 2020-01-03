@@ -14,7 +14,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// abstrakte Klasse, welche eine Liste mit Raum-Zuständen speichern kann
   /// </summary>
-  public abstract class StateList : IEnumerable<KeyValuePair<ulong, int[]>>
+  public abstract class StateList : IEnumerable<KeyValuePair<ulong, int[]>>, IDisposable
   {
     /// <summary>
     /// merkt sich alle Felder, welche zum Raum gehören
@@ -93,6 +93,21 @@ namespace SokoWahnLib.Rooms
     {
       return GetEnumerator();
     }
+    #endregion
+
+    #region # // --- Dispose ---
+    /// <summary>
+    /// Destruktor
+    /// </summary>
+    ~StateList()
+    {
+      Dispose();
+    }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public abstract void Dispose();
     #endregion
   }
 }

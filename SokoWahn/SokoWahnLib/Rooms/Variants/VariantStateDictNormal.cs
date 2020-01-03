@@ -69,5 +69,10 @@ namespace SokoWahnLib.Rooms
 
       return data.TryGetValue(stateId, out list) ? list : Enumerable.Empty<ulong>();
     }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public override void Dispose() { }
   }
 }

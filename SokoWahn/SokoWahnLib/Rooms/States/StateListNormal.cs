@@ -61,5 +61,10 @@ namespace SokoWahnLib.Rooms
 
       return data[(int)(uint)id];
     }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public override void Dispose() { }
   }
 }

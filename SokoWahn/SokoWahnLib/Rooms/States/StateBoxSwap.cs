@@ -10,7 +10,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// abstrakte Klasse, welche sich Zustandswechel merkt, wenn eine Kiste in einen Raum geschoben wurde
   /// </summary>
-  public abstract class StateBoxSwap : IEnumerable<KeyValuePair<ulong, ulong>>
+  public abstract class StateBoxSwap : IEnumerable<KeyValuePair<ulong, ulong>>, IDisposable
   {
     /// <summary>
     /// Liste mit allen Zuständen im Raum
@@ -84,6 +84,21 @@ namespace SokoWahnLib.Rooms
     {
       return GetEnumerator();
     }
+    #endregion
+
+    #region # // --- Dispose ---
+    /// <summary>
+    /// Destruktor
+    /// </summary>
+    ~StateBoxSwap()
+    {
+      Dispose();
+    }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public abstract void Dispose();
     #endregion
   }
 }

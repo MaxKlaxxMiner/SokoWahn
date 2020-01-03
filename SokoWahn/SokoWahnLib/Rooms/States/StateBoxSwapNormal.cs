@@ -66,5 +66,10 @@ namespace SokoWahnLib.Rooms
     {
       return data.Keys;
     }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public override void Dispose() { }
   }
 }

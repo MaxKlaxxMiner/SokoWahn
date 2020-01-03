@@ -40,11 +40,11 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Liste mit allen Zuständen, welche der Raum annehmen kann
     /// </summary>
-    public readonly StateList stateList;
+    public StateList stateList;
     /// <summary>
     /// Liste mit allen Varianten, welche innerhalb des Raumes durchgeführt werden können
     /// </summary>
-    public readonly VariantList variantList;
+    public VariantList variantList;
     /// <summary>
     /// merkt sich die Anzahl der vorhandenen Start-Varianten (nur wenn der Spieler in diesem Raum startet)
     /// </summary>
@@ -79,7 +79,7 @@ namespace SokoWahnLib.Rooms
       goalPosis = fieldPosis.Where(field.IsGoal).ToArray();
       startBoxPosis = fieldPosis.Where(field.IsBox).ToArray();
 
-      stateList = new StateListNormal(fieldPosis, fieldPosis.Where(field.IsGoal).ToArray());
+      stateList = new StateListNormal(fieldPosis, goalPosis);
 
       variantList = new VariantListNormal((uint)incomingPortals.Length);
     }
@@ -271,6 +271,18 @@ namespace SokoWahnLib.Rooms
           if (incomingPortals[p] != null) incomingPortals[p].Dispose();
           incomingPortals[p] = null;
         }
+      }
+
+      if (stateList != null)
+      {
+        stateList.Dispose();
+        stateList = null;
+      }
+
+      if (variantList != null)
+      {
+        variantList.Dispose();
+        variantList = null;
       }
     }
 

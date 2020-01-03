@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable MemberCanBeProtected.Global
@@ -10,7 +11,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// abstrakte Klasse, welche eine Liste mit Varianten speichert
   /// </summary>
-  public abstract class VariantList
+  public abstract class VariantList : IDisposable
   {
     /// <summary>
     /// merkt sich die Anzahl der vorhandenen Portale
@@ -52,5 +53,20 @@ namespace SokoWahnLib.Rooms
     /// <param name="variantId">ID der Variante, welche abgefragt werden soll</param>
     /// <returns>Daten der abgefragten Variante</returns>
     public abstract VariantData GetData(ulong variantId);
+
+    #region # // --- Dispose ---
+    /// <summary>
+    /// Destructor
+    /// </summary>
+    ~VariantList()
+    {
+      Dispose();
+    }
+
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public abstract void Dispose();
+    #endregion
   }
 }
