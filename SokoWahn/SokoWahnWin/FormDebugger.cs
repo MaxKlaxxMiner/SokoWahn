@@ -680,7 +680,7 @@ namespace SokoWahnWin
         ulong freeBits = killVariants.CountFreeBits(0);
         if (freeBits < killVariants.Length) // als gelöscht markierte Varianten erkannt?
         {
-          throw new NotImplementedException("todo");
+          //throw new NotImplementedException("todo");
         }
       }
       #endregion
@@ -787,17 +787,20 @@ namespace SokoWahnWin
         // --- stateBoxSwap übertragen ---
         var oldSwap = portal.stateBoxSwap;
         var newSwap = new StateBoxSwapNormal(room.stateList);
+        ulong skipSwaps = 0;
         foreach (ulong oldKey in oldSwap.GetAllKeys())
         {
           ulong newKey = skip.map[oldKey];
+          if (newKey == ulong.MaxValue) { skipSwaps++; continue; } // nicht mehr gültige Swaps überspringen
           Debug.Assert(newKey < room.stateList.Count);
           ulong oldState = oldSwap.Get(oldKey);
           Debug.Assert(oldState != oldKey);
           ulong newState = skip.map[oldState];
+          if (newState == ulong.MaxValue) { skipSwaps++; continue; }  // nicht mehr gültige Swaps überspringen
           Debug.Assert(newState < room.stateList.Count);
-          newSwap.Add(newKey, newState); // TODO: überflüssig gewordene Swaps überspringen
+          newSwap.Add(newKey, newState);
         }
-        Debug.Assert(newSwap.Count == oldSwap.Count);
+        Debug.Assert(newSwap.Count + skipSwaps == oldSwap.Count);
         oldSwap.Dispose();
         portal.stateBoxSwap = newSwap;
 
@@ -833,11 +836,23 @@ namespace SokoWahnWin
       listRooms.Items.Clear();
       listRooms.EndUpdate();
 
+      int roomIndex = 0;
       foreach (var room in network.rooms)
       {
-        if (OptimizeStep1(room)) return;
-        if (OptimizeUnusedStates(room)) return;
+        roomIndex++;
+        if (OptimizeStep1(room))
+        {
+          button1.Text = "Room " + roomIndex;
+          return;
+        }
+        if (OptimizeUnusedStates(room))
+        {
+          button1.Text = "Room " + roomIndex;
+          return;
+        }
       }
+
+      button1.Text = "ok.";
     }
 
     /// <summary>

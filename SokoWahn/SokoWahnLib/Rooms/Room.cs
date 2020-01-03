@@ -147,12 +147,10 @@ namespace SokoWahnLib.Rooms
       #region # // --- Start-Varianten hinzufügen ---
       if (field.IsPlayer(pos))
       {
-        ulong oldState = field.IsGoal(pos) ? 1UL : 0UL;
-        ulong newState = field.IsGoal(pos) ? 0UL : 1UL;
-
+        ulong state = field.IsGoal(pos) ? 1UL : 0UL;
         for (int p = 0; p < incomingPortals.Length; p++)
         {
-          variantList.Add(oldState, 1, 0, new uint[0], (uint)p, newState, outgoingPortals[p].dirChar.ToString());
+          variantList.Add(state, 1, 0, new uint[0], (uint)p, state, outgoingPortals[p].dirChar.ToString());
           startVariantCount++;
         }
       }

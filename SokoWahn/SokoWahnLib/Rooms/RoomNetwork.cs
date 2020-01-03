@@ -14,7 +14,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// Ein auf Räume basierende Netzwerk
   /// </summary>
-  public class RoomNetwork : IDisposable
+  public sealed class RoomNetwork : IDisposable
   {
     /// <summary>
     /// Spielfeld, welches verwendet wird
