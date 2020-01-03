@@ -29,6 +29,7 @@
   private void InitializeComponent()
   {
       this.components = new System.ComponentModel.Container();
+      System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
       this.button1 = new System.Windows.Forms.Button();
       this.textBox4 = new System.Windows.Forms.TextBox();
       this.button2 = new System.Windows.Forms.Button();
@@ -62,8 +63,7 @@
       this.textBox4.ScrollBars = System.Windows.Forms.ScrollBars.Both;
       this.textBox4.Size = new System.Drawing.Size(791, 504);
       this.textBox4.TabIndex = 5;
-      this.textBox4.Text = "######   \r\n#    ####\r\n#    ...#\r\n#    ...#\r\n######  #\r\n  #  #  #\r\n  # $$ ##\r\n  # " +
-    "@$  #\r\n  # $$  #\r\n  ## $# #\r\n   #    #\r\n   ######\r\n\r\n";
+      this.textBox4.Text = resources.GetString("textBox4.Text");
       this.textBox4.WordWrap = false;
       this.textBox4.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBox4_KeyDown);
       // 

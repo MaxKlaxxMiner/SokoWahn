@@ -80,6 +80,7 @@
     <Compile Include="ngMaxLite\Zp.cs" />
     <Compile Include="SokowahnTools\ISokowahnHash.cs" />
     <Compile Include="SokowahnTools\ISokowahnBlocker.cs" />
+    <Compile Include="SokowahnTools\SokowahnBlockerBx.cs" />
     <Compile Include="SokowahnTools\SokowahnBlockerB.cs" />
     <Compile Include="SokowahnTools\SokowahnBlockerB2.cs" />
     <Compile Include="SokowahnTools\SokowahnBlocker.cs" />
