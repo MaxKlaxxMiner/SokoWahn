@@ -324,7 +324,7 @@ namespace SokoWahnLib
     /// <returns>Anzahl der nicht markierten Bits</returns>
     public ulong CountFreeBits(ulong bitPos)
     {
-      Debug.Assert(bitPos < bitCount);
+      Debug.Assert(bitPos <= bitCount);
       ulong pos = bitPos;
       uint valPos = (uint)(pos >> 6);
       ulong dataVal = data[valPos];
@@ -355,7 +355,7 @@ namespace SokoWahnLib
     /// <returns>Anzahl der markierten Bits</returns>
     public ulong CountMarkedBits(ulong bitPos)
     {
-      Debug.Assert(bitPos < bitCount);
+      Debug.Assert(bitPos <= bitCount);
       ulong pos = bitPos;
       uint valPos = (uint)(pos >> 6);
       ulong dataVal = data[valPos];
