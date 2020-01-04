@@ -1,7 +1,7 @@
 ﻿#define byteModus
 
 // gibt an, ob der Parallel-Betrieb komplett deaktiviert werden soll (lansamer, übersichtlicher fürs Debuggen)
-//#define parallelDeaktivieren
+#define parallelDeaktivieren
 
 // gibt an, ob der Parallel-Betrieb geordnet ablaufen soll (= stabilere Zugverteilungen für Vergleiche, jedoch etwas langsamer)
 //#define parallelGeordnet
@@ -491,7 +491,7 @@ namespace Sokosolver
 {
   SokowahnRaum raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
   raum.LadeStellung(stellungen, stellung * satzGröße, 60000 - rückwärtsTiefe);
-  return raum.GetVariantenRückwärtsRun();
+  return raum.GetVariantenRückwärtsRun2();
 }).Where(x => { int find = zielStellungen.Get(x.crc64); return find == 65535 || find < x.zugTiefe; }).ToArray();
 
       foreach (var variante in ergebnisse)

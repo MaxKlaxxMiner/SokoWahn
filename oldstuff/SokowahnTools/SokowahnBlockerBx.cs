@@ -1,5 +1,5 @@
 ﻿// gibt an, ob der Parallel-Betrieb komplett deaktiviert werden soll (lansamer, übersichtlicher fürs Debuggen)
-//#define parallelDeaktivieren
+#define parallelDeaktivieren
 
 #region # using *.*
 using System;
@@ -852,17 +852,27 @@ namespace Sokosolver.SokowahnTools
           limit = (int)Math.Min(limit, prüfListe.SatzAnzahl);
           verschmelzenRest -= limit;
 
-          var ergebnisse = Enumerable.Range(0, limit).Select(i => prüfListe.Pop()).AsParallel().SelectMany(stellung =>
+          var ergebnisse = Enumerable.Range(0, limit).Select(i => prüfListe.Pop())
+#if !parallelDeaktivieren
+.AsParallel()
+#endif
+.SelectMany(stellung =>
           {
             var raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
             raum.LadeStellung(stellung, 0, 0);
-            return raum.GetVariantenRückwärts();
-          }).Where(x => bekannteStellungen.Get(x.crc64) < 65535).ToArray();
+            return raum.GetVariantenRückwärts(this);
+          }).ToArray();
 
           foreach (var stellung in ergebnisse)
           {
             int find = bekannteStellungen.Get(stellung.crc64);
             if (find == 60000) continue;
+            if (find == 65535)
+            {
+              bekannteStellungen.Add(stellung.crc64, 12345);
+              prüfListeBöse.Add(stellung.raumSpielerPos, stellung.kistenZuRaum);
+              continue;
+            }
             prüfListeGut.Add(stellung.raumSpielerPos, stellung.kistenZuRaum);
             bekannteStellungen.Update(stellung.crc64, 60000);
           }

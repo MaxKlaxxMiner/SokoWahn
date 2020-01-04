@@ -1371,6 +1371,105 @@ namespace Sokosolver.SokowahnTools
       #endregion
     }
     #endregion
+    #region # public IEnumerable<SokowahnStellung> GetVariantenRückwärts(ISokowahnBlocker blocker) // ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
+    /// <summary>
+    /// ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
+    /// </summary>
+    /// <param name="blocker">Blocker, welcher verwendet werden soll</param>
+    /// <returns>alle möglichen Vorgänge-Zugvarianten</returns>
+    public IEnumerable<SokowahnStellung> GetVariantenRückwärts(ISokowahnBlocker blocker)
+    {
+      int pMitte = raumSpielerPos;
+      int pLinks = raumLinks[pMitte];
+      int pRechts = raumRechts[pMitte];
+      int pOben = raumOben[pMitte];
+      int pUnten = raumUnten[pMitte];
+
+      #region # // --- Links-Vermutung: Kiste wurde das letztes mal nach links geschoben ---
+      if (raumZuKisten[pLinks] < kistenAnzahl && pRechts < raumAnzahl && raumZuKisten[pRechts] == kistenAnzahl)
+      {
+        raumSpielerPos = pRechts; // Spieler zurück nach rechts bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pLinks]] = pMitte; raumZuKisten[pLinks] = kistenAnzahl; // linke Kiste eins zurück nach rechts schieben
+
+        foreach (var variante in GetVariantenRückwärtsTeil(blocker)) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pLinks] = raumZuKisten[pMitte]] = pLinks; raumZuKisten[pMitte] = kistenAnzahl; // linke Kiste weiter nach links schieben
+        raumSpielerPos = pMitte; // Spieler nach links bewegen
+      }
+      #endregion
+
+      #region # // --- Rechts-Vermutung: Kiste wurde das letztes mal nach rechts geschoben ---
+      if (raumZuKisten[pRechts] < kistenAnzahl && pLinks < raumAnzahl && raumZuKisten[pLinks] == kistenAnzahl)
+      {
+        raumSpielerPos = pLinks; // Spieler zurück nach links bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pRechts]] = pMitte; raumZuKisten[pRechts] = kistenAnzahl; // rechte Kiste eins zurück nach links schieben
+
+        foreach (var variante in GetVariantenRückwärtsTeil(blocker)) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pRechts] = raumZuKisten[pMitte]] = pRechts; raumZuKisten[pMitte] = kistenAnzahl; // rechte Kiste weiter nach rechts schieben
+        raumSpielerPos = pMitte; // Spieler nach rechts bewegen
+      }
+      #endregion
+
+      #region # // --- Oben-Vermutung: Kiste wurde das letztes mal nach oben geschoben ---
+      if (raumZuKisten[pOben] < kistenAnzahl && pUnten < raumAnzahl && raumZuKisten[pUnten] == kistenAnzahl)
+      {
+        raumSpielerPos = pUnten; // Spieler zurück nach unten bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pOben]] = pMitte; raumZuKisten[pOben] = kistenAnzahl; // obere Kiste eins zurück nach unten schieben
+        #region # // Kisten zurück sortieren (sofern notwendig)
+        while (raumZuKisten[pMitte] < kistenAnzahl - 1 && kistenZuRaum[raumZuKisten[pMitte] + 1] < pMitte)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pMitte] + 1];
+          kistenZuRaum[raumZuKisten[pMitte]++] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]--] = pMitte;
+        }
+        #endregion
+
+        foreach (var variante in GetVariantenRückwärtsTeil(blocker)) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pOben] = raumZuKisten[pMitte]] = pOben; raumZuKisten[pMitte] = kistenAnzahl; // obere Kiste weiter nach oben schieben
+        raumSpielerPos = pMitte; // Spieler nach oben bewegen
+        #region # // Kisten sortieren (sofern notwendig)
+        while (raumZuKisten[pOben] > 0 && kistenZuRaum[raumZuKisten[pOben] - 1] > pOben && raumZuKisten[pOben] < kistenAnzahl)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pOben] - 1];
+          kistenZuRaum[raumZuKisten[pOben]--] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]++] = pOben;
+        }
+        #endregion
+      }
+      #endregion
+
+      #region # // --- Unten-Vermutung: Kiste wurde das letztes mal nach unten geschoben ---
+      if (raumZuKisten[pUnten] < kistenAnzahl && pOben < raumAnzahl && raumZuKisten[pOben] == kistenAnzahl)
+      {
+        raumSpielerPos = pOben; // Spieler zurück nach oben bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pUnten]] = pMitte; raumZuKisten[pUnten] = kistenAnzahl; // untere Kiste eins zurück nach oben schieben
+        #region # // Kisten zurück sortieren (sofern notwendig)
+        while (raumZuKisten[pMitte] > 0 && kistenZuRaum[raumZuKisten[pMitte] - 1] > pMitte && raumZuKisten[pMitte] < kistenAnzahl)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pMitte] - 1];
+          kistenZuRaum[raumZuKisten[pMitte]--] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]++] = pMitte;
+        }
+        #endregion
+
+        foreach (var variante in GetVariantenRückwärtsTeil(blocker)) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pUnten] = raumZuKisten[pMitte]] = pUnten; raumZuKisten[pMitte] = kistenAnzahl; // untere Kiste weiter nach unten schieben
+        raumSpielerPos = pMitte; // Spieler nach unten bewegen
+        #region # // Kisten sortieren (sofern notwendig)
+        while (raumZuKisten[pUnten] < kistenAnzahl - 1 && kistenZuRaum[raumZuKisten[pUnten] + 1] < pUnten)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pUnten] + 1];
+          kistenZuRaum[raumZuKisten[pUnten]++] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]--] = pUnten;
+        }
+        #endregion
+      }
+      #endregion
+    }
+    #endregion
     #region # IEnumerable<SokowahnStellung> GetVariantenRückwärtsTeil() // Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
     /// <summary>
     /// Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
@@ -1465,6 +1564,129 @@ namespace Sokosolver.SokowahnTools
             if ((p2 = raumOben[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
             {
               yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        checkRaumVon++;
+      }
+    }
+    #endregion
+    #region # IEnumerable<SokowahnStellung> GetVariantenRückwärtsTeil(ISokowahnBlocker blocker) // Hilfsmethode für GetVariantenRückwärts(ISokowahnBlocker blocker), berechnet eine bestimmte Richtung
+    /// <summary>
+    /// Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
+    /// </summary>
+    /// <param name="blocker">Blocker, welcher verwendet werden soll</param>
+    /// <returns>gefundene gültige Stellungen</returns>
+    IEnumerable<SokowahnStellung> GetVariantenRückwärtsTeil(ISokowahnBlocker blocker)
+    {
+      int checkRaumVon = 0;
+      int checkRaumBis = 0;
+
+      Array.Clear(tmpRaumCheckFertig, 0, raumAnzahl);
+
+      // erste Spielerposition hinzufügen
+      tmpRaumCheckFertig[raumSpielerPos] = true;
+      tmpCheckRaumPosis[checkRaumBis] = raumSpielerPos;
+      tmpCheckRaumTiefe[checkRaumBis] = spielerZugTiefe;
+      checkRaumBis++;
+
+      // alle möglichen Spielerposition berechnen
+      while (checkRaumVon < checkRaumBis)
+      {
+        raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];
+        int pTiefe = tmpCheckRaumTiefe[checkRaumVon] - 1;
+
+        int p, p2;
+
+        #region # // --- links ---
+        if (!tmpRaumCheckFertig[p = raumLinks[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumRechts[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              if (blocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+              {
+                yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+              }
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- rechts ---
+        if (!tmpRaumCheckFertig[p = raumRechts[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumLinks[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              if (blocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+              {
+                yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+              }
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- oben ---
+        if (!tmpRaumCheckFertig[p = raumOben[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumUnten[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              if (blocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+              {
+                yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+              }
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- unten ---
+        if (!tmpRaumCheckFertig[p = raumUnten[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumOben[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              if (blocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+              {
+                yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+              }
             }
           }
           else
@@ -1682,6 +1904,246 @@ namespace Sokosolver.SokowahnTools
               ulong crc = Crc;
               int find = merkZielHash.Get(crc);
               if (find == 65535 || find < pTiefe) yield return new SokowahnStellungRun { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = crc, findHash = merkStartHash.Get(crc), raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        checkRaumVon++;
+      }
+    }
+    #endregion
+    #region # public IEnumerable<SokowahnStellungRun> GetVariantenRückwärtsRun2() // ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
+    /// <summary>
+    /// ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
+    /// </summary>
+    /// <returns>alle möglichen Vorgänge-Zugvarianten</returns>
+    public IEnumerable<SokowahnStellungRun> GetVariantenRückwärtsRun2()
+    {
+      int pMitte = raumSpielerPos;
+      int pLinks = raumLinks[pMitte];
+      int pRechts = raumRechts[pMitte];
+      int pOben = raumOben[pMitte];
+      int pUnten = raumUnten[pMitte];
+
+      #region # // --- Links-Vermutung: Kiste wurde das letztes mal nach links geschoben ---
+      if (raumZuKisten[pLinks] < kistenAnzahl && pRechts < raumAnzahl && raumZuKisten[pRechts] == kistenAnzahl)
+      {
+        raumSpielerPos = pRechts; // Spieler zurück nach rechts bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pLinks]] = pMitte; raumZuKisten[pLinks] = kistenAnzahl; // linke Kiste eins zurück nach rechts schieben
+
+        foreach (var variante in GetVariantenRückwärtsTeilRun2()) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pLinks] = raumZuKisten[pMitte]] = pLinks; raumZuKisten[pMitte] = kistenAnzahl; // linke Kiste weiter nach links schieben
+        raumSpielerPos = pMitte; // Spieler nach links bewegen
+      }
+      #endregion
+
+      #region # // --- Rechts-Vermutung: Kiste wurde das letztes mal nach rechts geschoben ---
+      if (raumZuKisten[pRechts] < kistenAnzahl && pLinks < raumAnzahl && raumZuKisten[pLinks] == kistenAnzahl)
+      {
+        raumSpielerPos = pLinks; // Spieler zurück nach links bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pRechts]] = pMitte; raumZuKisten[pRechts] = kistenAnzahl; // rechte Kiste eins zurück nach links schieben
+
+        foreach (var variante in GetVariantenRückwärtsTeilRun2()) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pRechts] = raumZuKisten[pMitte]] = pRechts; raumZuKisten[pMitte] = kistenAnzahl; // rechte Kiste weiter nach rechts schieben
+        raumSpielerPos = pMitte; // Spieler nach rechts bewegen
+      }
+      #endregion
+
+      #region # // --- Oben-Vermutung: Kiste wurde das letztes mal nach oben geschoben ---
+      if (raumZuKisten[pOben] < kistenAnzahl && pUnten < raumAnzahl && raumZuKisten[pUnten] == kistenAnzahl)
+      {
+        raumSpielerPos = pUnten; // Spieler zurück nach unten bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pOben]] = pMitte; raumZuKisten[pOben] = kistenAnzahl; // obere Kiste eins zurück nach unten schieben
+        #region # // Kisten zurück sortieren (sofern notwendig)
+        while (raumZuKisten[pMitte] < kistenAnzahl - 1 && kistenZuRaum[raumZuKisten[pMitte] + 1] < pMitte)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pMitte] + 1];
+          kistenZuRaum[raumZuKisten[pMitte]++] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]--] = pMitte;
+        }
+        #endregion
+
+        foreach (var variante in GetVariantenRückwärtsTeilRun2()) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pOben] = raumZuKisten[pMitte]] = pOben; raumZuKisten[pMitte] = kistenAnzahl; // obere Kiste weiter nach oben schieben
+        raumSpielerPos = pMitte; // Spieler nach oben bewegen
+        #region # // Kisten sortieren (sofern notwendig)
+        while (raumZuKisten[pOben] > 0 && kistenZuRaum[raumZuKisten[pOben] - 1] > pOben && raumZuKisten[pOben] < kistenAnzahl)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pOben] - 1];
+          kistenZuRaum[raumZuKisten[pOben]--] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]++] = pOben;
+        }
+        #endregion
+      }
+      #endregion
+
+      #region # // --- Unten-Vermutung: Kiste wurde das letztes mal nach unten geschoben ---
+      if (raumZuKisten[pUnten] < kistenAnzahl && pOben < raumAnzahl && raumZuKisten[pOben] == kistenAnzahl)
+      {
+        raumSpielerPos = pOben; // Spieler zurück nach oben bewegen
+        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pUnten]] = pMitte; raumZuKisten[pUnten] = kistenAnzahl; // untere Kiste eins zurück nach oben schieben
+        #region # // Kisten zurück sortieren (sofern notwendig)
+        while (raumZuKisten[pMitte] > 0 && kistenZuRaum[raumZuKisten[pMitte] - 1] > pMitte && raumZuKisten[pMitte] < kistenAnzahl)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pMitte] - 1];
+          kistenZuRaum[raumZuKisten[pMitte]--] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]++] = pMitte;
+        }
+        #endregion
+
+        foreach (var variante in GetVariantenRückwärtsTeilRun2()) yield return variante;
+
+        kistenZuRaum[raumZuKisten[pUnten] = raumZuKisten[pMitte]] = pUnten; raumZuKisten[pMitte] = kistenAnzahl; // untere Kiste weiter nach unten schieben
+        raumSpielerPos = pMitte; // Spieler nach unten bewegen
+        #region # // Kisten sortieren (sofern notwendig)
+        while (raumZuKisten[pUnten] < kistenAnzahl - 1 && kistenZuRaum[raumZuKisten[pUnten] + 1] < pUnten)
+        {
+          int tmp = kistenZuRaum[raumZuKisten[pUnten] + 1];
+          kistenZuRaum[raumZuKisten[pUnten]++] = tmp;
+          kistenZuRaum[raumZuKisten[tmp]--] = pUnten;
+        }
+        #endregion
+      }
+      #endregion
+    }
+    #endregion
+    #region # IEnumerable<SokowahnStellungRun> GetVariantenRückwärtsTeilRun2() // Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
+    /// <summary>
+    /// Hilfsmethode für GetVariantenRückwärtsRun(), berechnet eine bestimmte Richtung
+    /// </summary>
+    /// <returns>gefundene gültige Stellungen</returns>
+    IEnumerable<SokowahnStellungRun> GetVariantenRückwärtsTeilRun2()
+    {
+      int checkRaumVon = 0;
+      int checkRaumBis = 0;
+
+      Array.Clear(tmpRaumCheckFertig, 0, raumAnzahl);
+
+      // erste Spielerposition hinzufügen
+      tmpRaumCheckFertig[raumSpielerPos] = true;
+      tmpCheckRaumPosis[checkRaumBis] = raumSpielerPos;
+      tmpCheckRaumTiefe[checkRaumBis] = spielerZugTiefe;
+      checkRaumBis++;
+
+      // alle möglichen Spielerposition berechnen
+      while (checkRaumVon < checkRaumBis)
+      {
+        raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];
+        int pTiefe = tmpCheckRaumTiefe[checkRaumVon] - 1;
+
+        int p, p2;
+
+        #region # // --- links ---
+        if (!tmpRaumCheckFertig[p = raumLinks[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumRechts[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              ulong crc = Crc;
+              int find = merkZielHash.Get(crc);
+              if (find == 65535 || find < pTiefe)
+              {
+                if (merkBlocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+                {
+                  yield return new SokowahnStellungRun { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = crc, findHash = merkStartHash.Get(crc), raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+                }
+              }
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- rechts ---
+        if (!tmpRaumCheckFertig[p = raumRechts[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumLinks[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              ulong crc = Crc;
+              int find = merkZielHash.Get(crc);
+              if (find == 65535 || find < pTiefe)
+              {
+                if (merkBlocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+                {
+                  yield return new SokowahnStellungRun { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = crc, findHash = merkStartHash.Get(crc), raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+                }
+              }
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- oben ---
+        if (!tmpRaumCheckFertig[p = raumOben[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumUnten[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              ulong crc = Crc;
+              int find = merkZielHash.Get(crc);
+              if (find == 65535 || find < pTiefe)
+              {
+                if (merkBlocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+                {
+                  yield return new SokowahnStellungRun { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = crc, findHash = merkStartHash.Get(crc), raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+                }
+              }
+            }
+          }
+          else
+          {
+            tmpRaumCheckFertig[p] = true;
+            tmpCheckRaumPosis[checkRaumBis] = p;
+            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
+            checkRaumBis++;
+          }
+        }
+        #endregion
+
+        #region # // --- unten ---
+        if (!tmpRaumCheckFertig[p = raumUnten[raumSpielerPos]])
+        {
+          if (raumZuKisten[p] < kistenAnzahl)
+          {
+            if ((p2 = raumOben[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
+            {
+              ulong crc = Crc;
+              int find = merkZielHash.Get(crc);
+              if (find == 65535 || find < pTiefe)
+              {
+                if (merkBlocker.CheckErlaubt(raumSpielerPos, raumZuKisten))
+                {
+                  yield return new SokowahnStellungRun { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = crc, findHash = merkStartHash.Get(crc), raumSpielerPos = raumSpielerPos, zugTiefe = pTiefe };
+                }
+              }
             }
           }
           else
