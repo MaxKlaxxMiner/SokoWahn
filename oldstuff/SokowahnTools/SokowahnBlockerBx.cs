@@ -1,9 +1,11 @@
 ﻿// gibt an, ob der Parallel-Betrieb komplett deaktiviert werden soll (lansamer, übersichtlicher fürs Debuggen)
-#define parallelDeaktivieren
+//#define parallelDeaktivieren
 
 #region # using *.*
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -285,6 +287,75 @@ namespace Sokosolver.SokowahnTools
         if (blockerAnzahl == 0) return " - ";
         return " Kisten: " + kistenAnzahl + ", Blocker: " + blockerAnzahl.ToString("#,##0") + ", Aufwand: " + geprüfteStellungen.ToString("#,##0") + " ";
       }
+
+      #region # public void Speichern(BinaryWriter schreib) // speichert den gesamten Blocker in einen Stream
+      /// <summary>
+      /// speichert den gesamten Blocker in einen Stream
+      /// </summary>
+      /// <param name="stream">Stream in den der Blocker gespeichert werden soll</param>
+      public void Speichern(BinaryWriter stream)
+      {
+        if (!blockerSortiert) throw new Exception("Blocker wurde noch nicht sortiert!");
+
+        stream.Write(geprüfteStellungen);
+        stream.Write(kistenAnzahl);
+        stream.Write(blockerAnzahl);
+
+        int pBis = blockerAnzahl * blockerGröße;
+
+        for (int i = 0; i < kistenAnzahl; i++)
+        {
+          for (int p = i * 2; p < pBis; )
+          {
+            int wert = blockerData[p];
+            if (wert < 0xff)
+            {
+              stream.Write((byte)wert);
+            }
+            else
+            {
+              stream.Write((byte)0xff);
+              stream.Write((ushort)wert);
+            }
+            p += kistenAnzahl * 2;
+          }
+        }
+      }
+      #endregion
+
+      #region # public void Laden(BinaryReader lese) // lädt den gesamten Blocker aus einem Stream
+      /// <summary>
+      /// lädt den gesamten Blocker aus einem Stream
+      /// </summary>
+      /// <param name="stream">Stream aus dem der Blocker geladen werden soll</param>
+      public void Laden(BinaryReader stream)
+      {
+        geprüfteStellungen = stream.ReadInt64();
+        kistenAnzahl = stream.ReadInt32();
+        blockerAnzahl = stream.ReadInt32();
+
+        blockerGröße = kistenAnzahl * 2;
+        blockerSortiert = true;
+
+        blockerData = new int[blockerAnzahl * blockerGröße];
+        for (int i = 0; i < kistenAnzahl; i++)
+        {
+          for (int p = i * 2; p < blockerData.Length; )
+          {
+            int wert = stream.ReadByte();
+            if (wert == 255) wert = stream.ReadUInt16();
+            blockerData[p] = wert;
+            p += kistenAnzahl * 2;
+          }
+        }
+
+        if (blockerAnzahl > 0)
+        {
+          blockerSortiert = false;
+          Sortieren();
+        }
+      }
+      #endregion
     }
     #endregion
 
@@ -347,6 +418,16 @@ namespace Sokosolver.SokowahnTools
     BlockerFeld[] bekannteBlocker;
 
     /// <summary>
+    /// merkt sich den Namen der Blocker-Datei
+    /// </summary>
+    readonly string blockerDatei;
+
+    /// <summary>
+    /// gitb an, ob eine Blocker-Datei geladen wurde
+    /// </summary>
+    readonly bool blockerGeladen;
+
+    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="blockerDatei">Pfad zur Datei, worin sich eventuell archivierte Blocker-Daten befinden</param>
@@ -358,6 +439,12 @@ namespace Sokosolver.SokowahnTools
       bekannteBlocker = new BlockerFeld[0];
       status = BlockerStatus.Init;
       suchKistenAnzahl = 0;
+      this.blockerDatei = blockerDatei;
+      if (File.Exists(blockerDatei))
+      {
+        LadeAlleBlocker();
+        blockerGeladen = true;
+      }
     }
 
     /// <summary>
@@ -720,6 +807,63 @@ namespace Sokosolver.SokowahnTools
     long verschmelzenRest;
 
     /// <summary>
+    /// speichert alle bekannten Blocker
+    /// </summary>
+    void SpeichereAlleBlocker()
+    {
+      var schreib = new BinaryWriter(new GZipStream(new FileStream(blockerDatei, FileMode.Create, FileAccess.Write), CompressionLevel.Optimal));
+
+      schreib.Write(107); // Version
+
+      schreib.Write(bekannteBlocker.Length / raumAnzahl + 1);
+      schreib.Write(raumAnzahl);
+      schreib.Write(bekannteBlocker.Length);
+
+      var mem = new MemoryStream();
+      var schreib2 = new BinaryWriter(mem);
+
+      foreach (var blocker in bekannteBlocker) blocker.Speichern(schreib2);
+
+      schreib2.Close();
+      var buf = mem.ToArray().RlePack();
+      schreib.Write(buf.Length);
+      schreib.Write(buf);
+
+      schreib.Close();
+    }
+
+    /// <summary>
+    /// lädt alle bekannten Blocker aus einer GZip-Datei
+    /// </summary>
+    void LadeAlleBlocker()
+    {
+      var lese = new BinaryReader(new GZipStream(new FileStream(blockerDatei, FileMode.Open, FileAccess.Read), CompressionMode.Decompress));
+
+      int version = lese.ReadInt32();
+      if (version != 107) throw new Exception("falsche Version Blocker-Datei: (" + version + ") " + blockerDatei);
+
+      suchKistenAnzahl = lese.ReadInt32() - 1;
+      raumAnzahl = lese.ReadInt32();
+      bekannteBlocker = new BlockerFeld[lese.ReadInt32()];
+
+      int len = lese.ReadInt32();
+      var buf = lese.ReadBytes(len);
+      if (len != buf.Length) throw new Exception("Lesefehler!");
+      buf = buf.RleUnpack<byte>().ToArray();
+      using (var lese2 = new BinaryReader(new RamStream(buf, false)))
+      {
+
+        for (int b = 0; b < bekannteBlocker.Length; b++)
+        {
+          bekannteBlocker[b].kistenNummerLeer = suchKistenAnzahl + 1;
+          bekannteBlocker[b].Laden(lese2);
+        }
+      }
+
+      lese.Close();
+    }
+
+    /// <summary>
     /// berechnet die nächsten Blocker
     /// </summary>
     /// <param name="limit">maximale Anzahl der Berechnungen, oder 0, wenn die Berechnung beendet werden soll</param>
@@ -739,7 +883,7 @@ namespace Sokosolver.SokowahnTools
         case BlockerStatus.Init:
         {
           bool abbruch = suchKistenAnzahl + 1 >= maxKisten; // Kisten-Limit erreicht?
-          if (!abbruch && (suchKistenAnzahl >= 3 && NextSchätzen > 15000000 || suchKistenAnzahl >= 4 && NextSchätzen > 5000000)) abbruch = true; // Limit für automatischen Stop erreicht?
+          if (!abbruch && !blockerGeladen && (suchKistenAnzahl >= 3 && NextSchätzen > 15000000 || suchKistenAnzahl >= 4 && NextSchätzen > 5000000)) abbruch = true; // Limit für automatischen Stop erreicht?
 
           if (abbruch)
           {
@@ -871,6 +1015,7 @@ namespace Sokosolver.SokowahnTools
             {
               bekannteStellungen.Add(stellung.crc64, 12345);
               prüfListeBöse.Add(stellung.raumSpielerPos, stellung.kistenZuRaum);
+              verschmelzenRest++;
               continue;
             }
             prüfListeGut.Add(stellung.raumSpielerPos, stellung.kistenZuRaum);
@@ -908,7 +1053,7 @@ namespace Sokosolver.SokowahnTools
             for (int i = 0; i < bekannteBlocker.Length; i += raumAnzahl) geprüfteStellungenGesamt += bekannteBlocker[i].geprüfteStellungen;
             for (int i = 0; i < bekannteBlocker.Length; i++) bekannteBlocker[i].Sortieren();
 
-            if (geprüfteStellungenGesamt > 100000) { } // SpeichereAlleBlocker();
+            if (geprüfteStellungenGesamt > 100000) SpeichereAlleBlocker();
 
             status = BlockerStatus.Init;
             bekannteStellungen = null;

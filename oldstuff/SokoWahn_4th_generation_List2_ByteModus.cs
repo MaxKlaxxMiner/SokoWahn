@@ -1,7 +1,7 @@
 ﻿#define byteModus
 
 // gibt an, ob der Parallel-Betrieb komplett deaktiviert werden soll (lansamer, übersichtlicher fürs Debuggen)
-#define parallelDeaktivieren
+//#define parallelDeaktivieren
 
 // gibt an, ob der Parallel-Betrieb geordnet ablaufen soll (= stabilere Zugverteilungen für Vergleiche, jedoch etwas langsamer)
 //#define parallelGeordnet

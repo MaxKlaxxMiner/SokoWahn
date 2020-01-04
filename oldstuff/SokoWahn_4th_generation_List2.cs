@@ -199,7 +199,7 @@ namespace Sokosolver
 
       string blockerPath = Environment.CurrentDirectory + "\\blocker\\";
       Directory.CreateDirectory(blockerPath);
-      blocker = new SokowahnBlockerB(blockerPath + "blockerB_x" + spielFeldCrc.ToString("x").PadLeft(16, '0') + ".gz", raumBasis);
+      blocker = new SokowahnBlockerBx(blockerPath + "blockerB_x" + spielFeldCrc.ToString("x").PadLeft(16, '0') + ".gz", raumBasis);
     }
     #endregion
 
@@ -305,7 +305,7 @@ namespace Sokosolver
     /// <summary>
     /// merkt sich alle Blocker-Stellungen (um bei der Vorwärtssuche sinnlose Stellungen auszulassen)
     /// </summary>
-    readonly SokowahnBlockerB blocker;
+    readonly SokowahnBlockerBx blocker;
 
     /// <summary>
     /// merkt sich alle Thread-Räume (für Multi-Threading)
@@ -491,7 +491,7 @@ namespace Sokosolver
 {
   SokowahnRaum raum = threadRäume[Thread.CurrentThread.ManagedThreadId];
   raum.LadeStellung(stellungen, stellung * satzGröße, 60000 - rückwärtsTiefe);
-  return raum.GetVariantenRückwärtsRun();
+  return raum.GetVariantenRückwärtsRun2();
 }).Where(x => { int find = zielStellungen.Get(x.crc64); return find == 65535 || find < x.zugTiefe; }).ToArray();
 
       foreach (var variante in ergebnisse)
