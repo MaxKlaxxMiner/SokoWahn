@@ -5,7 +5,7 @@
  *  Quelle: ngMax.Lite   *
  * * * * * * * * * * * * */
 
-namespace SokoWahnLib.Rooms
+namespace SokoWahnLib
 {
   /// <summary>
   /// Klasse zum berechnen von Crc64-Schlüsseln (FNV)

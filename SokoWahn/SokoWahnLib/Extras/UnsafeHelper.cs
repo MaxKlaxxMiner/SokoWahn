@@ -13,6 +13,10 @@ using System.Threading.Tasks;
 // ReSharper disable UnusedMember.Global
 #endregion
 
+/* * * * * * * * * * * * *
+ *  Quelle: ngMax.Lite   *
+ * * * * * * * * * * * * */
+
 namespace SokoWahnLib
 {
   /// <summary>

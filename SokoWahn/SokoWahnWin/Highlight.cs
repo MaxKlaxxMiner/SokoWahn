@@ -1,4 +1,4 @@
-﻿using SokoWahnLib.Rooms;
+﻿using SokoWahnLib;
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable UnusedMember.Global
 // ReSharper disable FieldCanBeMadeReadOnly.Global

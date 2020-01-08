@@ -5,6 +5,7 @@ namespace SokoWahnLib
   /// <summary>
   /// Typ in welcher Richtung der Spieler sich bewegen kann
   /// </summary>
+  [Flags]
   public enum MoveType
   {
     /// <summary>

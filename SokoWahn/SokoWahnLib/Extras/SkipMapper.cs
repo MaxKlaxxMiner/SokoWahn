@@ -1,14 +1,13 @@
-﻿using System;
-// ReSharper disable MemberCanBePrivate.Global
+﻿// ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable UnusedMember.Global
 // ReSharper disable NotAccessedField.Global
 
-namespace SokoWahnLib.Rooms
+namespace SokoWahnLib
 {
   /// <summary>
   /// Klasse zum neu Mappen von zu überspringenden Werten
   /// </summary>
-  public class SkipMapper
+  public sealed class SkipMapper
   {
     /// <summary>
     /// merkt sich die gemappten Daten

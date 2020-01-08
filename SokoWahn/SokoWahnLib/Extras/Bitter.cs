@@ -5,10 +5,14 @@ using System.Runtime.InteropServices;
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
 
+/* * * * * * * * * * * * *
+ *  Quelle: ngMax.Mcart  *
+ * * * * * * * * * * * * */
+
 namespace SokoWahnLib
 {
   /// <summary>
-  /// wie Bitt64, jedoch werden Zeiger statt normale UInt64-Arrays benutzt
+  /// wie Bitter64, jedoch werden Zeiger statt normale UInt64-Arrays benutzt
   /// </summary>
   public unsafe struct Bitter : IDisposable
   {
