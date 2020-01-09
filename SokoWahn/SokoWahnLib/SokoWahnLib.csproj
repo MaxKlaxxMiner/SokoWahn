@@ -49,8 +49,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rooms\QuickScan\SokowahnHash.cs" />
     <Compile Include="Extras\Sort.cs" />
-    <Compile Include="Rooms\QuickScan\SokowahnStellung.cs" />
-    <Compile Include="Rooms\QuickScan\SokowahnRaum.cs" />
+    <Compile Include="Rooms\QuickScan\SokowahnPosition.cs" />
+    <Compile Include="Rooms\QuickScan\SokowahnField.cs" />
     <Compile Include="Rooms\QuickScan\SokoFieldQuickScan.cs" />
     <Compile Include="Extras\SkipMapper.cs" />
     <Compile Include="Rooms\States\StateBoxSwapNormal.cs" />

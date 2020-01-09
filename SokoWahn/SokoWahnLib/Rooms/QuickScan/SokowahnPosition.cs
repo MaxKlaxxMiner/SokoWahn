@@ -1,24 +1,26 @@
-﻿namespace SokoWahnLib.Rooms
+﻿// ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable UnusedMember.Global
+namespace SokoWahnLib.Rooms
 {
   /// <summary>
   /// Struktur einer kompletten Stellung (inkl. Zugtiefe und Crc64-Schlüssel)
   /// </summary>
-  public struct SokowahnStellung
+  public struct SokowahnPosition
   {
     /// <summary>
     /// Spielerposition im Raum
     /// </summary>
-    public int raumSpielerPos;
+    public int roomPlayerPos;
 
     /// <summary>
     /// Kistenpositionen im Raum
     /// </summary>
-    public int[] kistenZuRaum;
+    public int[] boxesToRoom;
 
     /// <summary>
     /// Zugtiefe, bei welcher diese Stellung erreicht wurde
     /// </summary>
-    public int zugTiefe;
+    public int calcDepth;
 
     /// <summary>
     /// Crc64-Schlüssel der gesammten Stellung
@@ -28,47 +30,49 @@
     /// <summary>
     /// gibt die Stellung als Array zurück (ushort-Typ)
     /// </summary>
-    /// <param name="zielArray">Array in dem die Stellung direkt gespeichert werden soll</param>
+    /// <param name="dst">Array in dem die Stellung direkt gespeichert werden soll</param>
     /// <param name="offset">Start-Position im Array</param>
     /// <returns>Anzahl der getätigten Einträge</returns>
-    public void SpeichereStellung(ushort[] zielArray, int offset)
+    public void SavePosition(ushort[] dst, int offset)
     {
-      zielArray[offset++] = (ushort)raumSpielerPos;
-      foreach (int kiste in kistenZuRaum) zielArray[offset++] = (ushort)kiste;
+      dst[offset++] = (ushort)roomPlayerPos;
+      foreach (int box in boxesToRoom) dst[offset++] = (ushort)box;
     }
 
     /// <summary>
     /// gibt die Stellung als Array zurück (byte-Typ)
     /// </summary>
-    /// <param name="zielArray">Array in dem die Stellung direkt gespeichert werden soll</param>
+    /// <param name="dst">Array in dem die Stellung direkt gespeichert werden soll</param>
     /// <param name="offset">Start-Position im Array</param>
     /// <returns>Anzahl der getätigten Einträge</returns>
-    public void SpeichereStellung(byte[] zielArray, int offset)
+    public void SavePosition(byte[] dst, int offset)
     {
-      zielArray[offset++] = (byte)raumSpielerPos;
-      foreach (int kiste in kistenZuRaum) zielArray[offset++] = (byte)kiste;
+      dst[offset++] = (byte)roomPlayerPos;
+      foreach (int box in boxesToRoom) dst[offset++] = (byte)box;
     }
 
     /// <summary>
     /// gibt die eigene Stellung als lesbares Feld zurück
     /// </summary>
-    /// <param name="tmpRaum">Sokowahn-Raum mit den jeweiligen Grunddaten</param>
+    /// <param name="field">Sokowahn-Raum mit den jeweiligen Grunddaten</param>
     /// <returns>lesbares Spielfeld</returns>
-    public string Debug(SokowahnRaum raum)
+    public string Debug(SokowahnField field)
     {
-      SokowahnRaum temp = new SokowahnRaum(raum);
-      temp.KistenAnzahl = kistenZuRaum.Length;
+      var temp = new SokowahnField(field)
+      {
+        BoxesCount = boxesToRoom.Length
+      };
       return temp.Debug(this);
     }
 
     /// <summary>
     /// gibt die eigene Stellung als lesbares Feld zurück
     /// </summary>
-    /// <param name="tmpRaum">Sokowahn-Raum mit den jeweiligen Grunddaten</param>
+    /// <param name="field">Sokowahn-Raum mit den jeweiligen Grunddaten</param>
     /// <returns>lesbares Spielfeld</returns>
-    public string ToString(SokowahnRaum raum)
+    public string ToString(SokowahnField field)
     {
-      return Debug(raum);
+      return Debug(field);
     }
 
     /// <summary>
@@ -77,7 +81,7 @@
     /// <returns>Zeichenkette, welche ausgegeben werden soll</returns>
     public override string ToString()
     {
-      return "[" + zugTiefe + "] - (" + raumSpielerPos + ") " + string.Join(", ", kistenZuRaum) + " - " + crc64;
+      return "[" + calcDepth + "] - (" + roomPlayerPos + ") " + string.Join(", ", boxesToRoom) + " - " + crc64;
     }
   }
 }
