@@ -18,37 +18,37 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// merkt sich die Grunddaten des Spielfeldes
     /// </summary>
-    readonly char[] feldData;
+    readonly char[] fieldData;
 
     /// <summary>
     /// Breite des Spielfeldes
     /// </summary>
-    readonly int feldBreite;
+    readonly int fieldWidth;
 
     /// <summary>
     /// merkt sich die Anzahl der begehbaren Bereiche
     /// </summary>
-    readonly int raumAnzahl;
+    readonly int roomCount;
 
     /// <summary>
     /// zeigt auf das linke benachbarte Raum-Feld (raumAnzahl = wenn das Feld nicht begehbar ist)
     /// </summary>
-    readonly int[] raumLinks;
+    readonly int[] roomLeft;
 
     /// <summary>
     /// zeigt auf das rechts benachbarte Raum-Feld (raumAnzahl = wenn das Feld nicht begehbar ist)
     /// </summary>
-    readonly int[] raumRechts;
+    readonly int[] roomRight;
 
     /// <summary>
     /// zeigt auf das obere benachbarte Raum-Feld (raumAnzahl = wenn das Feld nicht begehbar ist)
     /// </summary>
-    readonly int[] raumOben;
+    readonly int[] roomUp;
 
     /// <summary>
     /// zeigt auf das untere benachbarte Raum-Feld (raumAnzahl = wenn das Feld nicht begehbar ist)
     /// </summary>
-    readonly int[] raumUnten;
+    readonly int[] roomDown;
 
     /// <summary>
     /// Anzahl der Kisten, welche auf dem Spielfeld liegen (kann bei der Blocker-Suche niedriger sein als die eigentliche Ziele-Anzahl)
@@ -60,39 +60,39 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// aktuelle Spielerposition im SokowahnRaum
     /// </summary>
-    int raumSpielerPos;
+    int roomPlayerPos;
 
     /// <summary>
     /// gibt bei den begehbaren Raumbereichen an, welche Kiste sich dort befindet (Wert = kistenAnzahl, keine Kiste steht auf dem Feld)
     /// </summary>
-    readonly int[] raumZuKisten;
+    readonly int[] roomToBoxes;
 
     /// <summary>
     /// enthält die Kistenpositionen (Wert = raumAnzahl, Kiste steht nirgendwo, ist also nicht vorhanden)
     /// </summary>
-    int[] kistenZuRaum;
+    int[] boxesToRoom;
 
     /// <summary>
     /// merkt sich die aktuelle Zugtiefe
     /// </summary>
-    int spielerZugTiefe;
+    int playerCalcDepth;
     #endregion
 
     #region # // --- temporäre Werte ---
     /// <summary>
     /// merkt sich temporär, welche Positionen geprüft wurden bzw. noch geprüft werden müssen
     /// </summary>
-    readonly int[] tmpCheckRaumPosis;
+    readonly int[] tmpCheckRoomPosis;
 
     /// <summary>
     /// merkt sich temporär, welche Zugtiefen erreicht wurden
     /// </summary>
-    readonly int[] tmpCheckRaumTiefe;
+    readonly int[] tmpCheckRoomDepth;
 
     /// <summary>
     /// merkt sich temporär, welche Felder im Raum bereits abgelaufen wurden
     /// </summary>
-    readonly bool[] tmpRaumCheckFertig;
+    readonly bool[] tmpCheckRoomReady;
     #endregion
 
     #region # // --- public Properties ---
@@ -103,25 +103,25 @@ namespace SokoWahnLib.Rooms
     {
       get
       {
-        ulong ergebnis = (Crc64.Start ^ (ulong)raumSpielerPos) * 0x100000001b3;
+        ulong result = (Crc64.Start ^ (ulong)roomPlayerPos) * 0x100000001b3;
 
         for (int i = 0; i < boxesCount; i++)
         {
-          ergebnis = (ergebnis ^ (ulong)kistenZuRaum[i]) * 0x100000001b3;
+          result = (result ^ (ulong)boxesToRoom[i]) * 0x100000001b3;
         }
 
-        return ergebnis;
+        return result;
       }
     }
 
     /// <summary>
     /// gibt die Anzahl der begehbaren Raum-Felder an
     /// </summary>
-    public int RaumAnzahl
+    public int RoomCount
     {
       get
       {
-        return raumAnzahl;
+        return roomCount;
       }
     }
 
@@ -139,50 +139,50 @@ namespace SokoWahnLib.Rooms
         boxesCount = value;
 
         // alle Kisten entfernen
-        for (int i = 0; i < raumAnzahl; i++) raumZuKisten[i] = boxesCount;
-        kistenZuRaum = Enumerable.Range(0, boxesCount).Select(i => i).ToArray();
+        for (int i = 0; i < roomCount; i++) roomToBoxes[i] = boxesCount;
+        boxesToRoom = Enumerable.Range(0, boxesCount).Select(i => i).ToArray();
 
-        for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = i; // Kisten neu sinnlos auf das Feld setzen
+        for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = i; // Kisten neu sinnlos auf das Feld setzen
       }
     }
 
     /// <summary>
     /// gibt die aktuelle Zugtiefe zurück
     /// </summary>
-    public int SpielerZugTiefe
+    public int CalcDepth
     {
       get
       {
-        if (spielerZugTiefe >= 0 && spielerZugTiefe < 30000) return spielerZugTiefe;
-        if (spielerZugTiefe >= 30000 & spielerZugTiefe < 60000) return spielerZugTiefe - 60000;
+        if (playerCalcDepth >= 0 && playerCalcDepth < 30000) return playerCalcDepth;
+        if (playerCalcDepth >= 30000 & playerCalcDepth < 60000) return playerCalcDepth - 60000;
         return 0;
       }
 
       set
       {
-        spielerZugTiefe = value;
+        playerCalcDepth = value;
       }
     }
 
     /// <summary>
     /// gibt das gesamte Spielfeld zurück
     /// </summary>
-    public char[] FeldData
+    public char[] FieldData
     {
       get
       {
-        return feldData.ToArray();
+        return fieldData.ToArray();
       }
     }
 
     /// <summary>
     /// gibt das gesamte Spielfeld zurück, jedoch ohne Spieler und ohne Kisten
     /// </summary>
-    public char[] FeldDataLeer
+    public char[] FieldDataEmpty
     {
       get
       {
-        return feldData.Select(z =>
+        return fieldData.Select(z =>
         {
           switch (z)
           {
@@ -202,22 +202,22 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt die Breite des Spielfeldes zurück
     /// </summary>
-    public int FeldBreite
+    public int FieldWidth
     {
       get
       {
-        return feldBreite;
+        return fieldWidth;
       }
     }
 
     /// <summary>
     /// gibt die Höhe des Spielfeldes zurück
     /// </summary>
-    public int FeldHöhe
+    public int FieldHeight
     {
       get
       {
-        return feldData.Length / feldBreite;
+        return fieldData.Length / fieldWidth;
       }
     }
 
@@ -227,135 +227,135 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbarer String</returns>
     public override string ToString()
     {
-      var feldLeer = FeldDataLeer;
+      var fieldEmpty = FieldDataEmpty;
 
-      int feldHöhe = feldData.Length / feldBreite;
+      int fieldHeight = fieldData.Length / fieldWidth;
 
-      var spielerRaum = SpielfeldRaumScan(feldData, feldBreite);
-      var raumZuFeld = Enumerable.Range(0, spielerRaum.Length).Where(i => spielerRaum[i]).ToArray();
-      var feldZuRaum = Enumerable.Range(0, feldData.Length).Select(i => spielerRaum[i] ? raumZuFeld.ToList().IndexOf(i) : -1).ToArray();
+      var playerRoom = FieldRoomScan(fieldData, fieldWidth);
+      var roomToField = Enumerable.Range(0, playerRoom.Length).Where(i => playerRoom[i]).ToArray();
+      var fieldToRoom = Enumerable.Range(0, fieldData.Length).Select(i => playerRoom[i] ? roomToField.ToList().IndexOf(i) : -1).ToArray();
 
-      var raumZuKisten = this.raumZuKisten.ToArray();
-      int kistenAnzahl = boxesCount;
-      int raumSpielerPos = this.raumSpielerPos;
+      var roomToBoxes = this.roomToBoxes.ToArray();
+      int boxesCount = this.boxesCount;
+      int roomPlayerPos = this.roomPlayerPos;
 
-      return string.Concat(Enumerable.Range(0, feldHöhe).Select(y => new string(Enumerable.Range(0, feldBreite).Select(x =>
+      return string.Concat(Enumerable.Range(0, fieldHeight).Select(y => new string(Enumerable.Range(0, fieldWidth).Select(x =>
       {
-        int p = feldZuRaum[x + y * feldBreite];
-        if (p < 0) return feldLeer[x + y * feldBreite];
-        if (raumZuKisten[p] < kistenAnzahl) return feldLeer[x + y * feldBreite] == '.' ? '*' : '$';
-        if (p == raumSpielerPos) return feldLeer[x + y * feldBreite] == '.' ? '+' : '@';
-        return feldLeer[x + y * feldBreite];
-      }).ToArray()) + "\r\n")).TrimEnd() + (SpielerZugTiefe != 0 ? " - Tiefe: " + SpielerZugTiefe.ToString("#,##0") : "")
+        int p = fieldToRoom[x + y * fieldWidth];
+        if (p < 0) return fieldEmpty[x + y * fieldWidth];
+        if (roomToBoxes[p] < boxesCount) return fieldEmpty[x + y * fieldWidth] == '.' ? '*' : '$';
+        if (p == roomPlayerPos) return fieldEmpty[x + y * fieldWidth] == '.' ? '+' : '@';
+        return fieldEmpty[x + y * fieldWidth];
+      }).ToArray()) + "\r\n")).TrimEnd() + (CalcDepth != 0 ? " - Tiefe: " + CalcDepth.ToString("#,##0") : "")
         //   + " - Crc: " + Crc 
       + "\r\n";
     }
     #endregion
 
     #region # // --- public Methoden ---
-    #region # public SokowahnStellung GetStellung() // gibt die aktuelle Stellung zurück
+    #region # public SokowahnPosition GetPosition() // gibt die aktuelle Stellung zurück
     /// <summary>
     /// gibt die aktuelle Stellung zurück
     /// </summary>
     /// <returns>aktuelle Stellung</returns>
-    public SokowahnPosition GetStellung()
+    public SokowahnPosition GetPosition()
     {
-      return new SokowahnPosition { roomPlayerPos = raumSpielerPos, boxesToRoom = kistenZuRaum.ToArray(), crc64 = Crc, calcDepth = spielerZugTiefe };
+      return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, calcDepth = playerCalcDepth };
     }
     #endregion
 
-    #region # public void LadeStellung(*[] datenArray, int off, int spielerZugTiefe) // lädt eine bestimmte Stellung
+    #region # public void LoadPosition(*[] src, int off, int spielerZugTiefe) // lädt eine bestimmte Stellung
     /// <summary>
     /// lädt eine bestimmte Stellung
     /// </summary>
-    /// <param name="datenArray">Array mit entsprechenden Daten</param>
+    /// <param name="src">Array mit entsprechenden Daten</param>
     /// <param name="off">Position im Array, wo die Daten liegen</param>
-    /// <param name="zugTiefe">Zugtiefe der Stellung</param>
-    public void LadeStellung(byte[] datenArray, int off, int zugTiefe)
+    /// <param name="depth">Zugtiefe der Stellung</param>
+    public void LoadPosition(byte[] src, int off, int depth)
     {
       // neue Spielerposition setzen
-      raumSpielerPos = datenArray[off++];
-      spielerZugTiefe = zugTiefe;
+      roomPlayerPos = src[off++];
+      playerCalcDepth = depth;
 
       // alte Kisten entfernen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = boxesCount;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
       for (int i = 0; i < boxesCount; i++)
       {
-        int p = datenArray[off + i];
-        kistenZuRaum[i] = p;
-        raumZuKisten[p] = i;
+        int p = src[off + i];
+        boxesToRoom[i] = p;
+        roomToBoxes[p] = i;
       }
     }
 
     /// <summary>
     /// lädt eine bestimmte Stellung
     /// </summary>
-    /// <param name="datenArray">Array mit entsprechenden Daten</param>
-    /// <param name="zugTiefe">Zugtiefe der Stellung</param>
-    public void LadeStellung(byte[] datenArray, int zugTiefe)
+    /// <param name="src">Array mit entsprechenden Daten</param>
+    /// <param name="depth">Zugtiefe der Stellung</param>
+    public void LoadPosition(byte[] src, int depth)
     {
       // neue Spielerposition setzen
-      raumSpielerPos = datenArray[0];
-      spielerZugTiefe = zugTiefe;
+      roomPlayerPos = src[0];
+      playerCalcDepth = depth;
 
       // alte Kisten entfernen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = boxesCount;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
       for (int i = 0; i < boxesCount; i++)
       {
-        int p = datenArray[i + 1];
-        kistenZuRaum[i] = p;
-        raumZuKisten[p] = i;
+        int p = src[i + 1];
+        boxesToRoom[i] = p;
+        roomToBoxes[p] = i;
       }
     }
 
     /// <summary>
     /// lädt eine bestimmte Stellung
     /// </summary>
-    /// <param name="datenArray">Array mit entsprechenden Daten</param>
+    /// <param name="src">Array mit entsprechenden Daten</param>
     /// <param name="off">Position im Array, wo die Daten liegen</param>
-    /// <param name="zugTiefe">Zugtiefe der Stellung</param>
-    public void LadeStellung(ushort[] datenArray, int off, int zugTiefe)
+    /// <param name="depth">Zugtiefe der Stellung</param>
+    public void LoadPosition(ushort[] src, int off, int depth)
     {
       // neue Spielerposition setzen
-      raumSpielerPos = datenArray[off++];
-      spielerZugTiefe = zugTiefe;
+      roomPlayerPos = src[off++];
+      playerCalcDepth = depth;
 
       // alte Kisten entfernen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = boxesCount;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
       for (int i = 0; i < boxesCount; i++)
       {
-        int p = datenArray[off + i];
-        kistenZuRaum[i] = p;
-        raumZuKisten[p] = i;
+        int p = src[off + i];
+        boxesToRoom[i] = p;
+        roomToBoxes[p] = i;
       }
     }
 
     /// <summary>
     /// lädt eine bestimmte Stellung
     /// </summary>
-    /// <param name="datenArray">Array mit entsprechenden Daten</param>
-    /// <param name="zugTiefe">Zugtiefe der Stellung</param>
-    public void LadeStellung(ushort[] datenArray, int zugTiefe)
+    /// <param name="src">Array mit entsprechenden Daten</param>
+    /// <param name="depth">Zugtiefe der Stellung</param>
+    public void LoadPosition(ushort[] src, int depth)
     {
       // neue Spielerposition setzen
-      raumSpielerPos = datenArray[0];
-      spielerZugTiefe = zugTiefe;
+      roomPlayerPos = src[0];
+      playerCalcDepth = depth;
 
       // alte Kisten entfernen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = boxesCount;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
       for (int i = 0; i < boxesCount; i++)
       {
-        int p = datenArray[i + 1];
-        kistenZuRaum[i] = p;
-        raumZuKisten[p] = i;
+        int p = src[i + 1];
+        boxesToRoom[i] = p;
+        roomToBoxes[p] = i;
       }
     }
 
@@ -363,53 +363,53 @@ namespace SokoWahnLib.Rooms
     /// lädt eine bestimmte Stellung
     /// </summary>
     /// <param name="position">Stellung, welche geladen werden soll</param>
-    public void LadeStellung(SokowahnPosition position)
+    public void LoadPosition(SokowahnPosition position)
     {
-      raumSpielerPos = position.roomPlayerPos;
-      spielerZugTiefe = position.calcDepth;
+      roomPlayerPos = position.roomPlayerPos;
+      playerCalcDepth = position.calcDepth;
 
       // alte Kisten entfernen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = boxesCount;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i] = position.boxesToRoom[i]] = i;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i] = position.boxesToRoom[i]] = i;
     }
 
     /// <summary>
     /// Sondervariante für das Blocker-System (ohne setzen der Spielerposition)
     /// </summary>
-    /// <param name="sammlerKistenIndex">Kisten-Index für sammlerKistenRaum (Länge = sammlerKistenAnzahl)</param>
-    /// <param name="sammlerKistenRaum">Raumpositionen der einzelnen Kisten (Länge = basisKistenAnzahl)</param>
-    public void LadeStellung(int[] sammlerKistenIndex, int[] sammlerKistenRaum)
+    /// <param name="boxesIndex">Kisten-Index für sammlerKistenRaum (Länge = sammlerKistenAnzahl)</param>
+    /// <param name="boxesRoom">Raumpositionen der einzelnen Kisten (Länge = basisKistenAnzahl)</param>
+    public void LoadPosition(int[] boxesIndex, int[] boxesRoom)
     {
       // alte Kisten entfernen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i]] = boxesCount;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
-      for (int i = 0; i < boxesCount; i++) raumZuKisten[kistenZuRaum[i] = sammlerKistenRaum[sammlerKistenIndex[i]]] = i;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i] = boxesRoom[boxesIndex[i]]] = i;
     }
     #endregion
-    #region # public void SpeichereStellung(*[] datenArray, int off) // speichert eine bestimmte Stellung
+    #region # public void SavePosition(*[] dst, int off) // speichert eine bestimmte Stellung
     /// <summary>
     /// speichert eine bestimmte Stellung
     /// </summary>
-    /// <param name="datenArray">Array, in dem die Daten gespeichert werden sollen</param>
+    /// <param name="dst">Array, in dem die Daten gespeichert werden sollen</param>
     /// <param name="off">Position im Array, wo die Daten gespeichert werden sollen</param>
-    public void SpeichereStellung(byte[] datenArray, int off)
+    public void SavePosition(byte[] dst, int off)
     {
-      datenArray[off++] = (byte)raumSpielerPos;
-      for (int i = 0; i < boxesCount; i++) datenArray[off++] = (byte)kistenZuRaum[i];
+      dst[off++] = (byte)roomPlayerPos;
+      for (int i = 0; i < boxesCount; i++) dst[off++] = (byte)boxesToRoom[i];
     }
 
     /// <summary>
     /// speichert eine bestimmte Stellung
     /// </summary>
-    /// <param name="datenArray">Array, in dem die Daten gespeichert werden sollen</param>
+    /// <param name="dst">Array, in dem die Daten gespeichert werden sollen</param>
     /// <param name="off">Position im Array, wo die Daten gespeichert werden sollen</param>
-    public void SpeichereStellung(ushort[] datenArray, int off)
+    public void SavePosition(ushort[] dst, int off)
     {
-      datenArray[off++] = (ushort)raumSpielerPos;
-      for (int i = 0; i < boxesCount; i++) datenArray[off++] = (ushort)kistenZuRaum[i];
+      dst[off++] = (ushort)roomPlayerPos;
+      for (int i = 0; i < boxesCount; i++) dst[off++] = (ushort)boxesToRoom[i];
     }
     #endregion
 
@@ -421,704 +421,691 @@ namespace SokoWahnLib.Rooms
     public string GetSteps(SokowahnField next)
     {
       string findSteps = "";
-      int spielerZiel = next.raumSpielerPos;
-      int checkRaumVon = 0;
-      int checkRaumBis = 0;
+      int playerGoal = next.roomPlayerPos;
+      int checkRoomFrom = 0;
+      int checkRoomTo = 0;
 
-      Array.Clear(tmpRaumCheckFertig, 0, raumAnzahl);
+      Array.Clear(tmpCheckRoomReady, 0, roomCount);
 
       // erste Spielerposition hinzufügen
-      tmpRaumCheckFertig[raumSpielerPos] = true;
-      tmpCheckRaumPosis[checkRaumBis] = raumSpielerPos;
-      tmpCheckRaumTiefe[checkRaumBis] = spielerZugTiefe;
-      checkRaumBis++;
+      tmpCheckRoomReady[roomPlayerPos] = true;
+      tmpCheckRoomPosis[checkRoomTo] = roomPlayerPos;
+      tmpCheckRoomDepth[checkRoomTo] = playerCalcDepth;
+      checkRoomTo++;
 
-      Func<int, int, int> vorherFeld = (pp, tt) =>
+      Func<int, int, int> preFields = (pp, tt) =>
       {
-        if (raumLinks[pp] < raumAnzahl)
+        if (roomLeft[pp] < roomCount)
         {
           int index = -1;
-          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumLinks[pp]) index = i;
-          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          for (int i = 0; i < checkRoomTo; i++) if (tmpCheckRoomPosis[i] == roomLeft[pp]) index = i;
+          if (index >= 0 && tmpCheckRoomDepth[index] == tt)
           {
             if (tt > 0 || index == 0)
             {
               findSteps = "r" + findSteps;
-              return raumLinks[pp];
+              return roomLeft[pp];
             }
           }
         }
 
-        if (raumRechts[pp] < raumAnzahl)
+        if (roomRight[pp] < roomCount)
         {
           int index = -1;
-          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumRechts[pp]) index = i;
-          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          for (int i = 0; i < checkRoomTo; i++) if (tmpCheckRoomPosis[i] == roomRight[pp]) index = i;
+          if (index >= 0 && tmpCheckRoomDepth[index] == tt)
           {
             if (tt > 0 || index == 0)
             {
               findSteps = "l" + findSteps;
-              return raumRechts[pp];
+              return roomRight[pp];
             }
           }
         }
 
-        if (raumOben[pp] < raumAnzahl)
+        if (roomUp[pp] < roomCount)
         {
           int index = -1;
-          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumOben[pp]) index = i;
-          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          for (int i = 0; i < checkRoomTo; i++) if (tmpCheckRoomPosis[i] == roomUp[pp]) index = i;
+          if (index >= 0 && tmpCheckRoomDepth[index] == tt)
           {
             if (tt > 0 || index == 0)
             {
               findSteps = "d" + findSteps;
-              return raumOben[pp];
+              return roomUp[pp];
             }
           }
         }
 
-        if (raumUnten[pp] < raumAnzahl)
+        if (roomDown[pp] < roomCount)
         {
           int index = -1;
-          for (int i = 0; i < checkRaumBis; i++) if (tmpCheckRaumPosis[i] == raumUnten[pp]) index = i;
-          if (index >= 0 && tmpCheckRaumTiefe[index] == tt)
+          for (int i = 0; i < checkRoomTo; i++) if (tmpCheckRoomPosis[i] == roomDown[pp]) index = i;
+          if (index >= 0 && tmpCheckRoomDepth[index] == tt)
           {
             if (tt > 0 || index == 0)
             {
               findSteps = "u" + findSteps;
-              return raumUnten[pp];
+              return roomDown[pp];
             }
           }
         }
 
-        return tmpCheckRaumPosis[0];
+        return tmpCheckRoomPosis[0];
       };
 
       // alle möglichen Spielerposition berechnen
-      while (checkRaumVon < checkRaumBis)
+      while (checkRoomFrom < checkRoomTo)
       {
-        raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];
-        int pTiefe = tmpCheckRaumTiefe[checkRaumVon] + 1;
+        roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];
+        int pDepth = tmpCheckRoomDepth[checkRoomFrom] + 1;
 
         int p, p2;
 
         #region # // --- links ---
-        if (!tmpRaumCheckFertig[p = raumLinks[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomLeft[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumLinks[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomLeft[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // linke Kiste weiter nach links schieben
-              raumSpielerPos = p;                                                                    // Spieler nach links bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // linke Kiste weiter nach links schieben
+              roomPlayerPos = p;                                                                    // Spieler nach links bewegen
 
-              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, boxesCount).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              if (roomPlayerPos == playerGoal && Enumerable.Range(0, boxesCount).All(i => boxesToRoom[i] == next.boxesToRoom[i]))
               {
-                int pp = raumRechts[p];
-                int tt = pTiefe - 1;
+                int pp = roomRight[p];
+                int tt = pDepth - 1;
                 findSteps = "L";
-                while (pp != tmpCheckRaumPosis[0])
+                while (pp != tmpCheckRoomPosis[0])
                 {
                   tt--;
-                  pp = vorherFeld(pp, tt);
+                  pp = preFields(pp, tt);
                 }
               }
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach rechts bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // linke Kiste eins zurück nach rechts schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach rechts bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // linke Kiste eins zurück nach rechts schieben
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- rechts ---
-        if (!tmpRaumCheckFertig[p = raumRechts[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomRight[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumRechts[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomRight[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // rechte Kiste weiter nach rechts schieben
-              raumSpielerPos = p;                                                                    // Spieler nach rechts bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // rechte Kiste weiter nach rechts schieben
+              roomPlayerPos = p;                                                                    // Spieler nach rechts bewegen
 
-              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, boxesCount).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              if (roomPlayerPos == playerGoal && Enumerable.Range(0, boxesCount).All(i => boxesToRoom[i] == next.boxesToRoom[i]))
               {
-                int pp = raumLinks[p];
-                int tt = pTiefe - 1;
+                int pp = roomLeft[p];
+                int tt = pDepth - 1;
                 findSteps = "R";
-                while (pp != tmpCheckRaumPosis[0])
+                while (pp != tmpCheckRoomPosis[0])
                 {
                   tt--;
-                  pp = vorherFeld(pp, tt);
+                  pp = preFields(pp, tt);
                 }
               }
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach links bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // rechte Kiste eins zurück nach links schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach links bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // rechte Kiste eins zurück nach links schieben
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- oben ---
-        if (!tmpRaumCheckFertig[p = raumOben[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomUp[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumOben[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomUp[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // obere Kiste weiter nach oben schieben
-              raumSpielerPos = p;                                                                    // Spieler nach oben bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // obere Kiste weiter nach oben schieben
+              roomPlayerPos = p;                                                                    // Spieler nach oben bewegen
 
               #region # // Kisten sortieren (sofern notwendig)
-              while (raumZuKisten[p2] > 0 && kistenZuRaum[raumZuKisten[p2] - 1] > p2 && raumZuKisten[p2] < boxesCount)
+              while (roomToBoxes[p2] > 0 && boxesToRoom[roomToBoxes[p2] - 1] > p2 && roomToBoxes[p2] < boxesCount)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p2] - 1];
-                kistenZuRaum[raumZuKisten[p2]--] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]++] = p2;
+                int tmp = boxesToRoom[roomToBoxes[p2] - 1];
+                boxesToRoom[roomToBoxes[p2]--] = tmp;
+                boxesToRoom[roomToBoxes[tmp]++] = p2;
               }
               #endregion
 
-              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, boxesCount).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              if (roomPlayerPos == playerGoal && Enumerable.Range(0, boxesCount).All(i => boxesToRoom[i] == next.boxesToRoom[i]))
               {
-                int pp = raumUnten[p];
-                int tt = pTiefe - 1;
+                int pp = roomDown[p];
+                int tt = pDepth - 1;
                 findSteps = "U";
-                while (pp != tmpCheckRaumPosis[0])
+                while (pp != tmpCheckRoomPosis[0])
                 {
                   tt--;
-                  pp = vorherFeld(pp, tt);
+                  pp = preFields(pp, tt);
                 }
               }
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach unten bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // obere Kiste eins zurück nach unten schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach unten bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // obere Kiste eins zurück nach unten schieben
 
               #region # // Kisten zurück sortieren (sofern notwendig)
-              while (raumZuKisten[p] < boxesCount - 1 && kistenZuRaum[raumZuKisten[p] + 1] < p)
+              while (roomToBoxes[p] < boxesCount - 1 && boxesToRoom[roomToBoxes[p] + 1] < p)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p] + 1];
-                kistenZuRaum[raumZuKisten[p]++] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]--] = p;
+                int tmp = boxesToRoom[roomToBoxes[p] + 1];
+                boxesToRoom[roomToBoxes[p]++] = tmp;
+                boxesToRoom[roomToBoxes[tmp]--] = p;
               }
               #endregion
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- unten ---
-        if (!tmpRaumCheckFertig[p = raumUnten[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomDown[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumUnten[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomDown[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // untere Kiste weiter nach unten schieben
-              raumSpielerPos = p;                                                                    // Spieler nach unten bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // untere Kiste weiter nach unten schieben
+              roomPlayerPos = p;                                                                    // Spieler nach unten bewegen
 
               #region # // Kisten sortieren (sofern notwendig)
-              while (raumZuKisten[p2] < boxesCount - 1 && kistenZuRaum[raumZuKisten[p2] + 1] < p2)
+              while (roomToBoxes[p2] < boxesCount - 1 && boxesToRoom[roomToBoxes[p2] + 1] < p2)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p2] + 1];
-                kistenZuRaum[raumZuKisten[p2]++] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]--] = p2;
+                int tmp = boxesToRoom[roomToBoxes[p2] + 1];
+                boxesToRoom[roomToBoxes[p2]++] = tmp;
+                boxesToRoom[roomToBoxes[tmp]--] = p2;
               }
               #endregion
 
-              if (raumSpielerPos == spielerZiel && Enumerable.Range(0, boxesCount).All(i => kistenZuRaum[i] == next.kistenZuRaum[i]))
+              if (roomPlayerPos == playerGoal && Enumerable.Range(0, boxesCount).All(i => boxesToRoom[i] == next.boxesToRoom[i]))
               {
-                int pp = raumOben[p];
-                int tt = pTiefe - 1;
+                int pp = roomUp[p];
+                int tt = pDepth - 1;
                 findSteps = "D";
-                while (pp != tmpCheckRaumPosis[0])
+                while (pp != tmpCheckRoomPosis[0])
                 {
                   tt--;
-                  pp = vorherFeld(pp, tt);
+                  pp = preFields(pp, tt);
                 }
               }
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach oben bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // untere Kiste eins zurück nach oben schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach oben bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // untere Kiste eins zurück nach oben schieben
 
               #region # // Kisten zurück sortieren (sofern notwendig)
-              while (raumZuKisten[p] > 0 && kistenZuRaum[raumZuKisten[p] - 1] > p && raumZuKisten[p] < boxesCount)
+              while (roomToBoxes[p] > 0 && boxesToRoom[roomToBoxes[p] - 1] > p && roomToBoxes[p] < boxesCount)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p] - 1];
-                kistenZuRaum[raumZuKisten[p]--] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]++] = p;
+                int tmp = boxesToRoom[roomToBoxes[p] - 1];
+                boxesToRoom[roomToBoxes[p]--] = tmp;
+                boxesToRoom[roomToBoxes[tmp]++] = p;
               }
               #endregion
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
-        checkRaumVon++;
+        checkRoomFrom++;
       }
 
-      raumSpielerPos = tmpCheckRaumPosis[0]; // alte Spielerposition wieder herstellen
+      roomPlayerPos = tmpCheckRoomPosis[0]; // alte Spielerposition wieder herstellen
 
       return findSteps;
     }
 
-    #region # public IEnumerable<SokowahnStellung> GetVarianten() // ermittelt alle möglichen Zugvarianten und gibt deren Stellungen zurück
+    #region # public IEnumerable<SokowahnStellung> GetVariants() // ermittelt alle möglichen Zugvarianten und gibt deren Stellungen zurück
     /// <summary>
     /// ermittelt alle möglichen Zugvarianten und gibt deren Stellungen zurück
     /// </summary>
     /// <returns>Enumerable der gefundenen Stellungen</returns>
-    public IEnumerable<SokowahnPosition> GetVarianten()
+    public IEnumerable<SokowahnPosition> GetVariants()
     {
-      int checkRaumVon = 0;
-      int checkRaumBis = 0;
+      int checkRoomFrom = 0;
+      int checkRoomTo = 0;
 
-      Array.Clear(tmpRaumCheckFertig, 0, raumAnzahl);
+      Array.Clear(tmpCheckRoomReady, 0, roomCount);
 
       // erste Spielerposition hinzufügen
-      tmpRaumCheckFertig[raumSpielerPos] = true;
-      tmpCheckRaumPosis[checkRaumBis] = raumSpielerPos;
-      tmpCheckRaumTiefe[checkRaumBis] = spielerZugTiefe;
-      checkRaumBis++;
+      tmpCheckRoomReady[roomPlayerPos] = true;
+      tmpCheckRoomPosis[checkRoomTo] = roomPlayerPos;
+      tmpCheckRoomDepth[checkRoomTo] = playerCalcDepth;
+      checkRoomTo++;
 
       // alle möglichen Spielerposition berechnen
-      while (checkRaumVon < checkRaumBis)
+      while (checkRoomFrom < checkRoomTo)
       {
-        raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];
-        int pTiefe = tmpCheckRaumTiefe[checkRaumVon] + 1;
+        roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];
+        int pDepth = tmpCheckRoomDepth[checkRoomFrom] + 1;
 
         int p, p2;
 
         #region # // --- links ---
-        if (!tmpRaumCheckFertig[p = raumLinks[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomLeft[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumLinks[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomLeft[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // linke Kiste weiter nach links schieben
-              raumSpielerPos = p;                                                                    // Spieler nach links bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // linke Kiste weiter nach links schieben
+              roomPlayerPos = p;                                                                    // Spieler nach links bewegen
 
-              //       if (!IstBlocker())
-              {
-                yield return new SokowahnPosition { roomPlayerPos = raumSpielerPos, boxesToRoom = TeilArray(kistenZuRaum, boxesCount), crc64 = Crc, calcDepth = pTiefe };
-              }
+              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach rechts bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // linke Kiste eins zurück nach rechts schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach rechts bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // linke Kiste eins zurück nach rechts schieben
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- rechts ---
-        if (!tmpRaumCheckFertig[p = raumRechts[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomRight[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumRechts[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomRight[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // rechte Kiste weiter nach rechts schieben
-              raumSpielerPos = p;                                                                    // Spieler nach rechts bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // rechte Kiste weiter nach rechts schieben
+              roomPlayerPos = p;                                                                    // Spieler nach rechts bewegen
 
-              //       if (!IstBlocker())
-              {
-                yield return new SokowahnPosition { roomPlayerPos = raumSpielerPos, boxesToRoom = TeilArray(kistenZuRaum, boxesCount), crc64 = Crc, calcDepth = pTiefe };
-              }
+              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach links bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // rechte Kiste eins zurück nach links schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach links bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // rechte Kiste eins zurück nach links schieben
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- oben ---
-        if (!tmpRaumCheckFertig[p = raumOben[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomUp[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumOben[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomUp[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // obere Kiste weiter nach oben schieben
-              raumSpielerPos = p;                                                                    // Spieler nach oben bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // obere Kiste weiter nach oben schieben
+              roomPlayerPos = p;                                                                    // Spieler nach oben bewegen
 
               #region # // Kisten sortieren (sofern notwendig)
-              while (raumZuKisten[p2] > 0 && kistenZuRaum[raumZuKisten[p2] - 1] > p2 && raumZuKisten[p2] < boxesCount)
+              while (roomToBoxes[p2] > 0 && boxesToRoom[roomToBoxes[p2] - 1] > p2 && roomToBoxes[p2] < boxesCount)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p2] - 1];
-                kistenZuRaum[raumZuKisten[p2]--] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]++] = p2;
+                int tmp = boxesToRoom[roomToBoxes[p2] - 1];
+                boxesToRoom[roomToBoxes[p2]--] = tmp;
+                boxesToRoom[roomToBoxes[tmp]++] = p2;
               }
               #endregion
 
-              //       if (!IstBlocker())
-              {
-                yield return new SokowahnPosition { roomPlayerPos = raumSpielerPos, boxesToRoom = TeilArray(kistenZuRaum, boxesCount), crc64 = Crc, calcDepth = pTiefe };
-              }
+              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach unten bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // obere Kiste eins zurück nach unten schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach unten bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // obere Kiste eins zurück nach unten schieben
 
               #region # // Kisten zurück sortieren (sofern notwendig)
-              while (raumZuKisten[p] < boxesCount - 1 && kistenZuRaum[raumZuKisten[p] + 1] < p)
+              while (roomToBoxes[p] < boxesCount - 1 && boxesToRoom[roomToBoxes[p] + 1] < p)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p] + 1];
-                kistenZuRaum[raumZuKisten[p]++] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]--] = p;
+                int tmp = boxesToRoom[roomToBoxes[p] + 1];
+                boxesToRoom[roomToBoxes[p]++] = tmp;
+                boxesToRoom[roomToBoxes[tmp]--] = p;
               }
               #endregion
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- unten ---
-        if (!tmpRaumCheckFertig[p = raumUnten[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomDown[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
+          if (roomToBoxes[p] < boxesCount) // steht eine Kiste auf den benachbarten Feld?
           {
-            if (raumZuKisten[p2 = raumUnten[p]] == boxesCount && p2 < raumAnzahl) // Feld hinter der Kiste frei?
+            if (roomToBoxes[p2 = roomDown[p]] == boxesCount && p2 < roomCount) // Feld hinter der Kiste frei?
             {
-              kistenZuRaum[raumZuKisten[p2] = raumZuKisten[p]] = p2; raumZuKisten[p] = boxesCount; // untere Kiste weiter nach unten schieben
-              raumSpielerPos = p;                                                                    // Spieler nach unten bewegen
+              boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // untere Kiste weiter nach unten schieben
+              roomPlayerPos = p;                                                                    // Spieler nach unten bewegen
 
               #region # // Kisten sortieren (sofern notwendig)
-              while (raumZuKisten[p2] < boxesCount - 1 && kistenZuRaum[raumZuKisten[p2] + 1] < p2)
+              while (roomToBoxes[p2] < boxesCount - 1 && boxesToRoom[roomToBoxes[p2] + 1] < p2)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p2] + 1];
-                kistenZuRaum[raumZuKisten[p2]++] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]--] = p2;
+                int tmp = boxesToRoom[roomToBoxes[p2] + 1];
+                boxesToRoom[roomToBoxes[p2]++] = tmp;
+                boxesToRoom[roomToBoxes[tmp]--] = p2;
               }
               #endregion
 
-              //       if (!IstBlocker())
-              {
-                yield return new SokowahnPosition { roomPlayerPos = raumSpielerPos, boxesToRoom = TeilArray(kistenZuRaum, boxesCount), crc64 = Crc, calcDepth = pTiefe };
-              }
+              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
-              raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];                                      // Spieler zurück nach oben bewegen
-              kistenZuRaum[raumZuKisten[p] = raumZuKisten[p2]] = p; raumZuKisten[p2] = boxesCount; // untere Kiste eins zurück nach oben schieben
+              roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach oben bewegen
+              boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // untere Kiste eins zurück nach oben schieben
 
               #region # // Kisten zurück sortieren (sofern notwendig)
-              while (raumZuKisten[p] > 0 && kistenZuRaum[raumZuKisten[p] - 1] > p && raumZuKisten[p] < boxesCount)
+              while (roomToBoxes[p] > 0 && boxesToRoom[roomToBoxes[p] - 1] > p && roomToBoxes[p] < boxesCount)
               {
-                int tmp = kistenZuRaum[raumZuKisten[p] - 1];
-                kistenZuRaum[raumZuKisten[p]--] = tmp;
-                kistenZuRaum[raumZuKisten[tmp]++] = p;
+                int tmp = boxesToRoom[roomToBoxes[p] - 1];
+                boxesToRoom[roomToBoxes[p]--] = tmp;
+                boxesToRoom[roomToBoxes[tmp]++] = p;
               }
               #endregion
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
-        checkRaumVon++;
+        checkRoomFrom++;
       }
 
-      raumSpielerPos = tmpCheckRaumPosis[0]; // alte Spielerposition wieder herstellen
+      roomPlayerPos = tmpCheckRoomPosis[0]; // alte Spielerposition wieder herstellen
     }
     #endregion
 
-    #region # public IEnumerable<SokowahnStellung> GetVariantenRückwärts() // ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
+    #region # public IEnumerable<SokowahnPosition> GetVariantsBackward() // ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
     /// <summary>
     /// ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
     /// </summary>
     /// <returns>alle möglichen Vorgänge-Zugvarianten</returns>
-    public IEnumerable<SokowahnPosition> GetVariantenRückwärts()
+    public IEnumerable<SokowahnPosition> GetVariantsBackward()
     {
-      int pMitte = raumSpielerPos;
-      int pLinks = raumLinks[pMitte];
-      int pRechts = raumRechts[pMitte];
-      int pOben = raumOben[pMitte];
-      int pUnten = raumUnten[pMitte];
+      int pMiddle = roomPlayerPos;
+      int pLeft = roomLeft[pMiddle];
+      int pRight = roomRight[pMiddle];
+      int pUp = roomUp[pMiddle];
+      int pDown = roomDown[pMiddle];
 
       #region # // --- Links-Vermutung: Kiste wurde das letztes mal nach links geschoben ---
-      if (raumZuKisten[pLinks] < boxesCount && pRechts < raumAnzahl && raumZuKisten[pRechts] == boxesCount)
+      if (roomToBoxes[pLeft] < boxesCount && pRight < roomCount && roomToBoxes[pRight] == boxesCount)
       {
-        raumSpielerPos = pRechts; // Spieler zurück nach rechts bewegen
-        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pLinks]] = pMitte; raumZuKisten[pLinks] = boxesCount; // linke Kiste eins zurück nach rechts schieben
+        roomPlayerPos = pRight; // Spieler zurück nach rechts bewegen
+        boxesToRoom[roomToBoxes[pMiddle] = roomToBoxes[pLeft]] = pMiddle; roomToBoxes[pLeft] = boxesCount; // linke Kiste eins zurück nach rechts schieben
 
-        foreach (var variante in GetVariantenRückwärtsTeil()) yield return variante;
+        foreach (var v in GetVariantsBackwardStep()) yield return v;
 
-        kistenZuRaum[raumZuKisten[pLinks] = raumZuKisten[pMitte]] = pLinks; raumZuKisten[pMitte] = boxesCount; // linke Kiste weiter nach links schieben
-        raumSpielerPos = pMitte; // Spieler nach links bewegen
+        boxesToRoom[roomToBoxes[pLeft] = roomToBoxes[pMiddle]] = pLeft; roomToBoxes[pMiddle] = boxesCount; // linke Kiste weiter nach links schieben
+        roomPlayerPos = pMiddle; // Spieler nach links bewegen
       }
       #endregion
 
       #region # // --- Rechts-Vermutung: Kiste wurde das letztes mal nach rechts geschoben ---
-      if (raumZuKisten[pRechts] < boxesCount && pLinks < raumAnzahl && raumZuKisten[pLinks] == boxesCount)
+      if (roomToBoxes[pRight] < boxesCount && pLeft < roomCount && roomToBoxes[pLeft] == boxesCount)
       {
-        raumSpielerPos = pLinks; // Spieler zurück nach links bewegen
-        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pRechts]] = pMitte; raumZuKisten[pRechts] = boxesCount; // rechte Kiste eins zurück nach links schieben
+        roomPlayerPos = pLeft; // Spieler zurück nach links bewegen
+        boxesToRoom[roomToBoxes[pMiddle] = roomToBoxes[pRight]] = pMiddle; roomToBoxes[pRight] = boxesCount; // rechte Kiste eins zurück nach links schieben
 
-        foreach (var variante in GetVariantenRückwärtsTeil()) yield return variante;
+        foreach (var v in GetVariantsBackwardStep()) yield return v;
 
-        kistenZuRaum[raumZuKisten[pRechts] = raumZuKisten[pMitte]] = pRechts; raumZuKisten[pMitte] = boxesCount; // rechte Kiste weiter nach rechts schieben
-        raumSpielerPos = pMitte; // Spieler nach rechts bewegen
+        boxesToRoom[roomToBoxes[pRight] = roomToBoxes[pMiddle]] = pRight; roomToBoxes[pMiddle] = boxesCount; // rechte Kiste weiter nach rechts schieben
+        roomPlayerPos = pMiddle; // Spieler nach rechts bewegen
       }
       #endregion
 
       #region # // --- Oben-Vermutung: Kiste wurde das letztes mal nach oben geschoben ---
-      if (raumZuKisten[pOben] < boxesCount && pUnten < raumAnzahl && raumZuKisten[pUnten] == boxesCount)
+      if (roomToBoxes[pUp] < boxesCount && pDown < roomCount && roomToBoxes[pDown] == boxesCount)
       {
-        raumSpielerPos = pUnten; // Spieler zurück nach unten bewegen
-        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pOben]] = pMitte; raumZuKisten[pOben] = boxesCount; // obere Kiste eins zurück nach unten schieben
+        roomPlayerPos = pDown; // Spieler zurück nach unten bewegen
+        boxesToRoom[roomToBoxes[pMiddle] = roomToBoxes[pUp]] = pMiddle; roomToBoxes[pUp] = boxesCount; // obere Kiste eins zurück nach unten schieben
         #region # // Kisten zurück sortieren (sofern notwendig)
-        while (raumZuKisten[pMitte] < boxesCount - 1 && kistenZuRaum[raumZuKisten[pMitte] + 1] < pMitte)
+        while (roomToBoxes[pMiddle] < boxesCount - 1 && boxesToRoom[roomToBoxes[pMiddle] + 1] < pMiddle)
         {
-          int tmp = kistenZuRaum[raumZuKisten[pMitte] + 1];
-          kistenZuRaum[raumZuKisten[pMitte]++] = tmp;
-          kistenZuRaum[raumZuKisten[tmp]--] = pMitte;
+          int tmp = boxesToRoom[roomToBoxes[pMiddle] + 1];
+          boxesToRoom[roomToBoxes[pMiddle]++] = tmp;
+          boxesToRoom[roomToBoxes[tmp]--] = pMiddle;
         }
         #endregion
 
-        foreach (var variante in GetVariantenRückwärtsTeil()) yield return variante;
+        foreach (var v in GetVariantsBackwardStep()) yield return v;
 
-        kistenZuRaum[raumZuKisten[pOben] = raumZuKisten[pMitte]] = pOben; raumZuKisten[pMitte] = boxesCount; // obere Kiste weiter nach oben schieben
-        raumSpielerPos = pMitte; // Spieler nach oben bewegen
+        boxesToRoom[roomToBoxes[pUp] = roomToBoxes[pMiddle]] = pUp; roomToBoxes[pMiddle] = boxesCount; // obere Kiste weiter nach oben schieben
+        roomPlayerPos = pMiddle; // Spieler nach oben bewegen
         #region # // Kisten sortieren (sofern notwendig)
-        while (raumZuKisten[pOben] > 0 && kistenZuRaum[raumZuKisten[pOben] - 1] > pOben && raumZuKisten[pOben] < boxesCount)
+        while (roomToBoxes[pUp] > 0 && boxesToRoom[roomToBoxes[pUp] - 1] > pUp && roomToBoxes[pUp] < boxesCount)
         {
-          int tmp = kistenZuRaum[raumZuKisten[pOben] - 1];
-          kistenZuRaum[raumZuKisten[pOben]--] = tmp;
-          kistenZuRaum[raumZuKisten[tmp]++] = pOben;
+          int tmp = boxesToRoom[roomToBoxes[pUp] - 1];
+          boxesToRoom[roomToBoxes[pUp]--] = tmp;
+          boxesToRoom[roomToBoxes[tmp]++] = pUp;
         }
         #endregion
       }
       #endregion
 
       #region # // --- Unten-Vermutung: Kiste wurde das letztes mal nach unten geschoben ---
-      if (raumZuKisten[pUnten] < boxesCount && pOben < raumAnzahl && raumZuKisten[pOben] == boxesCount)
+      if (roomToBoxes[pDown] < boxesCount && pUp < roomCount && roomToBoxes[pUp] == boxesCount)
       {
-        raumSpielerPos = pOben; // Spieler zurück nach oben bewegen
-        kistenZuRaum[raumZuKisten[pMitte] = raumZuKisten[pUnten]] = pMitte; raumZuKisten[pUnten] = boxesCount; // untere Kiste eins zurück nach oben schieben
+        roomPlayerPos = pUp; // Spieler zurück nach oben bewegen
+        boxesToRoom[roomToBoxes[pMiddle] = roomToBoxes[pDown]] = pMiddle; roomToBoxes[pDown] = boxesCount; // untere Kiste eins zurück nach oben schieben
         #region # // Kisten zurück sortieren (sofern notwendig)
-        while (raumZuKisten[pMitte] > 0 && kistenZuRaum[raumZuKisten[pMitte] - 1] > pMitte && raumZuKisten[pMitte] < boxesCount)
+        while (roomToBoxes[pMiddle] > 0 && boxesToRoom[roomToBoxes[pMiddle] - 1] > pMiddle && roomToBoxes[pMiddle] < boxesCount)
         {
-          int tmp = kistenZuRaum[raumZuKisten[pMitte] - 1];
-          kistenZuRaum[raumZuKisten[pMitte]--] = tmp;
-          kistenZuRaum[raumZuKisten[tmp]++] = pMitte;
+          int tmp = boxesToRoom[roomToBoxes[pMiddle] - 1];
+          boxesToRoom[roomToBoxes[pMiddle]--] = tmp;
+          boxesToRoom[roomToBoxes[tmp]++] = pMiddle;
         }
         #endregion
 
-        foreach (var variante in GetVariantenRückwärtsTeil()) yield return variante;
+        foreach (var v in GetVariantsBackwardStep()) yield return v;
 
-        kistenZuRaum[raumZuKisten[pUnten] = raumZuKisten[pMitte]] = pUnten; raumZuKisten[pMitte] = boxesCount; // untere Kiste weiter nach unten schieben
-        raumSpielerPos = pMitte; // Spieler nach unten bewegen
+        boxesToRoom[roomToBoxes[pDown] = roomToBoxes[pMiddle]] = pDown; roomToBoxes[pMiddle] = boxesCount; // untere Kiste weiter nach unten schieben
+        roomPlayerPos = pMiddle; // Spieler nach unten bewegen
         #region # // Kisten sortieren (sofern notwendig)
-        while (raumZuKisten[pUnten] < boxesCount - 1 && kistenZuRaum[raumZuKisten[pUnten] + 1] < pUnten)
+        while (roomToBoxes[pDown] < boxesCount - 1 && boxesToRoom[roomToBoxes[pDown] + 1] < pDown)
         {
-          int tmp = kistenZuRaum[raumZuKisten[pUnten] + 1];
-          kistenZuRaum[raumZuKisten[pUnten]++] = tmp;
-          kistenZuRaum[raumZuKisten[tmp]--] = pUnten;
+          int tmp = boxesToRoom[roomToBoxes[pDown] + 1];
+          boxesToRoom[roomToBoxes[pDown]++] = tmp;
+          boxesToRoom[roomToBoxes[tmp]--] = pDown;
         }
         #endregion
       }
       #endregion
     }
     #endregion
-    #region # IEnumerable<SokowahnStellung> GetVariantenRückwärtsTeil() // Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
+    #region # IEnumerable<SokowahnPosition> GetVariantsBackwardStep() // Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
     /// <summary>
     /// Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
     /// </summary>
     /// <returns>gefundene gültige Stellungen</returns>
-    IEnumerable<SokowahnPosition> GetVariantenRückwärtsTeil()
+    IEnumerable<SokowahnPosition> GetVariantsBackwardStep()
     {
-      int checkRaumVon = 0;
-      int checkRaumBis = 0;
+      int checkRoomFrom = 0;
+      int checkRoomTo = 0;
 
-      Array.Clear(tmpRaumCheckFertig, 0, raumAnzahl);
+      Array.Clear(tmpCheckRoomReady, 0, roomCount);
 
       // erste Spielerposition hinzufügen
-      tmpRaumCheckFertig[raumSpielerPos] = true;
-      tmpCheckRaumPosis[checkRaumBis] = raumSpielerPos;
-      tmpCheckRaumTiefe[checkRaumBis] = spielerZugTiefe;
-      checkRaumBis++;
+      tmpCheckRoomReady[roomPlayerPos] = true;
+      tmpCheckRoomPosis[checkRoomTo] = roomPlayerPos;
+      tmpCheckRoomDepth[checkRoomTo] = playerCalcDepth;
+      checkRoomTo++;
 
       // alle möglichen Spielerposition berechnen
-      while (checkRaumVon < checkRaumBis)
+      while (checkRoomFrom < checkRoomTo)
       {
-        raumSpielerPos = tmpCheckRaumPosis[checkRaumVon];
-        int pTiefe = tmpCheckRaumTiefe[checkRaumVon] - 1;
+        roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];
+        int pDepth = tmpCheckRoomDepth[checkRoomFrom] - 1;
 
         int p, p2;
 
         #region # // --- links ---
-        if (!tmpRaumCheckFertig[p = raumLinks[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomLeft[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount)
+          if (roomToBoxes[p] < boxesCount)
           {
-            if ((p2 = raumRechts[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == boxesCount)
+            if ((p2 = roomRight[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = kistenZuRaum.ToArray(), crc64 = Crc, roomPlayerPos = raumSpielerPos, calcDepth = pTiefe };
+              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- rechts ---
-        if (!tmpRaumCheckFertig[p = raumRechts[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomRight[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount)
+          if (roomToBoxes[p] < boxesCount)
           {
-            if ((p2 = raumLinks[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == boxesCount)
+            if ((p2 = roomLeft[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = kistenZuRaum.ToArray(), crc64 = Crc, roomPlayerPos = raumSpielerPos, calcDepth = pTiefe };
+              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- oben ---
-        if (!tmpRaumCheckFertig[p = raumOben[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomUp[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount)
+          if (roomToBoxes[p] < boxesCount)
           {
-            if ((p2 = raumUnten[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == boxesCount)
+            if ((p2 = roomDown[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = kistenZuRaum.ToArray(), crc64 = Crc, roomPlayerPos = raumSpielerPos, calcDepth = pTiefe };
+              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
         #region # // --- unten ---
-        if (!tmpRaumCheckFertig[p = raumUnten[raumSpielerPos]])
+        if (!tmpCheckRoomReady[p = roomDown[roomPlayerPos]])
         {
-          if (raumZuKisten[p] < boxesCount)
+          if (roomToBoxes[p] < boxesCount)
           {
-            if ((p2 = raumOben[raumSpielerPos]) < raumAnzahl && raumZuKisten[p2] == boxesCount)
+            if ((p2 = roomUp[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = kistenZuRaum.ToArray(), crc64 = Crc, roomPlayerPos = raumSpielerPos, calcDepth = pTiefe };
+              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
           {
-            tmpRaumCheckFertig[p] = true;
-            tmpCheckRaumPosis[checkRaumBis] = p;
-            tmpCheckRaumTiefe[checkRaumBis] = pTiefe;
-            checkRaumBis++;
+            tmpCheckRoomReady[p] = true;
+            tmpCheckRoomPosis[checkRoomTo] = p;
+            tmpCheckRoomDepth[checkRoomTo] = pDepth;
+            checkRoomTo++;
           }
         }
         #endregion
 
-        checkRaumVon++;
+        checkRoomFrom++;
       }
     }
     #endregion
 
-    #region # public IEnumerable<SokowahnStellung> GetVariantenBlockerZiele() // ermittelt alle Ziel-Varianten, wo der Spieler stehen kann
+    #region # public IEnumerable<SokowahnPosition> GetVariantsBlockerGoals() // ermittelt alle Ziel-Varianten, wo der Spieler stehen kann
     /// <summary>
     /// ermittelt alle Ziel-Varianten, wo der Spieler stehen kann
     /// </summary>
     /// <returns>gefundene mögliche Stellungen</returns>
-    public IEnumerable<SokowahnPosition> GetVariantenBlockerZiele()
+    public IEnumerable<SokowahnPosition> GetVariantsBlockerGoals()
     {
-      for (int kiste = 0; kiste < boxesCount; kiste++)
+      for (int box = 0; box < boxesCount; box++)
       {
-        int pKiste = kistenZuRaum[kiste];
-        int pSpieler;
+        int pBox = boxesToRoom[box];
+        int pPlayer;
 
-        if ((pSpieler = raumLinks[pKiste]) < raumAnzahl && raumZuKisten[pSpieler] == boxesCount)
+        if ((pPlayer = roomLeft[pBox]) < roomCount && roomToBoxes[pPlayer] == boxesCount)
         {
-          raumSpielerPos = pSpieler;
-          //     if (GetVariantenRückwärts().Count() > 0) 
-          yield return GetStellung();
+          roomPlayerPos = pPlayer;
+          yield return GetPosition();
         }
 
-        if ((pSpieler = raumRechts[pKiste]) < raumAnzahl && raumZuKisten[pSpieler] == boxesCount)
+        if ((pPlayer = roomRight[pBox]) < roomCount && roomToBoxes[pPlayer] == boxesCount)
         {
-          raumSpielerPos = pSpieler;
-          yield return GetStellung();
+          roomPlayerPos = pPlayer;
+          yield return GetPosition();
         }
 
-        if ((pSpieler = raumOben[pKiste]) < raumAnzahl && raumZuKisten[pSpieler] == boxesCount)
+        if ((pPlayer = roomUp[pBox]) < roomCount && roomToBoxes[pPlayer] == boxesCount)
         {
-          raumSpielerPos = pSpieler;
-          yield return GetStellung();
+          roomPlayerPos = pPlayer;
+          yield return GetPosition();
         }
 
-        if ((pSpieler = raumUnten[pKiste]) < raumAnzahl && raumZuKisten[pSpieler] == boxesCount)
+        if ((pPlayer = roomDown[pBox]) < roomCount && roomToBoxes[pPlayer] == boxesCount)
         {
-          raumSpielerPos = pSpieler;
-          yield return GetStellung();
+          roomPlayerPos = pPlayer;
+          yield return GetPosition();
         }
       }
     }
@@ -1145,9 +1132,9 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbare Stellung</returns>
     public string Debug(byte[] data, int offset)
     {
-      SokowahnField tmp = new SokowahnField(this);
+      var tmp = new SokowahnField(this);
 
-      tmp.LadeStellung(data, offset, 0);
+      tmp.LoadPosition(data, offset, 0);
 
       return tmp.ToString();
     }
@@ -1160,9 +1147,9 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbare Stellung</returns>
     public string Debug(ushort[] data, int offset)
     {
-      SokowahnField tmp = new SokowahnField(this);
+      var tmp = new SokowahnField(this);
 
-      tmp.LadeStellung(data, offset, 0);
+      tmp.LoadPosition(data, offset, 0);
 
       return tmp.ToString();
     }
@@ -1178,7 +1165,7 @@ namespace SokoWahnLib.Rooms
     {
       var tmp = new SokowahnField(this);
 
-      tmp.LadeStellung(data, offset, zugTiefe);
+      tmp.LoadPosition(data, offset, zugTiefe);
 
       return tmp.ToString();
     }
@@ -1194,7 +1181,7 @@ namespace SokoWahnLib.Rooms
     {
       var tmp = new SokowahnField(this);
 
-      tmp.LadeStellung(data, offset, zugTiefe);
+      tmp.LoadPosition(data, offset, zugTiefe);
 
       return tmp.ToString();
     }
@@ -1208,61 +1195,61 @@ namespace SokoWahnLib.Rooms
     /// <param name="field">Basisdaten anhand eines vorhanden Raumes nutzen</param>
     public SokowahnField(SokowahnField field)
     {
-      feldData = field.feldData;
-      feldBreite = field.feldBreite;
-      raumAnzahl = field.raumAnzahl;
-      raumLinks = field.raumLinks;
-      raumRechts = field.raumRechts;
-      raumOben = field.raumOben;
-      raumUnten = field.raumUnten;
+      fieldData = field.fieldData;
+      fieldWidth = field.fieldWidth;
+      roomCount = field.roomCount;
+      roomLeft = field.roomLeft;
+      roomRight = field.roomRight;
+      roomUp = field.roomUp;
+      roomDown = field.roomDown;
 
-      raumSpielerPos = field.raumSpielerPos;
-      spielerZugTiefe = field.spielerZugTiefe;
-      raumZuKisten = field.raumZuKisten.ToArray(); // Kopie erstellen
+      roomPlayerPos = field.roomPlayerPos;
+      playerCalcDepth = field.playerCalcDepth;
+      roomToBoxes = field.roomToBoxes.ToArray(); // Kopie erstellen
       boxesCount = field.boxesCount;
-      kistenZuRaum = field.kistenZuRaum.ToArray(); // Kopie erstellen
+      boxesToRoom = field.boxesToRoom.ToArray(); // Kopie erstellen
 
-      tmpCheckRaumPosis = new int[raumAnzahl];
-      tmpCheckRaumTiefe = new int[raumAnzahl];
-      tmpRaumCheckFertig = new bool[raumAnzahl + 1];
-      tmpRaumCheckFertig[raumAnzahl] = true; // Ende-Feld schon auf fertig setzen
+      tmpCheckRoomPosis = new int[roomCount];
+      tmpCheckRoomDepth = new int[roomCount];
+      tmpCheckRoomReady = new bool[roomCount + 1];
+      tmpCheckRoomReady[roomCount] = true; // Ende-Feld schon auf fertig setzen
     }
 
     /// <summary>
     /// Konstruktor
     /// </summary>
-    /// <param name="feldData">Daten des Spielfeldes</param>
-    /// <param name="feldBreite">Breite des Spielfeldes</param>
-    public SokowahnField(char[] feldData, int feldBreite)
+    /// <param name="fieldData">Daten des Spielfeldes</param>
+    /// <param name="fieldWidth">Breite des Spielfeldes</param>
+    public SokowahnField(char[] fieldData, int fieldWidth)
     {
-      this.feldData = feldData;
-      this.feldBreite = feldBreite;
+      this.fieldData = fieldData;
+      this.fieldWidth = fieldWidth;
 
-      var spielerRaum = SpielfeldRaumScan(feldData, feldBreite);
+      var spielerRaum = FieldRoomScan(fieldData, fieldWidth);
 
-      int raumAnzahl = this.raumAnzahl = spielerRaum.Count(x => x);
+      int roomCount = this.roomCount = spielerRaum.Count(x => x);
 
-      var raumZuFeld = Enumerable.Range(0, spielerRaum.Length).Where(i => spielerRaum[i]).ToArray();
+      var roomToField = Enumerable.Range(0, spielerRaum.Length).Where(i => spielerRaum[i]).ToArray();
 
-      raumLinks = raumZuFeld.Select(i => spielerRaum[i - 1] ? raumZuFeld.ToList().IndexOf(i - 1) : raumAnzahl).ToArray();
-      raumRechts = raumZuFeld.Select(i => spielerRaum[i + 1] ? raumZuFeld.ToList().IndexOf(i + 1) : raumAnzahl).ToArray();
-      raumOben = raumZuFeld.Select(i => spielerRaum[i - feldBreite] ? raumZuFeld.ToList().IndexOf(i - feldBreite) : raumAnzahl).ToArray();
-      raumUnten = raumZuFeld.Select(i => spielerRaum[i + feldBreite] ? raumZuFeld.ToList().IndexOf(i + feldBreite) : raumAnzahl).ToArray();
+      roomLeft = roomToField.Select(i => spielerRaum[i - 1] ? roomToField.ToList().IndexOf(i - 1) : roomCount).ToArray();
+      roomRight = roomToField.Select(i => spielerRaum[i + 1] ? roomToField.ToList().IndexOf(i + 1) : roomCount).ToArray();
+      roomUp = roomToField.Select(i => spielerRaum[i - fieldWidth] ? roomToField.ToList().IndexOf(i - fieldWidth) : roomCount).ToArray();
+      roomDown = roomToField.Select(i => spielerRaum[i + fieldWidth] ? roomToField.ToList().IndexOf(i + fieldWidth) : roomCount).ToArray();
 
-      kistenZuRaum = Enumerable.Range(0, raumAnzahl).Where(i => spielerRaum[raumZuFeld[i]] && (feldData[raumZuFeld[i]] == '$' || feldData[raumZuFeld[i]] == '*')).ToArray();
-      int kistenAnzahl = boxesCount = kistenZuRaum.Length;
+      boxesToRoom = Enumerable.Range(0, roomCount).Where(i => spielerRaum[roomToField[i]] && (fieldData[roomToField[i]] == '$' || fieldData[roomToField[i]] == '*')).ToArray();
+      int boxesCount = this.boxesCount = boxesToRoom.Length;
       int counter = 0;
-      raumZuKisten = raumZuFeld.Select(i => (feldData[i] == '$' || feldData[i] == '*') ? counter++ : kistenAnzahl).ToArray();
-      Array.Resize(ref raumZuKisten, raumAnzahl + 1);
-      raumZuKisten[raumAnzahl] = kistenAnzahl;
+      roomToBoxes = roomToField.Select(i => (fieldData[i] == '$' || fieldData[i] == '*') ? counter++ : boxesCount).ToArray();
+      Array.Resize(ref roomToBoxes, roomCount + 1);
+      roomToBoxes[roomCount] = boxesCount;
 
-      raumSpielerPos = Enumerable.Range(0, raumAnzahl).First(i => feldData[raumZuFeld[i]] == '@' || feldData[raumZuFeld[i]] == '+');
-      spielerZugTiefe = 0;
+      roomPlayerPos = Enumerable.Range(0, roomCount).First(i => fieldData[roomToField[i]] == '@' || fieldData[roomToField[i]] == '+');
+      playerCalcDepth = 0;
 
-      tmpCheckRaumPosis = new int[raumAnzahl];
-      tmpCheckRaumTiefe = new int[raumAnzahl];
-      tmpRaumCheckFertig = new bool[raumAnzahl + 1];
-      tmpRaumCheckFertig[raumAnzahl] = true; // Ende-Feld schon auf fertig setzen
+      tmpCheckRoomPosis = new int[roomCount];
+      tmpCheckRoomDepth = new int[roomCount];
+      tmpCheckRoomReady = new bool[roomCount + 1];
+      tmpCheckRoomReady[roomCount] = true; // Ende-Feld schon auf fertig setzen
     }
     #endregion
 
@@ -1273,54 +1260,52 @@ namespace SokoWahnLib.Rooms
     /// <param name="feldData">Felddaten des Spielfeldes als char-Array</param>
     /// <param name="feldBreite">Breite des Feldes (Höhe wird automatisch ermittelt)</param>
     /// <returns>Bool-Array mit gleicher Größe wie feldData, gibt an, wo der Spieler sich aufhalten darf</returns>
-    public static bool[] SpielfeldRaumScan(char[] feldData, int feldBreite)
+    public static bool[] FieldRoomScan(char[] feldData, int feldBreite)
     {
-      int feldHöhe = feldData.Length / feldBreite;
+      int fieldHeight = feldData.Length / feldBreite;
 
-      var spielerRaum = feldData.Select(c => c == '@' || c == '+').ToArray();
+      var playerRoom = feldData.Select(c => c == '@' || c == '+').ToArray();
 
       bool find = true;
       while (find)
       {
         find = false;
-        for (int y = 1; y < feldHöhe - 1; y++)
+        for (int y = 1; y < fieldHeight - 1; y++)
         {
           for (int x = 1; x < feldBreite - 1; x++)
           {
-            if (spielerRaum[x + y * feldBreite])
+            if (playerRoom[x + y * feldBreite])
             {
               int p = x + y * feldBreite - feldBreite;
-              if (!spielerRaum[p] && " .$*".Any(c => feldData[p] == c)) find = spielerRaum[p] = true;
+              if (!playerRoom[p] && " .$*".Any(c => feldData[p] == c)) find = playerRoom[p] = true;
               p += feldBreite - 1;
-              if (!spielerRaum[p] && " .$*".Any(c => feldData[p] == c)) find = spielerRaum[p] = true;
+              if (!playerRoom[p] && " .$*".Any(c => feldData[p] == c)) find = playerRoom[p] = true;
               p += 2;
-              if (!spielerRaum[p] && " .$*".Any(c => feldData[p] == c)) find = spielerRaum[p] = true;
+              if (!playerRoom[p] && " .$*".Any(c => feldData[p] == c)) find = playerRoom[p] = true;
               p += feldBreite - 1;
-              if (!spielerRaum[p] && " .$*".Any(c => feldData[p] == c)) find = spielerRaum[p] = true;
+              if (!playerRoom[p] && " .$*".Any(c => feldData[p] == c)) find = playerRoom[p] = true;
             }
           }
         }
       }
 
-      return spielerRaum;
+      return playerRoom;
     }
     #endregion
 
-    #region # // --- Extensions ---
     /// <summary>
     /// erstellt eine gekürzte Kopie eines Arrays
     /// </summary>
     /// <param name="array">Array mit den entsprechenden Daten</param>
-    /// <param name="anzahl">Anzahl der Datensätze (darf maximale so lang sein wie das Array selbst)</param>
+    /// <param name="count">Anzahl der Datensätze (darf maximale so lang sein wie das Array selbst)</param>
     /// <returns>neues Array mit den entsprechenden Daten</returns>
-    public static T[] TeilArray<T>(T[] array, int anzahl) where T : struct
+    public static T[] CopyArray<T>(T[] array, int count) where T : struct
     {
-      var ausgabe = new T[anzahl];
+      var result = new T[count];
 
-      for (int i = 0; i < anzahl; i++) ausgabe[i] = array[i];
+      for (int i = 0; i < count; i++) result[i] = array[i];
 
-      return ausgabe;
+      return result;
     }
-    #endregion
   }
 }
