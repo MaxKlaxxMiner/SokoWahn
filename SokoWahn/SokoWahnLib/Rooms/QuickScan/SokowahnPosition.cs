@@ -56,9 +56,9 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="field">Sokowahn-Raum mit den jeweiligen Grunddaten</param>
     /// <returns>lesbares Spielfeld</returns>
-    public string Debug(SokowahnField field)
+    public string Debug(SokoFieldQuickScan field)
     {
-      var temp = new SokowahnField(field)
+      var temp = new SokoFieldQuickScan(field)
       {
         BoxesCount = boxesToRoom.Length
       };
@@ -70,7 +70,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="field">Sokowahn-Raum mit den jeweiligen Grunddaten</param>
     /// <returns>lesbares Spielfeld</returns>
-    public string ToString(SokowahnField field)
+    public string ToString(SokoFieldQuickScan field)
     {
       return Debug(field);
     }
