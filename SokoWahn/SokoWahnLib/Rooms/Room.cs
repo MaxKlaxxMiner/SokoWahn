@@ -1,5 +1,6 @@
 ﻿#region # using *.*
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 // ReSharper disable MemberCanBePrivate.Global
@@ -89,13 +90,15 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// erstellt die ersten Zustände
     /// </summary>
-    public void InitStates()
+    /// <param name="singleBoxScan">Scan-Ergebniss einer einzelnen Kiste (alle erlaubten Varianten)</param>
+    public void InitStates(List<KeyValuePair<int, int>> singleBoxScan)
     {
       Debug.Assert(fieldPosis.Length == 1);
       Debug.Assert(stateList.Count == 0);
       Debug.Assert(variantList.Count == 0);
 
       int pos = fieldPosis.First();
+      bool isBoxField = singleBoxScan != null ? singleBoxScan.Any(x => x.Key == pos || x.Value == pos) : field.IsGoal(pos) || !field.CheckCorner(pos); // gibt an, ob theoretisch eine Kiste auf dem Spielfeld sein darf
 
       switch (field.GetField(pos))
       {
@@ -103,12 +106,13 @@ namespace SokoWahnLib.Rooms
         case ' ': // leeres Feld
         {
           stateList.Add(new int[0]); // End-Zustand: leeres Feld
-          if (!field.CheckCorner(pos)) stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen (sofern diese nicht in einer Ecke steht)
+          if (isBoxField) stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
         } break;
 
         case '+': // Spieler auf einem Zielfeld
         case '.': // Zielfeld
         {
+          Debug.Assert(isBoxField);
           stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
           stateList.Add(new int[0]); // Zwischen-Zustand: leeres Zielfeld
         } break;
@@ -116,6 +120,7 @@ namespace SokoWahnLib.Rooms
         case '$': // Feld mit Kiste
         {
           if (field.CheckCorner(pos)) throw new SokoFieldException("found invalid Box on " + pos % field.Width + ", " + pos / field.Width);
+          Debug.Assert(isBoxField);
           stateList.Add(new int[0]); // End-Zustand: leeres Feld
           stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
         } break;
@@ -135,7 +140,8 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// initialisiert die ersten Varianten
     /// </summary>
-    public void InitVariants()
+    /// <param name="singleBoxScan">Scan-Ergebniss einer einzelnen Kiste (alle erlaubten Varianten)</param>
+    public void InitVariants(List<KeyValuePair<int, int>> singleBoxScan)
     {
       Debug.Assert(fieldPosis.Length == 1);
       Debug.Assert(stateList.Count > 0);
@@ -171,7 +177,10 @@ namespace SokoWahnLib.Rooms
           && !field.IsWall(portal.fromPos + portal.fromPos - portal.toPos) // Spieler stand vorher nicht in der Wand?
           )
         {
-          portal.stateBoxSwap.Add(st1.Key, st2.Key);
+          if (singleBoxScan == null || singleBoxScan.Any(x => x.Key == portal.fromPos && x.Value == portal.toPos)) // gültige Kisten-Varianten erkannt?
+          {
+            portal.stateBoxSwap.Add(st1.Key, st2.Key);
+          }
         }
       }
       #endregion
@@ -203,6 +212,9 @@ namespace SokoWahnLib.Rooms
                 if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
                 {
                   if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
+
+                  if (singleBoxScan != null && singleBoxScan.All(x => x.Key != pos || x.Value != outgoingPortals[bPortal].toPos)) continue; // ungültige Kisten-Varianten erkannt?
+
                   Debug.Assert(boxPortal == -1);
                   boxPortal = bPortal;
                 }
@@ -210,7 +222,7 @@ namespace SokoWahnLib.Rooms
               if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
               int checkPos = outgoingPortals[oPortal].toPos + outgoingPortals[oPortal].toPos - outgoingPortals[oPortal].fromPos;
-              if (boxPortal == oPortal && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde in eine Ecke geschoben werden
+              if (boxPortal == oPortal && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde noch weiter in eine Ecke geschoben werden
 
               portal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortal }, oPortal, 0, outgoingPortals[oPortal].dirChar.ToString()));
             }
@@ -235,6 +247,9 @@ namespace SokoWahnLib.Rooms
                 if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
                 {
                   if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
+
+                  if (singleBoxScan != null && singleBoxScan.All(x => x.Key != pos || x.Value != outgoingPortals[bPortal].toPos)) continue; // ungültige Kisten-Varianten erkannt?
+
                   Debug.Assert(boxPortal == -1);
                   boxPortal = bPortal;
                 }
@@ -242,7 +257,7 @@ namespace SokoWahnLib.Rooms
               if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
               int checkPos = outgoingPortals[oPortal].toPos + outgoingPortals[oPortal].toPos - outgoingPortals[oPortal].fromPos;
-              if (boxPortal == oPortal && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde in eine Ecke geschoben werden
+              if (boxPortal == oPortal && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde noch weiter in eine Ecke geschoben werden
 
               portal.variantStateDict.Add(0, variantList.Add(0, 1, 1, new[] { (uint)boxPortal }, oPortal, 1, outgoingPortals[oPortal].dirChar.ToString()));
             }

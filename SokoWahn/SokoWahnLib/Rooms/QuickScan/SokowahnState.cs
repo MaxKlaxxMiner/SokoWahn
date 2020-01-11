@@ -5,7 +5,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// Struktur einer kompletten Stellung (inkl. Zugtiefe und Crc64-Schlüssel)
   /// </summary>
-  public struct SokowahnPosition
+  public struct SokowahnState
   {
     /// <summary>
     /// Spielerposition im Raum

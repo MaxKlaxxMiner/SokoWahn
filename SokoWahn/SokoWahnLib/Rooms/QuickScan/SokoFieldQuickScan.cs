@@ -11,7 +11,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// Klasse zum schnellen Prüfen eines Spielfeldes (siehe old-solver: SokowahnRaum)
   /// </summary>
-  public class SokoFieldQuickScan : ISokoField
+  public sealed class SokoFieldQuickScan : ISokoField
   {
     /// <summary>
     /// Breite des Spielfeldes in Spalten
@@ -192,14 +192,34 @@ namespace SokoWahnLib.Rooms
       }
       #endregion
 
-      //#region # // --- Ziele und Kisten zählen und vergleichen ---
-      //goalPositions = field.Select((c, i) => new { c, i }).Where(x => x.c == '.' || x.c == '*' || x.c == '+').Select(x => x.i).ToArray(); // Zielfelder: leer, mit Kiste, mit Spieler
-      //boxPositions = field.Select((c, i) => new { c, i }).Where(x => x.c == '$' || x.c == '*').Select(x => x.i).ToArray(); // Kisten: nur Kiste, auf einem Zielfeld
-      //if (boxPositions.Length == 0) throw new SokoFieldException("no boxes found");
-      //if (goalPositions.Length == 0) throw new SokoFieldException("no goals found");
-      //if (boxPositions.Length < goalPositions.Length) throw new SokoFieldException("less boxes than goals (" + boxPositions.Length + " < " + goalPositions.Length + ")");
-      //if (boxPositions.Length > goalPositions.Length) throw new SokoFieldException("more boxes than goals (" + boxPositions.Length + " > " + goalPositions.Length + ")");
-      //#endregion
+      #region # // --- Raum-Logik ---
+      var playerRoom = FieldRoomScan(fieldChars, width);
+
+      int roomCount = this.roomCount = playerRoom.Count(x => x);
+
+      roomToField = Enumerable.Range(0, playerRoom.Length).Where(i => playerRoom[i]).ToArray();
+      fieldToRoom = Enumerable.Range(0, fieldChars.Length).Select(i => playerRoom[i] ? roomToField.ToList().IndexOf(i) : -1).ToArray();
+
+      roomLeft = roomToField.Select(i => playerRoom[i - 1] ? roomToField.ToList().IndexOf(i - 1) : roomCount).ToArray();
+      roomRight = roomToField.Select(i => playerRoom[i + 1] ? roomToField.ToList().IndexOf(i + 1) : roomCount).ToArray();
+      roomUp = roomToField.Select(i => playerRoom[i - width] ? roomToField.ToList().IndexOf(i - width) : roomCount).ToArray();
+      roomDown = roomToField.Select(i => playerRoom[i + width] ? roomToField.ToList().IndexOf(i + width) : roomCount).ToArray();
+
+      boxesToRoom = Enumerable.Range(0, roomCount).Where(i => playerRoom[roomToField[i]] && (fieldChars[roomToField[i]] == '$' || fieldChars[roomToField[i]] == '*')).ToArray();
+      int boxesCount = this.boxesCount = boxesToRoom.Length;
+      int counter = 0;
+      roomToBoxes = roomToField.Select(i => (fieldChars[i] == '$' || fieldChars[i] == '*') ? counter++ : boxesCount).ToArray();
+      Array.Resize(ref roomToBoxes, roomCount + 1);
+      roomToBoxes[roomCount] = boxesCount;
+
+      roomPlayerPos = Enumerable.Range(0, roomCount).First(i => fieldChars[roomToField[i]] == '@' || fieldChars[roomToField[i]] == '+');
+      playerCalcDepth = 0;
+
+      tmpCheckRoomPosis = new int[roomCount];
+      tmpCheckRoomDepth = new int[roomCount];
+      tmpCheckRoomReady = new bool[roomCount + 1];
+      tmpCheckRoomReady[roomCount] = true; // Ende-Feld schon auf fertig setzen
+      #endregion
     }
 
     /// <summary>
@@ -230,6 +250,12 @@ namespace SokoWahnLib.Rooms
       tmpCheckRoomReady = new bool[roomCount + 1];
       tmpCheckRoomReady[roomCount] = true; // Ende-Feld schon auf fertig setzen
     }
+
+    /// <summary>
+    /// Konstruktor
+    /// </summary>
+    /// <param name="field">bestehende Spielfeld, welches verwendet werden soll</param>
+    public SokoFieldQuickScan(ISokoField field) : this(Enumerable.Range(0, field.Width * field.Height).Select(field.GetField).ToArray(), field.Width) { }
 
     /// <summary>
     /// Konstruktor
@@ -308,6 +334,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="move">Spielzug, welcher durchgeführt werden soll</param>
     public void Move(MoveType move)
     {
+      throw new NotSupportedException();
     }
     #endregion
 
@@ -470,9 +497,9 @@ namespace SokoWahnLib.Rooms
     /// gibt die aktuelle Stellung zurück
     /// </summary>
     /// <returns>aktuelle Stellung</returns>
-    public SokowahnPosition GetState()
+    public SokowahnState GetState()
     {
-      return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, calcDepth = playerCalcDepth };
+      return new SokowahnState { roomPlayerPos = roomPlayerPos, boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, calcDepth = playerCalcDepth };
     }
     #endregion
 
@@ -574,17 +601,17 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// lädt eine bestimmte Stellung
     /// </summary>
-    /// <param name="position">Stellung, welche geladen werden soll</param>
-    public void LoadState(SokowahnPosition position)
+    /// <param name="state">Stellung, welche geladen werden soll</param>
+    public void LoadState(SokowahnState state)
     {
-      roomPlayerPos = position.roomPlayerPos;
-      playerCalcDepth = position.calcDepth;
+      roomPlayerPos = state.roomPlayerPos;
+      playerCalcDepth = state.calcDepth;
 
       // alte Kisten entfernen
       for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i]] = boxesCount;
 
       // neue Kisten setzen
-      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i] = position.boxesToRoom[i]] = i;
+      for (int i = 0; i < boxesCount; i++) roomToBoxes[boxesToRoom[i] = state.boxesToRoom[i]] = i;
     }
 
     /// <summary>
@@ -909,7 +936,7 @@ namespace SokoWahnLib.Rooms
     /// ermittelt alle möglichen Zugvarianten und gibt deren Stellungen zurück
     /// </summary>
     /// <returns>Enumerable der gefundenen Stellungen</returns>
-    public IEnumerable<SokowahnPosition> GetVariants()
+    public IEnumerable<SokowahnState> GetVariants()
     {
       int checkRoomFrom = 0;
       int checkRoomTo = 0;
@@ -940,7 +967,7 @@ namespace SokoWahnLib.Rooms
               boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // linke Kiste weiter nach links schieben
               roomPlayerPos = p;                                                                    // Spieler nach links bewegen
 
-              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
+              yield return new SokowahnState { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
               roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach rechts bewegen
               boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // linke Kiste eins zurück nach rechts schieben
@@ -966,7 +993,7 @@ namespace SokoWahnLib.Rooms
               boxesToRoom[roomToBoxes[p2] = roomToBoxes[p]] = p2; roomToBoxes[p] = boxesCount; // rechte Kiste weiter nach rechts schieben
               roomPlayerPos = p;                                                                    // Spieler nach rechts bewegen
 
-              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
+              yield return new SokowahnState { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
               roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach links bewegen
               boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // rechte Kiste eins zurück nach links schieben
@@ -1001,7 +1028,7 @@ namespace SokoWahnLib.Rooms
               }
               #endregion
 
-              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
+              yield return new SokowahnState { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
               roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach unten bewegen
               boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // obere Kiste eins zurück nach unten schieben
@@ -1045,7 +1072,7 @@ namespace SokoWahnLib.Rooms
               }
               #endregion
 
-              yield return new SokowahnPosition { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
+              yield return new SokowahnState { roomPlayerPos = roomPlayerPos, boxesToRoom = CopyArray(boxesToRoom, boxesCount), crc64 = Crc, calcDepth = pDepth };
 
               roomPlayerPos = tmpCheckRoomPosis[checkRoomFrom];                                      // Spieler zurück nach oben bewegen
               boxesToRoom[roomToBoxes[p] = roomToBoxes[p2]] = p; roomToBoxes[p2] = boxesCount; // untere Kiste eins zurück nach oben schieben
@@ -1082,7 +1109,7 @@ namespace SokoWahnLib.Rooms
     /// ermittelt alle möglichen Zugvarianten, welche vor dieser Stellung existiert haben könnten und gibt deren Stellungen zurück
     /// </summary>
     /// <returns>alle möglichen Vorgänge-Zugvarianten</returns>
-    public IEnumerable<SokowahnPosition> GetVariantsBackward()
+    public IEnumerable<SokowahnState> GetVariantsBackward()
     {
       int pMiddle = roomPlayerPos;
       int pLeft = roomLeft[pMiddle];
@@ -1180,7 +1207,7 @@ namespace SokoWahnLib.Rooms
     /// Hilfsmethode für GetVariantenRückwärts(), berechnet eine bestimmte Richtung
     /// </summary>
     /// <returns>gefundene gültige Stellungen</returns>
-    IEnumerable<SokowahnPosition> GetVariantsBackwardStep()
+    IEnumerable<SokowahnState> GetVariantsBackwardStep()
     {
       int checkRoomFrom = 0;
       int checkRoomTo = 0;
@@ -1208,7 +1235,7 @@ namespace SokoWahnLib.Rooms
           {
             if ((p2 = roomRight[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
+              yield return new SokowahnState { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
@@ -1228,7 +1255,7 @@ namespace SokoWahnLib.Rooms
           {
             if ((p2 = roomLeft[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
+              yield return new SokowahnState { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
@@ -1248,7 +1275,7 @@ namespace SokoWahnLib.Rooms
           {
             if ((p2 = roomDown[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
+              yield return new SokowahnState { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
@@ -1268,7 +1295,7 @@ namespace SokoWahnLib.Rooms
           {
             if ((p2 = roomUp[roomPlayerPos]) < roomCount && roomToBoxes[p2] == boxesCount)
             {
-              yield return new SokowahnPosition { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
+              yield return new SokowahnState { boxesToRoom = boxesToRoom.ToArray(), crc64 = Crc, roomPlayerPos = roomPlayerPos, calcDepth = pDepth };
             }
           }
           else
@@ -1291,7 +1318,7 @@ namespace SokoWahnLib.Rooms
     /// ermittelt alle Ziel-Varianten, wo der Spieler stehen kann
     /// </summary>
     /// <returns>gefundene mögliche Stellungen</returns>
-    public IEnumerable<SokowahnPosition> GetVariantsBlockerGoals()
+    public IEnumerable<SokowahnState> GetVariantsBlockerGoals()
     {
       for (int box = 0; box < boxesCount; box++)
       {
@@ -1329,13 +1356,13 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt eine bestimmte Stellung direkt als sichtbaren String aus (ohne die eigene Stellung zu beeinflussen)
     /// </summary>
-    /// <param name="position">Stellung, welche ausgelesen werden soll</param>
+    /// <param name="state">Stellung, welche ausgelesen werden soll</param>
     /// <returns>lesbare Stellung</returns>
-    public string Debug(SokowahnPosition position)
+    public string Debug(SokowahnState state)
     {
       var tmpData = new ushort[boxesCount + 1];
-      position.SavePosition(tmpData, 0);
-      return Debug(tmpData, 0, position.calcDepth);
+      state.SavePosition(tmpData, 0);
+      return Debug(tmpData, 0, state.calcDepth);
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ namespace SokoWahnWin
   /// <summary>
   /// Item-Element für die Varianten-Liste
   /// </summary>
-  public struct VariantListItem
+  public sealed class VariantListItem
   {
     /// <summary>
     /// merkt sich die Textzeile für die Listbox

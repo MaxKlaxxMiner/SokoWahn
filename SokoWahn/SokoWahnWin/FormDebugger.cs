@@ -19,7 +19,7 @@ using SokoWahnLib.Rooms;
 
 namespace SokoWahnWin
 {
-  public partial class FormDebugger : Form
+  public sealed partial class FormDebugger : Form
   {
     RoomNetwork network;
 
@@ -189,10 +189,10 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
+      //network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
       //network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
-      //network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
+      network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
       //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
@@ -405,8 +405,10 @@ namespace SokoWahnWin
 
         var el = variantPath[timePos];
         displaySettings.playerPos = el.playerPos;
+        Text = "Player: " + string.Join(", ", variantPath.Select(x => x.playerPos)) + " -> " + el.playerPos;
         displaySettings.boxes = el.boxes;
       }
+      else Text = "-";
       #endregion
 
       fieldDisplay.Update(network, displaySettings);
@@ -1038,6 +1040,19 @@ namespace SokoWahnWin
       {
         MessageBox.Show(exc.ToString().Replace("System.Exception: ", ""), "Validation", MessageBoxButtons.OK, MessageBoxIcon.Error);
       }
+    }
+
+    VariantListItem DetermineHoveredItem()
+    {
+      var screenPosition = MousePosition;
+      var listBoxClientAreaPosition = listVariants.PointToClient(screenPosition);
+
+      int hoveredIndex = listVariants.IndexFromPoint(listBoxClientAreaPosition);
+      if (hoveredIndex != -1)
+      {
+        return listVariants.Items[hoveredIndex] as VariantListItem;
+      }
+      return null;
     }
   }
 }

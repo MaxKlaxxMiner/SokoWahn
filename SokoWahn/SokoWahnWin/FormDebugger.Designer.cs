@@ -1,6 +1,6 @@
 ﻿namespace SokoWahnWin
 {
-  partial class FormDebugger
+  sealed partial class FormDebugger
   {
     /// <summary>
     /// Erforderliche Designervariable.
