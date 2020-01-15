@@ -402,7 +402,7 @@ namespace SokoWahnLib.Rooms
     #endregion
 
     /// <summary>
-    /// gibt alle gespeidcherten Hasheinträge zurück
+    /// gibt alle gespeicherten Hasheinträge zurück
     /// </summary>
     /// <returns>Enumerable mit allen Hasheinträgen</returns>
     public IEnumerable<KeyValuePair<ulong, ushort>> GetAll()

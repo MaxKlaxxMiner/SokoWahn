@@ -47,6 +47,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="FormSolver.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormSolver.Designer.cs">
+      <DependentUpon>FormSolver.cs</DependentUpon>
+    </Compile>
     <Compile Include="StateListItem.cs" />
     <Compile Include="Highlight.cs" />
     <Compile Include="DisplaySettings.cs" />
@@ -63,6 +69,9 @@
     <Compile Include="VariantPathElement.cs" />
     <EmbeddedResource Include="FormDebugger.resx">
       <DependentUpon>FormDebugger.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormSolver.resx">
+      <DependentUpon>FormSolver.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

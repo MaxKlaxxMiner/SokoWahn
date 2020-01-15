@@ -29,7 +29,7 @@
     private void InitializeComponent()
     {
       this.components = new System.ComponentModel.Container();
-      this.button1 = new System.Windows.Forms.Button();
+      this.buttonStep = new System.Windows.Forms.Button();
       this.listRooms = new System.Windows.Forms.ListBox();
       this.pictureBoxField = new System.Windows.Forms.PictureBox();
       this.timerDisplay = new System.Windows.Forms.Timer(this.components);
@@ -38,6 +38,7 @@
       this.listVariants = new System.Windows.Forms.ListBox();
       this.textBoxInfo = new System.Windows.Forms.TextBox();
       this.buttonValidate = new System.Windows.Forms.Button();
+      this.buttonSolver = new System.Windows.Forms.Button();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
       this.splitContainer1.Panel1.SuspendLayout();
@@ -45,17 +46,17 @@
       this.splitContainer1.SuspendLayout();
       this.SuspendLayout();
       // 
-      // button1
+      // buttonStep
       // 
-      this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.button1.Location = new System.Drawing.Point(1162, 12);
-      this.button1.Name = "button1";
-      this.button1.Size = new System.Drawing.Size(92, 36);
-      this.button1.TabIndex = 0;
-      this.button1.Text = "Step";
-      this.button1.UseVisualStyleBackColor = true;
-      this.button1.Click += new System.EventHandler(this.button1_Click);
-      this.button1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      this.buttonStep.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonStep.Location = new System.Drawing.Point(1162, 12);
+      this.buttonStep.Name = "buttonStep";
+      this.buttonStep.Size = new System.Drawing.Size(92, 36);
+      this.buttonStep.TabIndex = 0;
+      this.buttonStep.Text = "Step";
+      this.buttonStep.UseVisualStyleBackColor = true;
+      this.buttonStep.Click += new System.EventHandler(this.button1_Click);
+      this.buttonStep.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // listRooms
       // 
@@ -154,6 +155,7 @@
       this.textBoxInfo.Name = "textBoxInfo";
       this.textBoxInfo.Size = new System.Drawing.Size(976, 23);
       this.textBoxInfo.TabIndex = 5;
+      this.textBoxInfo.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // buttonValidate
       // 
@@ -165,6 +167,19 @@
       this.buttonValidate.Text = "Validate";
       this.buttonValidate.UseVisualStyleBackColor = true;
       this.buttonValidate.Click += new System.EventHandler(this.buttonValidate_Click);
+      this.buttonValidate.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      // 
+      // buttonSolver
+      // 
+      this.buttonSolver.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonSolver.Location = new System.Drawing.Point(1162, 96);
+      this.buttonSolver.Name = "buttonSolver";
+      this.buttonSolver.Size = new System.Drawing.Size(92, 36);
+      this.buttonSolver.TabIndex = 7;
+      this.buttonSolver.Text = "Solver...";
+      this.buttonSolver.UseVisualStyleBackColor = true;
+      this.buttonSolver.Click += new System.EventHandler(this.buttonSolver_Click);
+      this.buttonSolver.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // FormDebugger
       // 
@@ -172,14 +187,15 @@
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.buttonSolver);
       this.Controls.Add(this.buttonValidate);
       this.Controls.Add(this.textBoxInfo);
       this.Controls.Add(this.splitContainer1);
       this.Controls.Add(this.pictureBoxField);
       this.Controls.Add(this.listRooms);
-      this.Controls.Add(this.button1);
+      this.Controls.Add(this.buttonStep);
       this.Name = "FormDebugger";
-      this.Text = "Form1";
+      this.Text = "Rooms Debugger";
       this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       this.Resize += new System.EventHandler(this.FormDebugger_Resize);
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).EndInit();
@@ -194,7 +210,7 @@
 
     #endregion
 
-    private System.Windows.Forms.Button button1;
+    private System.Windows.Forms.Button buttonStep;
     private System.Windows.Forms.ListBox listRooms;
     private System.Windows.Forms.PictureBox pictureBoxField;
     private System.Windows.Forms.Timer timerDisplay;
@@ -203,6 +219,7 @@
     private System.Windows.Forms.ListBox listVariants;
     private System.Windows.Forms.TextBox textBoxInfo;
     private System.Windows.Forms.Button buttonValidate;
+    private System.Windows.Forms.Button buttonSolver;
   }
 }
 

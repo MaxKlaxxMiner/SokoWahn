@@ -174,6 +174,8 @@ namespace SokoWahnWin
     DisplaySettings displaySettings;
     readonly FieldDisplay fieldDisplay;
 
+    readonly FormSolver formSolver = new FormSolver();
+
     /// <summary>
     /// Geschwindigkeit der Varianten-Anzeige (Millisekunden pro Schritt)
     /// </summary>
@@ -385,9 +387,10 @@ namespace SokoWahnWin
       #endregion
 
       #region # // --- Varianten-Animation (sofern eine ausgewählt wurde) ---
-      if (listVariants.SelectedItem is VariantListItem)
+      var listItem = listVariants.SelectedItem as VariantListItem;
+      if (listItem != null)
       {
-        var variantPath = ((VariantListItem)listVariants.SelectedItem).variantPath;
+        var variantPath = listItem.variantPath;
 
         int time = Environment.TickCount;
 
@@ -1002,23 +1005,23 @@ namespace SokoWahnWin
         {
           if (RemoveBoxStates(room))
           {
-            button1.Text = "B-Room " + roomIndex;
+            buttonStep.Text = "B-Room " + roomIndex;
             return;
           }
         }
         if (OptimizeStep1(room))
         {
-          button1.Text = "1-Room " + roomIndex;
+          buttonStep.Text = "1-Room " + roomIndex;
           return;
         }
         if (OptimizeUnusedStates(room))
         {
-          button1.Text = "S-Room " + roomIndex;
+          buttonStep.Text = "S-Room " + roomIndex;
           return;
         }
       }
 
-      button1.Text = "ok.";
+      buttonStep.Text = "ok.";
     }
 
     /// <summary>
@@ -1058,6 +1061,17 @@ namespace SokoWahnWin
         return listVariants.Items[hoveredIndex] as VariantListItem;
       }
       return null;
+    }
+
+    /// <summary>
+    /// Button zum öffnen des Lösung-Fensters
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">Event-Infos</param>
+    void buttonSolver_Click(object sender, EventArgs e)
+    {
+      formSolver.InitRoomNetwork(network);
+      formSolver.ShowDialog();
     }
   }
 }
