@@ -106,7 +106,7 @@ namespace SokoWahnLib.Rooms
       #endregion
 
       var boxScan = SokoBoxScanner.ScanSingleBoxPushes(field);
-      boxScan = null;
+      //boxScan = null;
 
       #region # // --- Raumzustände erstellen ---
       foreach (var room in rooms)

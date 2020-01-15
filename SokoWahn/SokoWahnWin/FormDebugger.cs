@@ -375,7 +375,7 @@ namespace SokoWahnWin
             }
           }
 
-          if (variantCount == 0)
+          if (variantCount == 0 && boxState == stateItem.stateId)
           {
             listVariants.Items.Add("no variants");
           }
