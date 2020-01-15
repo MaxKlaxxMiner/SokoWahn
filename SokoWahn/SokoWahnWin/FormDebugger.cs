@@ -189,10 +189,10 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      //network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
+      network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
       //network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
-      network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
+      //network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
       //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
@@ -704,7 +704,8 @@ namespace SokoWahnWin
 
       using (var usingStates = new Bitter(stateList.Count))
       {
-        usingStates.SetBit(0); // ersten Zustand immer pauschal markieren
+        usingStates.SetBit(0); // ersten Zustand immer pauschal markieren (End-Zustand)
+        usingStates.SetBit(room.startState); // Start-Zustand ebenfalls markieren
 
         // Start-Varianten durchsuchen
         for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
@@ -1042,6 +1043,10 @@ namespace SokoWahnWin
       }
     }
 
+    /// <summary>
+    /// gibt das Varianten-Element zurück, wenn nur mit der Maus drauf gezeigt wird (nicht geklickt)
+    /// </summary>
+    /// <returns>gehovertes Element (oder null)</returns>
     VariantListItem DetermineHoveredItem()
     {
       var screenPosition = MousePosition;

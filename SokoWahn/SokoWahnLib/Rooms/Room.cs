@@ -43,6 +43,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public StateList stateList;
     /// <summary>
+    /// merkt sich den Anfangs-Zustand des Raumes bei Beginn des Spieles
+    /// </summary>
+    public ulong startState;
+    /// <summary>
     /// Liste mit allen Varianten, welche innerhalb des Raumes durchgeführt werden können
     /// </summary>
     public VariantList variantList;
@@ -106,6 +110,7 @@ namespace SokoWahnLib.Rooms
         case ' ': // leeres Feld
         {
           stateList.Add(new int[0]); // End-Zustand: leeres Feld
+          startState = 0;
           if (isBoxField) stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
         } break;
 
@@ -115,6 +120,7 @@ namespace SokoWahnLib.Rooms
           Debug.Assert(isBoxField);
           stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
           stateList.Add(new int[0]); // Zwischen-Zustand: leeres Zielfeld
+          startState = 1;
         } break;
 
         case '$': // Feld mit Kiste
@@ -123,11 +129,13 @@ namespace SokoWahnLib.Rooms
           Debug.Assert(isBoxField);
           stateList.Add(new int[0]); // End-Zustand: leeres Feld
           stateList.Add(fieldPosis); // Zustand mit Kiste hinzufügen
+          startState = 1;
         } break;
 
         case '*': // Kiste auf einem Zielfeld
         {
           stateList.Add(fieldPosis); // End-Zustand: Kiste auf Zielfeld
+          startState = 0;
           if (!field.CheckCorner(pos)) stateList.Add(new int[0]); // Zustand ohne Kiste hinzufügen (nur wenn die Kiste herausgeschoben werden kann)
         } break;
 

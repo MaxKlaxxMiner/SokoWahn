@@ -214,11 +214,14 @@ namespace SokoWahnLib.Rooms
             currentRoom = roomIndex;
             var room = rooms[roomIndex];
             var stateList = room.stateList;
+            if (stateList.Count < 1) throw new IndexOutOfRangeException();
+            if (room.startState >= stateList.Count) throw new IndexOutOfRangeException();
             var variantList = room.variantList;
             using (var usingStates = new Bitter(stateList.Count))
             using (var usingVariants = new Bitter(variantList.Count))
             {
-              usingStates.SetBit(0); // ersten Zustand immer pauschal markieren
+              usingStates.SetBit(0); // 0-Zustand immer pauschal markieren (End-Zustand)
+              usingStates.SetBit(room.startState); // Start-Zustand immer markieren
 
               // Start-Varianten markieren
               for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
@@ -268,7 +271,7 @@ namespace SokoWahnLib.Rooms
                   if (boxSwap.Key >= usingStates.Length) throw new IndexOutOfRangeException();
                   if (boxSwap.Value >= usingStates.Length) throw new IndexOutOfRangeException();
                   if (boxSwap.Key == boxSwap.Value) throw new Exception("unnötige BoxSwap erkannt");
-                  //usingStates.SetBit(boxSwap.Value); -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
+                  //usingStates.SetBit(boxSwap.Value); // -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
                 }
                 currentPortal++;
               }
