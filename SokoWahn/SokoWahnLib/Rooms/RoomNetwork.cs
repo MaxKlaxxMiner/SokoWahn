@@ -310,7 +310,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>Rechenaufwand als Zeichenkette</returns>
     public string Effort(int maxLen = 16777216)
     {
-      return MulNumber(rooms.Select(room => room.variantList.Count), maxLen);
+      return MulNumber(rooms.Select(room => room.variantList.Count - room.variantList.CountEnd), maxLen);
     }
 
     /// <summary>

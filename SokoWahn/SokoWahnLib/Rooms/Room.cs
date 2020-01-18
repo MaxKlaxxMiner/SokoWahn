@@ -199,6 +199,21 @@ namespace SokoWahnLib.Rooms
         var portal = incomingPortals[iPortal];
         portal.variantStateDict = new VariantStateDictNormal(stateList, variantList); // Inhalstverzeichnis initialisieren
 
+        // ausgehendes Portal suchen (für die gleichzeitig rausgeschobene Kiste, wenn der Raum auf der anderen Seite betreten wird)
+        int boxPortal = -1;
+        for (int bPortal = 0; bPortal < outgoingPortals.Length; bPortal++)
+        {
+          if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
+          {
+            if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
+
+            if (singleBoxScan != null && singleBoxScan.All(x => x.Key != pos || x.Value != outgoingPortals[bPortal].toPos)) continue; // ungültige Kisten-Varianten erkannt?
+
+            Debug.Assert(boxPortal == -1);
+            boxPortal = bPortal;
+          }
+        }
+
         switch (field.GetField(pos))
         {
           case '@': // Spieler auf einem leeren Feld
@@ -214,19 +229,6 @@ namespace SokoWahnLib.Rooms
 
               if (field.CheckCorner(pos)) continue; // Varianten mit rauschiebender Kiste nicht möglich
 
-              int boxPortal = -1; // ausgehendes Portal suchen (für die rausgeschobene Kiste)
-              for (int bPortal = 0; bPortal < outgoingPortals.Length; bPortal++)
-              {
-                if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
-                {
-                  if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
-
-                  if (singleBoxScan != null && singleBoxScan.All(x => x.Key != pos || x.Value != outgoingPortals[bPortal].toPos)) continue; // ungültige Kisten-Varianten erkannt?
-
-                  Debug.Assert(boxPortal == -1);
-                  boxPortal = bPortal;
-                }
-              }
               if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
               int checkPos = outgoingPortals[oPortal].toPos + outgoingPortals[oPortal].toPos - outgoingPortals[oPortal].fromPos;
@@ -234,6 +236,13 @@ namespace SokoWahnLib.Rooms
 
               portal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortal }, oPortal, 0, outgoingPortals[oPortal].dirChar.ToString()));
             }
+
+            if (boxPortal >= 0 && field.IsGoal(outgoingPortals[boxPortal].toPos))
+            {
+              // End-Variante hinzufügen (Spieler verbleibt im Raum)
+              portal.variantStateDict.Add(1, variantList.Add(1, 0, 1, new[] { (uint)boxPortal }, uint.MaxValue, 0, ""));
+            }
+
           } break;
 
           case '+': // Spieler auf einem Zielfeld
@@ -249,19 +258,6 @@ namespace SokoWahnLib.Rooms
 
               if (field.CheckCorner(pos)) continue; // Varianten mit rauschiebender Kiste nicht möglich
 
-              int boxPortal = -1; // ausgehendes Portal suchen (für die rausgeschobene Kiste)
-              for (int bPortal = 0; bPortal < outgoingPortals.Length; bPortal++)
-              {
-                if (outgoingPortals[bPortal].toPos - outgoingPortals[bPortal].fromPos == portal.toPos - portal.fromPos)
-                {
-                  if (field.CheckCorner(outgoingPortals[bPortal].toPos) && !field.IsGoal(outgoingPortals[bPortal].toPos)) continue; // Kiste würde in eine Ecke geschoben werden
-
-                  if (singleBoxScan != null && singleBoxScan.All(x => x.Key != pos || x.Value != outgoingPortals[bPortal].toPos)) continue; // ungültige Kisten-Varianten erkannt?
-
-                  Debug.Assert(boxPortal == -1);
-                  boxPortal = bPortal;
-                }
-              }
               if (boxPortal == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
 
               int checkPos = outgoingPortals[oPortal].toPos + outgoingPortals[oPortal].toPos - outgoingPortals[oPortal].fromPos;

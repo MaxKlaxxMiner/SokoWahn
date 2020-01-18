@@ -308,7 +308,7 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
-              listVariants.Items.Add(new VariantListItem("Variant " + variantCount + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variant.playerPortal < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -369,7 +369,7 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
-              listVariants.Items.Add(new VariantListItem("Variant " + variantCount + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variant.playerPortal < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
