@@ -33,6 +33,7 @@
       this.textBoxInfo = new System.Windows.Forms.TextBox();
       this.timerDisplay = new System.Windows.Forms.Timer(this.components);
       this.textBoxLog = new System.Windows.Forms.TextBox();
+      this.buttonSolve = new System.Windows.Forms.Button();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       this.SuspendLayout();
       // 
@@ -58,6 +59,7 @@
       this.textBoxInfo.Name = "textBoxInfo";
       this.textBoxInfo.Size = new System.Drawing.Size(917, 23);
       this.textBoxInfo.TabIndex = 6;
+      this.textBoxInfo.TabStop = false;
       this.textBoxInfo.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // timerDisplay
@@ -73,13 +75,26 @@
       this.textBoxLog.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
       this.textBoxLog.Font = new System.Drawing.Font("Consolas", 9.75F);
       this.textBoxLog.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(86)))), ((int)(((byte)(156)))), ((int)(((byte)(214)))));
-      this.textBoxLog.Location = new System.Drawing.Point(925, 2);
+      this.textBoxLog.Location = new System.Drawing.Point(925, 55);
       this.textBoxLog.Multiline = true;
       this.textBoxLog.Name = "textBoxLog";
       this.textBoxLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-      this.textBoxLog.Size = new System.Drawing.Size(339, 628);
+      this.textBoxLog.Size = new System.Drawing.Size(339, 575);
       this.textBoxLog.TabIndex = 7;
+      this.textBoxLog.TabStop = false;
       this.textBoxLog.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      // 
+      // buttonSolve
+      // 
+      this.buttonSolve.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonSolve.Location = new System.Drawing.Point(925, 2);
+      this.buttonSolve.Name = "buttonSolve";
+      this.buttonSolve.Size = new System.Drawing.Size(134, 47);
+      this.buttonSolve.TabIndex = 8;
+      this.buttonSolve.Text = "Solve";
+      this.buttonSolve.UseVisualStyleBackColor = true;
+      this.buttonSolve.Click += new System.EventHandler(this.buttonSolve_Click);
+      this.buttonSolve.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // FormSolver
       // 
@@ -87,6 +102,7 @@
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.buttonSolve);
       this.Controls.Add(this.textBoxLog);
       this.Controls.Add(this.textBoxInfo);
       this.Controls.Add(this.pictureBoxField);
@@ -106,5 +122,6 @@
     private System.Windows.Forms.TextBox textBoxInfo;
     private System.Windows.Forms.Timer timerDisplay;
     private System.Windows.Forms.TextBox textBoxLog;
+    private System.Windows.Forms.Button buttonSolve;
   }
 }

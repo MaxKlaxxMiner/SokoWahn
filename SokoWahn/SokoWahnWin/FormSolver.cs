@@ -17,6 +17,7 @@ namespace SokoWahnWin
   public sealed partial class FormSolver : Form
   {
     RoomNetwork network;
+    RoomSolver solver;
     DisplaySettings displaySettings;
     readonly FieldDisplay fieldDisplay;
 
@@ -29,7 +30,9 @@ namespace SokoWahnWin
       if (ReferenceEquals(this.network, network)) return; // gleiches Spielfeld/Netzwerk?
 
       this.network = network;
+      solver = new RoomSolver(network);
       displaySettings = new DisplaySettings(network.field);
+      UpdateSolverDisplay();
     }
 
     /// <summary>
@@ -61,7 +64,7 @@ namespace SokoWahnWin
     {
       switch (e.KeyCode)
       {
-        case Keys.Escape: Close(); break;
+        case Keys.Escape: Application.Exit(); break;
       }
     }
 
@@ -93,6 +96,27 @@ namespace SokoWahnWin
       innerTimer = true;
       DisplayUpdate();
       innerTimer = false;
+    }
+
+    /// <summary>
+    /// aktualisiert die Anzeige
+    /// </summary>
+    void UpdateSolverDisplay()
+    {
+      displaySettings.playerPos = solver.CurrentPlayerPos;
+      displaySettings.boxes = solver.CurrentBoxes;
+      textBoxLog.Text = solver.ToString();
+    }
+
+    /// <summary>
+    /// führt einen oder mehrere Lösungsschritte durch
+    /// </summary>
+    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
+    /// <param name="e">zusätzliche Event-Infos</param>
+    void buttonSolve_Click(object sender, EventArgs e)
+    {
+      solver.Search(1);
+      UpdateSolverDisplay();
     }
   }
 }

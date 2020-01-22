@@ -55,7 +55,7 @@
       this.buttonStep.TabIndex = 0;
       this.buttonStep.Text = "Step";
       this.buttonStep.UseVisualStyleBackColor = true;
-      this.buttonStep.Click += new System.EventHandler(this.button1_Click);
+      this.buttonStep.Click += new System.EventHandler(this.buttonStep_Click);
       this.buttonStep.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // listRooms
@@ -196,6 +196,7 @@
       this.Controls.Add(this.buttonStep);
       this.Name = "FormDebugger";
       this.Text = "Rooms Debugger";
+      this.Load += new System.EventHandler(this.FormDebugger_Load);
       this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       this.Resize += new System.EventHandler(this.FormDebugger_Resize);
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).EndInit();

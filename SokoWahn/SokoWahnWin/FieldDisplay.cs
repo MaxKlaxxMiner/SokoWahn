@@ -22,7 +22,7 @@ namespace SokoWahnWin
   /// <summary>
   /// Klasse zum darstellen eines Spielfeldes
   /// </summary>
-  public class FieldDisplay
+  public sealed class FieldDisplay
   {
     #region # // --- Konstanten ---
     /// <summary>
@@ -229,22 +229,6 @@ namespace SokoWahnWin
       using (var boxGoalF = GetBrush(0x333311))
       using (var boxGoalH = GetBrush(0x666633))
       {
-        // --- Spieler zeichnen ---
-        if (settings.playerPos >= 0)
-        {
-          int playerX = settings.playerPos % w;
-          int playerY = settings.playerPos / w;
-
-          g.FillEllipse(playerL, playerX + (0.5f - BoxSize / 2), playerY + (0.5f - BoxSize / 2), BoxSize, BoxSize);
-          g.FillEllipse(playerF, playerX + (0.5f - PlayerSize / 2), playerY + (0.5f - PlayerSize / 2), PlayerSize, PlayerSize);
-          g.DrawEllipse(player, playerX + (0.5f - PlayerSize / 2), playerY + (0.5f - PlayerSize / 2), PlayerSize, PlayerSize);
-
-          if (field.IsGoal(settings.playerPos))
-          {
-            g.DrawRectangle(playerGoal, playerX + (0.5f - GoalSize / 2), playerY + (0.5f - GoalSize / 2), GoalSize, GoalSize);
-          }
-        }
-
         if (settings.boxes.Length > 0)
         {
           // --- Kisten zeichnen ---
@@ -274,6 +258,22 @@ namespace SokoWahnWin
               g.FillRectangle(boxF, l2, t2, BoxInnerSize, BoxInnerSize);
               g.DrawRectangle(box, l2, t2, BoxInnerSize, BoxInnerSize);
             }
+          }
+        }
+
+        // --- Spieler zeichnen ---
+        if (settings.playerPos >= 0)
+        {
+          int playerX = settings.playerPos % w;
+          int playerY = settings.playerPos / w;
+
+          g.FillEllipse(playerL, playerX + (0.5f - BoxSize / 2), playerY + (0.5f - BoxSize / 2), BoxSize, BoxSize);
+          g.FillEllipse(playerF, playerX + (0.5f - PlayerSize / 2), playerY + (0.5f - PlayerSize / 2), PlayerSize, PlayerSize);
+          g.DrawEllipse(player, playerX + (0.5f - PlayerSize / 2), playerY + (0.5f - PlayerSize / 2), PlayerSize, PlayerSize);
+
+          if (field.IsGoal(settings.playerPos))
+          {
+            g.DrawRectangle(playerGoal, playerX + (0.5f - GoalSize / 2), playerY + (0.5f - GoalSize / 2), GoalSize, GoalSize);
           }
         }
       }

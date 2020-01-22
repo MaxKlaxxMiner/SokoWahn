@@ -10,7 +10,7 @@ namespace SokoWahnWin
   /// <summary>
   /// Klasse zum merken der Display-Einstellungen
   /// </summary>
-  public class DisplaySettings
+  public sealed class DisplaySettings
   {
     /// <summary>
     /// merkt sich die Spielerposition auf dem Spielfeld (-1 = wird nicht angezeigt)

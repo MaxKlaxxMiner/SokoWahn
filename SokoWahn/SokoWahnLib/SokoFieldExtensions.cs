@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace SokoWahnLib
 {
   /// <summary>
-  /// Hilfmethoden für SokoWahn-Spielfeld
+  /// Hilfsmethoden für SokoWahn-Spielfeld
   /// </summary>
   public static class SokoFieldExtensions
   {

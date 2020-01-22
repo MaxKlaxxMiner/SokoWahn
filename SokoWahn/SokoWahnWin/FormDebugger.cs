@@ -949,7 +949,7 @@ namespace SokoWahnWin
     /// </summary>
     /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
     /// <param name="e">Event-Infos</param>
-    void button1_Click(object sender, EventArgs e)
+    void buttonStep_Click(object sender, EventArgs e)
     {
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -1072,6 +1072,11 @@ namespace SokoWahnWin
     {
       formSolver.InitRoomNetwork(network);
       formSolver.ShowDialog();
+    }
+
+    void FormDebugger_Load(object sender, EventArgs e)
+    {
+      buttonSolver_Click(sender, e);
     }
   }
 }
