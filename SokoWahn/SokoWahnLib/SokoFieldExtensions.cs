@@ -61,13 +61,21 @@ namespace SokoWahnLib
 
     #region # public static HashSet<int> GetWalkPosis(this ISokoField field) // gibt alle begehbaren Position auf dem Spielfeld zurück
     /// <summary>
+    /// Cache für häufige Abfragen
+    /// </summary>
+    static readonly Dictionary<ISokoField, HashSet<int>> CacheWalkPosis = new Dictionary<ISokoField, HashSet<int>>();
+
+    /// <summary>
     /// gibt alle begehbaren Position auf dem Spielfeld zurück
     /// </summary>
     /// <param name="field">gesamtes Spielfeld, welches abgefragt werden soll</param>
     /// <returns>HastSet der begehbaren Positionen</returns>
     public static HashSet<int> GetWalkPosis(this ISokoField field)
     {
-      var walkFields = new HashSet<int>();
+      HashSet<int> walkFields;
+      if (CacheWalkPosis.TryGetValue(field, out walkFields)) return walkFields;
+
+      walkFields = new HashSet<int>();
       var todo = new Stack<int>();
       todo.Push(field.PlayerPos);
       while (todo.Count > 0)
@@ -81,6 +89,8 @@ namespace SokoWahnLib
         todo.Push(pos - field.Width); // oben hinzufügen
         todo.Push(pos + field.Width); // unten hinzufügen
       }
+
+      CacheWalkPosis.Add(field, walkFields);
       return walkFields;
     }
     #endregion
