@@ -40,13 +40,14 @@ namespace SokoWahnLib.Rooms
       // --- begehbare Felder abfragen und daraus Basis-Räume erstellen ---
       var walkFields = field.GetWalkPosis();
 
-      rooms = walkFields.OrderBy(pos => pos).Select(pos =>
+      uint roomIndex = 0;
+      rooms = walkFields.OrderBy(pos => pos).ToArray().Select(pos =>
       {
         int portals = (walkFields.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
                       (walkFields.Contains(pos + 1) ? 1 : 0) + // eingegendes Portal von der rechten Seite
                       (walkFields.Contains(pos - field.Width) ? 1 : 0) + // eingehendes Portal von oben
                       (walkFields.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
-        return new Room(field, new[] { pos }, new RoomPortal[portals], new RoomPortal[portals]);
+        return new Room(roomIndex++, field, new[] { pos }, new RoomPortal[portals], new RoomPortal[portals]);
       }).ToArray();
 
       if (rooms.Sum(room => room.goalPosis.Length) != rooms.Sum(room => room.startBoxPosis.Length)) throw new SokoFieldException("goal count != box count");
@@ -137,8 +138,10 @@ namespace SokoWahnLib.Rooms
       #region # // --- Räume auf Doppler prüfen und Basis-Check der Portale ---
       var roomsHash = new HashSet<Room>();
       var posToRoom = new Dictionary<int, Room>();
-      foreach (var room in rooms)
+      for (uint roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
       {
+        var room = rooms[roomIndex];
+        if (room.roomIndex != roomIndex) throw new Exception("fehlerhafter Room-Index: " + room.roomIndex + " != " + roomIndex);
         if (roomsHash.Contains(room)) throw new Exception("doppelten Raum erkannt: " + room);
 
         if (room.incomingPortals.Length != room.outgoingPortals.Length)

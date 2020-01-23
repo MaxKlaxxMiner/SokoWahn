@@ -31,6 +31,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly int[] startBoxPosis;
     /// <summary>
+    /// eigender Index des Rooms
+    /// </summary>
+    public readonly uint roomIndex;
+    /// <summary>
     /// eingehende Portale, welche zum eigenen Raum gehören
     /// </summary>
     public readonly RoomPortal[] incomingPortals;
@@ -59,13 +63,16 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Konstruktor
     /// </summary>
+    /// <param name="roomIndex">eigener Room-Index</param>
     /// <param name="field">Spielfeld, welches verwendet werden soll</param>
     /// <param name="fieldPosis">Positionen der Spielfelder, welche dem Raum zugeordnet werden</param>
     /// <param name="incomingPortals">eingehende Portale, welche zum eigenen Raum gehören</param>
     /// <param name="outgoingPortals">ausgehende Portale, welche zu anderen Räumen gehören</param>
-    public Room(ISokoField field, int[] fieldPosis, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
+    public Room(uint roomIndex, ISokoField field, int[] fieldPosis, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
     {
-      #region # // --- Parameter prüfen ---
+      #region # // --- Parameter prüfen und Werte initialisieren ---
+      this.roomIndex = roomIndex;
+
       if (field == null) throw new ArgumentNullException("field");
       this.field = field;
 
