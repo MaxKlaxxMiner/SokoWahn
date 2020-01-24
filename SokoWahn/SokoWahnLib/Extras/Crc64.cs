@@ -5,6 +5,7 @@
  *  Quelle: ngMax.Lite   *
  * * * * * * * * * * * * */
 
+// ReSharper disable UnusedMethodReturnValue.Global
 namespace SokoWahnLib
 {
   /// <summary>

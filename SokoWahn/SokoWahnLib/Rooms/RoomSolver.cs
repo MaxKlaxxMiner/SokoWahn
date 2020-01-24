@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+// ReSharper disable UnusedMethodReturnValue.Global
 
 namespace SokoWahnLib.Rooms
 {
@@ -66,6 +67,11 @@ namespace SokoWahnLib.Rooms
     readonly List<TaskList> moveForwardTasks = new List<TaskList>();
 
     /// <summary>
+    /// merkt sich alle bereits verarbeiteten Hash-Einträge
+    /// </summary>
+    readonly HashCrc hashTable = new HashCrcNormal();
+
+    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="network">Netzwerk, welches verwendet werden soll</param>
@@ -107,6 +113,8 @@ namespace SokoWahnLib.Rooms
           currentState[roomCount] = (ulong)(uint)startRoom << VariantBits;
           solveState = SolveState.AddStarts;
         } break;
+        #endregion
+        #region # // --- AddStarts - Anfangswerte als Aufgaben hinzufügen ---
         case SolveState.AddStarts:
         {
           uint startRoom = (uint)(currentState[roomCount] >> VariantBits);
@@ -120,6 +128,10 @@ namespace SokoWahnLib.Rooms
             int okMoves = ResolveMoves(tmpStates, rooms[startRoom], variantId);
             if (okMoves >= 0)
             {
+              ulong crc = Crc64.Start;
+              for (int i = 0; i < tmpStates.Length; i++) crc = crc.Crc64Update(tmpStates[i]);
+              hashTable.Add(crc, (uint)okMoves);
+
               while (okMoves >= moveForwardTasks.Count) moveForwardTasks.Add(new TaskListNormal(roomCount + 1));
               moveForwardTasks[okMoves].Add(tmpStates);
             }
@@ -219,7 +231,12 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbarer Inhalt vom Such-Status</returns>
     public override string ToString()
     {
-      var sb = new StringBuilder("\r\n  Hash: " + (0UL).ToString("N0") + "\r\n\r\n");
+      var sb = new StringBuilder("\r\n");
+      sb.AppendLine("  Hash: " + hashTable.Count.ToString("N0"));
+      ulong tasks = 0;
+      foreach (var t in moveForwardTasks) tasks += t.Count;
+      sb.AppendLine(" Tasks: " + tasks.ToString("N0"));
+      sb.AppendLine();
       sb.AppendLine(" State: " + solveState).AppendLine();
 
       uint currentRoom = (uint)(currentState[roomCount] >> VariantBits);
