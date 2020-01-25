@@ -719,3 +719,22 @@ Name: SokoWahn.Solver
   710: Alberto Garcia Plus 2 :: sokoboxes plus 27
   177: Alberto Garcia Plus 2 :: sokomania plus 11
   105: Alberto Garcia Plus 2 :: sokomania plus 13
+  411: Alberto Garcia remixed :: level 30
+  237: Alberto Garcia remixed :: level 38
+1.010: Alberto Garcia remixed :: level 44
+  693: Alberto Garcia remixed :: level 55
+  498: Alberto Garcia remixed :: level 64
+  702: Alberto Garcia remixed :: level 65
+  501: Alberto Garcia remixed :: level 66
+  736: Alberto Garcia remixed :: level 67
+1.136: Alberto Garcia remixed :: level 70
+1.201: Alberto Garcia remixed :: level 72
+1.334: Alberto Garcia remixed :: level 73
+4.124: Alberto Garcia remixed :: level 74
+  474: Alberto Garcia remixed :: level 78
+2.021: Alberto Garcia remixed :: level 80
+  652: Alberto Garcia remixed :: level 83
+  985: Alberto Garcia remixed :: level 85
+1.328: Alberto Garcia remixed :: level 86
+  193: Alberto Garcia remixed :: level 88
+2.368: Alberto Garcia remixed :: level 89
