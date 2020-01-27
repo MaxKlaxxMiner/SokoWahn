@@ -160,6 +160,8 @@ namespace SokoWahnLib.Rooms
             if (variantId == rooms[startRoom].startVariantCount) // alle Start-Varianten bereits ermittelt?
             {
               solveState = SolveState.ScanForward;
+              if (maxTicks == 0) maxTicks = 1;
+              goto case SolveState.ScanForward;
             }
           }
         } break;
@@ -173,7 +175,7 @@ namespace SokoWahnLib.Rooms
           if (taskList.Count == 0) // Aufgabenliste für diesen Zug bereits abgearbeitet?
           {
             moveForwardStep++;
-            break;
+            goto case SolveState.ScanForward;
           }
 
           for (; maxTicks > 0 && taskList.Count > 0; maxTicks--)
@@ -190,6 +192,11 @@ namespace SokoWahnLib.Rooms
               ulong oldMoves = hashTable.Get(crc, ulong.MaxValue);
               if ((uint)totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
               {
+                if (okMoves == 0 && currentState.Take((int)roomCount).All(x => x == 0)) // Ende gefunden?
+                {
+                  throw new NotImplementedException();
+                }
+
                 if (oldMoves == ulong.MaxValue) // neue Variante in HashTable merken
                 {
                   hashTable.Add(crc, (uint)totalMoves);
@@ -207,7 +214,10 @@ namespace SokoWahnLib.Rooms
           }
 
           // --- nächsten Current-State nachladen (für Debugging) ---
-          if (taskList.Count == 0 && moveForwardStep + 1 < moveForwardTasks.Count) taskList = moveForwardTasks[moveForwardStep + 1];
+          if (taskList.Count == 0 && moveForwardStep + 1 < moveForwardTasks.Count)
+          {
+            taskList = moveForwardTasks[++moveForwardStep];
+          }
           taskList.PeekFirst(currentState);
         } break;
         #endregion
@@ -242,7 +252,8 @@ namespace SokoWahnLib.Rooms
 
       if (vData.playerPortal == uint.MaxValue) // End-Stellung erreicht?
       {
-        throw new NotImplementedException();
+        for (int i = 0; i < states.Length - 1; i++) if (states[i] != 0) return -1; // unvollständiges Ende gefunden
+        return (int)(uint)vData.moves; // Ende erreicht!
       }
 
       var oPortal = room.outgoingPortals[vData.playerPortal];
@@ -282,6 +293,27 @@ namespace SokoWahnLib.Rooms
       }
     }
 
+    int PlayerPosFrom
+    {
+      get
+      {
+        uint currentRoom = (uint)(currentState[roomCount] >> VariantBits);
+        ulong currentVariant = currentState[roomCount] & VariantMask;
+
+        switch (solveState)
+        {
+          case SolveState.AddStarts:
+          case SolveState.ScanForward:
+          {
+            var vData = rooms[currentRoom].variantList.GetData(currentVariant);
+            if (vData.playerPortal == uint.MaxValue) return rooms[currentRoom].fieldPosis.First();
+            return rooms[currentRoom].outgoingPortals[vData.playerPortal].fromPos;
+          }
+          default: return network.field.PlayerPos;
+        }
+      }
+    }
+
     /// <summary>
     /// gibt die aktuelle Spielerposition zurück
     /// </summary>
@@ -295,7 +327,12 @@ namespace SokoWahnLib.Rooms
         switch (solveState)
         {
           case SolveState.AddStarts:
-          case SolveState.ScanForward: return rooms[currentRoom].outgoingPortals[rooms[currentRoom].variantList.GetData(currentVariant).playerPortal].toPos;
+          case SolveState.ScanForward:
+          {
+            var vData = rooms[currentRoom].variantList.GetData(currentVariant);
+            if (vData.playerPortal == uint.MaxValue) return rooms[currentRoom].fieldPosis.First();
+            return rooms[currentRoom].outgoingPortals[vData.playerPortal].toPos;
+          }
           default: return network.field.PlayerPos;
         }
       }
@@ -318,6 +355,12 @@ namespace SokoWahnLib.Rooms
             for (int r = 0; r < roomCount; r++)
             {
               boxes.AddRange(rooms[r].stateList.Get(currentState[r]));
+            }
+
+            int playerTo = CurrentPlayerPos;
+            for (int i = 0; i < boxes.Count; i++)
+            {
+              if (boxes[i] == playerTo) boxes[i] = playerTo + playerTo - PlayerPosFrom;
             }
 
             return boxes.ToArray();

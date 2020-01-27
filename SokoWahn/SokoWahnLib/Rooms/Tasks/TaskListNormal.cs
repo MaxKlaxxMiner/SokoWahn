@@ -40,7 +40,10 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(taskLength <= newTask.Length);
 
       ulong taskOffset = taskCount++ * taskLength;
-      if (taskOffset == (uint)taskData.Length) Array.Resize(ref taskData, taskData.Length * 2); // Array vergrößern
+      if (taskOffset == (uint)taskData.Length)
+      {
+        Array.Resize(ref taskData, taskData.Length * 2); // Array vergrößern
+      }
 
       for (ulong i = 0; i < taskLength; i++) taskData[taskOffset + i] = newTask[i];
     }
