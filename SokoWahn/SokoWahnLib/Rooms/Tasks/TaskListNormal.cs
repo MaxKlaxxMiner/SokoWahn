@@ -62,6 +62,18 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
+    /// liest die erste Aufgabe, belässt diese aber in der Liste
+    /// </summary>
+    /// <param name="readTask">Array, wohin die Aufgaben-Daten geschrieben werden sollen</param>
+    /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
+    public override bool PeekFirst(ulong[] readTask)
+    {
+      if (!FetchFirst(readTask)) return false;
+      taskPos--; // Vorwärtszählung rückgängig machen
+      return true;
+    }
+
+    /// <summary>
     /// liest die letzte Aufgabe und entfernt diese aus der Liste
     /// </summary>
     /// <param name="readTask">Array, wohin die Aufgaben-Daten geschrieben werden sollen</param>
@@ -74,6 +86,18 @@ namespace SokoWahnLib.Rooms
       ulong taskOffset = --taskCount * taskLength;
       for (ulong i = 0; i < taskLength; i++) readTask[i] = taskData[taskOffset + i];
 
+      return true;
+    }
+
+    /// <summary>
+    /// liest die letzte Aufgabe, belässt diese aber in der Liste
+    /// </summary>
+    /// <param name="readTask">Array, wohin die Aufgaben-Daten geschrieben werden sollen</param>
+    /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
+    public override bool PeekLast(ulong[] readTask)
+    {
+      if (!FetchLast(readTask)) return false;
+      taskCount++; // Abwärtszählung rückgängig machen
       return true;
     }
 

@@ -48,13 +48,22 @@ namespace SokoWahnLib.Rooms
       /// <summary>
       /// fügt alle Start-Varianten hinzu
       /// </summary>
-      AddStarts
+      AddStarts,
+      /// <summary>
+      /// Suchmodus in Vorwärts-Richtung
+      /// </summary>
+      ScanForward
     }
 
     /// <summary>
     /// merkt sich den aktuellen Such-Status
     /// </summary>
     SolveState solveState = SolveState.Init;
+
+    /// <summary>
+    /// merkt sich alle bereits verarbeiteten Hash-Einträge
+    /// </summary>
+    readonly HashCrc hashTable = new HashCrcNormal();
 
     /// <summary>
     /// merkt sich den aktuellen Spielfeld-Zustand
@@ -67,9 +76,9 @@ namespace SokoWahnLib.Rooms
     readonly List<TaskList> moveForwardTasks = new List<TaskList>();
 
     /// <summary>
-    /// merkt sich alle bereits verarbeiteten Hash-Einträge
+    /// merkt sich die aktuelle Suchtiefe
     /// </summary>
-    readonly HashCrc hashTable = new HashCrcNormal();
+    int moveForwardStep;
 
     /// <summary>
     /// Konstruktor
@@ -89,7 +98,7 @@ namespace SokoWahnLib.Rooms
     /// sucht nach der Lösung
     /// </summary>
     /// <param name="maxTicks">maximale Anzahl der Rechenschritte</param>
-    /// <returns>true, wenn eine Lösung gefunden wurde, sonst: false</returns>
+    /// <returns>true, wenn eine Lösung gefunden wurde (bzw. Ende erreicht wurde), sonst: false</returns>
     public bool Search(int maxTicks)
     {
       switch (solveState)
@@ -114,6 +123,7 @@ namespace SokoWahnLib.Rooms
           solveState = SolveState.AddStarts;
         } break;
         #endregion
+
         #region # // --- AddStarts - Anfangswerte als Aufgaben hinzufügen ---
         case SolveState.AddStarts:
         {
@@ -128,8 +138,7 @@ namespace SokoWahnLib.Rooms
             int okMoves = ResolveMoves(tmpStates, rooms[startRoom], variantId);
             if (okMoves >= 0)
             {
-              ulong crc = Crc64.Start;
-              for (int i = 0; i < tmpStates.Length; i++) crc = crc.Crc64Update(tmpStates[i]);
+              ulong crc = Crc64.Get(tmpStates);
               hashTable.Add(crc, (uint)okMoves);
 
               while (okMoves >= moveForwardTasks.Count) moveForwardTasks.Add(new TaskListNormal(roomCount + 1));
@@ -142,9 +151,61 @@ namespace SokoWahnLib.Rooms
 
             if (variantId == rooms[startRoom].startVariantCount) // alle Start-Varianten bereits ermittelt?
             {
-              throw new NotImplementedException();
+              solveState = SolveState.ScanForward;
             }
           }
+        } break;
+        #endregion
+
+        #region # // --- ScanForward - Lösungssuche vorwärts ---
+        case SolveState.ScanForward:
+        {
+          if (moveForwardStep >= moveForwardTasks.Count) return true;
+          var taskList = moveForwardTasks[moveForwardStep];
+          if (taskList.Count == 0) // Aufgabenliste für diesen Zug bereits abgearbeitet?
+          {
+            moveForwardStep++;
+            break;
+          }
+
+          maxTicks = (int)(uint)Math.Min(taskList.Count, (uint)maxTicks);
+          //todo: Schleife in Methode auslagern
+          var tmpStates = new ulong[roomCount + 1];
+          for (int tick = 0; tick < maxTicks; tick++)
+          {
+            taskList.FetchFirst(tmpStates);
+            uint room = (uint)(tmpStates[roomCount] >> VariantBits);
+            ulong variantId = tmpStates[roomCount] & VariantMask;
+
+            // --- Aufgabe prüfen und neue Einträge in die Aufgaben-Liste hinzufügen ---
+            // TODO: 2. Schleife benötigt
+            int okMoves = ResolveMoves(tmpStates, rooms[room], variantId);
+            if (okMoves >= 0)
+            {
+              int totalMoves = moveForwardStep + okMoves; // TODO: Verarbeitung der einzelnen Varianten notwendig
+              ulong crc = Crc64.Get(tmpStates);
+              ulong oldMoves = hashTable.Get(crc, ulong.MaxValue);
+              if ((uint)totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
+              {
+                if (oldMoves == ulong.MaxValue) // neue Variante in HashTable merken
+                {
+                  hashTable.Add(crc, (uint)totalMoves);
+                }
+                else // bessere Variante in Hashtable aktualisieren
+                {
+                  hashTable.Update(crc, (uint)totalMoves);
+                }
+
+                // --- Variante als Aufgabe hinzufügen ---
+                while (totalMoves >= moveForwardTasks.Count) moveForwardTasks.Add(new TaskListNormal(roomCount + 1));
+                moveForwardTasks[totalMoves].Add(tmpStates);
+              }
+            }
+          }
+
+          // --- nächsten Current-State nachladen (für Debugging) ---
+          if (taskList.Count == 0 && moveForwardStep + 1 < moveForwardTasks.Count) taskList = moveForwardTasks[moveForwardStep + 1];
+          taskList.PeekFirst(currentState);
         } break;
         #endregion
         default: throw new NotSupportedException(solveState.ToString());
@@ -194,14 +255,15 @@ namespace SokoWahnLib.Rooms
 
         switch (solveState)
         {
-          case SolveState.AddStarts: return rooms[currentRoom].outgoingPortals[rooms[currentRoom].variantList.GetData(currentVariant).playerPortal].toPos;
+          case SolveState.AddStarts:
+          case SolveState.ScanForward: return rooms[currentRoom].outgoingPortals[rooms[currentRoom].variantList.GetData(currentVariant).playerPortal].toPos;
           default: return network.field.PlayerPos;
         }
       }
     }
 
     /// <summary>
-    /// gibt die aktuelle Kisten-Positionen zurücfk
+    /// gibt die aktuelle Kisten-Positionen zurück
     /// </summary>
     public int[] CurrentBoxes
     {
@@ -234,9 +296,9 @@ namespace SokoWahnLib.Rooms
       var sb = new StringBuilder("\r\n");
       sb.AppendLine("  Hash: " + hashTable.Count.ToString("N0"));
       ulong tasks = 0;
-      foreach (var t in moveForwardTasks) tasks += t.Count;
-      sb.AppendLine(" Tasks: " + tasks.ToString("N0"));
-      sb.AppendLine();
+      for (int moveIndex = moveForwardStep; moveIndex < moveForwardTasks.Count; moveIndex++) tasks += moveForwardTasks[moveIndex].Count;
+      sb.AppendLine(" Tasks: " + tasks.ToString("N0")).AppendLine();
+      sb.AppendLine(" Moves: " + moveForwardStep.ToString("N0")).AppendLine();
       sb.AppendLine(" State: " + solveState).AppendLine();
 
       uint currentRoom = (uint)(currentState[roomCount] >> VariantBits);
@@ -256,10 +318,9 @@ namespace SokoWahnLib.Rooms
         sb.AppendLine(" Path: " + rooms[currentRoom].variantList.GetData(currentVariant).path);
         sb.AppendLine();
 
-        for (int moveIndex = 0; moveIndex < moveForwardTasks.Count; moveIndex++)
+        for (int moveIndex = moveForwardStep; moveIndex < moveForwardTasks.Count; moveIndex++)
         {
-          var task = moveForwardTasks[moveIndex];
-          if (task.Count > 0) sb.AppendLine(" [" + moveIndex.ToString("N0") + "]: " + task.Count.ToString("N0"));
+          sb.AppendLine(" [" + moveIndex.ToString("N0") + "]: " + moveForwardTasks[moveIndex].Count.ToString("N0"));
         }
       }
 

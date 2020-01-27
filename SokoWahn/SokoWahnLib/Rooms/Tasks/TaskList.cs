@@ -1,7 +1,7 @@
 ﻿using System;
-// ReSharper disable MemberCanBePrivate.Global
-// ReSharper disable NotAccessedField.Global
+// ReSharper disable UnusedMemberInSuper.Global
 // ReSharper disable UnusedMember.Global
+// ReSharper disable MemberCanBeProtected.Global
 
 namespace SokoWahnLib.Rooms
 {
@@ -37,11 +37,25 @@ namespace SokoWahnLib.Rooms
     public abstract bool FetchFirst(ulong[] readTask);
 
     /// <summary>
+    /// liest die erste Aufgabe, belässt diese aber in der Liste
+    /// </summary>
+    /// <param name="readTask">Array, wohin die Aufgaben-Daten geschrieben werden sollen</param>
+    /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
+    public abstract bool PeekFirst(ulong[] readTask);
+
+    /// <summary>
     /// liest die letzte Aufgabe und entfernt diese aus der Liste
     /// </summary>
     /// <param name="readTask">Array, wohin die Aufgaben-Daten geschrieben werden sollen</param>
     /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
     public abstract bool FetchLast(ulong[] readTask);
+
+    /// <summary>
+    /// liest die letzte Aufgabe, belässt diese aber in der Liste
+    /// </summary>
+    /// <param name="readTask">Array, wohin die Aufgaben-Daten geschrieben werden sollen</param>
+    /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
+    public abstract bool PeekLast(ulong[] readTask);
 
     /// <summary>
     /// gibt die Anzahl der gespeicherten Aufgaben zurück

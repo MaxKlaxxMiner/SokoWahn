@@ -280,5 +280,20 @@ namespace SokoWahnLib
       }
       return tmp;
     }
+
+    /// <summary>
+    /// berechnet eine CRC-Prüfsumme eines ulong-Arrays
+    /// </summary>
+    /// <param name="value">Array, welches gelesen werden soll</param>
+    /// <returns>berechnete Prüfsumme</returns>
+    public static ulong Get(ulong[] value)
+    {
+      ulong crc = Start;
+      foreach (ulong v in value)
+      {
+        crc = ((crc ^ (uint)v) * Mul ^ v >> 32) * Mul;
+      }
+      return crc;
+    }
   }
 }
