@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 // ReSharper disable UnusedMethodReturnValue.Global
+// ReSharper disable NotAccessedField.Local
 
 namespace SokoWahnLib.Rooms
 {
@@ -21,6 +22,11 @@ namespace SokoWahnLib.Rooms
     /// merkt sich die Räume im Netzwerk
     /// </summary>
     readonly Room[] rooms;
+
+    /// <summary>
+    /// optionale Methode zum Anzeigen im Debug-Modus
+    /// </summary>
+    readonly Action debugDisplay;
 
     /// <summary>
     /// merkt sich die Anzahl der Räume im Netzwerk
@@ -84,7 +90,8 @@ namespace SokoWahnLib.Rooms
     /// Konstruktor
     /// </summary>
     /// <param name="network">Netzwerk, welches verwendet werden soll</param>
-    public RoomSolver(RoomNetwork network)
+    /// <param name="debugDisplay">optionale Methode für die Debug-Anzeige</param>
+    public RoomSolver(RoomNetwork network, Action debugDisplay = null)
     {
       if (network == null) throw new ArgumentNullException("network");
       this.network = network;
@@ -92,6 +99,7 @@ namespace SokoWahnLib.Rooms
       if (rooms == null) throw new ArgumentNullException("network");
       roomCount = (uint)rooms.Length;
       currentState = new ulong[roomCount + 1]; // Raum-Zustände[] + (uhort)Raum-Nummer | ausgewählte Variante
+      this.debugDisplay = debugDisplay ?? (() => { });
     }
 
     /// <summary>
@@ -168,22 +176,17 @@ namespace SokoWahnLib.Rooms
             break;
           }
 
-          maxTicks = (int)(uint)Math.Min(taskList.Count, (uint)maxTicks);
-          //todo: Schleife in Methode auslagern
-          var tmpStates = new ulong[roomCount + 1];
-          for (int tick = 0; tick < maxTicks; tick++)
+          for (; maxTicks > 0 && taskList.Count > 0; maxTicks--)
           {
-            taskList.FetchFirst(tmpStates);
-            uint room = (uint)(tmpStates[roomCount] >> VariantBits);
-            ulong variantId = tmpStates[roomCount] & VariantMask;
+            taskList.FetchFirst(currentState);
+            uint room = (uint)(currentState[roomCount] >> VariantBits);
+            ulong variantId = currentState[roomCount] & VariantMask;
 
             // --- Aufgabe prüfen und neue Einträge in die Aufgaben-Liste hinzufügen ---
-            // TODO: 2. Schleife benötigt
-            int okMoves = ResolveMoves(tmpStates, rooms[room], variantId);
-            if (okMoves >= 0)
+            foreach (int okMoves in VariantMoves(currentState, rooms[room], variantId))
             {
-              int totalMoves = moveForwardStep + okMoves; // TODO: Verarbeitung der einzelnen Varianten notwendig
-              ulong crc = Crc64.Get(tmpStates);
+              int totalMoves = moveForwardStep + okMoves;
+              ulong crc = Crc64.Get(currentState);
               ulong oldMoves = hashTable.Get(crc, ulong.MaxValue);
               if ((uint)totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
               {
@@ -198,7 +201,7 @@ namespace SokoWahnLib.Rooms
 
                 // --- Variante als Aufgabe hinzufügen ---
                 while (totalMoves >= moveForwardTasks.Count) moveForwardTasks.Add(new TaskListNormal(roomCount + 1));
-                moveForwardTasks[totalMoves].Add(tmpStates);
+                moveForwardTasks[totalMoves].Add(currentState);
               }
             }
           }
@@ -228,8 +231,14 @@ namespace SokoWahnLib.Rooms
 
       foreach (var boxPortal in vData.boxPortals) // Kisten wurden durch benachbarte Portale geschoben?
       {
-        throw new NotImplementedException();
+        var portal = room.outgoingPortals[boxPortal];
+        ulong oldState = states[portal.toRoom.roomIndex];
+        ulong newState = portal.stateBoxSwap.Get(oldState);
+        if (oldState == newState) return -1; // Kiste kann nicht durch ein benachbartes Portal geschoben werden -> gesamte Variante ungültig
+        states[portal.toRoom.roomIndex] = newState; // neuen Zustand im benachbarten Raum setzen
       }
+
+      states[room.roomIndex] = vData.newStateId; // neuen Zustand des eigenen Raumes setzen
 
       if (vData.playerPortal == uint.MaxValue) // End-Stellung erreicht?
       {
@@ -241,6 +250,36 @@ namespace SokoWahnLib.Rooms
 
       Debug.Assert(vData.moves < int.MaxValue);
       return (int)(uint)vData.moves;
+    }
+
+    /// <summary>
+    /// verarbeitet eine Varianten und gibt alle gültigen Sub-Varianten zurück
+    /// </summary>
+    /// <param name="states">Array mit den Zuständen, welche aktualisiert werden sollen</param>
+    /// <param name="room">aktueller Raum für die Berechnung</param>
+    /// <param name="variantId">Variante im Raum, welche verwendet werden soll</param>
+    /// <returns>Enumerable der Anzahl der Moves pro Variante, gleichzeitig wird states erneuert</returns>
+    static IEnumerable<int> VariantMoves(ulong[] states, Room room, ulong variantId)
+    {
+      Debug.Assert(variantId < room.variantList.Count);
+      var vData = room.variantList.GetData(variantId);
+
+      if (vData.playerPortal == uint.MaxValue) // End-Stellung bereits erreicht?
+      {
+        throw new NotImplementedException();
+      }
+
+      // --- original Zustände sichern ---
+      var originStates = new ulong[states.Length];
+      Array.Copy(states, originStates, states.Length);
+
+      var oPortal = room.outgoingPortals[vData.playerPortal];
+      foreach (var vId in oPortal.variantStateDict.GetVariants(originStates[oPortal.toRoom.roomIndex])) // alle Sub-Varianten durcharbeiten
+      {
+        Array.Copy(originStates, states, states.Length);
+        states[states.Length - 1] = (ulong)oPortal.toRoom.roomIndex << VariantBits | vId;
+        yield return ResolveMoves(states, oPortal.toRoom, vId);
+      }
     }
 
     /// <summary>

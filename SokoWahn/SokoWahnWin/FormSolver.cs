@@ -30,7 +30,12 @@ namespace SokoWahnWin
       if (ReferenceEquals(this.network, network)) return; // gleiches Spielfeld/Netzwerk?
 
       this.network = network;
-      solver = new RoomSolver(network);
+      solver = new RoomSolver(network, () =>
+      {
+        UpdateSolverDisplay();
+        DisplayUpdate();
+        Application.DoEvents();
+      });
       displaySettings = new DisplaySettings(network.field);
       UpdateSolverDisplay();
     }
