@@ -27,24 +27,24 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt eine weitere Variante pro Raumzustand hinzu
     /// </summary>
-    /// <param name="stateId">Raumzustand, welcher betroffen ist</param>
-    /// <param name="variantId">Variante, welche hinzugefügt werden soll</param>
-    public override void Add(ulong stateId, ulong variantId)
+    /// <param name="state">Raumzustand, welcher betroffen ist</param>
+    /// <param name="variant">Variante, welche hinzugefügt werden soll</param>
+    public override void Add(ulong state, ulong variant)
     {
-      Debug.Assert(stateId < stateList.Count);
-      Debug.Assert(variantId < variantList.Count);
+      Debug.Assert(state < stateList.Count);
+      Debug.Assert(variant < variantList.Count);
 
       List<ulong> list;
 
-      if (!data.TryGetValue(stateId, out list))
+      if (!data.TryGetValue(state, out list))
       {
         list = new List<ulong>();
-        data.Add(stateId, list);
+        data.Add(state, list);
       }
 
-      Debug.Assert(!list.Contains(variantId));
+      Debug.Assert(!list.Contains(variant));
 
-      list.Add(variantId);
+      list.Add(variant);
     }
 
     /// <summary>
@@ -59,15 +59,15 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
     /// </summary>
-    /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>
+    /// <param name="state">Raumzustand, welche abgefragt werden soll</param>
     /// <returns>Enumerable der zugehörigen Varianten</returns>
-    public override IEnumerable<ulong> GetVariants(ulong stateId)
+    public override IEnumerable<ulong> GetVariants(ulong state)
     {
-      Debug.Assert(stateId < stateList.Count);
+      Debug.Assert(state < stateList.Count);
 
-      List<ulong> list;
+      List<ulong> resultList;
 
-      return data.TryGetValue(stateId, out list) ? list : Enumerable.Empty<ulong>();
+      return data.TryGetValue(state, out resultList) ? resultList : Enumerable.Empty<ulong>();
     }
 
     /// <summary>

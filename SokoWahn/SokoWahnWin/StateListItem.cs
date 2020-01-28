@@ -14,17 +14,17 @@ namespace SokoWahnWin
     /// <summary>
     /// Zustand-ID des Raumes
     /// </summary>
-    public readonly ulong stateId;
+    public readonly ulong state;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="roomIndex">Raum-Index, wohin der Zustand gehört</param>
-    /// <param name="stateId">Zustand-ID des Raumes</param>
-    public StateListItem(int roomIndex, ulong stateId)
+    /// <param name="state">Zustand-ID des Raumes</param>
+    public StateListItem(int roomIndex, ulong state)
     {
       this.roomIndex = roomIndex;
-      this.stateId = stateId;
+      this.state = state;
     }
 
     /// <summary>
@@ -33,8 +33,8 @@ namespace SokoWahnWin
     /// <returns>lesbarer Inhalt</returns>
     public override string ToString()
     {
-      if (stateId == 0) return "State finish";
-      return "State " + stateId;
+      if (state == 0) return "State finish";
+      return "State " + state;
     }
   }
 }

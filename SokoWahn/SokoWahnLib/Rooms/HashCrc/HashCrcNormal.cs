@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace SokoWahnLib.Rooms
 {
   /// <summary>
-  /// einfachste Implementierung einer Hashtable
+  /// einfachste Implementierung einer Hash-Tabelle
   /// </summary>
   public sealed class HashCrcNormal : HashCrc
   {

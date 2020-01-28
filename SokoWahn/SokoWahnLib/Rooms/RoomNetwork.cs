@@ -38,16 +38,16 @@ namespace SokoWahnLib.Rooms
 
       #region # // --- Räume erstellen ---
       // --- begehbare Felder abfragen und daraus Basis-Räume erstellen ---
-      var walkFields = field.GetWalkPosis();
+      var walkPosis = field.GetWalkPosis();
 
       uint roomIndex = 0;
-      rooms = walkFields.OrderBy(pos => pos).ToArray().Select(pos =>
+      rooms = walkPosis.OrderBy(pos => pos).ToArray().Select(pos =>
       {
-        int portals = (walkFields.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
-                      (walkFields.Contains(pos + 1) ? 1 : 0) + // eingegendes Portal von der rechten Seite
-                      (walkFields.Contains(pos - field.Width) ? 1 : 0) + // eingehendes Portal von oben
-                      (walkFields.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
-        return new Room(roomIndex++, field, new[] { pos }, new RoomPortal[portals], new RoomPortal[portals]);
+        int portalCount = (walkPosis.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
+                          (walkPosis.Contains(pos + 1) ? 1 : 0) + // eingegendes Portal von der rechten Seite
+                          (walkPosis.Contains(pos - field.Width) ? 1 : 0) + // eingehendes Portal von oben
+                          (walkPosis.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
+        return new Room(roomIndex++, field, new[] { pos }, new RoomPortal[portalCount], new RoomPortal[portalCount]);
       }).ToArray();
 
       if (rooms.Sum(room => room.goalPosis.Length) != rooms.Sum(room => room.startBoxPosis.Length)) throw new SokoFieldException("goal count != box count");
@@ -59,33 +59,33 @@ namespace SokoWahnLib.Rooms
       {
         int pos = room.fieldPosis.First();
         var portals = room.incomingPortals;
-        int pIndex = 0;
+        int portalIndex = 0;
 
         // eingehendes Portal von der linken Seite
-        if (walkFields.Contains(pos - 1))
+        if (walkPosis.Contains(pos - 1))
         {
-          portals[pIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - 1), pos - 1, room, pos);
+          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - 1), pos - 1, room, pos);
         }
 
         // eingehendes Portal von der rechten Seite
-        if (walkFields.Contains(pos + 1))
+        if (walkPosis.Contains(pos + 1))
         {
-          portals[pIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + 1), pos + 1, room, pos);
+          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + 1), pos + 1, room, pos);
         }
 
         // eingehendes Portal von der oberen Seite
-        if (walkFields.Contains(pos - field.Width))
+        if (walkPosis.Contains(pos - field.Width))
         {
-          portals[pIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - field.Width), pos - field.Width, room, pos);
+          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - field.Width), pos - field.Width, room, pos);
         }
 
         // eingehendes Portal von der unteren Seite
-        if (walkFields.Contains(pos + field.Width))
+        if (walkPosis.Contains(pos + field.Width))
         {
-          portals[pIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + field.Width), pos + field.Width, room, pos);
+          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + field.Width), pos + field.Width, room, pos);
         }
 
-        Debug.Assert(pIndex == portals.Length);
+        Debug.Assert(portalIndex == portals.Length);
       }
 
       // --- ausgehende Portale in den Basis-Räumen setzen und verlinken ---
@@ -107,7 +107,7 @@ namespace SokoWahnLib.Rooms
       #endregion
 
       var boxScan = SokoBoxScanner.ScanSingleBoxPushes(field);
-      //boxScan = null;
+      //boxScan = null; // Test ohne Scanner
 
       #region # // --- Raumzustände erstellen ---
       foreach (var room in rooms)
@@ -170,17 +170,17 @@ namespace SokoWahnLib.Rooms
       var portals = new HashSet<RoomPortal>();
       foreach (var room in rooms)
       {
-        for (int p = 0; p < room.incomingPortals.Length; p++)
+        for (int i = 0; i < room.incomingPortals.Length; i++)
         {
-          var portal = room.incomingPortals[p];
-          if (portals.Contains(portal)) throw new Exception("Portal wird doppelt benutzt: " + portal);
-          portals.Add(portal);
+          var iPortal = room.incomingPortals[i];
+          if (portals.Contains(iPortal)) throw new Exception("Portal wird doppelt benutzt: " + iPortal);
+          portals.Add(iPortal);
 
-          if (portal.toRoom != room) throw new Exception("eingehendes Portal [" + p + "] verlinkt nicht zum eigenen Raum, bei: " + room);
-          if (!roomsHash.Contains(portal.fromRoom)) throw new Exception("eingehendes Portal [" + p + "] hat einen unbekannten Quell-Raum verlinkt, bei: " + room);
+          if (iPortal.toRoom != room) throw new Exception("eingehendes Portal [" + i + "] verlinkt nicht zum eigenen Raum, bei: " + room);
+          if (!roomsHash.Contains(iPortal.fromRoom)) throw new Exception("eingehendes Portal [" + i + "] hat einen unbekannten Quell-Raum verlinkt, bei: " + room);
 
-          if (posToRoom[portal.fromPos] != portal.fromRoom) throw new Exception("posFrom passt nicht zu roomFrom, bei: " + room);
-          if (posToRoom[portal.toPos] != portal.toRoom) throw new Exception("posTo passt nicht zu roomTo, bei: " + room);
+          if (posToRoom[iPortal.fromPos] != iPortal.fromRoom) throw new Exception("posFrom passt nicht zu roomFrom, bei: " + room);
+          if (posToRoom[iPortal.toPos] != iPortal.toRoom) throw new Exception("posTo passt nicht zu roomTo, bei: " + room);
         }
       }
       #endregion
@@ -189,15 +189,15 @@ namespace SokoWahnLib.Rooms
       var outPortals = new HashSet<RoomPortal>();
       foreach (var room in rooms)
       {
-        for (int p = 0; p < room.outgoingPortals.Length; p++)
+        for (int i = 0; i < room.outgoingPortals.Length; i++)
         {
-          var portal = room.outgoingPortals[p];
-          if (!portals.Contains(portal)) throw new Exception("Out-Portal wurde nicht bei den eingehenden Portalen gefunden: " + portal);
-          if (outPortals.Contains(portal)) throw new Exception("Out-Portal wird doppelt benutzt: " + portal);
-          outPortals.Add(portal);
+          var oPortal = room.outgoingPortals[i];
+          if (!portals.Contains(oPortal)) throw new Exception("Out-Portal wurde nicht bei den eingehenden Portalen gefunden: " + oPortal);
+          if (outPortals.Contains(oPortal)) throw new Exception("Out-Portal wird doppelt benutzt: " + oPortal);
+          outPortals.Add(oPortal);
 
-          if (portal.oppositePortal != room.incomingPortals[p]) throw new Exception("Rückverweis des Portals passt nicht: " + portal);
-          if (portal.oppositePortal.oppositePortal != portal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + portal);
+          if (oPortal.oppositePortal != room.incomingPortals[i]) throw new Exception("Rückverweis des Portals passt nicht: " + oPortal);
+          if (oPortal.oppositePortal.oppositePortal != oPortal) throw new Exception("doppelter Rückverweis des Portals passt nicht: " + oPortal);
         }
       }
       #endregion
@@ -205,8 +205,8 @@ namespace SokoWahnLib.Rooms
       #region # // --- Zustände und Varianten prüfen ---
       if (checkVariants)
       {
-        int currentRoom = -1;
-        int currentPortal = -1;
+        int currentRoomIndex = -1;
+        int currentPortalIndex = -1;
         ulong currentState = ulong.MaxValue;
         ulong currentVariant = ulong.MaxValue;
 
@@ -214,7 +214,7 @@ namespace SokoWahnLib.Rooms
         {
           for (int roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
           {
-            currentRoom = roomIndex;
+            currentRoomIndex = roomIndex;
             var room = rooms[roomIndex];
             var stateList = room.stateList;
             if (stateList.Count < 1) throw new IndexOutOfRangeException();
@@ -227,46 +227,46 @@ namespace SokoWahnLib.Rooms
               usingStates.SetBit(room.startState); // Start-Zustand immer markieren
 
               // Start-Varianten markieren
-              for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+              for (ulong variant = 0; variant < room.startVariantCount; variant++)
               {
-                currentVariant = variantId;
-                if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
-                usingVariants.SetBit(variantId);
+                currentVariant = variant;
+                if (variant >= usingVariants.Length) throw new IndexOutOfRangeException();
+                usingVariants.SetBit(variant);
 
-                var v = variantList.GetData(variantId);
+                var v = variantList.GetData(variant);
 
-                if (v.oldStateId >= usingStates.Length) throw new IndexOutOfRangeException();
-                usingStates.SetBit(v.oldStateId);
+                if (v.oldState >= usingStates.Length) throw new IndexOutOfRangeException();
+                usingStates.SetBit(v.oldState);
 
-                if (v.newStateId >= usingStates.Length) throw new IndexOutOfRangeException();
-                usingStates.SetBit(v.newStateId);
+                if (v.newState >= usingStates.Length) throw new IndexOutOfRangeException();
+                usingStates.SetBit(v.newState);
               }
               currentVariant = ulong.MaxValue;
 
               // Portal-Varianten markieren
-              currentPortal = 0;
+              currentPortalIndex = 0;
               foreach (var portal in room.incomingPortals)
               {
-                foreach (var stateId in portal.variantStateDict.GetAllStates())
+                foreach (var state in portal.variantStateDict.GetAllStates())
                 {
-                  currentState = stateId;
-                  if (stateId >= usingStates.Length) throw new IndexOutOfRangeException();
-                  foreach (var variantId in portal.variantStateDict.GetVariants(stateId))
+                  currentState = state;
+                  if (state >= usingStates.Length) throw new IndexOutOfRangeException();
+                  foreach (var variant in portal.variantStateDict.GetVariants(state))
                   {
-                    currentVariant = variantId;
-                    if (variantId >= usingVariants.Length) throw new IndexOutOfRangeException();
-                    if (usingVariants.GetBit(variantId)) throw new Exception("mehrfach benutzte Varianten erkannt");
-                    usingVariants.SetBit(variantId);
-                    usingStates.SetBit(stateId);
+                    currentVariant = variant;
+                    if (variant >= usingVariants.Length) throw new IndexOutOfRangeException();
+                    if (usingVariants.GetBit(variant)) throw new Exception("mehrfach benutzte Varianten erkannt");
+                    usingVariants.SetBit(variant);
+                    usingStates.SetBit(state);
                   }
                   currentVariant = ulong.MaxValue;
                 }
-                currentPortal++;
+                currentPortalIndex++;
               }
               currentState = ulong.MaxValue;
 
               // Zustandänderungen durch eingehende Kisten markieren
-              currentPortal = 0;
+              currentPortalIndex = 0;
               foreach (var portal in room.incomingPortals)
               {
                 foreach (var boxSwap in portal.stateBoxSwap)
@@ -276,9 +276,9 @@ namespace SokoWahnLib.Rooms
                   if (boxSwap.Key == boxSwap.Value) throw new Exception("unnötige BoxSwap erkannt");
                   //usingStates.SetBit(boxSwap.Value); // -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
                 }
-                currentPortal++;
+                currentPortalIndex++;
               }
-              currentPortal = -1;
+              currentPortalIndex = -1;
 
               if (usingStates.CountMarkedBits(0) != usingStates.Length)
               {
@@ -295,9 +295,9 @@ namespace SokoWahnLib.Rooms
         }
         catch (Exception exc)
         {
-          string txt = exc.Message + "\r\n\r\nRoom " + (currentRoom + 1);
+          string txt = exc.Message + "\r\n\r\nRoom " + (currentRoomIndex + 1);
           if (currentState < ulong.MaxValue) txt += "\r\nState " + (currentState == 0 ? "finish" : currentState.ToString());
-          if (currentPortal >= 0) txt += "\r\nPortal " + (currentPortal + 1);
+          if (currentPortalIndex >= 0) txt += "\r\nPortal " + (currentPortalIndex + 1);
           if (currentVariant < ulong.MaxValue) txt += "\r\nVariant " + (currentVariant + 1);
           throw new Exception(txt + "\r\n");
         }
@@ -313,7 +313,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>Rechenaufwand als Zeichenkette</returns>
     public string Effort(int maxLen = 16777216)
     {
-      return MulNumber(rooms.Select(room => room.variantList.Count - room.variantList.CountEnd), maxLen);
+      return MulNumber(rooms.Select(room => room.variantList.Count - room.variantList.EndVariantCount), maxLen);
     }
 
     /// <summary>

@@ -18,9 +18,9 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Konstruktor
     /// </summary>
-    /// <param name="fields">alle Felder, welche zum Raum gehören</param>
-    /// <param name="goals">die Zielfelder, welche zum Raum gehören</param>
-    public StateListNormal(int[] fields, int[] goals) : base(fields, goals) { }
+    /// <param name="fieldPosis">alle Felder, welche zum Raum gehören</param>
+    /// <param name="goalPosis">die Zielfelder, welche zum Raum gehören</param>
+    public StateListNormal(int[] fieldPosis, int[] goalPosis) : base(fieldPosis, goalPosis) { }
 
     /// <summary>
     /// gibt die Anzahl der gespeicherten Zustände zurück
@@ -36,17 +36,17 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt einen weiteren Zustand in die Liste hinzu und gibt die entsprechende ID zurück
     /// </summary>
-    /// <param name="boxes">Kisten-Positionen des Zustandes</param>
+    /// <param name="boxIndices">Kisten-Positionen des Zustandes</param>
     /// <returns>ID des neuen Zustandes</returns>
-    public override ulong Add(int[] boxes)
+    public override ulong Add(int[] boxIndices)
     {
-      if (boxes == null) throw new ArgumentNullException("boxes");
+      if (boxIndices == null) throw new ArgumentNullException("boxIndices");
 
-      Debug.Assert(boxes.All(fields.Contains));                    // alle Kisten müssen sich auf den Feldern des Raumes befinden
-      Debug.Assert(boxes.Length == new HashSet<int>(boxes).Count); // Doppler sind nicht erlaubt
+      Debug.Assert(boxIndices.All(fieldPosis.Contains));                    // alle Kisten müssen sich auf den Feldern des Raumes befinden
+      Debug.Assert(boxIndices.Length == new HashSet<int>(boxIndices).Count); // Doppler sind nicht erlaubt
 
       ulong id = (uint)data.Count;
-      data.Add(boxes);
+      data.Add(boxIndices);
       return id;
     }
 

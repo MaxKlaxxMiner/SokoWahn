@@ -1,0 +1,64 @@
+﻿
+ +---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+ | Allgemeine Begriffe                                                                                                                                                 |
+ +-----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+ | english   | Deutsch    | Beschreibung                                                                                                                               |
+ +-----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+ | field     | Spielfeld  | Spielfeld-Struktur, worüber das Level als einzelne ASCII-Zeichen dargestellt wird                                                          |
+ | width     | Breite     | Breite des Spielfeldes in Kacheln (inklusive Wände und Freiräume)                                                                          |
+ | height    | Höhe       | Höhe des Spielfeldes in Kacheln (inklusive Wände und Freiräume)                                                                            |
+ | player    | Spieler    | Spielerfigur auf dem Spielfeld, welche bewegt werden kann, Zeichen: '@' oder '+' (auf einem Zielfeld)                                      |
+ | box       | Kiste      | eine Kiste auf dem Spielfeld, welche in der Regel von der Spielerfigure verschoben werden kann, Zeichen: '$' oder '*' (auf einem Zielfeld) |
+ | goal      | Zielfeld   | Zielfelder auf dem Spielfeld, wo die Kisten hingeschoben werden müssen, Zeichen: '.' oder '*' (mit Kiste) oder '+' (mit Spieler)           |
+ | wall      | Wand       | Wände auf dem Spielfeld, welche zur Begrenzung dienen und nicht durchquert werden können, Zeichen: '#'                                     |
+ | free      | Leer       | gibt ein leeres Spielfeld an, Zeichen: ' '                                                                                                 |
+ | pos       | Position   | absolute Position, welche direkt auf ein Spielfeld zeigt: pos = x + y * width                                                              |
+ | posis     | Positionen | eine Liste mit mehreren absoluten Positionsangaben, welche auf die Spielfelder zeigen, bildet ein Teil des Spielfeldes ab                  |
+ | walkPosis | Laufwege   | Liste mit zusammenhängenden Positionsangaben aller Felder, welche mit der Spielerfigur erreicht werden können                              |
+ | corner    | Ecke       | erkannte Ecke auf einem Spielfeld, wohin keine Kiste geschoben werden darf, Ausnahme: wenn es sich um Zielfeld handelt                     |
+ +-----------+------------+--------------------------------------------------------------------------------------------------------------------------------------------+
+
+ +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+ | Begriffe der Raum-Strukturen                                                                                                                                             |
+ +-------------------+--------------------+---------------------------------------------------------------------------------------------------------------------------------+
+ | english           | Deutsch            | Beschreibung                                                                                                                    |
+ +-------------------+--------------------+---------------------------------------------------------------------------------------------------------------------------------+
+ | room              | Raum               | Struktur, welche ein Teil des (begehbaren) Spielfeldes enthält, inkl. Portale zu benachbarten Räumen und weiteren Infos         |
+ | rooms             | Räume              | Liste mit allen Räumen, welche zusammen das gesamt begehbare Spielfeld ergeben                                                  |
+ | roomIndex         | Raum-Index         | zeigt auf die Position in der Räume-Liste, welche Raum betroffen ist (beginnt mit 0 für den ersten Raum)                        |
+ | roomNetwork       | Räume-Netzwerk     | Netzwerk, welches anhand eines Spielfeldes erzeugt wird, alle Daten speichert/refernziert und diverse Funktionen bereitstellt   |
+ | portal            | Portal             | Portal von oder nach einem banachbarten Raum (direkt angrenzend)                                                                |
+ | incomingPortals   | eingehende Portale | Liste mit allen eingehenden Portalen eines Raumes: werden anhand der Daten des eigenen Raumes erstellt                          |
+ | outgoingPortals   | ausgehende Portale | Liste mit allen ausgehenden Portalen zu benachbarten Räumen: Referenzen werden von den benachbarten Räumen übernommen           |
+ | state             | Zustand            | eindeutiger Kisten-Zustand, welcher ein Raum einnehmen kann (Spielerfigur wird hierbei ignoriert)                               |
+ | stateList         | Zustands-Liste     | Liste mit allen Zuständen, welche ein Raum einnehmen kann (keine doppelten Einträge erlaubt)                                    |
+ | stateBoxSwap      | Kisten-Swap        | speichert mögliche Zustandsänderungen eines Raumes, wenn durch ein benachbartes Portal eine Kiste hereingeschoben wurde         |
+ | startState        | Anfangszustand     | merkt sich den Anfangzustand eines Raumes, welcher am Spielbeginn vorzufinden ist                                               |
+ | endState          | Endzustand         | merkt sich den Endzustand eines Raumes, wenn alle Kisten passend auf den Zielfeldern stehen, ID ist immer = 0                   |
+ | variant           | Variante           | Zugfolge einer Spielerfigur, welche sich innerhalb eines Raumes abspielt, kann den Zustand des Raumes ändern                    |
+ | variantData       | Varianten-Daten    | detailierte Daten einer Variante (z.B. Laufweg, alter/neu-Raumzustand, Portale wohin eventuell Kisten geschoben wurden usw.)    |
+ | variantList       | Varianten-Liste    | Liste mit allen möglichen Varianten innerhalb eines Raumes (keine doppelten Einträge erlaubt)                                   |
+ | variantStateDict  | Zustands-Varianten | Inhaltsverzeichnis für alle möglichen Varianten, welche sich anhand bestimmter Raumzustände ergeben                             |
+ | startVariantCount | Start-Varianten    | merkt sich die Anzahl der ersten(!) Varianten in der Varianten-Liste, wo die Spielerfigur innerhalb des Raumes beginnt          |
+ | endVariantCount   | End-Varianten      | merkt sich die Anzahl der Varianten, welche den Raum in einen fertigen Zustand bringt (ID: 0) und der Spieler im Raum verbleibt |
+ | singleBoxScan     | Einzelkisten-Wege  | merkt sich alle erlaubte Kistenverschiebungen mit absoluten von-nach Positionsangaben auf dem Spielfeld                         |
+ +-------------------+--------------------+---------------------------------------------------------------------------------------------------------------------------------+
+
+ +--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+ | Begriffe für das Such-System                                                                                                                                                         |
+ +--------------+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------+
+ | pushes       | Kistenverschiebungen | Anzahl, wie oft eine Kiste verschoben wurde                                                                                                    |
+ | moves        | Laufschritte         | Anzahl, wie oft die Spielerfigur bewegt wurde (inkl. Kistenverschiebungen)                                                                     |
+ +--------------+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------+
+ | effort       | Rechenaufwand        | theoretisch berechneter Gesamtaufwand zum Durcharbeiten des gesamten Spielfeldes                                                               |
+ | roolSolver   | Lösungs-System       | Klasse zum optimalen Lösen eines Spielfeldes mit Hilfe eines Räume-Netzwerkes                                                                  |
+ | crc          | Prüfsumme            | einzelne 64-Bit CRC Prüfsumme, welche aus gesamten Levelzuständen berechnet wurde und immer eindeutig ist                                      |
+ | hashTable    | Hash-Tabelle         | Tabelle, welche sich die eindeutigen Prüfsummen in Kombination mit den dazugehörigen Laufschritten merkt                                       |
+ | task         | Rechen-Aufgabe       | einzelne Aufgabe: als Array bestehend aus den Zuständen aller Räume + ein Wert, welcher den aktiven Raum und die zugehörige Variante speichert |
+ | currentTask  | Aktuelle Aufgabe     | aktuelle Aufgabe, welche momentan abgearbeitet wird (für die Live-Anzeige im Fenster geeignet), ändert sich einmal pro Arbeits-Zyklus          |
+ | SearchCycle  | Arbeits-Zyklus       | Methode zum durchführen der Arbeits-Zyklen (bis eine optimale Lösung gefunden wurde)                                                           |
+ | maxTicks     | Rechenschritte       | maximale Anzahl der Rechenschritte pro Arbeits-Zyklus (zum Unterteilen des Gesamtrechenaufwandes in kleinere Teile)                            |
+ | solveState   | Suchstatus           | Aktueller Suchzustand (z.B. Init, AddStarts, ScanForward usw.)                                                                                 |
+ | forwardTasks | Vorwärts-Aufgaben    | Liste mit allen Aufgaben-Listen, welche noch durchgerechnet werden müssen                                                                      |
+ | forwardIndex | Vorsärts-Suchtiefe   | Aktuelle Suchtiefe in Vorwärts-Richtung, zeigt auf die Aufgaben-Liste, welche momentan abgearbeitet wird                                       |
+ +--------------+----------------------+------------------------------------------------------------------------------------------------------------------------------------------------+

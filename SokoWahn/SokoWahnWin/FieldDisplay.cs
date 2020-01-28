@@ -65,11 +65,11 @@ namespace SokoWahnWin
     /// <summary>
     /// merkt sich das aktuell angezeigte Räume-Netzwerk
     /// </summary>
-    RoomNetwork network;
+    RoomNetwork roomNetwork;
     /// <summary>
     /// merkt sich die aktuelle Anzahl der Räume
     /// </summary>
-    int networkRooms;
+    int roomCount;
     /// <summary>
     /// aktuell gezeichnete Einstellungen
     /// </summary>
@@ -149,7 +149,7 @@ namespace SokoWahnWin
     /// </summary>
     void DrawBackground()
     {
-      var field = network.field;
+      var field = roomNetwork.field;
       using (var g = Graphics.FromImage(background))
       using (var wall = new HatchBrush(HatchStyle.DiagonalBrick, Color.FromArgb(0x666666 - 16777216)))
       using (var wallBorderL = GetPen(0x888888))
@@ -210,7 +210,7 @@ namespace SokoWahnWin
     void DrawForeground()
     {
       UnsafeHelper.CopyBitmap(background, foreground);
-      var field = network.field;
+      var field = roomNetwork.field;
       int w = field.Width;
       var g = graphics;
       g.CompositingQuality = CompositingQuality.HighQuality;
@@ -297,17 +297,17 @@ namespace SokoWahnWin
     /// <summary>
     /// aktualisiert die Anzeige
     /// </summary>
-    /// <param name="network">Raum-Netzwerk (Spielfeld), welches gezeichnet werden soll</param>
+    /// <param name="roomNetwork">Raum-Netzwerk (Spielfeld), welches gezeichnet werden soll</param>
     /// <param name="settings">optionale Einstellungen, welche Dinge angezeigt werden sollen (Default: null = normales Spielfeld)</param>
-    public void Update(RoomNetwork network, DisplaySettings settings = null)
+    public void Update(RoomNetwork roomNetwork, DisplaySettings settings = null)
     {
-      if (network == null) throw new ArgumentNullException("network");
+      if (roomNetwork == null) throw new ArgumentNullException("roomNetwork");
 
       if (isUpdate) return;
       isUpdate = true;
 
       // --- zu zeichnenden Aufgaben ermitteln ---
-      if (settings == null) settings = this.settings ?? new DisplaySettings(network.field);
+      if (settings == null) settings = this.settings ?? new DisplaySettings(roomNetwork.field);
 
       bool doDrawF = false;
       bool doDrawB = false;
@@ -326,11 +326,11 @@ namespace SokoWahnWin
       int newWidth = Math.Max(16, pictureBox.Width);
       int newHeight = Math.Max(16, pictureBox.Height);
 
-      if (network != this.network || network.rooms.Length != networkRooms // neues oder geändertes Spielfeld?
+      if (roomNetwork != this.roomNetwork || roomNetwork.rooms.Length != roomCount // neues oder geändertes Spielfeld?
        || newWidth != background.Width || newHeight != background.Height) // oder Größenänderung? -> alles neu zeichnen
       {
-        this.network = network;
-        networkRooms = network.rooms.Length;
+        this.roomNetwork = roomNetwork;
+        roomCount = roomNetwork.rooms.Length;
 
         // --- neuen Vordergrund erstellen und Graphics-Objekt neu einstellen  ---
         if (foreground != null) foreground.Dispose();
@@ -340,7 +340,7 @@ namespace SokoWahnWin
         // --- neues Graphics-Objekt erstellen ---
         if (graphics != null) graphics.Dispose();
         graphics = Graphics.FromImage(foreground);
-        var field = network.field;
+        var field = roomNetwork.field;
         float scale = field.Width / (float)newWidth > field.Height / (float)newHeight ? newWidth / (float)field.Width : newHeight / (float)field.Height;
         scale *= 0.98f; // Am Rand etwas Abstand lassen
         graphics.CompositingQuality = CompositingQuality.HighQuality;
@@ -388,9 +388,9 @@ namespace SokoWahnWin
       int px = (int)p[0].X;
       int py = (int)p[0].Y;
 
-      if (px < 0 || px >= network.field.Width || py < 0 || py >= network.field.Height) return -1;
+      if (px < 0 || px >= roomNetwork.field.Width || py < 0 || py >= roomNetwork.field.Height) return -1;
 
-      return px + py * network.field.Width;
+      return px + py * roomNetwork.field.Width;
     }
   }
 }

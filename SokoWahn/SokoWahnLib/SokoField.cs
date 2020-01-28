@@ -33,11 +33,11 @@ namespace SokoWahnLib
     /// <summary>
     /// merkt sich die Positionen der Ziele
     /// </summary>
-    public readonly int[] goalPositions;
+    public readonly int[] goalPosis;
     /// <summary>
     /// merkt sich die Positionen der Kisten
     /// </summary>
-    public readonly int[] boxPositions;
+    public readonly int[] boxPosis;
     /// <summary>
     /// die aktuelle Spielerposition
     /// </summary>
@@ -146,12 +146,12 @@ namespace SokoWahnLib
       #endregion
 
       #region # // --- Ziele und Kisten zählen und vergleichen ---
-      goalPositions = field.Select((c, i) => new { c, i }).Where(x => x.c == '.' || x.c == '*' || x.c == '+').Select(x => x.i).ToArray(); // Zielfelder: leer, mit Kiste, mit Spieler
-      boxPositions = field.Select((c, i) => new { c, i }).Where(x => x.c == '$' || x.c == '*').Select(x => x.i).ToArray(); // Kisten: nur Kiste, auf einem Zielfeld
-      if (boxPositions.Length == 0) throw new SokoFieldException("no boxes found");
-      if (goalPositions.Length == 0) throw new SokoFieldException("no goals found");
-      if (boxPositions.Length < goalPositions.Length) throw new SokoFieldException("less boxes than goals (" + boxPositions.Length + " < " + goalPositions.Length + ")");
-      if (boxPositions.Length > goalPositions.Length) throw new SokoFieldException("more boxes than goals (" + boxPositions.Length + " > " + goalPositions.Length + ")");
+      goalPosis = field.Select((c, i) => new { c, i }).Where(x => x.c == '.' || x.c == '*' || x.c == '+').Select(x => x.i).ToArray(); // Zielfelder: leer, mit Kiste, mit Spieler
+      boxPosis = field.Select((c, i) => new { c, i }).Where(x => x.c == '$' || x.c == '*').Select(x => x.i).ToArray(); // Kisten: nur Kiste, auf einem Zielfeld
+      if (boxPosis.Length == 0) throw new SokoFieldException("no boxes found");
+      if (goalPosis.Length == 0) throw new SokoFieldException("no goals found");
+      if (boxPosis.Length < goalPosis.Length) throw new SokoFieldException("less boxes than goals (" + boxPosis.Length + " < " + goalPosis.Length + ")");
+      if (boxPosis.Length > goalPosis.Length) throw new SokoFieldException("more boxes than goals (" + boxPosis.Length + " > " + goalPosis.Length + ")");
       #endregion
     }
     #endregion
@@ -177,7 +177,7 @@ namespace SokoWahnLib
     /// </summary>
     /// <param name="pos">Position des Spielfeldes, welches abgefragt werden soll (pos: x + y * Width)</param>
     /// <returns>Inhalt des Spielfeldes</returns>
-    public char GetField(int pos)
+    public char GetFieldChar(int pos)
     {
       return field[pos];
     }

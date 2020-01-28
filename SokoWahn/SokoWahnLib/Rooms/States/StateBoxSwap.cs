@@ -36,16 +36,16 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt eine weitere Variante pro Raumzustand hinzu
     /// </summary>
-    /// <param name="oldStateId">vorheriger Raum-Zustand</param>
-    /// <param name="newStateId">nachfolgender Raum-Zustand, nachdem eine Kiste rein geschoben wurde</param>
-    public abstract void Add(ulong oldStateId, ulong newStateId);
+    /// <param name="oldState">vorheriger Raum-Zustand</param>
+    /// <param name="newState">nachfolgender Raum-Zustand, nachdem eine Kiste rein geschoben wurde</param>
+    public abstract void Add(ulong oldState, ulong newState);
 
     /// <summary>
     /// gibt einen bestimmten Zustandswechsel zurück (oder gleiche ID, wenn keine Kiste aufgenommen werden kann)
     /// </summary>
-    /// <param name="stateId">Zustand, welcher abgefragt werden soll</param>
+    /// <param name="state">Zustand, welcher abgefragt werden soll</param>
     /// <returns>Zustand-ID nach dem Wechsel (oder gleiche ID, wenn keine Kiste aufgenommen werden könnte)</returns>
-    public abstract ulong Get(ulong stateId);
+    public abstract ulong Get(ulong state);
 
     /// <summary>
     /// gibt alle Zustand-IDs zurück, wo eine Kiste aufgenommen werden kann
@@ -60,7 +60,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>Enumerable der gespeicherten Elemente</returns>
     public IEnumerable<KeyValuePair<ulong, ulong>> AsEnumerable()
     {
-      foreach (ulong id in GetAllKeys()) yield return new KeyValuePair<ulong, ulong>(id, Get(id));
+      foreach (ulong stateKey in GetAllKeys()) yield return new KeyValuePair<ulong, ulong>(stateKey, Get(stateKey));
     }
 
     /// <summary>

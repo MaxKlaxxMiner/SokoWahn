@@ -21,7 +21,7 @@ namespace SokoWahnWin
 {
   public sealed partial class FormDebugger : Form
   {
-    RoomNetwork network;
+    RoomNetwork roomNetwork;
 
     #region # // --- normale einfache Spielfelder ---
     static readonly SokoField FieldTest1 = new SokoField(@"
@@ -191,15 +191,15 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      network = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
-      //network = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
-      //network = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
-      //network = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
-      //network = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
-      //network = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
-      //network = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
+      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
+      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
+      //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
+      //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit viele Möglichkeiten
+      //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
+      //roomNetwork = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
 
-      displaySettings = new DisplaySettings(network.field);
+      displaySettings = new DisplaySettings(roomNetwork.field);
     }
 
     /// <summary>
@@ -212,28 +212,28 @@ namespace SokoWahnWin
     /// </summary>
     void DisplayUpdate()
     {
-      if (network == null) return; // Räume noch nicht initialisiert?
+      if (roomNetwork == null) return; // Räume noch nicht initialisiert?
 
       #region # // --- Room-Liste erneuern (falls notwendig) ---
-      if (listRooms.Items.Count != network.rooms.Length)
+      if (listRooms.Items.Count != roomNetwork.rooms.Length)
       {
         int oldSelected = listRooms.SelectedIndex;
         listRooms.BeginUpdate();
         listRooms.Items.Clear();
-        for (int i = 0; i < network.rooms.Length; i++)
+        for (int i = 0; i < roomNetwork.rooms.Length; i++)
         {
-          listRooms.Items.Add("Room " + (i + 1) + " [" + network.rooms[i].fieldPosis.Length + "]");
+          listRooms.Items.Add("Room " + (i + 1) + " [" + roomNetwork.rooms[i].fieldPosis.Length + "]");
         }
-        listRooms.SelectedIndex = Math.Min(oldSelected, network.rooms.Length - 1);
+        listRooms.SelectedIndex = Math.Min(oldSelected, roomNetwork.rooms.Length - 1);
         listRooms.EndUpdate();
 
-        displaySettings.hBack = network.rooms.Select(room => new Highlight(0x003366, 0.7f, room.fieldPosis)).ToArray();
+        displaySettings.hBack = roomNetwork.rooms.Select(room => new Highlight(0x003366, 0.7f, room.fieldPosis)).ToArray();
 
         listStates.BeginUpdate();
         listStates.Items.Clear();
         listStates.EndUpdate();
 
-        textBoxInfo.Text = "Effort: " + network.Effort();
+        textBoxInfo.Text = "Effort: " + roomNetwork.Effort();
       }
       #endregion
 
@@ -244,7 +244,7 @@ namespace SokoWahnWin
         foreach (int roomIndex in listRooms.SelectedIndices.Cast<int>())
         {
           listStates.Items.Add("-- Room " + (roomIndex + 1) + " --");
-          ulong stateCount = network.rooms[roomIndex].stateList.Count;
+          ulong stateCount = roomNetwork.rooms[roomIndex].stateList.Count;
           for (ulong i = 0; i < stateCount; i++)
           {
             listStates.Items.Add(new StateListItem(roomIndex, i));
@@ -263,26 +263,26 @@ namespace SokoWahnWin
       {
         listVariants.BeginUpdate();
         var stateItem = (StateListItem)listStates.SelectedItem;
-        var room = network.rooms[stateItem.roomIndex];
+        var room = roomNetwork.rooms[stateItem.roomIndex];
         var stateList = room.stateList;
         var variantList = room.variantList;
         var incomingPortals = room.incomingPortals;
 
         // --- Start-Varianten des Raums auflisten ---
         ulong startVariants = room.startVariantCount;
-        if (startVariants > 0 && variantList.GetData(0).oldStateId == stateItem.stateId)
+        if (startVariants > 0 && variantList.GetData(0).oldState == stateItem.state)
         {
           listVariants.Items.Add("-- Starts --");
 
           int variantCount = 0;
-          for (ulong variantId = 0; variantId < startVariants; variantId++)
+          for (ulong variant = 0; variant < startVariants; variant++)
           {
             variantCount++;
-            var variant = variantList.GetData(variantId);
-            string path = variant.path;
+            var variantData = variantList.GetData(variant);
+            string path = variantData.path;
             if (path != null)
             {
-              var el = new VariantPathElement(room.field.PlayerPos, stateList.Get(variant.oldStateId)); // Start-Stellung erzeugen
+              var el = new VariantPathElement(room.field.PlayerPos, stateList.Get(variantData.oldState)); // Start-Stellung erzeugen
               var variantPath = new List<VariantPathElement> { el };
 
               foreach (char c in path)
@@ -308,7 +308,7 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variant.playerPortal < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.playerPortalIndex < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -323,8 +323,8 @@ namespace SokoWahnWin
           var portal = incomingPortals[portalIndex];
           listVariants.Items.Add("-- Portal " + (portalIndex + 1) + " --");
 
-          var boxState = portal.stateBoxSwap.Get(stateItem.stateId);
-          if (boxState != stateItem.stateId) // Variante mit reinschiebbarer Kiste vorhanden?
+          var boxState = portal.stateBoxSwap.Get(stateItem.state);
+          if (boxState != stateItem.state) // Variante mit reinschiebbarer Kiste vorhanden?
           {
             listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ")", new[]
             {
@@ -334,14 +334,14 @@ namespace SokoWahnWin
           }
 
           int variantCount = 0;
-          foreach (ulong variantId in portal.variantStateDict.GetVariants(stateItem.stateId))
+          foreach (ulong variant in portal.variantStateDict.GetVariants(stateItem.state))
           {
             variantCount++;
-            var variant = variantList.GetData(variantId);
-            string path = variant.path;
+            var variantData = variantList.GetData(variant);
+            string path = variantData.path;
             if (path != null)
             {
-              var el = new VariantPathElement(portal.fromPos, stateList.Get(variant.oldStateId)); // Start-Stellung erzeugen
+              var el = new VariantPathElement(portal.fromPos, stateList.Get(variantData.oldState)); // Start-Stellung erzeugen
               var variantPath = new List<VariantPathElement> { el };
 
               path = portal.dirChar + path; // ersten Schritt durch das eingehende Portal hinzufügen
@@ -369,7 +369,7 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variant.playerPortal < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.playerPortalIndex < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -377,7 +377,7 @@ namespace SokoWahnWin
             }
           }
 
-          if (variantCount == 0 && boxState == stateItem.stateId)
+          if (variantCount == 0 && boxState == stateItem.state)
           {
             listVariants.Items.Add("no variants");
           }
@@ -414,7 +414,7 @@ namespace SokoWahnWin
       else Text = "-";
       #endregion
 
-      fieldDisplay.Update(network, displaySettings);
+      fieldDisplay.Update(roomNetwork, displaySettings);
     }
 
     #region # // --- Form-Handling ---
@@ -425,15 +425,15 @@ namespace SokoWahnWin
     /// <param name="e">zusätzliche Event-Infos</param>
     void listRooms_SelectedIndexChanged(object sender, EventArgs e)
     {
-      displaySettings.hFront = listRooms.SelectedIndices.Cast<int>().Select(i => network.rooms[i])
+      displaySettings.hFront = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i])
         .Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
 
       listStates.BeginUpdate();
       listStates.Items.Clear();
       listStates.EndUpdate();
 
-      displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
-      displaySettings.playerPos = network.field.PlayerPos;
+      displaySettings.boxes = Enumerable.Range(0, roomNetwork.field.Width * roomNetwork.field.Height).Where(roomNetwork.field.IsBox).ToArray();
+      displaySettings.playerPos = roomNetwork.field.PlayerPos;
     }
 
     /// <summary>
@@ -456,11 +456,11 @@ namespace SokoWahnWin
         if (listStates.SelectedItem is StateListItem)
         {
           var selected = (StateListItem)listStates.SelectedItem;
-          displaySettings.boxes = network.rooms[selected.roomIndex].stateList.Get(selected.stateId);
+          displaySettings.boxes = roomNetwork.rooms[selected.roomIndex].stateList.Get(selected.state);
           displaySettings.playerPos = -1;
           for (int i = 0; i < displaySettings.hFront.Length; i++)
           {
-            if (displaySettings.hFront[i].fields.Contains(network.rooms[selected.roomIndex].fieldPosis[0]))
+            if (displaySettings.hFront[i].fields.Contains(roomNetwork.rooms[selected.roomIndex].fieldPosis[0]))
             {
               displaySettings.hFront[i].color = 0xffff00;
             }
@@ -468,8 +468,8 @@ namespace SokoWahnWin
         }
         else
         {
-          displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
-          displaySettings.playerPos = network.field.PlayerPos;
+          displaySettings.boxes = Enumerable.Range(0, roomNetwork.field.Width * roomNetwork.field.Height).Where(roomNetwork.field.IsBox).ToArray();
+          displaySettings.playerPos = roomNetwork.field.PlayerPos;
         }
 
         listVariants.BeginUpdate();
@@ -491,11 +491,11 @@ namespace SokoWahnWin
       if (listStates.SelectedItem is StateListItem)
       {
         var selected = (StateListItem)listStates.SelectedItem;
-        displaySettings.boxes = network.rooms[selected.roomIndex].stateList.Get(selected.stateId);
+        displaySettings.boxes = roomNetwork.rooms[selected.roomIndex].stateList.Get(selected.state);
         displaySettings.playerPos = -1;
         for (int i = 0; i < displaySettings.hFront.Length; i++)
         {
-          if (displaySettings.hFront[i].fields.Contains(network.rooms[selected.roomIndex].fieldPosis[0]))
+          if (displaySettings.hFront[i].fields.Contains(roomNetwork.rooms[selected.roomIndex].fieldPosis[0]))
           {
             displaySettings.hFront[i].color = 0xffff00;
           }
@@ -503,8 +503,8 @@ namespace SokoWahnWin
       }
       else
       {
-        displaySettings.boxes = Enumerable.Range(0, network.field.Width * network.field.Height).Where(network.field.IsBox).ToArray();
-        displaySettings.playerPos = network.field.PlayerPos;
+        displaySettings.boxes = Enumerable.Range(0, roomNetwork.field.Width * roomNetwork.field.Height).Where(roomNetwork.field.IsBox).ToArray();
+        displaySettings.playerPos = roomNetwork.field.PlayerPos;
       }
     }
 
@@ -568,7 +568,7 @@ namespace SokoWahnWin
       if (pos >= 0)
       {
         int roomIndex = -1;
-        for (int i = 0; i < network.rooms.Length; i++) if (network.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
+        for (int i = 0; i < roomNetwork.rooms.Length; i++) if (roomNetwork.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
         if (roomIndex >= 0)
         {
           if (e.Button == MouseButtons.Left) listRooms.SelectedIndices.Add(roomIndex);
@@ -588,7 +588,7 @@ namespace SokoWahnWin
       if (pos >= 0)
       {
         int roomIndex = -1;
-        for (int i = 0; i < network.rooms.Length; i++) if (network.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
+        for (int i = 0; i < roomNetwork.rooms.Length; i++) if (roomNetwork.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
         if (roomIndex >= 0)
         {
           if (e.Button == MouseButtons.Left) listRooms.SelectedIndices.Add(roomIndex);
@@ -631,11 +631,11 @@ namespace SokoWahnWin
 
       #region # // --- befüllen: boxPortals ---
       // --- alle Varianten prüfen (inkl. Start-Varianten) ---
-      for (ulong variantId = 0; variantId < variantList.Count; variantId++)
+      for (ulong variant = 0; variant < variantList.Count; variant++)
       {
-        var v = variantList.GetData(variantId);
-        if (v.boxPortals.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
-        foreach (var boxPortal in v.boxPortals) boxPortals.Add(boxPortal);
+        var variantData = variantList.GetData(variant);
+        if (variantData.boxPortalsIndices.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+        foreach (var boxPortal in variantData.boxPortalsIndices) boxPortals.Add(boxPortal);
       }
       #endregion
 
@@ -643,17 +643,17 @@ namespace SokoWahnWin
       using (var killVariants = new Bitter(variantList.Count))
       {
         // --- Start-Varianten prüfen ---
-        for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+        for (ulong variant = 0; variant < room.startVariantCount; variant++)
         {
-          var v = variantList.GetData(variantId);
-          if (v.boxPortals.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+          var variantData = variantList.GetData(variant);
+          if (variantData.boxPortalsIndices.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
 
-          foreach (var boxPortal in v.boxPortals)
+          foreach (var boxPortal in variantData.boxPortalsIndices)
           {
             var oPortal = room.outgoingPortals[boxPortal];
             if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
             {
-              killVariants.SetBit(variantId); // Variante als löschbar markieren
+              killVariants.SetBit(variant); // Variante als löschbar markieren
             }
           }
         }
@@ -665,17 +665,17 @@ namespace SokoWahnWin
           // --- Varianten der Portale prüfen ---
           foreach (var portal in room.incomingPortals)
           {
-            foreach (var variantId in portal.variantStateDict.GetVariants(st.Key))
+            foreach (var variant in portal.variantStateDict.GetVariants(st.Key))
             {
-              var v = variantList.GetData(variantId);
-              if (v.boxPortals.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+              var variantData = variantList.GetData(variant);
+              if (variantData.boxPortalsIndices.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
 
-              foreach (var boxPortal in v.boxPortals)
+              foreach (var boxPortal in variantData.boxPortalsIndices)
               {
                 var oPortal = room.outgoingPortals[boxPortal];
                 if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
                 {
-                  killVariants.SetBit(variantId); // Variante als löschbar markieren
+                  killVariants.SetBit(variant); // Variante als löschbar markieren
                 }
               }
             }
@@ -711,28 +711,28 @@ namespace SokoWahnWin
         usingStates.SetBit(room.startState); // Start-Zustand ebenfalls markieren
 
         // Start-Varianten durchsuchen
-        for (ulong variantId = 0; variantId < room.startVariantCount; variantId++)
+        for (ulong variant = 0; variant < room.startVariantCount; variant++)
         {
-          Debug.Assert(variantId < variantList.Count);
-          var v = variantList.GetData(variantId);
+          Debug.Assert(variant < variantList.Count);
+          var v = variantList.GetData(variant);
 
-          Debug.Assert(v.oldStateId < stateList.Count);
-          usingStates.SetBit(v.oldStateId);
+          Debug.Assert(v.oldState < stateList.Count);
+          usingStates.SetBit(v.oldState);
 
-          Debug.Assert(v.newStateId < stateList.Count);
-          usingStates.SetBit(v.newStateId);
+          Debug.Assert(v.newState < stateList.Count);
+          usingStates.SetBit(v.newState);
         }
 
         // Portal-Varianten durchsuchen
         foreach (var portal in room.incomingPortals)
         {
-          foreach (var stateId in portal.variantStateDict.GetAllStates())
+          foreach (var state in portal.variantStateDict.GetAllStates())
           {
-            Debug.Assert(stateId < usingStates.Length);
-            foreach (var variantId in portal.variantStateDict.GetVariants(stateId))
+            Debug.Assert(state < usingStates.Length);
+            foreach (var variant in portal.variantStateDict.GetVariants(state))
             {
-              Debug.Assert(variantId < variantList.Count);
-              usingStates.SetBit(stateId);
+              Debug.Assert(variant < variantList.Count);
+              usingStates.SetBit(state);
             }
           }
         }
@@ -762,9 +762,9 @@ namespace SokoWahnWin
 
       using (var usingStates = new Bitter(stateList.Count))
       {
-        for (ulong stateId = 0; stateId < stateList.Count; stateId++)
+        for (ulong state = 0; state < stateList.Count; state++)
         {
-          if (stateList.Get(stateId).Length == 0) usingStates.SetBit(stateId);
+          if (stateList.Get(state).Length == 0) usingStates.SetBit(state);
         }
 
         if (usingStates.CountMarkedBits(0) != usingStates.Length)
@@ -774,12 +774,12 @@ namespace SokoWahnWin
 
           using (var usingVariants = new Bitter(variantList.Count))
           {
-            for (ulong variantId = 0; variantId < variantList.Count; variantId++)
+            for (ulong variant = 0; variant < variantList.Count; variant++)
             {
-              var v = variantList.GetData(variantId);
-              if (v.boxPortals.Length == 0 && skipStates.map[v.oldStateId] != ulong.MaxValue && skipStates.map[v.newStateId] != ulong.MaxValue)
+              var variantData = variantList.GetData(variant);
+              if (variantData.boxPortalsIndices.Length == 0 && skipStates.map[variantData.oldState] != ulong.MaxValue && skipStates.map[variantData.newState] != ulong.MaxValue)
               {
-                usingVariants.SetBit(variantId);
+                usingVariants.SetBit(variant);
               }
             }
 
@@ -812,13 +812,13 @@ namespace SokoWahnWin
       // --- Variantenliste neu erstellen und gefiltert befüllen ---
       var oldVariants = room.variantList;
       var newVariants = new VariantListNormal((uint)room.incomingPortals.Length);
-      for (ulong variantId = 0; variantId < oldVariants.Count; variantId++)
+      for (ulong variant = 0; variant < oldVariants.Count; variant++)
       {
-        ulong map = skip.map[variantId];
+        ulong map = skip.map[variant];
         if (map == ulong.MaxValue) continue;
         Debug.Assert(map == newVariants.Count);
-        var v = oldVariants.GetData(variantId);
-        newVariants.Add(v.oldStateId, v.moves, v.pushes, v.boxPortals, v.playerPortal, v.newStateId, v.path);
+        var v = oldVariants.GetData(variant);
+        newVariants.Add(v.oldState, v.moves, v.pushes, v.boxPortalsIndices, v.playerPortalIndex, v.newState, v.path);
       }
       Debug.Assert(newVariants.Count == skip.usedCount);
       oldVariants.Dispose();
@@ -841,16 +841,16 @@ namespace SokoWahnWin
         foreach (ulong state in oldDict.GetAllStates())
         {
           ulong skipVariants = 0;
-          foreach (ulong variantId in oldDict.GetVariants(state))
+          foreach (ulong variant in oldDict.GetVariants(state))
           {
-            Debug.Assert(variantId < (uint)skip.map.Length);
-            if (skip.map[variantId] == ulong.MaxValue) // Variante wird nicht mehr verwendet?
+            Debug.Assert(variant < (uint)skip.map.Length);
+            if (skip.map[variant] == ulong.MaxValue) // Variante wird nicht mehr verwendet?
             {
               skipVariants++;
               continue;
             }
-            Debug.Assert(skip.map[variantId] < room.variantList.Count);
-            newDict.Add(state, skip.map[variantId]);
+            Debug.Assert(skip.map[variant] < room.variantList.Count);
+            newDict.Add(state, skip.map[variant]);
           }
           Debug.Assert(oldDict.GetVariants(state).Count() == newDict.GetVariants(state).Count() + (int)skipVariants);
         }
@@ -872,13 +872,13 @@ namespace SokoWahnWin
       // --- Zustandsliste neu erstellen und gefiltert befüllen ---
       var oldStates = room.stateList;
       var newStates = new StateListNormal(room.fieldPosis, room.goalPosis);
-      for (ulong stateId = 0; stateId < oldStates.Count; stateId++)
+      for (ulong state = 0; state < oldStates.Count; state++)
       {
-        ulong map = skip.map[stateId];
+        ulong map = skip.map[state];
         if (map == ulong.MaxValue) continue;
         Debug.Assert(map == newStates.Count);
-        newStates.Add(oldStates.Get(stateId));
-        Debug.Assert(newStates.Get(map).Length == oldStates.Get(stateId).Length);
+        newStates.Add(oldStates.Get(state));
+        Debug.Assert(newStates.Get(map).Length == oldStates.Get(state).Length);
       }
       Debug.Assert(newStates.Count == skip.usedCount);
       oldStates.Dispose();
@@ -887,15 +887,15 @@ namespace SokoWahnWin
       // --- verlinkte Zustände innerhalb der Varianten neu setzen ---
       var oldVariants = room.variantList;
       var newVariants = new VariantListNormal(oldVariants.portalCount);
-      for (ulong variantId = 0; variantId < oldVariants.Count; variantId++)
+      for (ulong variant = 0; variant < oldVariants.Count; variant++)
       {
-        var v = oldVariants.GetData(variantId);
-        Debug.Assert(v.oldStateId < oldStates.Count);
-        Debug.Assert(skip.map[v.oldStateId] < newStates.Count);
-        Debug.Assert(v.newStateId < oldStates.Count);
-        Debug.Assert(skip.map[v.newStateId] < newStates.Count);
-        Debug.Assert(variantId == newVariants.Count);
-        newVariants.Add(skip.map[v.oldStateId], v.moves, v.pushes, v.boxPortals, v.playerPortal, skip.map[v.newStateId], v.path);
+        var v = oldVariants.GetData(variant);
+        Debug.Assert(v.oldState < oldStates.Count);
+        Debug.Assert(skip.map[v.oldState] < newStates.Count);
+        Debug.Assert(v.newState < oldStates.Count);
+        Debug.Assert(skip.map[v.newState] < newStates.Count);
+        Debug.Assert(variant == newVariants.Count);
+        newVariants.Add(skip.map[v.oldState], v.moves, v.pushes, v.boxPortalsIndices, v.playerPortalIndex, skip.map[v.newState], v.path);
       }
       oldVariants.Dispose();
       Debug.Assert(newVariants.Count == oldVariants.Count);
@@ -931,10 +931,10 @@ namespace SokoWahnWin
           Debug.Assert(oldState < (uint)skip.map.Length);
           ulong newState = skip.map[oldState];
           Debug.Assert(newState < room.stateList.Count);
-          foreach (ulong variantId in oldDict.GetVariants(oldState))
+          foreach (ulong variant in oldDict.GetVariants(oldState))
           {
-            Debug.Assert(variantId < room.variantList.Count);
-            newDict.Add(newState, variantId);
+            Debug.Assert(variant < room.variantList.Count);
+            newDict.Add(newState, variant);
           }
           Debug.Assert(oldDict.GetVariants(oldState).Count() == newDict.GetVariants(newState).Count());
         }
@@ -963,7 +963,7 @@ namespace SokoWahnWin
       var roomsCheck = new Stack<Room>(); // Räume, welche noch geprüft werden müssen
 
       // --- roomsBoxesStart und roomsBoxesGoals befüllen ---
-      foreach (var room in network.rooms)
+      foreach (var room in roomNetwork.rooms)
       {
         if (room.startBoxPosis.Length > 0) { roomsBoxesStart.Add(room); roomsCheck.Push(room); }
         if (room.goalPosis.Length > 0) { roomsBoxesGoals.Add(room); roomsCheck.Push(room); }
@@ -977,10 +977,10 @@ namespace SokoWahnWin
 
         var variantList = checkRoom.variantList;
         var outgoingBoxPortals = new bool[checkRoom.incomingPortals.Length];
-        for (ulong variantId = 0; variantId < variantList.Count; variantId++)
+        for (ulong variant = 0; variant < variantList.Count; variant++)
         {
-          var v = variantList.GetData(variantId);
-          foreach (uint p in v.boxPortals) outgoingBoxPortals[p] = true;
+          var v = variantList.GetData(variant);
+          foreach (uint p in v.boxPortalsIndices) outgoingBoxPortals[p] = true;
         }
         if (outgoingBoxPortals.Any(x => x)) roomsBoxesPass.Add(checkRoom);
         for (uint p = 0; p < outgoingBoxPortals.Length; p++)
@@ -989,7 +989,7 @@ namespace SokoWahnWin
         }
       }
 
-      foreach (var room in network.rooms)
+      foreach (var room in roomNetwork.rooms)
       {
         if (roomsBoxesStart.Contains(room)) continue;
         if (roomsBoxesGoals.Contains(room)) continue;
@@ -998,7 +998,7 @@ namespace SokoWahnWin
       }
 
       int roomIndex = 0;
-      foreach (var room in network.rooms)
+      foreach (var room in roomNetwork.rooms)
       {
         roomIndex++;
         if (roomsBoxesEmpty.Contains(room))
@@ -1033,11 +1033,11 @@ namespace SokoWahnWin
     {
       try
       {
-        network.Validate(true);
+        roomNetwork.Validate(true);
         MessageBox.Show("Validate: ok.\r\n\r\n" +
-                        "Rooms: " + network.rooms.Length.ToString("N0") + "\r\n\r\n" +
-                        "States: " + network.rooms.Sum(room => (double)room.stateList.Count).ToString("N0") + "\r\n\r\n" +
-                        "Variants: " + network.rooms.Sum(room => (double)room.variantList.Count).ToString("N0"),
+                        "Rooms: " + roomNetwork.rooms.Length.ToString("N0") + "\r\n\r\n" +
+                        "States: " + roomNetwork.rooms.Sum(room => (double)room.stateList.Count).ToString("N0") + "\r\n\r\n" +
+                        "Variants: " + roomNetwork.rooms.Sum(room => (double)room.variantList.Count).ToString("N0"),
                         "Validation", MessageBoxButtons.OK, MessageBoxIcon.Information);
       }
       catch (Exception exc)
@@ -1070,7 +1070,7 @@ namespace SokoWahnWin
     /// <param name="e">Event-Infos</param>
     void buttonSolver_Click(object sender, EventArgs e)
     {
-      formSolver.InitRoomNetwork(network);
+      formSolver.InitRoomNetwork(roomNetwork);
       formSolver.ShowDialog();
     }
 

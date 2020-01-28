@@ -36,22 +36,22 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt die Anzahl der jeweiligen End-Varianten zurück
     /// </summary>
-    public override ulong CountEnd { get { return endVariants; } }
+    public override ulong EndVariantCount { get { return endVariants; } }
 
     /// <summary>
     /// fügt eine weitere Variante hinzu und gibt deren ID zurück
     /// </summary>
-    /// <param name="oldStateId">vorheriger Raum-Zustand</param>
+    /// <param name="oldState">vorheriger Raum-Zustand</param>
     /// <param name="moves">Anzahl der Bewegungsschritte (nur Bewegungen innerhalb des Raumes und beim Verlassen des Raumes wird gezählt)</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen (nur Verschiebungen innerhalb des Raumes oder beim Verlassen des Raumes wird gezählt)</param>
-    /// <param name="boxPortals">alle Portale, wohin eine Kiste rausgeschoben wurde</param>
-    /// <param name="playerPortal">Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)</param>
-    /// <param name="newStateId">nachfolgender Raum-Zustand</param>
+    /// <param name="boxPortalsIndices">alle Portale, wohin eine Kiste rausgeschoben wurde</param>
+    /// <param name="playerPortalIndex">Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)</param>
+    /// <param name="newState">nachfolgender Raum-Zustand</param>
     /// <param name="path">optionaler Pfad in XSB-Schreibweise (lrudLRUD bzw. auch RLE komprimiert erlaubt)</param>
     /// <returns>neue Varianten-ID</returns>
-    public override ulong Add(ulong oldStateId, ulong moves, ulong pushes, uint[] boxPortals, uint playerPortal, ulong newStateId, string path = null)
+    public override ulong Add(ulong oldState, ulong moves, ulong pushes, uint[] boxPortalsIndices, uint playerPortalIndex, ulong newState, string path = null)
     {
-      if (playerPortal == uint.MaxValue)
+      if (playerPortalIndex == uint.MaxValue)
       {
         endVariants++;
         Debug.Assert(moves + 1 >= pushes);
@@ -61,25 +61,25 @@ namespace SokoWahnLib.Rooms
         Debug.Assert(moves > 0);
         Debug.Assert(moves  >= pushes);
       }
-      Debug.Assert(boxPortals.All(portal => portal < portalCount));
-      Debug.Assert(playerPortal < portalCount || (playerPortal == uint.MaxValue && newStateId == 0)); // Spieler verlässt den Raum oder kann bleiben, wenn der End-Zustand erreicht wurde
+      Debug.Assert(boxPortalsIndices.All(portal => portal < portalCount));
+      Debug.Assert(playerPortalIndex < portalCount || (playerPortalIndex == uint.MaxValue && newState == 0)); // Spieler verlässt den Raum oder kann bleiben, wenn der End-Zustand erreicht wurde
       Debug.Assert(path != null && (ulong)VariantData.UncompressPath(path).Length == moves);
 
       ulong id = (uint)variantData.Count;
-      variantData.Add(new VariantData { oldStateId = oldStateId, moves = moves, pushes = pushes, boxPortals = boxPortals, playerPortal = playerPortal, newStateId = newStateId, path = path });
+      variantData.Add(new VariantData { oldState = oldState, moves = moves, pushes = pushes, boxPortalsIndices = boxPortalsIndices, playerPortalIndex = playerPortalIndex, newState = newState, path = path });
       return id;
     }
 
     /// <summary>
     /// fragt die Daten einer bestimmten Variante ab
     /// </summary>
-    /// <param name="variantId">ID der Variante, welche abgefragt werden soll</param>
+    /// <param name="variant">ID der Variante, welche abgefragt werden soll</param>
     /// <returns>Daten der abgefragten Variante</returns>
-    public override VariantData GetData(ulong variantId)
+    public override VariantData GetData(ulong variant)
     {
-      Debug.Assert(variantId < Count);
+      Debug.Assert(variant < Count);
 
-      return variantData[(int)(uint)variantId];
+      return variantData[(int)(uint)variant];
     }
 
     /// <summary>

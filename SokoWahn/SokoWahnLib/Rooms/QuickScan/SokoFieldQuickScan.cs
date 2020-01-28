@@ -255,7 +255,7 @@ namespace SokoWahnLib.Rooms
     /// Konstruktor
     /// </summary>
     /// <param name="field">bestehende Spielfeld, welches verwendet werden soll</param>
-    public SokoFieldQuickScan(ISokoField field) : this(Enumerable.Range(0, field.Width * field.Height).Select(field.GetField).ToArray(), field.Width) { }
+    public SokoFieldQuickScan(ISokoField field) : this(Enumerable.Range(0, field.Width * field.Height).Select(field.GetFieldChar).ToArray(), field.Width) { }
 
     /// <summary>
     /// Konstruktor
@@ -318,7 +318,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="pos">Position des Spielfeldes, welches abgefragt werden soll (pos: x + y * Width)</param>
     /// <returns>Inhalt des Spielfeldes</returns>
-    public char GetField(int pos)
+    public char GetFieldChar(int pos)
     {
       if (pos < 0 || pos >= fieldChars.Length) throw new ArgumentOutOfRangeException("pos");
       int p = fieldToRoom[pos];

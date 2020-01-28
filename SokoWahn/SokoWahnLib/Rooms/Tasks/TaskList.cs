@@ -2,6 +2,7 @@
 // ReSharper disable UnusedMemberInSuper.Global
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBeProtected.Global
+// ReSharper disable UnusedMethodReturnValue.Global
 
 namespace SokoWahnLib.Rooms
 {

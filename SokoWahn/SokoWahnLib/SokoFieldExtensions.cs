@@ -34,7 +34,7 @@ namespace SokoWahnLib
         {
           for (int x = 0; x < w; x++)
           {
-            resultP[resultPos++] = field.GetField(fieldPos++);
+            resultP[resultPos++] = field.GetFieldChar(fieldPos++);
           }
           resultP[resultPos++] = '\r'; // Zeilenumbruch hinzufügen
           resultP[resultPos++] = '\n';
@@ -81,7 +81,7 @@ namespace SokoWahnLib
       while (todo.Count > 0)
       {
         int pos = todo.Pop();
-        if (field.GetField(pos) == '#') continue; // Feld ist nie begehbar
+        if (field.GetFieldChar(pos) == '#') continue; // Feld ist nie begehbar
         if (walkFields.Contains(pos)) continue;   // Feld schon bekannt
         walkFields.Add(pos);                      // bekannte Felder merken
         todo.Push(pos - 1); // links hinzufügen
@@ -114,11 +114,11 @@ namespace SokoWahnLib
       // --- links prüfen ---
       if (px > 0)
       {
-        char f = field.GetField(p - 1);
+        char f = field.GetFieldChar(p - 1);
         if (f == ' ' || f == '.') result |= MoveType.Left; // Spielfeld leer?
         else if ((f == '$' || f == '*') && px > 1) // Kiste vorhanden und theoretisch Platz dahinter?
         {
-          f = field.GetField(p - 2);
+          f = field.GetFieldChar(p - 2);
           if (f == ' ' || f == '.') result |= MoveType.LeftPush; // Feld hinter der Kiste leer?
         }
       }
@@ -126,11 +126,11 @@ namespace SokoWahnLib
       // --- rechts prüfen ---
       if (px < w - 1)
       {
-        char f = field.GetField(p + 1);
+        char f = field.GetFieldChar(p + 1);
         if (f == ' ' || f == '.') result |= MoveType.Right; // Spielfeld leer?
         else if ((f == '$' || f == '*') && px < w - 2) // Kiste vorhanden und theoretisch Platz dahinter?
         {
-          f = field.GetField(p + 2);
+          f = field.GetFieldChar(p + 2);
           if (f == ' ' || f == '.') result |= MoveType.RightPush; // Feld hinter der Kiste leer?
         }
       }
@@ -138,11 +138,11 @@ namespace SokoWahnLib
       // --- oben prüfen ---
       if (py > 0)
       {
-        char f = field.GetField(p - w);
+        char f = field.GetFieldChar(p - w);
         if (f == ' ' || f == '.') result |= MoveType.Up; // Spielfeld leer?
         else if ((f == '$' || f == '*') && py > 1) // Kiste vorhanden und theoretisch Platz dahinter?
         {
-          f = field.GetField(p - w * 2);
+          f = field.GetFieldChar(p - w * 2);
           if (f == ' ' || f == '.') result |= MoveType.UpPush; // Feld hinter der Kiste leer?
         }
       }
@@ -150,11 +150,11 @@ namespace SokoWahnLib
       // --- unten prüfen ---
       if (py < h - 1)
       {
-        char f = field.GetField(p + w);
+        char f = field.GetFieldChar(p + w);
         if (f == ' ' || f == '.') result |= MoveType.Down; // Spielfeld leer?
         else if ((f == '$' || f == '*') && py < h - 2) // Kiste vorhanden und theoretisch Platz dahinter?
         {
-          f = field.GetField(p + w * 2);
+          f = field.GetFieldChar(p + w * 2);
           if (f == ' ' || f == '.') result |= MoveType.DownPush; // Feld hinter der Kiste leer?
         }
       }
@@ -172,11 +172,11 @@ namespace SokoWahnLib
     /// <returns>true, wenn es sich um eine Ecke handelt</returns>
     public static bool CheckCorner(this ISokoField field, int pos)
     {
-      if (pos < 0 || pos >= field.Width * field.Height || field.GetField(pos) == '#') return true; // ungültige Felder zählen auch als "Ecken"
-      bool left = field.GetField(pos - 1) == '#';
-      bool right = field.GetField(pos + 1) == '#';
-      bool top = field.GetField(pos - field.Width) == '#';
-      bool bottom = field.GetField(pos + field.Width) == '#';
+      if (pos < 0 || pos >= field.Width * field.Height || field.GetFieldChar(pos) == '#') return true; // ungültige Felder zählen auch als "Ecken"
+      bool left = field.GetFieldChar(pos - 1) == '#';
+      bool right = field.GetFieldChar(pos + 1) == '#';
+      bool top = field.GetFieldChar(pos - field.Width) == '#';
+      bool bottom = field.GetFieldChar(pos + field.Width) == '#';
       return top && (left || right) || bottom && (left || right);
     }
 
@@ -189,7 +189,7 @@ namespace SokoWahnLib
     public static bool IsPlayer(this ISokoField field, int pos)
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
-      char c = field.GetField(pos);
+      char c = field.GetFieldChar(pos);
       return c == '@' || c == '+';
     }
 
@@ -202,7 +202,7 @@ namespace SokoWahnLib
     public static bool IsBox(this ISokoField field, int pos)
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
-      char c = field.GetField(pos);
+      char c = field.GetFieldChar(pos);
       return c == '$' || c == '*';
     }
 
@@ -215,7 +215,7 @@ namespace SokoWahnLib
     public static bool IsGoal(this ISokoField field, int pos)
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
-      char c = field.GetField(pos);
+      char c = field.GetFieldChar(pos);
       return c == '.' || c == '*' || c == '+';
     }
 
@@ -228,7 +228,7 @@ namespace SokoWahnLib
     public static bool IsFree(this ISokoField field, int pos)
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
-      char c = field.GetField(pos);
+      char c = field.GetFieldChar(pos);
       return c == ' ' || c == '.';
     }
 
@@ -241,7 +241,7 @@ namespace SokoWahnLib
     public static bool IsWall(this ISokoField field, int pos)
     {
       if (pos < 0 || pos >= field.Width * field.Height) return false;
-      return field.GetField(pos) == '#';
+      return field.GetFieldChar(pos) == '#';
     }
   }
 }

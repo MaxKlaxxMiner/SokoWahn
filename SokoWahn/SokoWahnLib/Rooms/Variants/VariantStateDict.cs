@@ -37,9 +37,9 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt eine weitere Variante pro Raumzustand hinzu
     /// </summary>
-    /// <param name="stateId">Raumzustand, welcher betroffen ist</param>
-    /// <param name="variantId">Variante, welche hinzugefügt werden soll</param>
-    public abstract void Add(ulong stateId, ulong variantId);
+    /// <param name="state">Raumzustand, welcher betroffen ist</param>
+    /// <param name="variant">Variante, welche hinzugefügt werden soll</param>
+    public abstract void Add(ulong state, ulong variant);
 
     /// <summary>
     /// gibt alle Zustände zurück, wofür Varianten bekannt sind
@@ -50,9 +50,9 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
     /// </summary>
-    /// <param name="stateId">Raumzustand, welche abgefragt werden soll</param>
+    /// <param name="state">Raumzustand, welche abgefragt werden soll</param>
     /// <returns>Enumerable der zugehörigen Varianten</returns>
-    public abstract IEnumerable<ulong> GetVariants(ulong stateId);
+    public abstract IEnumerable<ulong> GetVariants(ulong state);
 
     #region # // --- Dispose ---
     /// <summary>

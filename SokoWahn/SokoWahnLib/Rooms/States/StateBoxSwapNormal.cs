@@ -31,31 +31,31 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt eine weitere Variante pro Raumzustand hinzu
     /// </summary>
-    /// <param name="oldStateId">vorheriger Raum-Zustand</param>
-    /// <param name="newStateId">nachfolgender Raum-Zustand, nachdem eine Kiste rein geschoben wurde</param>
-    public override void Add(ulong oldStateId, ulong newStateId)
+    /// <param name="oldState">vorheriger Raum-Zustand</param>
+    /// <param name="newState">nachfolgender Raum-Zustand, nachdem eine Kiste rein geschoben wurde</param>
+    public override void Add(ulong oldState, ulong newState)
     {
-      Debug.Assert(oldStateId < stateList.Count);
-      Debug.Assert(newStateId < stateList.Count);
-      Debug.Assert(oldStateId != newStateId);
+      Debug.Assert(oldState < stateList.Count);
+      Debug.Assert(newState < stateList.Count);
+      Debug.Assert(oldState != newState);
 
-      Debug.Assert(stateList.Get(oldStateId).Length + 1 == stateList.Get(newStateId).Length); // Kisten-Anzahl muss beim neuen Zustand genau um eins höher sein
-      Debug.Assert(stateList.Get(oldStateId).Concat(stateList.Get(newStateId)).GroupBy(x => x).Count(x => x.Count() != 2) == 1); // nur eine Kistenänderung darf enthalten sein
+      Debug.Assert(stateList.Get(oldState).Length + 1 == stateList.Get(newState).Length); // Kisten-Anzahl muss beim neuen Zustand genau um eins höher sein
+      Debug.Assert(stateList.Get(oldState).Concat(stateList.Get(newState)).GroupBy(x => x).Count(x => x.Count() != 2) == 1); // nur eine Kistenänderung darf enthalten sein
 
-      data.Add(oldStateId, newStateId);
+      data.Add(oldState, newState);
     }
 
     /// <summary>
     /// gibt einen bestimmten Zustandswechsel zurück (oder gleiche ID, wenn keine Kiste aufgenommen werden kann)
     /// </summary>
-    /// <param name="stateId">Zustand, welcher abgefragt werden soll</param>
+    /// <param name="state">Zustand, welcher abgefragt werden soll</param>
     /// <returns>Zustand-ID nach dem Wechsel (oder gleiche ID, wenn keine Kiste aufgenommen werden könnte)</returns>
-    public override ulong Get(ulong stateId)
+    public override ulong Get(ulong state)
     {
-      Debug.Assert(stateId < stateList.Count);
+      Debug.Assert(state < stateList.Count);
 
-      ulong newStateId;
-      return data.TryGetValue(stateId, out newStateId) ? newStateId : stateId;
+      ulong nextState;
+      return data.TryGetValue(state, out nextState) ? nextState : state;
     }
 
     /// <summary>

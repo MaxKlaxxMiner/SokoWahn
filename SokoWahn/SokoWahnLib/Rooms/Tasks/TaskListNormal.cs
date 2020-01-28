@@ -7,7 +7,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// einfachste Implementierung einer Aufgaben-Liste
   /// </summary>
-  public class TaskListNormal : TaskList
+  public sealed class TaskListNormal : TaskList
   {
     /// <summary>
     /// merkt sich die Daten der Aufgaben

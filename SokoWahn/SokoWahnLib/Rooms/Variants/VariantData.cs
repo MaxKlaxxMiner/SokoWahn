@@ -1,5 +1,4 @@
 ﻿// ReSharper disable NotAccessedField.Global
-
 using System.Linq;
 using System.Text;
 // ReSharper disable UnusedMember.Global
@@ -14,7 +13,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// vorheriger Raum-Zustand
     /// </summary>
-    public ulong oldStateId;
+    public ulong oldState;
     /// <summary>
     /// Anzahl der Bewegungsschritte (nur Bewegungen innerhalb des Raumes und beim Verlassen des Raumes wird gezählt)
     /// </summary>
@@ -26,15 +25,15 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// alle Portale, wohin eine Kiste rausgeschoben wurde
     /// </summary>
-    public uint[] boxPortals;
+    public uint[] boxPortalsIndices;
     /// <summary>
     /// Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)
     /// </summary>
-    public uint playerPortal;
+    public uint playerPortalIndex;
     /// <summary>
     /// nachfolgender Raum-Zustand
     /// </summary>
-    public ulong newStateId;
+    public ulong newState;
     /// <summary>
     /// optionaler Pfad in XSB-Schreibweise (lrudLRUD bzw. auch RLE komprimiert erlaubt)
     /// </summary>

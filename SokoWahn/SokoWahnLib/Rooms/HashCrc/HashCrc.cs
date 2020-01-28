@@ -5,7 +5,7 @@
 namespace SokoWahnLib.Rooms
 {
   /// <summary>
-  /// Hashtable zum speichern von Prüsummen und Spieltiefen
+  /// Hash-Tabelle zum speichern von Prüsummen und Spieltiefen
   /// </summary>
   public abstract class HashCrc : IDisposable
   {

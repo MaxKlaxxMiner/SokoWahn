@@ -19,28 +19,28 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// merkt sich alle Felder, welche zum Raum gehören
     /// </summary>
-    public readonly int[] fields;
+    public readonly int[] fieldPosis;
     /// <summary>
     /// merkt sich die Zielfelder, welche zum Raum gehören
     /// </summary>
-    public readonly int[] goals;
+    public readonly int[] goalPosis;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
-    /// <param name="fields">alle Felder, welche zum Raum gehören</param>
-    /// <param name="goals">die Zielfelder, welche zum Raum gehören</param>
-    protected StateList(int[] fields, int[] goals)
+    /// <param name="fieldPosis">alle Felder, welche zum Raum gehören</param>
+    /// <param name="goalPosis">die Zielfelder, welche zum Raum gehören</param>
+    protected StateList(int[] fieldPosis, int[] goalPosis)
     {
-      if (fields == null) throw new ArgumentNullException("fields");
-      if (goals == null) throw new ArgumentNullException("goals");
+      if (fieldPosis == null) throw new ArgumentNullException("fieldPosis");
+      if (goalPosis == null) throw new ArgumentNullException("goalPosis");
 
-      Debug.Assert(fields.Length > 0);          // es muss mindestens ein Spielfeld vorhanden sein
-      Debug.Assert(goals.All(fields.Contains)); // alle Zielfelder müssen zum Spielfeld gehören
-      Debug.Assert(fields.Length == new HashSet<int>(fields).Count && goals.Length == new HashSet<int>(goals).Count); // Doppler sind nicht erlaubt
+      Debug.Assert(fieldPosis.Length > 0);          // es muss mindestens ein Spielfeld vorhanden sein
+      Debug.Assert(goalPosis.All(fieldPosis.Contains)); // alle Zielfelder müssen zum Spielfeld gehören
+      Debug.Assert(fieldPosis.Length == new HashSet<int>(fieldPosis).Count && goalPosis.Length == new HashSet<int>(goalPosis).Count); // Doppler sind nicht erlaubt
 
-      this.fields = fields;
-      this.goals = goals;
+      this.fieldPosis = fieldPosis;
+      this.goalPosis = goalPosis;
     }
 
     /// <summary>
@@ -51,9 +51,9 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt einen weiteren Zustand in die Liste hinzu und gibt die entsprechende ID zurück
     /// </summary>
-    /// <param name="boxes">Kisten-Positionen des Zustandes</param>
+    /// <param name="boxIndices">Kisten-Positionen des Zustandes</param>
     /// <returns>ID des neuen Zustandes</returns>
-    public abstract ulong Add(int[] boxes);
+    public abstract ulong Add(int[] boxIndices);
 
     /// <summary>
     /// gibt die Kisten-Positionen eines bestimmten Zustandes zurück
@@ -69,7 +69,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>Enumerable aller Zustände</returns>
     public IEnumerable<KeyValuePair<ulong, int[]>> AsEnumerable()
     {
-      for (ulong id = 0; id < Count; id++) yield return new KeyValuePair<ulong, int[]>(id, Get(id));
+      for (ulong state = 0; state < Count; state++) yield return new KeyValuePair<ulong, int[]>(state, Get(state));
     }
 
     /// <summary>

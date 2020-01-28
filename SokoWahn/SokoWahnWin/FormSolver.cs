@@ -16,27 +16,27 @@ namespace SokoWahnWin
 {
   public sealed partial class FormSolver : Form
   {
-    RoomNetwork network;
-    RoomSolver solver;
+    RoomNetwork roomNetwork;
+    RoomSolver roomSolver;
     DisplaySettings displaySettings;
     readonly FieldDisplay fieldDisplay;
 
     /// <summary>
     /// setzt ein neues Spielfeld-Netzwerk zum Lösen
     /// </summary>
-    /// <param name="network">Netzwerk, welches gelöst werden soll</param>
-    public void InitRoomNetwork(RoomNetwork network)
+    /// <param name="roomNetwork">Netzwerk, welches gelöst werden soll</param>
+    public void InitRoomNetwork(RoomNetwork roomNetwork)
     {
-      if (ReferenceEquals(this.network, network)) return; // gleiches Spielfeld/Netzwerk?
+      if (ReferenceEquals(this.roomNetwork, roomNetwork)) return; // gleiches Spielfeld/Netzwerk?
 
-      this.network = network;
-      solver = new RoomSolver(network, () =>
+      this.roomNetwork = roomNetwork;
+      roomSolver = new RoomSolver(roomNetwork, () =>
       {
         UpdateSolverDisplay();
         DisplayUpdate();
         Application.DoEvents();
       });
-      displaySettings = new DisplaySettings(network.field);
+      displaySettings = new DisplaySettings(roomNetwork.field);
       UpdateSolverDisplay();
     }
 
@@ -55,9 +55,9 @@ namespace SokoWahnWin
     /// </summary>
     void DisplayUpdate()
     {
-      if (network == null) return; // Räume noch nicht initialisiert?
+      if (roomNetwork == null) return; // Räume noch nicht initialisiert?
 
-      fieldDisplay.Update(network, displaySettings);
+      fieldDisplay.Update(roomNetwork, displaySettings);
     }
 
     /// <summary>
@@ -108,9 +108,9 @@ namespace SokoWahnWin
     /// </summary>
     void UpdateSolverDisplay()
     {
-      displaySettings.playerPos = solver.CurrentPlayerPos;
-      displaySettings.boxes = solver.CurrentBoxes;
-      textBoxLog.Text = solver.ToString();
+      displaySettings.playerPos = roomSolver.CurrentPlayerPos;
+      displaySettings.boxes = roomSolver.CurrentBoxIndices;
+      textBoxLog.Text = roomSolver.ToString();
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ namespace SokoWahnWin
     /// <param name="e">zusätzliche Event-Infos</param>
     void buttonSolve_Click(object sender, EventArgs e)
     {
-      solver.Search(1);
+      roomSolver.SearchCycle(1);
       UpdateSolverDisplay();
     }
   }
