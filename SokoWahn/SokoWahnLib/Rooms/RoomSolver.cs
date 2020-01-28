@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 // ReSharper disable UnusedMethodReturnValue.Global
 // ReSharper disable NotAccessedField.Local
+// ReSharper disable RedundantIfElseBlock
 
 namespace SokoWahnLib.Rooms
 {
@@ -67,7 +68,7 @@ namespace SokoWahnLib.Rooms
     SolveState solveState = SolveState.Init;
 
     /// <summary>
-    /// merkt sich alle bereits verarbeiteten Hash-Einträge
+    /// merkt sich alle bereits verarbeiteten Hash-Einträge (nur Varianten mit Kisten verschiebungen)
     /// </summary>
     readonly HashCrc hashTable = new HashCrcNormal();
 
@@ -143,7 +144,8 @@ namespace SokoWahnLib.Rooms
           {
             // --- Aufgabe prüfen und in die Aufgaben-Liste hinzufügen ---
             Array.Copy(currentState, tmpStates, tmpStates.Length);
-            int okMoves = ResolveMoves(tmpStates, rooms[startRoom], variantId);
+            int pushes;
+            int okMoves = ResolveVariant(tmpStates, rooms[startRoom], variantId, out pushes);
             if (okMoves >= 0)
             {
               ulong crc = Crc64.Get(tmpStates);
@@ -181,11 +183,9 @@ namespace SokoWahnLib.Rooms
           for (; maxTicks > 0 && taskList.Count > 0; maxTicks--)
           {
             taskList.FetchFirst(currentState);
-            uint room = (uint)(currentState[roomCount] >> VariantBits);
-            ulong variantId = currentState[roomCount] & VariantMask;
 
             // --- Aufgabe prüfen und neue Einträge in die Aufgaben-Liste hinzufügen ---
-            foreach (int okMoves in VariantMoves(currentState, rooms[room], variantId))
+            foreach (int okMoves in VariantMoves(currentState))
             {
               int totalMoves = moveForwardStep + okMoves;
               ulong crc = Crc64.Get(currentState);
@@ -197,14 +197,7 @@ namespace SokoWahnLib.Rooms
                   throw new NotImplementedException();
                 }
 
-                if (oldMoves == ulong.MaxValue) // neue Variante in HashTable merken
-                {
-                  hashTable.Add(crc, (uint)totalMoves);
-                }
-                else // bessere Variante in Hashtable aktualisieren
-                {
-                  hashTable.Update(crc, (uint)totalMoves);
-                }
+                if (oldMoves == ulong.MaxValue) hashTable.Add(crc, (uint)totalMoves); else hashTable.Update(crc, (uint)totalMoves);
 
                 // --- Variante als Aufgabe hinzufügen ---
                 while (totalMoves >= moveForwardTasks.Count) moveForwardTasks.Add(new TaskListNormal(roomCount + 1));
@@ -228,16 +221,18 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
-    /// berechnet eine neue Variante und die Anzahl der Laufschritte zurück (oder -1, wenn die Variante ungültig ist)
+    /// berechnet eine Variante durch und gibt die Anzahl der Laufschritte zurück (oder -1, wenn die Variante ungültig ist)
     /// </summary>
     /// <param name="states">Array mit den Zuständen, welche aktualisiert werden sollen</param>
     /// <param name="room">aktueller Raum für die Berechnung</param>
     /// <param name="variantId">Variante im Raum, welche verwendet werden soll</param>
-    /// <returns>Anzahl der Laufschritte oder -1 wenn der Zug ungültig ist</returns>
-    static int ResolveMoves(ulong[] states, Room room, ulong variantId)
+    /// <param name="pushes">Anzahl der durchgeführten Kistenverschiebungen</param>
+    /// <returns>Anzahl der erkannten Laufschritte oder -1 wenn die Variante ungültig ist</returns>
+    static int ResolveVariant(ulong[] states, Room room, ulong variantId, out int pushes)
     {
       Debug.Assert(variantId < room.variantList.Count);
       var vData = room.variantList.GetData(variantId);
+      pushes = (int)(uint)vData.pushes;
 
       foreach (var boxPortal in vData.boxPortals) // Kisten wurden durch benachbarte Portale geschoben?
       {
@@ -267,29 +262,96 @@ namespace SokoWahnLib.Rooms
     /// verarbeitet eine Varianten und gibt alle gültigen Sub-Varianten zurück
     /// </summary>
     /// <param name="states">Array mit den Zuständen, welche aktualisiert werden sollen</param>
-    /// <param name="room">aktueller Raum für die Berechnung</param>
-    /// <param name="variantId">Variante im Raum, welche verwendet werden soll</param>
     /// <returns>Enumerable der Anzahl der Moves pro Variante, gleichzeitig wird states erneuert</returns>
-    static IEnumerable<int> VariantMoves(ulong[] states, Room room, ulong variantId)
+    IEnumerable<int> VariantMoves(ulong[] states)
     {
+      uint roomIndex = (uint)(states[roomCount] >> VariantBits);
+      var room = rooms[roomIndex];
+      ulong variantId = states[roomCount] & VariantMask;
+
       Debug.Assert(variantId < room.variantList.Count);
       var vData = room.variantList.GetData(variantId);
 
-      if (vData.playerPortal == uint.MaxValue) // End-Stellung bereits erreicht?
+      if (vData.playerPortal == uint.MaxValue) // End-Stellung erreicht?
       {
         throw new NotImplementedException();
       }
 
-      // --- original Zustände sichern ---
-      var originStates = new ulong[states.Length];
-      Array.Copy(states, originStates, states.Length);
-
       var oPortal = room.outgoingPortals[vData.playerPortal];
-      foreach (var vId in oPortal.variantStateDict.GetVariants(originStates[oPortal.toRoom.roomIndex])) // alle Sub-Varianten durcharbeiten
+
+      // todo: Rückgabe-Varianten sammeln und vorher von Dopplern befreien
+
+      using (var tmpHash = new HashCrcNormal()) // temporäre Hashtable zum merken bereits verarbeiteter Varianten
+      using (var tmpMoveTasks = new TaskListNormal((uint)states.Length)) // temporäre Aufgaben-Liste für die Lauf-Varianten, welche noch geprüft werden müssen
       {
-        Array.Copy(originStates, states, states.Length);
-        states[states.Length - 1] = (ulong)oPortal.toRoom.roomIndex << VariantBits | vId;
-        yield return ResolveMoves(states, oPortal.toRoom, vId);
+        // --- original Zustände sichern ---
+        var originStates = new ulong[states.Length];
+        Array.Copy(states, originStates, states.Length);
+
+        foreach (var vId in oPortal.variantStateDict.GetVariants(originStates[oPortal.toRoom.roomIndex])) // alle Sub-Varianten durcharbeiten
+        {
+          Array.Copy(originStates, states, states.Length);
+          states[states.Length - 1] = (ulong)oPortal.toRoom.roomIndex << VariantBits | vId;
+          int pushes;
+          int moves = ResolveVariant(states, oPortal.toRoom, vId, out pushes);
+          ulong crc = Crc64.Get(states);
+          ulong crcMoves = tmpHash.Get(crc, ulong.MaxValue);
+          if (crcMoves <= (uint)moves) continue; // Variante schon bekannt (bzw. bereits eine Bessere gefunden)
+          if (crcMoves == ulong.MaxValue) tmpHash.Add(crc, (uint)moves); else tmpHash.Update(crc, (uint)moves);
+
+          if (pushes > 0) // Variante mit Kistenverschiebung gefunden 
+          {
+            yield return moves; // direkt zurück geben
+          }
+          else
+          {
+            tmpMoveTasks.Add(states); // reine Laufvariante als Aufgabe weiter durchsuchen lassen
+          }
+        }
+
+        // --- alle gesammelten Laufvarianten weiter durchsuchen, bis Varianten mit Kistenverschiebungen erkannt wurden
+        for (; tmpMoveTasks.Count > 0; )
+        {
+          tmpMoveTasks.FetchFirst(states);
+
+          ulong baseCrc = Crc64.Get(states);
+          int baseMoves = (int)(uint)tmpHash.Get(baseCrc);
+          Debug.Assert(baseMoves > 0);
+
+          Array.Copy(states, originStates, states.Length);
+          roomIndex = (uint)(states[roomCount] >> VariantBits);
+          room = rooms[roomIndex];
+          variantId = states[roomCount] & VariantMask;
+          vData = room.variantList.GetData(variantId);
+
+          if (vData.playerPortal == uint.MaxValue) // End-Stellung erreicht?
+          {
+            throw new NotImplementedException();
+          }
+
+          oPortal = room.outgoingPortals[vData.playerPortal];
+
+          foreach (var vId in oPortal.variantStateDict.GetVariants(originStates[oPortal.toRoom.roomIndex])) // alle Sub-Varianten durcharbeiten
+          {
+            Array.Copy(originStates, states, states.Length);
+            states[states.Length - 1] = (ulong)oPortal.toRoom.roomIndex << VariantBits | vId;
+            int pushes;
+            int moves = ResolveVariant(states, oPortal.toRoom, vId, out pushes) + baseMoves;
+            ulong crc = Crc64.Get(states);
+            ulong crcMoves = tmpHash.Get(crc, ulong.MaxValue);
+            if (crcMoves <= (uint)moves) continue; // Variante schon bekannt (bzw. bereits eine Bessere gefunden)
+            if (crcMoves == ulong.MaxValue) tmpHash.Add(crc, (uint)moves); else tmpHash.Update(crc, (uint)moves);
+
+            if (pushes > 0) // Variante mit Kistenverschiebung gefunden 
+            {
+              yield return moves; // direkt zurück geben
+            }
+            else
+            {
+              tmpMoveTasks.Add(states); // reine Laufvariante als Aufgabe weiter durchsuchen lassen
+            }
+          }
+        }
       }
     }
 
