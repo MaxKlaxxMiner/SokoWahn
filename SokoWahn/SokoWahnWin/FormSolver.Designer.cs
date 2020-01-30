@@ -108,6 +108,7 @@
       this.Controls.Add(this.pictureBoxField);
       this.Name = "FormSolver";
       this.Text = "Rooms Solver";
+      this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FormSolver_FormClosed);
       this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       this.Resize += new System.EventHandler(this.FormSolver_Resize);
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).EndInit();

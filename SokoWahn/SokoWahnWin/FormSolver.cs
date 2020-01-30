@@ -99,8 +99,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Methode für gedrückte Tasten
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">Informationen über die gedrückten Tasten</param>
     void Form_KeyDown(object sender, KeyEventArgs e)
     {
       switch (e.KeyCode)
@@ -116,8 +114,6 @@ namespace SokoWahnWin
     /// <summary>
     /// automatischer Timmer für Bild-Updates
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Event-Infos</param>
     void timerDisplay_Tick(object sender, EventArgs e)
     {
       if (innerTimer) return;
@@ -129,8 +125,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Event, wenn die Fenstergröße geändert wird
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Event-Infos</param>
     void FormSolver_Resize(object sender, EventArgs e)
     {
       if (innerTimer) return;
@@ -162,18 +156,32 @@ namespace SokoWahnWin
       this.variantPath = variantPath.ToArray();
       displaySettings.playerPos = roomSolver.PlayerPathPosis.First();
       displaySettings.boxes = roomSolver.CurrentBoxIndices;
+      if (playerPosis.Length > 1)
+      {
+        displaySettings.hBack = new[] { new Highlight(0x003366, 0.7f, roomSolver.rooms[roomSolver.GetTaskRoomIndex(roomSolver.currentTask)].fieldPosis) };
+      }
+      else
+      {
+        displaySettings.hBack = new Highlight[0];
+      }
       textBoxLog.Text = roomSolver.ToString();
     }
 
     /// <summary>
     /// führt einen oder mehrere Lösungsschritte durch
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Event-Infos</param>
     void buttonSolve_Click(object sender, EventArgs e)
     {
       roomSolver.SearchCycle(1);
       UpdateSolverDisplay();
+    }
+
+    /// <summary>
+    /// beim schließen des Fensters, Programm direkt beenden
+    /// </summary>
+    void FormSolver_FormClosed(object sender, FormClosedEventArgs e)
+    {
+      Application.Exit();
     }
   }
 }

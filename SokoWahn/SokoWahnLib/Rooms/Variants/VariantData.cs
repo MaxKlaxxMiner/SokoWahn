@@ -95,5 +95,14 @@ namespace SokoWahnLib.Rooms
 
       return output.ToString();
     }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { moves, pushes, newState, boxPortalsIndices = "int[" + boxPortalsIndices.Length + "]", path }.ToString();
+    }
   }
 }

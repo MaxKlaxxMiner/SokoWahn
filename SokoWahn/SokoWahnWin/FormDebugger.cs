@@ -483,8 +483,6 @@ namespace SokoWahnWin
     /// <summary>
     /// neue Variante ausgewählt
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Event-Infos</param>
     void listVariants_SelectedIndexChanged(object sender, EventArgs e)
     {
       variantTime = 0;
@@ -511,8 +509,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Methode für gedrückte Tasten
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">Informationen über die gedrückten Tasten</param>
     void Form_KeyDown(object sender, KeyEventArgs e)
     {
       switch (e.KeyCode)
@@ -528,8 +524,6 @@ namespace SokoWahnWin
     /// <summary>
     /// automatischer Timmer für Bild-Updates
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Event-Infos</param>
     void timerDisplay_Tick(object sender, EventArgs e)
     {
       if (innerTimer) return;
@@ -541,8 +535,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Event, wenn die Fenstergröße geändert wird
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Event-Infos</param>
     void FormDebugger_Resize(object sender, EventArgs e)
     {
       if (innerTimer) return;
@@ -558,8 +550,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Mausklick in das Spielfeld
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Maus-Infos</param>
     void pictureBoxField_MouseDown(object sender, MouseEventArgs e)
     {
       if (e.Button == MouseButtons.None) return;
@@ -579,8 +569,6 @@ namespace SokoWahnWin
     /// <summary>
     /// bewegte Maus über das Spielfeld
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Maus-Infos</param>
     void pictureBoxField_MouseMove(object sender, MouseEventArgs e)
     {
       if (!fieldMouseActive) return;
@@ -599,8 +587,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Maustaste über dem Spielfeld wieder losgelassen
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">zusätzliche Maus-Infos</param>
     void pictureBoxField_MouseUp(object sender, MouseEventArgs e)
     {
       fieldMouseActive = false;
@@ -609,8 +595,6 @@ namespace SokoWahnWin
     /// <summary>
     /// passt die Größenverhältnisse der Zustandliste und Variantenliste an
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">Event-Infos</param>
     void splitContainer1_Resize(object sender, EventArgs e)
     {
       splitContainer1.SplitterDistance = (int)(splitContainer1.ClientSize.Height * 0.618);
@@ -947,8 +931,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Step-Button
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">Event-Infos</param>
     void buttonStep_Click(object sender, EventArgs e)
     {
       listRooms.BeginUpdate();
@@ -1027,8 +1009,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Validate-Button
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">Event-Infos</param>
     void buttonValidate_Click(object sender, EventArgs e)
     {
       try
@@ -1066,8 +1046,6 @@ namespace SokoWahnWin
     /// <summary>
     /// Button zum öffnen des Lösung-Fensters
     /// </summary>
-    /// <param name="sender">Objekt, welches dieses Event erzeugt hat</param>
-    /// <param name="e">Event-Infos</param>
     void buttonSolver_Click(object sender, EventArgs e)
     {
       formSolver.InitRoomNetwork(roomNetwork);
