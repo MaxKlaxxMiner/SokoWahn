@@ -15,11 +15,11 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public ulong oldState;
     /// <summary>
-    /// Anzahl der Bewegungsschritte (nur Bewegungen innerhalb des Raumes und beim Verlassen des Raumes wird gezählt)
+    /// Anzahl der Bewegungsschritte (nur Bewegungen innerhalb des Raumes und beim Verlassen des Raumes werden gezählt)
     /// </summary>
     public ulong moves;
     /// <summary>
-    /// Anzahl der Kistenverschiebungen (nur Verschiebungen innerhalb des Raumes oder beim Verlassen des Raumes wird gezählt)
+    /// Anzahl der Kistenverschiebungen (nur Verschiebungen innerhalb des Raumes oder beim Verlassen des Raumes werden gezählt)
     /// </summary>
     public ulong pushes;
     /// <summary>

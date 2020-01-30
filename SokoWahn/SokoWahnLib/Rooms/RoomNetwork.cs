@@ -138,6 +138,7 @@ namespace SokoWahnLib.Rooms
       #region # // --- Räume auf Doppler prüfen und Basis-Check der Portale ---
       var roomsHash = new HashSet<Room>();
       var posToRoom = new Dictionary<int, Room>();
+      int startRoom = -1;
       for (uint roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
       {
         var room = rooms[roomIndex];
@@ -161,8 +162,15 @@ namespace SokoWahnLib.Rooms
           if (room.outgoingPortals[p] == null) throw new Exception("ausgehendes Portal = null [" + p + "]: " + room);
         }
 
+        if (room.startVariantCount > 0)
+        {
+          if (startRoom >= 0) throw new Exception("doppelte Start-Räume gefunden: " + startRoom +" und " + roomIndex);
+          startRoom = (int)roomIndex;
+        }
+
         roomsHash.Add(room);
       }
+      if (startRoom < 0) throw new Exception("es wurde kein Start-Raum gefunden");
       if (field.GetWalkPosis().Count != posToRoom.Count) throw new Exception("nicht alle begehbaren Felder werden von allen Räumen abgedeckt");
       #endregion
 

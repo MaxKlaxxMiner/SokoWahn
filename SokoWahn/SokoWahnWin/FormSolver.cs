@@ -108,7 +108,7 @@ namespace SokoWahnWin
     /// </summary>
     void UpdateSolverDisplay()
     {
-      displaySettings.playerPos = roomSolver.CurrentPlayerPos;
+      displaySettings.playerPos = roomSolver.PlayerPathPosis.First();
       displaySettings.boxes = roomSolver.CurrentBoxIndices;
       textBoxLog.Text = roomSolver.ToString();
     }

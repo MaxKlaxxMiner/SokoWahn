@@ -338,5 +338,14 @@ namespace SokoWahnLib.Rooms
       return ReferenceEquals(obj, this);
     }
     #endregion
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return "Posis: " + string.Join(", ", fieldPosis);
+    }
   }
 }

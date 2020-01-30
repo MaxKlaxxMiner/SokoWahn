@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 // ReSharper disable UnusedMember.Global
+// ReSharper disable UnusedMethodReturnValue.Global
 #endregion
 
 namespace SokoWahnLib
@@ -161,6 +162,26 @@ namespace SokoWahnLib
 
       // --- gefundene Ergebnisse zurück geben ---
       return result;
+    }
+    #endregion
+
+    #region # public static bool SafeMove(this ISokoField field, char dirChar)
+    /// <summary>
+    /// führt einen Bewegungs-Schritt durch (laufen oder Kiste schieben) und gibt true zurück, wenn der Zug erfolgreich war
+    /// </summary>
+    /// <param name="field">Spielfeld, welches betroffen ist</param>
+    /// <param name="dirChar">Bewegungsrichtung ('l' = links, 'r' = rechts, 'u' = hoch, 'd' = runter)</param>
+    public static bool SafeMove(this ISokoField field, char dirChar)
+    {
+      var moveTypes = field.GetMoveTypes();
+      switch (dirChar)
+      {
+        case 'l': if ((moveTypes & MoveType.Left) == MoveType.None) return false; field.Move(moveTypes & MoveType.LeftPush); return true;
+        case 'r': if ((moveTypes & MoveType.Right) == MoveType.None) return false; field.Move(moveTypes & MoveType.RightPush); return true;
+        case 'u': if ((moveTypes & MoveType.Up) == MoveType.None) return false; field.Move(moveTypes & MoveType.UpPush); return true;
+        case 'd': if ((moveTypes & MoveType.Down) == MoveType.None) return false; field.Move(moveTypes & MoveType.DownPush); return true;
+        default: throw new Exception("invalid dirChar: '" + dirChar + "'");
+      }
     }
     #endregion
 

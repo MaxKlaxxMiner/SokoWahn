@@ -54,7 +54,7 @@
  | roolSolver   | Lösungs-System       | Klasse zum optimalen Lösen eines Spielfeldes mit Hilfe eines Räume-Netzwerkes                                                                  |
  | crc          | Prüfsumme            | einzelne 64-Bit CRC Prüfsumme, welche aus gesamten Levelzuständen berechnet wurde und immer eindeutig ist                                      |
  | hashTable    | Hash-Tabelle         | Tabelle, welche sich die eindeutigen Prüfsummen in Kombination mit den dazugehörigen Laufschritten merkt                                       |
- | task         | Rechen-Aufgabe       | einzelne Aufgabe: als Array bestehend aus den Zuständen aller Räume + ein Wert, welcher den aktiven Raum und die zugehörige Variante speichert |
+ | task         | Rechen-Aufgabe       | einzelne Aufgabe: als Array bestehend aus den Zuständen aller Räume + Variante + (Raum-Nummer und Nummer des eingehenden Portals)              |
  | currentTask  | Aktuelle Aufgabe     | aktuelle Aufgabe, welche momentan abgearbeitet wird (für die Live-Anzeige im Fenster geeignet), ändert sich einmal pro Arbeits-Zyklus          |
  | SearchCycle  | Arbeits-Zyklus       | Methode zum durchführen der Arbeits-Zyklen (bis eine optimale Lösung gefunden wurde)                                                           |
  | maxTicks     | Rechenschritte       | maximale Anzahl der Rechenschritte pro Arbeits-Zyklus (zum Unterteilen des Gesamtrechenaufwandes in kleinere Teile)                            |
