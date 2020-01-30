@@ -115,8 +115,29 @@ namespace SokoWahnLib.Rooms
     /// <returns>Enumerable der Spielerpositionen auf dem Spielfeld</returns>
     IEnumerable<int> GetTaskPlayerPath(ulong[] task)
     {
-      // todo
-      yield return roomNetwork.field.PlayerPos;
+      uint roomIndex = GetTaskRoomIndex(task);
+      uint iPortalIndex = GetTaskPortalIndex(task);
+      ulong variant = GetTaskVariant(task);
+      var variantData = rooms[roomIndex].variantList.GetData(variant);
+      int playerPos = iPortalIndex < uint.MaxValue ? rooms[roomIndex].incomingPortals[iPortalIndex].fromPos : roomNetwork.field.PlayerPos;
+
+      yield return playerPos;
+
+      if (variantData.path != null)
+      {
+        foreach (var c in variantData.path)
+        {
+          switch (c)
+          {
+            case 'l': playerPos--; break;
+            case 'r': playerPos++; break;
+            case 'u': playerPos -= roomNetwork.field.Width; break;
+            case 'd': playerPos += roomNetwork.field.Width; break;
+            default: throw new Exception("invalid path-char: '" + c + "'");
+          }
+          yield return playerPos;
+        }
+      }
     }
     #endregion
 
@@ -208,6 +229,7 @@ namespace SokoWahnLib.Rooms
           if (startRoomIndex < 0) throw new SokoFieldException("no start-room");
 
           SetTaskInfos(currentTask, 0, (uint)startRoomIndex, uint.MaxValue);
+          DebugConsole("Start-Variant " + 0);
 
           forwardTasks.Add(new TaskListNormal(taskLength)); // erste Aufgaben-Liste für die Start-Züge hinzufügen
 
@@ -222,11 +244,10 @@ namespace SokoWahnLib.Rooms
           ulong variant = GetTaskVariant(currentTask);
           Debug.Assert(GetTaskPortalIndex(currentTask) == uint.MaxValue);
 
-          DebugConsole("Start-Variant " + variant);
-
           for (; maxTicks > 0; maxTicks--)
           {
             // --- Start-Aufgabe in die Aufgaben-Liste hinzufügen ---
+            //todo: vorher prüfen, ob die Aufgabe gültig ist
             ulong crc = Crc64.Get(currentTask);
             hashTable.Add(crc, 0);
             forwardTasks[0].Add(currentTask);
@@ -240,6 +261,7 @@ namespace SokoWahnLib.Rooms
               goto case SolveState.ScanForward;
             }
             SetTaskInfos(currentTask, variant, startRoomIndex, uint.MaxValue);
+            DebugConsole("Start-Variant " + variant);
           }
         } break;
         #endregion

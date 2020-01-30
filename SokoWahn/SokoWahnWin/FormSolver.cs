@@ -22,6 +22,21 @@ namespace SokoWahnWin
     readonly FieldDisplay fieldDisplay;
 
     /// <summary>
+    /// Geschwindigkeit der Varianten-Anzeige (Millisekunden pro Schritt)
+    /// </summary>
+    const int VariantDelay = 300;
+
+    /// <summary>
+    /// aktuelle angezeigte Varianten-Position
+    /// </summary>
+    int variantTime;
+
+    /// <summary>
+    /// merkt sich die aktuelle Variante
+    /// </summary>
+    VariantPathElement[] variantPath;
+
+    /// <summary>
     /// setzt ein neues Spielfeld-Netzwerk zum Lösen
     /// </summary>
     /// <param name="roomNetwork">Netzwerk, welches gelöst werden soll</param>
@@ -56,6 +71,27 @@ namespace SokoWahnWin
     void DisplayUpdate()
     {
       if (roomNetwork == null) return; // Räume noch nicht initialisiert?
+
+      if (variantPath != null)
+      {
+        int time = Environment.TickCount;
+
+        int timePos = (time - variantTime) / VariantDelay;
+        if (timePos < 0)
+        {
+          variantTime = time;
+          timePos = 0;
+        }
+        if (timePos >= variantPath.Length)
+        {
+          if (timePos > variantPath.Length + 1) variantTime = time;
+          if (timePos == variantPath.Length) timePos = variantPath.Length - 1; else timePos = 0;
+        }
+
+        var el = variantPath[timePos];
+        displaySettings.playerPos = el.playerPos;
+        displaySettings.boxes = el.boxes;
+      }
 
       fieldDisplay.Update(roomNetwork, displaySettings);
     }
@@ -108,6 +144,22 @@ namespace SokoWahnWin
     /// </summary>
     void UpdateSolverDisplay()
     {
+      var playerPosis = roomSolver.PlayerPathPosis;
+      var el = new VariantPathElement(playerPosis.First(), roomSolver.CurrentBoxIndices); // Start-Stellung erzeugen
+      var variantPath = new List<VariantPathElement> { el };
+      foreach (int nextPlayerPos in playerPosis)
+      {
+        if (el.boxes.Any(pos => pos == nextPlayerPos)) // wurde eine Kiste verschoben?
+        {
+          el = new VariantPathElement(nextPlayerPos, el.boxes.Select(pos => pos == nextPlayerPos ? nextPlayerPos - el.playerPos + pos : pos).ToArray());
+        }
+        else
+        {
+          el = new VariantPathElement(nextPlayerPos, el.boxes);
+        }
+        variantPath.Add(el);
+      }
+      this.variantPath = variantPath.ToArray();
       displaySettings.playerPos = roomSolver.PlayerPathPosis.First();
       displaySettings.boxes = roomSolver.CurrentBoxIndices;
       textBoxLog.Text = roomSolver.ToString();
