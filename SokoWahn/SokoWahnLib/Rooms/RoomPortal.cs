@@ -33,6 +33,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly int toPos;
     /// <summary>
+    /// gibt die eingehende Portalnummer innerhalb des Raumes an
+    /// </summary>
+    public readonly uint iPortalIndex;
+    /// <summary>
     /// das gegenüberliegende/zurückführende Portal
     /// </summary>
     public RoomPortal oppositePortal;
@@ -53,7 +57,8 @@ namespace SokoWahnLib.Rooms
     /// <param name="fromPos">genaue Position im Quell-Raum, wo das Portal startet</param>
     /// <param name="toRoom">Ziel-Raum, wohin das Portal führt</param>
     /// <param name="toPos">genaue Position im Ziel-Raum, wohin das Portal führt</param>
-    public RoomPortal(Room fromRoom, int fromPos, Room toRoom, int toPos)
+    /// <param name="iPortalIndex">eigene Portalnummer der eingehenden Portale</param>
+    public RoomPortal(Room fromRoom, int fromPos, Room toRoom, int toPos, uint iPortalIndex)
     {
       #region # // --- Parameter prüfen ---
       if (fromRoom == null) throw new ArgumentNullException("fromRoom");
@@ -77,6 +82,8 @@ namespace SokoWahnLib.Rooms
       else if (toPos == fromPos - field.Width) dirChar = 'u';
       else if (toPos == fromPos + field.Width) dirChar = 'd';
       else throw new ArgumentException("invalid from/to pos");
+
+      this.iPortalIndex = iPortalIndex;
       #endregion
     }
     #endregion
@@ -117,5 +124,14 @@ namespace SokoWahnLib.Rooms
       return ReferenceEquals(obj, this);
     }
     #endregion
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return dirChar + ": " + fromPos + " -> " + toPos;
+    }
   }
 }

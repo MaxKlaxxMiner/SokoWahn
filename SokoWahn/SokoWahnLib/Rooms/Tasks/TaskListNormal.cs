@@ -14,21 +14,21 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     ulong[] taskData;
     /// <summary>
-    /// merkt sich die Anzahl der tatsächlich gespeicherten Aufgaben
+    /// merkt sich die Lese-Position als Aufgaben-Nummer am Anfang der Aufgaben-Liste
     /// </summary>
-    ulong taskCount;
+    ulong taskReadPos;
     /// <summary>
-    /// merkt sich die Lese-Position am Anfang der Aufgaben-Liste
+    /// merkt sich die Schreib-Position als Aufgaben-Number am Ende der Aufgaben-Liste
     /// </summary>
-    ulong taskPos;
+    ulong taskWritePos;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
-    public TaskListNormal(uint taskLength)
-      : base(taskLength)
+    public TaskListNormal(uint taskSize)
+      : base(taskSize)
     {
-      taskData = new ulong[taskLength];
+      taskData = new ulong[taskSize];
     }
 
     /// <summary>
@@ -37,15 +37,15 @@ namespace SokoWahnLib.Rooms
     /// <param name="newTask">Array mit den Daten der Aufgabe</param>
     public override void Add(ulong[] newTask)
     {
-      Debug.Assert(taskLength <= newTask.Length);
+      Debug.Assert(taskSize == newTask.Length);
 
-      ulong taskOffset = taskCount++ * taskLength;
+      ulong taskOffset = taskWritePos++ * taskSize;
       if (taskOffset == (uint)taskData.Length)
       {
         Array.Resize(ref taskData, taskData.Length * 2); // Array vergrößern
       }
 
-      for (ulong i = 0; i < taskLength; i++) taskData[taskOffset + i] = newTask[i];
+      for (ulong i = 0; i < taskSize; i++) taskData[taskOffset + i] = newTask[i];
     }
 
     /// <summary>
@@ -55,11 +55,11 @@ namespace SokoWahnLib.Rooms
     /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
     public override bool FetchFirst(ulong[] readTask)
     {
-      Debug.Assert(taskLength <= readTask.Length);
-      if (taskPos == taskCount) return false; // keine Aufgaben zum Lesen vorhanden?
+      Debug.Assert(taskSize <= readTask.Length);
+      if (taskReadPos == taskWritePos) return false; // keine Aufgaben zum Lesen vorhanden?
 
-      ulong taskOffset = taskPos++ * taskLength;
-      for (ulong i = 0; i < taskLength; i++) readTask[i] = taskData[taskOffset + i];
+      ulong taskOffset = taskReadPos++ * taskSize;
+      for (ulong i = 0; i < taskSize; i++) readTask[i] = taskData[taskOffset + i];
 
       return true;
     }
@@ -72,7 +72,7 @@ namespace SokoWahnLib.Rooms
     public override bool PeekFirst(ulong[] readTask)
     {
       if (!FetchFirst(readTask)) return false;
-      taskPos--; // Vorwärtszählung rückgängig machen
+      taskReadPos--; // Vorwärtszählung rückgängig machen
       return true;
     }
 
@@ -83,11 +83,11 @@ namespace SokoWahnLib.Rooms
     /// <returns>true, wenn die Aufgabe gelesen wurde (sonst false)</returns>
     public override bool FetchLast(ulong[] readTask)
     {
-      Debug.Assert(taskLength <= readTask.Length);
-      if (taskPos == taskCount) return false; // keine Aufgaben zum Lesen vorhanden?
+      Debug.Assert(taskSize <= readTask.Length);
+      if (taskReadPos == taskWritePos) return false; // keine Aufgaben zum Lesen vorhanden?
 
-      ulong taskOffset = --taskCount * taskLength;
-      for (ulong i = 0; i < taskLength; i++) readTask[i] = taskData[taskOffset + i];
+      ulong taskOffset = --taskWritePos * taskSize;
+      for (ulong i = 0; i < taskSize; i++) readTask[i] = taskData[taskOffset + i];
 
       return true;
     }
@@ -100,7 +100,7 @@ namespace SokoWahnLib.Rooms
     public override bool PeekLast(ulong[] readTask)
     {
       if (!FetchLast(readTask)) return false;
-      taskCount++; // Abwärtszählung rückgängig machen
+      taskWritePos++; // Abwärtszählung rückgängig machen
       return true;
     }
 
@@ -109,7 +109,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public override ulong Count
     {
-      get { return taskCount - taskPos; }
+      get { return taskWritePos - taskReadPos; }
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
-      return new { Count, taskPos, taskCount }.ToString();
+      return new { Count, taskReadPos, taskWritePos, bufferSize = (taskData.LongLength * sizeof(ulong) / 1024.0).ToString("N1") + " kByte" }.ToString();
     }
   }
 }

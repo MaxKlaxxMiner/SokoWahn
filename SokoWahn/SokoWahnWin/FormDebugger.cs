@@ -308,7 +308,7 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.playerPortalIndex < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -369,7 +369,7 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.playerPortalIndex < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -618,8 +618,8 @@ namespace SokoWahnWin
       for (ulong variant = 0; variant < variantList.Count; variant++)
       {
         var variantData = variantList.GetData(variant);
-        if (variantData.boxPortalsIndices.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
-        foreach (var boxPortal in variantData.boxPortalsIndices) boxPortals.Add(boxPortal);
+        if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+        foreach (var boxPortal in variantData.oPortalIndexBoxes) boxPortals.Add(boxPortal);
       }
       #endregion
 
@@ -630,9 +630,9 @@ namespace SokoWahnWin
         for (ulong variant = 0; variant < room.startVariantCount; variant++)
         {
           var variantData = variantList.GetData(variant);
-          if (variantData.boxPortalsIndices.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+          if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
 
-          foreach (var boxPortal in variantData.boxPortalsIndices)
+          foreach (var boxPortal in variantData.oPortalIndexBoxes)
           {
             var oPortal = room.outgoingPortals[boxPortal];
             if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
@@ -652,9 +652,9 @@ namespace SokoWahnWin
             foreach (var variant in portal.variantStateDict.GetVariants(st.Key))
             {
               var variantData = variantList.GetData(variant);
-              if (variantData.boxPortalsIndices.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
+              if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
 
-              foreach (var boxPortal in variantData.boxPortalsIndices)
+              foreach (var boxPortal in variantData.oPortalIndexBoxes)
               {
                 var oPortal = room.outgoingPortals[boxPortal];
                 if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
@@ -761,7 +761,7 @@ namespace SokoWahnWin
             for (ulong variant = 0; variant < variantList.Count; variant++)
             {
               var variantData = variantList.GetData(variant);
-              if (variantData.boxPortalsIndices.Length == 0 && skipStates.map[variantData.oldState] != ulong.MaxValue && skipStates.map[variantData.newState] != ulong.MaxValue)
+              if (variantData.oPortalIndexBoxes.Length == 0 && skipStates.map[variantData.oldState] != ulong.MaxValue && skipStates.map[variantData.newState] != ulong.MaxValue)
               {
                 usingVariants.SetBit(variant);
               }
@@ -802,7 +802,7 @@ namespace SokoWahnWin
         if (map == ulong.MaxValue) continue;
         Debug.Assert(map == newVariants.Count);
         var v = oldVariants.GetData(variant);
-        newVariants.Add(v.oldState, v.moves, v.pushes, v.boxPortalsIndices, v.playerPortalIndex, v.newState, v.path);
+        newVariants.Add(v.oldState, v.moves, v.pushes, v.oPortalIndexBoxes, v.oPortalIndexPlayer, v.newState, v.path);
       }
       Debug.Assert(newVariants.Count == skip.usedCount);
       oldVariants.Dispose();
@@ -879,7 +879,7 @@ namespace SokoWahnWin
         Debug.Assert(v.newState < oldStates.Count);
         Debug.Assert(skip.map[v.newState] < newStates.Count);
         Debug.Assert(variant == newVariants.Count);
-        newVariants.Add(skip.map[v.oldState], v.moves, v.pushes, v.boxPortalsIndices, v.playerPortalIndex, skip.map[v.newState], v.path);
+        newVariants.Add(skip.map[v.oldState], v.moves, v.pushes, v.oPortalIndexBoxes, v.oPortalIndexPlayer, skip.map[v.newState], v.path);
       }
       oldVariants.Dispose();
       Debug.Assert(newVariants.Count == oldVariants.Count);
@@ -962,7 +962,7 @@ namespace SokoWahnWin
         for (ulong variant = 0; variant < variantList.Count; variant++)
         {
           var v = variantList.GetData(variant);
-          foreach (uint p in v.boxPortalsIndices) outgoingBoxPortals[p] = true;
+          foreach (uint p in v.oPortalIndexBoxes) outgoingBoxPortals[p] = true;
         }
         if (outgoingBoxPortals.Any(x => x)) roomsBoxesPass.Add(checkRoom);
         for (uint p = 0; p < outgoingBoxPortals.Length; p++)

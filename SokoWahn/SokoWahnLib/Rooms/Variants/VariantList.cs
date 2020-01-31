@@ -45,12 +45,12 @@ namespace SokoWahnLib.Rooms
     /// <param name="oldState">vorheriger Raum-Zustand</param>
     /// <param name="moves">Anzahl der Bewegungsschritte (nur Bewegungen innerhalb des Raumes und beim Verlassen des Raumes wird gezählt)</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen (nur Verschiebungen innerhalb des Raumes oder beim Verlassen des Raumes wird gezählt)</param>
-    /// <param name="boxPortalsIndices">alle Portale, wohin eine Kiste rausgeschoben wurde</param>
-    /// <param name="playerPortalIndex">Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)</param>
+    /// <param name="oPortalIndexBoxes">alle Portale, wohin eine Kiste rausgeschoben wurde</param>
+    /// <param name="oPortalIndexPlayer">Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)</param>
     /// <param name="newState">nachfolgender Raum-Zustand</param>
     /// <param name="path">optionaler Pfad in XSB-Schreibweise (lrudLRUD bzw. auch RLE komprimiert erlaubt)</param>
     /// <returns>neue Varianten-ID</returns>
-    public abstract ulong Add(ulong oldState, ulong moves, ulong pushes, uint[] boxPortalsIndices, uint playerPortalIndex, ulong newState, string path = null);
+    public abstract ulong Add(ulong oldState, ulong moves, ulong pushes, uint[] oPortalIndexBoxes, uint oPortalIndexPlayer, ulong newState, string path = null);
 
     /// <summary>
     /// fragt die Daten einer bestimmten Variante ab

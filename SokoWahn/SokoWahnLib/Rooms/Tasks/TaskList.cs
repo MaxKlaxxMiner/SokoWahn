@@ -12,16 +12,16 @@ namespace SokoWahnLib.Rooms
   public abstract class TaskList : IDisposable
   {
     /// <summary>
-    /// gibt die Länge einer einzelnen Aufgabe an (roomCount + 1)
+    /// merk sich die Länge einer einzelnen Aufgabe (roomCount + 2)
     /// </summary>
-    public readonly uint taskLength;
+    public readonly uint taskSize;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
-    protected TaskList(uint taskLength)
+    protected TaskList(uint taskSize)
     {
-      this.taskLength = taskLength;
+      this.taskSize = taskSize;
     }
 
     /// <summary>

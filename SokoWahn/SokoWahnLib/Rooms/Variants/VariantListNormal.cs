@@ -44,14 +44,14 @@ namespace SokoWahnLib.Rooms
     /// <param name="oldState">vorheriger Raum-Zustand</param>
     /// <param name="moves">Anzahl der Bewegungsschritte (nur Bewegungen innerhalb des Raumes und beim Verlassen des Raumes wird gezählt)</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen (nur Verschiebungen innerhalb des Raumes oder beim Verlassen des Raumes wird gezählt)</param>
-    /// <param name="boxPortalsIndices">alle Portale, wohin eine Kiste rausgeschoben wurde</param>
-    /// <param name="playerPortalIndex">Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)</param>
+    /// <param name="oPortalIndexBoxes">alle Portale, wohin eine Kiste rausgeschoben wurde</param>
+    /// <param name="oPortalIndexPlayer">Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)</param>
     /// <param name="newState">nachfolgender Raum-Zustand</param>
     /// <param name="path">optionaler Pfad in XSB-Schreibweise (lrudLRUD bzw. auch RLE komprimiert erlaubt)</param>
     /// <returns>neue Varianten-ID</returns>
-    public override ulong Add(ulong oldState, ulong moves, ulong pushes, uint[] boxPortalsIndices, uint playerPortalIndex, ulong newState, string path = null)
+    public override ulong Add(ulong oldState, ulong moves, ulong pushes, uint[] oPortalIndexBoxes, uint oPortalIndexPlayer, ulong newState, string path = null)
     {
-      if (playerPortalIndex == uint.MaxValue)
+      if (oPortalIndexPlayer == uint.MaxValue)
       {
         endVariants++;
         Debug.Assert(moves + 1 >= pushes);
@@ -61,12 +61,12 @@ namespace SokoWahnLib.Rooms
         Debug.Assert(moves > 0);
         Debug.Assert(moves  >= pushes);
       }
-      Debug.Assert(boxPortalsIndices.All(portal => portal < portalCount));
-      Debug.Assert(playerPortalIndex < portalCount || (playerPortalIndex == uint.MaxValue && newState == 0)); // Spieler verlässt den Raum oder kann bleiben, wenn der End-Zustand erreicht wurde
+      Debug.Assert(oPortalIndexBoxes.All(portal => portal < portalCount));
+      Debug.Assert(oPortalIndexPlayer < portalCount || (oPortalIndexPlayer == uint.MaxValue && newState == 0)); // Spieler verlässt den Raum oder kann bleiben, wenn der End-Zustand erreicht wurde
       Debug.Assert(path != null && (ulong)VariantData.UncompressPath(path).Length == moves);
 
       ulong id = (uint)variantData.Count;
-      variantData.Add(new VariantData { oldState = oldState, moves = moves, pushes = pushes, boxPortalsIndices = boxPortalsIndices, playerPortalIndex = playerPortalIndex, newState = newState, path = path });
+      variantData.Add(new VariantData { oldState = oldState, moves = moves, pushes = pushes, oPortalIndexBoxes = oPortalIndexBoxes, oPortalIndexPlayer = oPortalIndexPlayer, newState = newState, path = path });
       return id;
     }
 

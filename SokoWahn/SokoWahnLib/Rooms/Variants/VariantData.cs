@@ -25,11 +25,11 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// alle Portale, wohin eine Kiste rausgeschoben wurde
     /// </summary>
-    public uint[] boxPortalsIndices;
+    public uint[] oPortalIndexBoxes;
     /// <summary>
     /// Portal, wo der Spieler den Raum zum Schluss verlassen hat (uint.MaxValue: Spieler verbleibt irgendwo im Raum = Zielstellung erreicht)
     /// </summary>
-    public uint playerPortalIndex;
+    public uint oPortalIndexPlayer;
     /// <summary>
     /// nachfolgender Raum-Zustand
     /// </summary>
@@ -102,7 +102,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
-      return new { moves, pushes, newState, boxPortalsIndices = "int[" + boxPortalsIndices.Length + "]", path }.ToString();
+      return new { moves, pushes, newState, boxPortalsIndices = "int[" + oPortalIndexBoxes.Length + "]", path }.ToString();
     }
   }
 }

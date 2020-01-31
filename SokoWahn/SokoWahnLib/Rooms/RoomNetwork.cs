@@ -64,25 +64,29 @@ namespace SokoWahnLib.Rooms
         // eingehendes Portal von der linken Seite
         if (walkPosis.Contains(pos - 1))
         {
-          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - 1), pos - 1, room, pos);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - 1), pos - 1, room, pos, (uint)portalIndex);
+          portalIndex++;
         }
 
         // eingehendes Portal von der rechten Seite
         if (walkPosis.Contains(pos + 1))
         {
-          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + 1), pos + 1, room, pos);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + 1), pos + 1, room, pos, (uint)portalIndex);
+          portalIndex++;
         }
 
         // eingehendes Portal von der oberen Seite
         if (walkPosis.Contains(pos - field.Width))
         {
-          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - field.Width), pos - field.Width, room, pos);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - field.Width), pos - field.Width, room, pos, (uint)portalIndex);
+          portalIndex++;
         }
 
         // eingehendes Portal von der unteren Seite
         if (walkPosis.Contains(pos + field.Width))
         {
-          portals[portalIndex++] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + field.Width), pos + field.Width, room, pos);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + field.Width), pos + field.Width, room, pos, (uint)portalIndex);
+          portalIndex++;
         }
 
         Debug.Assert(portalIndex == portals.Length);
@@ -181,6 +185,8 @@ namespace SokoWahnLib.Rooms
         for (int i = 0; i < room.incomingPortals.Length; i++)
         {
           var iPortal = room.incomingPortals[i];
+          if (iPortal.iPortalIndex != i) throw new Exception("iPortalIndex ist fehlerhaft " + iPortal.iPortalIndex + " != " + i);
+
           if (portals.Contains(iPortal)) throw new Exception("Portal wird doppelt benutzt: " + iPortal);
           portals.Add(iPortal);
 
