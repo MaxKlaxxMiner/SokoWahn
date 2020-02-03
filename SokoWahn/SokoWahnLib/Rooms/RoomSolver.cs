@@ -176,8 +176,6 @@ namespace SokoWahnLib.Rooms
     {
       foreach (var boxPortal in boxPortalsIndices) // Kisten durch benachbarte Portale schieben
       {
-        throw new NotImplementedException("todo: check debug");
-
         var oPortal = room.outgoingPortals[boxPortal];
         uint roomIndex = oPortal.toRoom.roomIndex;
         ulong oldState = task[roomIndex];
@@ -205,8 +203,6 @@ namespace SokoWahnLib.Rooms
 
       if (variantData.oPortalIndexBoxes.Length > 0)
       {
-        throw new NotImplementedException("todo: check debug");
-
         Array.Copy(task, tmpTask, task.Length); // Aufgabe temporär kopieren, damit Zustände geändert werden dürfen
 
         // Kisten-Zustände anpassen und prüfen
@@ -270,6 +266,15 @@ namespace SokoWahnLib.Rooms
         this.pushes = pushes;
         this.crc = crc;
       }
+
+      /// <summary>
+      /// gibt den Inhalt als lesbare Zeichenkette zurück
+      /// </summary>
+      /// <returns>lesbare Zeichenkette</returns>
+      public override string ToString()
+      {
+        return new { moves, pushes, crc }.ToString();
+      }
     }
     #endregion
 
@@ -303,31 +308,27 @@ namespace SokoWahnLib.Rooms
         yield break;
       }
 
-      using (var tmpMoveTasks = new TaskListNormal(taskSize))
+      var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+
+      SetTaskInfos(task, oPortal.toRoom.roomIndex, oPortal.iPortalIndex);
+
+      var tmpTask = new ulong[taskSize];
+
+      // --- Sub-Varianten durcharbeiten ---
+      foreach (ulong variant in oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]))
       {
-        var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+        SetTaskVariant(task, variant);
 
-        SetTaskInfos(task, oPortal.toRoom.roomIndex, oPortal.iPortalIndex);
-
-        var tmpTask = new ulong[taskSize];
-
-        // --- Sub-Varianten durcharbeiten ---
-        foreach (ulong variant in oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]))
+        if (CheckTask(task, tmpTask, oPortal.toRoom, variant))
         {
-          SetTaskVariant(task, variant);
+          DebugConsole("Next-Variant " + variant, task);
+          variantData = oPortal.toRoom.variantList.GetData(variant);
 
-          if (CheckTask(task, tmpTask, oPortal.toRoom, variant))
-          {
-            DebugConsole("Next-Variant " + variant, task);
-
-            yield return new TaskVariantInfo(variantData.moves, variantData.pushes, Crc64.Get(task));
-          }
-          else
-          {
-            throw new NotImplementedException("todo: check debug");
-
-            DebugConsole("Next-Variant " + variant + " (skipped)", task);
-          }
+          yield return new TaskVariantInfo(variantData.moves, variantData.pushes, Crc64.Get(task));
+        }
+        else
+        {
+          DebugConsole("Next-Variant " + variant + " (skipped)", task, true);
         }
       }
     }
@@ -407,7 +408,7 @@ namespace SokoWahnLib.Rooms
         #region # // --- Init - erste Initialisierung ---
         case SolveState.Init:
         {
-          if (roomNetwork.rooms.Length > 65535) throw new SokoFieldException("to many rooms (" + roomNetwork.rooms.Length + " > 65535)");
+          if (roomNetwork.rooms.Length > 65535) throw new SokoFieldException("too many rooms (" + roomNetwork.rooms.Length + " > 65535)");
           int startRoomIndex = -1; // Raum suchen, wo der Spieler beginnt
           for (int i = 0; i < roomNetwork.rooms.Length; i++)
           {
@@ -459,7 +460,7 @@ namespace SokoWahnLib.Rooms
             }
             else
             {
-              DebugConsole("Start-Variant " + variant + " (skipped)");
+              DebugConsole("Start-Variant " + variant + " (skipped)", null, true);
             }
           }
         } break;
@@ -502,12 +503,12 @@ namespace SokoWahnLib.Rooms
             }
           }
 
-          // --- nächsten Current-State nachladen (für Debugging) ---
-          if (taskList.Count == 0 && forwardIndex + 1 < forwardTasks.Count)
-          {
-            taskList = forwardTasks[++forwardIndex];
-          }
-          taskList.PeekFirst(currentTask);
+          //// --- nächsten Current-State nachladen (für Debugging) ---
+          //if (taskList.Count == 0 && forwardIndex + 1 < forwardTasks.Count)
+          //{
+          //  taskList = forwardTasks[++forwardIndex];
+          //}
+          //taskList.PeekFirst(currentTask);
         } break;
         #endregion
         default: throw new NotSupportedException(solveState.ToString());
@@ -574,13 +575,14 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="title">optionale Überschrift über dem Spielfeld</param>
     /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
+    /// <param name="ignoreMoveErrors">gibt an, ob nicht gültige Bewegungsschritte übersprungen werden dürfen</param>
     [Conditional("DEBUG")]
-    public void DebugConsole(string title = null, ulong[] task = null)
+    public void DebugConsole(string title = null, ulong[] task = null, bool ignoreMoveErrors = false)
     {
       if (!IsConsoleApplication) return;
       if (Console.CursorTop == 0) Console.WriteLine();
       if (!string.IsNullOrWhiteSpace(title)) title = "  --- " + title + " ---\r\n";
-      Console.WriteLine(title + ("\r\n" + DebugStr(task)).Replace("\r\n", "\r\n  "));
+      Console.WriteLine(title + ("\r\n" + DebugStr(task, ignoreMoveErrors)).Replace("\r\n", "\r\n  "));
     }
     #endregion
 
@@ -589,8 +591,9 @@ namespace SokoWahnLib.Rooms
     /// gibt das Spielfeld einer bestimmten Aufgabe zurück (nebeneinander: vorher/nacher)
     /// </summary>
     /// <param name="task">optional: Aufgabe, welche angezeigt werden soll (default: currentTask)</param>
+    /// <param name="ignoreMoveErrors">gibt an, ob nicht gültige Bewegungsschritte übersprungen werden dürfen</param>
     /// <returns>Spielfeld als Text Standard-Notation</returns>
-    public string DebugStr(ulong[] task = null)
+    public string DebugStr(ulong[] task = null, bool ignoreMoveErrors = false)
     {
       if (task == null) task = currentTask;
       int width = roomNetwork.field.Width;
@@ -630,14 +633,21 @@ namespace SokoWahnLib.Rooms
       if (iPortalIndex < uint.MaxValue) // Eintritt durch das eingehende Portal als ersten durchführen (aber später nicht darstellen)
       {
         char dirChar = rooms[roomIndex].incomingPortals[iPortalIndex].dirChar;
-        if (!tmpField.SafeMove(dirChar)) throw new Exception("invalid move");
+        if (!tmpField.SafeMove(dirChar))
+        {
+          throw new Exception("invalid move");
+        }
         linesBefore = tmpField.GetText().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); // das Vorher-Spielfeld neu setzen
       }
 
       int moves = 0;
       foreach (var dirChar in variantData.path)
       {
-        if (!tmpField.SafeMove(dirChar)) throw new Exception("invalid move");
+        if (!tmpField.SafeMove(dirChar))
+        {
+          if (ignoreMoveErrors) break;
+          throw new Exception("invalid move");
+        }
         moves++;
       }
       Debug.Assert(linesBefore.Length == height);
@@ -653,7 +663,7 @@ namespace SokoWahnLib.Rooms
       linesFill[0] = tmp;
       linesFill[linesFill.Length - 1] = "  -->  ";
 
-      return string.Join("\r\n", Enumerable.Range(0, height).Select(y => linesBefore[y] + linesFill[y] + linesAfter[y])) + "\r\n\r\n";
+      return string.Join("\r\n", Enumerable.Range(0, height).Select(y => linesBefore[y] + linesFill[y] + linesAfter[y])) + "\r\n\r\nPath: " + variantData.path + "\r\n\r\n";
     }
     #endregion
 
