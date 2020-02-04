@@ -34,6 +34,7 @@
       this.timerDisplay = new System.Windows.Forms.Timer(this.components);
       this.textBoxLog = new System.Windows.Forms.TextBox();
       this.buttonSolve = new System.Windows.Forms.Button();
+      this.textBoxTicks = new System.Windows.Forms.TextBox();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       this.SuspendLayout();
       // 
@@ -96,12 +97,27 @@
       this.buttonSolve.Click += new System.EventHandler(this.buttonSolve_Click);
       this.buttonSolve.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
+      // textBoxTicks
+      // 
+      this.textBoxTicks.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+      this.textBoxTicks.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
+      this.textBoxTicks.Font = new System.Drawing.Font("Consolas", 9.75F);
+      this.textBoxTicks.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(86)))), ((int)(((byte)(156)))), ((int)(((byte)(214)))));
+      this.textBoxTicks.Location = new System.Drawing.Point(1065, 2);
+      this.textBoxTicks.Name = "textBoxTicks";
+      this.textBoxTicks.Size = new System.Drawing.Size(124, 23);
+      this.textBoxTicks.TabIndex = 9;
+      this.textBoxTicks.TabStop = false;
+      this.textBoxTicks.Text = "1";
+      // 
       // FormSolver
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.textBoxTicks);
       this.Controls.Add(this.buttonSolve);
       this.Controls.Add(this.textBoxLog);
       this.Controls.Add(this.textBoxInfo);
@@ -124,5 +140,6 @@
     private System.Windows.Forms.Timer timerDisplay;
     private System.Windows.Forms.TextBox textBoxLog;
     private System.Windows.Forms.Button buttonSolve;
+    private System.Windows.Forms.TextBox textBoxTicks;
   }
 }

@@ -165,6 +165,7 @@ namespace SokoWahnWin
         displaySettings.hBack = new Highlight[0];
       }
       textBoxLog.Text = roomSolver.ToString();
+      textBoxLog.Update();
     }
 
     /// <summary>
@@ -172,8 +173,17 @@ namespace SokoWahnWin
     /// </summary>
     void buttonSolve_Click(object sender, EventArgs e)
     {
-      roomSolver.SearchCycle(1);
+      try
+      {
+        int ticks = int.Parse(textBoxTicks.Text);
+        roomSolver.SearchCycle(ticks);
+      }
+      catch (Exception exc)
+      {
+        MessageBox.Show(exc.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
       UpdateSolverDisplay();
+      timerDisplay_Tick(null, null);
     }
 
     /// <summary>

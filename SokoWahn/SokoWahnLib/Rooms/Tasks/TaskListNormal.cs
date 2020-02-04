@@ -115,7 +115,10 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt alle Ressourcen wieder frei
     /// </summary>
-    public override void Dispose() { }
+    public override void Dispose()
+    {
+      taskData = null;
+    }
 
     /// <summary>
     /// gibt den Inhalt als lesbare Zeichenkette zurück
