@@ -160,11 +160,12 @@ namespace SokoWahnWin
       this.variantPath = variantPath.ToArray();
       displaySettings.playerPos = roomSolver.PlayerPathPosis.First();
       displaySettings.boxes = roomSolver.CurrentBoxIndices;
-      if (playerPosis.Length > 1)
-      {
-        displaySettings.hBack = new[] { new Highlight(0x003366, 0.7f, roomSolver.rooms[roomSolver.GetTaskRoomIndex(roomSolver.currentTask)].fieldPosis) };
-      }
-      else
+      //todo
+      //if (playerPosis.Length > 1)
+      //{
+      //  displaySettings.hBack = new[] { new Highlight(0x003366, 0.7f, roomSolver.rooms[roomSolver.GetTaskRoomIndex(roomSolver.currentTask)].fieldPosis) };
+      //}
+      //else
       {
         displaySettings.hBack = new Highlight[0];
       }
