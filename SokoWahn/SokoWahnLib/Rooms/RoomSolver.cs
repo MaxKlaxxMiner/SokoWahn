@@ -300,7 +300,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="moveFilter">Filter zum verhindern von doppelten Laufschritten</param>
     /// <param name="moveOffset">Offset für den Move-Filter</param>
     /// <returns>Enumerable der neuen Aufgaben</returns>
-    IEnumerable<TaskVariantInfo> ResolveTaskVariants(ulong[] task, HashCrc moveFilter, ulong moveOffset)
+    IEnumerable<TaskVariantInfo> ResolveTaskVariants(ulong[] task, Dictionary<ulong, ulong> moveFilter, ulong moveOffset)
     {
       uint roomIndex = GetTaskRoomIndex(task);
       var room = rooms[roomIndex];
@@ -341,19 +341,20 @@ namespace SokoWahnLib.Rooms
 
           if (variantData.pushes > 0) // sinnvolle Variante mit Kistenverschiebungen erkannt?
           {
-            DebugConsole("Next-Variant " + variant, task);
+            DebugConsoleV("Next-Variant " + variant, task);
 
             yield return new TaskVariantInfo(totalMoves, variantData.pushes, Crc64.Get(task));
           }
           else // Variante nur mit Laufwegen erkannt -> rekursiv weiter suchen
           {
-            ulong crc = Crc64.Get(task);
-            ulong oldMoves = moveFilter.Get(crc, ulong.MaxValue);
+            ulong moveCrc = Crc64.Start.Crc64Update(task[task.Length - 2]).Crc64Update(task[task.Length - 1]);
+            ulong oldMoves;
+            if (!moveFilter.TryGetValue(moveCrc, out oldMoves)) oldMoves = ulong.MaxValue;
 
             if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
             {
               DebugConsoleV("Next-Move " + variant, task);
-              if (oldMoves == ulong.MaxValue) moveFilter.Add(crc, totalMoves); else moveFilter.Update(crc, totalMoves);
+              if (oldMoves == ulong.MaxValue) moveFilter.Add(moveCrc, totalMoves); else moveFilter[moveCrc] = totalMoves;
             }
             else
             {
@@ -529,25 +530,23 @@ namespace SokoWahnLib.Rooms
             DebugConsole("Search-Forward [" + forwardIndex + "], remain: " + (taskList.Count + 1).ToString("N0"));
 
             // --- Aufgabe abarbeiten und neue Einträge in die Aufgaben-Liste hinzufügen ---
-            using (var moveFilter = new HashCrcNormal())
+            var moveFilter = new Dictionary<ulong, ulong>();
+            foreach (var taskInfo in ResolveTaskVariants(currentTask, moveFilter, 0))
             {
-              foreach (var taskInfo in ResolveTaskVariants(currentTask, moveFilter, 0))
+              ulong totalMoves = (uint)forwardIndex + taskInfo.moves;
+              if (taskInfo.crc == 0)
               {
-                ulong totalMoves = (uint)forwardIndex + taskInfo.moves;
-                if (taskInfo.crc == 0)
-                {
-                  throw new NotImplementedException("todo: gesamten Pfad ermitteln und als beste Lösung speichern"); // Ziel erreicht?
-                }
-                ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
+                throw new NotImplementedException("todo: gesamten Pfad ermitteln und als beste Lösung speichern"); // Ziel erreicht?
+              }
+              ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
 
-                if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
-                {
-                  if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
+              if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
+              {
+                if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
 
-                  // --- Variante als neue Aufgabe hinzufügen ---
-                  while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
-                  forwardTasks[(int)(uint)totalMoves].Add(currentTask);
-                }
+                // --- Variante als neue Aufgabe hinzufügen ---
+                while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+                forwardTasks[(int)(uint)totalMoves].Add(currentTask);
               }
             }
           }
@@ -632,6 +631,7 @@ namespace SokoWahnLib.Rooms
     [Conditional("DEBUG")]
     public void DebugConsole(string title = null, ulong[] task = null)
     {
+      return;
       if (!IsConsoleApplication) return;
       if (Console.CursorTop == 0) Console.WriteLine();
       if (!string.IsNullOrWhiteSpace(title)) title = "  --- " + title + " ---\r\n";
@@ -646,6 +646,7 @@ namespace SokoWahnLib.Rooms
     [Conditional("DEBUG")]
     public void DebugConsoleV(string title = null, ulong[] task = null)
     {
+      // ReSharper disable once RedundantJumpStatement
       if (!DebugConsoleVerbose) return;
       DebugConsole(title, task);
     }
@@ -750,6 +751,7 @@ namespace SokoWahnLib.Rooms
       sb.AppendLine(" Moves: " + forwardIndex.ToString("N0")).AppendLine();
       sb.AppendLine(" State: " + solveState).AppendLine();
 
+      if (solveState == SolveState.Init) return sb.ToString();
       uint roomIndex = GetTaskRoomIndex(currentTask);
       ulong variant = GetTaskVariant(currentTask);
       switch (solveState)

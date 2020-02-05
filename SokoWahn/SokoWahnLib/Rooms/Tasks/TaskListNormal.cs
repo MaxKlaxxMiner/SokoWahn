@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Windows.Forms;
+
 // ReSharper disable UnusedMember.Global
 
 namespace SokoWahnLib.Rooms

@@ -128,7 +128,7 @@ namespace SokoWahnLib.Rooms
       #endregion
 
       // --- zum Schluss prüfen ---
-      Validate();
+      Validate(true);
     }
     #endregion
 
@@ -240,6 +240,7 @@ namespace SokoWahnLib.Rooms
               usingStates.SetBit(0); // 0-Zustand immer pauschal markieren (End-Zustand)
               usingStates.SetBit(room.startState); // Start-Zustand immer markieren
 
+              bool pushVariant = false;
               // Start-Varianten markieren
               for (ulong variant = 0; variant < room.startVariantCount; variant++)
               {
@@ -248,6 +249,14 @@ namespace SokoWahnLib.Rooms
                 usingVariants.SetBit(variant);
 
                 var v = variantList.GetData(variant);
+                if (v.pushes == 0)
+                {
+                  if (pushVariant) throw new Exception("Start-Varianten: Push vor Move-Variante erkannt");
+                }
+                else
+                {
+                  pushVariant = true;
+                }
 
                 if (v.oldState >= usingStates.Length) throw new IndexOutOfRangeException();
                 usingStates.SetBit(v.oldState);
@@ -265,6 +274,7 @@ namespace SokoWahnLib.Rooms
                 {
                   currentState = state;
                   if (state >= usingStates.Length) throw new IndexOutOfRangeException();
+                  pushVariant = false;
                   foreach (var variant in portal.variantStateDict.GetVariants(state))
                   {
                     currentVariant = variant;
@@ -272,6 +282,16 @@ namespace SokoWahnLib.Rooms
                     if (usingVariants.GetBit(variant)) throw new Exception("mehrfach benutzte Varianten erkannt");
                     usingVariants.SetBit(variant);
                     usingStates.SetBit(state);
+
+                    var v = variantList.GetData(variant);
+                    if (v.pushes == 0)
+                    {
+                      if (pushVariant) throw new Exception("Portal-Varianten: Push vor Move-Variante erkannt");
+                    }
+                    else
+                    {
+                      pushVariant = true;
+                    }
                   }
                   currentVariant = ulong.MaxValue;
                 }

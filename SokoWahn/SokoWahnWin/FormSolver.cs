@@ -63,6 +63,10 @@ namespace SokoWahnWin
       InitializeComponent();
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
+
+#if !DEBUG
+      textBoxTicks.Text = "1000";
+#endif
     }
 
     /// <summary>
