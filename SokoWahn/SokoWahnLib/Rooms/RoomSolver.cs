@@ -49,6 +49,16 @@ namespace SokoWahnLib.Rooms
     readonly uint taskSize;
 
     #region # // --- Aufgaben-Hilfsmethoden ---
+    /// <summary>
+    /// setzt die Basis-Infos innerhalb einer Aufgabe
+    /// </summary>
+    /// <param name="task">Aufgabe, welche angepasst werden soll</param>
+    /// <param name="roomIndex">Raum-Nummer, welche gesetzt werden soll</param>
+    /// <param name="iPortalIndex">eingehende Portal-Nummer des Raumes</param>
+    void SetTaskInfos(ulong[] task, uint roomIndex, uint iPortalIndex)
+    {
+    }
+
     ///// <summary>
     ///// setzt die Basis-Infos innerhalb einer Aufgabe
     ///// </summary>
@@ -557,7 +567,7 @@ namespace SokoWahnLib.Rooms
           }
           if (startRoomIndex < 0) throw new SokoFieldException("no start-room");
 
-          //SetTaskInfos(currentTask, (uint)startRoomIndex, uint.MaxValue);
+          SetTaskInfos(currentTask, (uint)startRoomIndex, uint.MaxValue);
           //SetTaskVariant(currentTask, ulong.MaxValue); // Start-Variante als -1 setzen, damit es ab Beginn durch das inkrementieren mit 0 beginnt
 
           forwardTasks.Add(new TaskListNormal(taskSize)); // erste Aufgaben-Liste für die Start-Züge hinzufügen
