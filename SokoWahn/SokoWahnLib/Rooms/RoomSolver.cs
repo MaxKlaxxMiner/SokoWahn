@@ -293,6 +293,84 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
+    IEnumerable<TaskVariantInfo> ResolveTaskMoveVariants(ulong[] task, Dictionary<ulong, ulong> moveFilter, ulong moveOffset)
+    {
+      //uint roomIndex = GetTaskRoomIndex(task);
+      //var room = rooms[roomIndex];
+
+      //Debug.Assert(GetTaskVariant(task) < room.variantList.Count);
+      //var variantData = room.variantList.GetData(GetTaskVariant(task));
+
+      //if (!ResolveTaskPortalBoxes(task, room, variantData.oPortalIndexBoxes))
+      //{
+      //  throw new Exception("invalid task (resolve portal-boxes)"); // Check-Funktion bei "AddStarts" nicht ausgeführt?
+      //}
+
+      //task[room.roomIndex] = variantData.newState; // neuen Zustand des eigenen Raumes setzen
+
+      //if (variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung schon erreicht?
+      //{
+      //  for (int i = 0; i < task.Length - TaskInfoValues; i++) if (task[i] != 0) throw new Exception("invalid task (end-states)");
+
+      //  yield return new TaskVariantInfo(variantData.moves, variantData.pushes);
+      //  yield break;
+      //}
+
+      //var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+
+      //SetTaskInfos(task, oPortal.toRoom.roomIndex, oPortal.iPortalIndex);
+
+      //var tmpTask = new ulong[taskSize];
+
+      //// --- Sub-Varianten durcharbeiten ---
+      //foreach (ulong variant in oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]))
+      //{
+      //  SetTaskVariant(task, variant);
+
+      //  if (CheckTask(task, tmpTask, oPortal.toRoom, variant))
+      //  {
+      //    variantData = oPortal.toRoom.variantList.GetData(variant);
+      //    ulong totalMoves = moveOffset + variantData.moves;
+
+      //    if (variantData.pushes > 0) // sinnvolle Variante mit Kistenverschiebungen erkannt?
+      //    {
+      //      DebugConsoleV("Next-Variant " + variant, task);
+
+      //      yield return new TaskVariantInfo(totalMoves, variantData.pushes, Crc64.Get(task));
+      //    }
+      //    else // Variante nur mit Laufwegen erkannt -> rekursiv weiter suchen
+      //    {
+      //      ulong moveCrc = Crc64.Start.Crc64Update(task[task.Length - 2]).Crc64Update(task[task.Length - 1]);
+      //      ulong oldMoves;
+      //      if (!moveFilter.TryGetValue(moveCrc, out oldMoves)) oldMoves = ulong.MaxValue;
+
+      //      if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
+      //      {
+      //        DebugConsoleV("Next-Move " + variant, task);
+      //        if (oldMoves == ulong.MaxValue) moveFilter.Add(moveCrc, totalMoves); else moveFilter[moveCrc] = totalMoves;
+      //      }
+      //      else
+      //      {
+      //        DebugConsoleV("Next-Move " + variant + " (skipped)", task);
+      //        continue;
+      //      }
+
+      //      Array.Copy(task, tmpTask, task.Length); // Backup erstellen
+      //      foreach (var subInfo in ResolveTaskVariants(task, moveFilter, totalMoves))
+      //      {
+      //        yield return subInfo;
+      //      }
+      //      Array.Copy(tmpTask, task, task.Length); // Backup wiederherstellen
+      //    }
+      //  }
+      //  else
+      //  {
+      //    DebugConsoleV("Next-Variant " + variant + " (skipped)", task);
+      //  }
+      //}
+      yield break;
+    }
+
     /// <summary>
     /// verarbeitet eine Aufgabe und berechnet daraus weitere neue Aufgaben
     /// </summary>
@@ -526,6 +604,9 @@ namespace SokoWahnLib.Rooms
 
           for (; maxTicks > 0 && taskList.Count > 0; maxTicks--)
           {
+            taskList.PeekFirst(currentTask);
+            // todo: move-varianten sammeln
+
             taskList.FetchFirst(currentTask);
             DebugConsole("Search-Forward [" + forwardIndex + "], remain: " + (taskList.Count + 1).ToString("N0"));
 
