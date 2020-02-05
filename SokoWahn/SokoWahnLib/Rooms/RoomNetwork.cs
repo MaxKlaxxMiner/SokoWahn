@@ -168,7 +168,7 @@ namespace SokoWahnLib.Rooms
 
         if (room.startVariantCount > 0)
         {
-          if (startRoom >= 0) throw new Exception("doppelte Start-Räume gefunden: " + startRoom +" und " + roomIndex);
+          if (startRoom >= 0) throw new Exception("doppelte Start-Räume gefunden: " + startRoom + " und " + roomIndex);
           startRoom = (int)roomIndex;
         }
 
@@ -229,6 +229,10 @@ namespace SokoWahnLib.Rooms
           for (int roomIndex = 0; roomIndex < rooms.Length; roomIndex++)
           {
             currentRoomIndex = roomIndex;
+            currentPortalIndex = -1;
+            currentState = ulong.MaxValue;
+            currentVariant = ulong.MaxValue;
+
             var room = rooms[roomIndex];
             var stateList = room.stateList;
             if (stateList.Count < 1) throw new IndexOutOfRangeException();
@@ -241,7 +245,7 @@ namespace SokoWahnLib.Rooms
               usingStates.SetBit(room.startState); // Start-Zustand immer markieren
 
               bool pushVariant = false;
-              // Start-Varianten markieren
+              // --- Start-Varianten prüfen ---
               for (ulong variant = 0; variant < room.startVariantCount; variant++)
               {
                 currentVariant = variant;
@@ -264,9 +268,8 @@ namespace SokoWahnLib.Rooms
                 if (v.newState >= usingStates.Length) throw new IndexOutOfRangeException();
                 usingStates.SetBit(v.newState);
               }
-              currentVariant = ulong.MaxValue;
 
-              // Portal-Varianten markieren
+              // --- Portal-Varianten prüfen ---
               currentPortalIndex = 0;
               foreach (var portal in room.incomingPortals)
               {
@@ -277,6 +280,7 @@ namespace SokoWahnLib.Rooms
                   pushVariant = false;
                   foreach (var variant in portal.variantStateDict.GetVariants(state))
                   {
+                    if (variant != currentVariant + 1) throw new Exception("Varianten nicht Lückenfrei! erwartet: " + (currentVariant + 1) + ", vorhanden: " + variant);
                     currentVariant = variant;
                     if (variant >= usingVariants.Length) throw new IndexOutOfRangeException();
                     if (usingVariants.GetBit(variant)) throw new Exception("mehrfach benutzte Varianten erkannt");
@@ -293,13 +297,12 @@ namespace SokoWahnLib.Rooms
                       pushVariant = true;
                     }
                   }
-                  currentVariant = ulong.MaxValue;
                 }
                 currentPortalIndex++;
               }
               currentState = ulong.MaxValue;
 
-              // Zustandänderungen durch eingehende Kisten markieren
+              // --- Zustandänderungen durch eingehende Kisten prüfen ---
               currentPortalIndex = 0;
               foreach (var portal in room.incomingPortals)
               {
@@ -329,10 +332,10 @@ namespace SokoWahnLib.Rooms
         }
         catch (Exception exc)
         {
-          string txt = exc.Message + "\r\n\r\nRoom " + (currentRoomIndex + 1);
+          string txt = exc.Message + "\r\n\r\nRoom-Index " + currentRoomIndex;
           if (currentState < ulong.MaxValue) txt += "\r\nState " + (currentState == 0 ? "finish" : currentState.ToString());
-          if (currentPortalIndex >= 0) txt += "\r\nPortal " + (currentPortalIndex + 1);
-          if (currentVariant < ulong.MaxValue) txt += "\r\nVariant " + (currentVariant + 1);
+          if (currentPortalIndex >= 0) txt += "\r\nPortal-Index " + currentPortalIndex;
+          if (currentVariant < ulong.MaxValue) txt += "\r\nVariant " + currentVariant;
           throw new Exception(txt + "\r\n");
         }
       }

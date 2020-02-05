@@ -227,13 +227,17 @@ namespace SokoWahnLib.Rooms
           case ' ': // leeres Feld
           case '$': // Feld mit Kiste
           {
+            // --- durchlaufen ---
             for (uint oPortalIndex = 0; oPortalIndex < outgoingPortals.Length; oPortalIndex++)
             {
-              if (iPortalIndex != oPortalIndex) // nur Durchlaufen aber nicht zum gleichen Portal zurück
-              {
-                iPortal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortalIndex, 0, outgoingPortals[oPortalIndex].dirChar.ToString()));
-              }
+              if (iPortalIndex == oPortalIndex) continue; // nicht zum gleichen Portal zurück laufen
 
+              iPortal.variantStateDict.Add(0, variantList.Add(0, 1, 0, new uint[0], oPortalIndex, 0, outgoingPortals[oPortalIndex].dirChar.ToString()));
+            }
+
+            // --- Kiste schieben ---
+            for (uint oPortalIndex = 0; oPortalIndex < outgoingPortals.Length; oPortalIndex++)
+            {
               if (field.CheckCorner(pos)) continue; // Varianten mit rauschiebender Kiste nicht möglich
 
               if (boxPortalIndex == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
@@ -244,9 +248,10 @@ namespace SokoWahnLib.Rooms
               iPortal.variantStateDict.Add(1, variantList.Add(1, 1, 1, new[] { (uint)boxPortalIndex }, oPortalIndex, 0, outgoingPortals[oPortalIndex].dirChar.ToString()));
             }
 
+            // --- Kiste schieben und gesamtes Spiel abschließen ---
             if (boxPortalIndex >= 0 && field.IsGoal(outgoingPortals[boxPortalIndex].toPos))
             {
-              // End-Variante hinzufügen (Spieler verbleibt im Raum)
+              // End-Variante hinzufügen (Spieler hat als letztes eine Kiste geschoben und verbleibt im Raum)
               iPortal.variantStateDict.Add(1, variantList.Add(1, 0, 1, new[] { (uint)boxPortalIndex }, uint.MaxValue, 0, ""));
             }
 
@@ -256,21 +261,25 @@ namespace SokoWahnLib.Rooms
           case '.': // leeres Zielfeld
           case '*': // Kiste auf einem Zielfeld 
           {
+            // --- Kiste schieben ---
             for (uint oPortalIndex = 0; oPortalIndex < outgoingPortals.Length; oPortalIndex++)
             {
-              if (iPortalIndex != oPortalIndex) // nur Durchlaufen aber nicht zum gleichen Portal zurück
-              {
-                iPortal.variantStateDict.Add(1, variantList.Add(1, 1, 0, new uint[0], oPortalIndex, 1, outgoingPortals[oPortalIndex].dirChar.ToString()));
-              }
-
               if (field.CheckCorner(pos)) continue; // Varianten mit rauschiebender Kiste nicht möglich
 
-              if (boxPortalIndex == -1) continue; // Kiste kann doch nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt?
+              if (boxPortalIndex == -1) continue; // Kiste kann nicht rausgeschoben werden, da man auf der gegenüberliegenden Seite nicht herankommt
 
               int checkPos = outgoingPortals[oPortalIndex].toPos + outgoingPortals[oPortalIndex].toPos - outgoingPortals[oPortalIndex].fromPos;
-              if (boxPortalIndex == oPortalIndex && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde noch weiter in eine Ecke geschoben werden
+              if (boxPortalIndex == oPortalIndex && field.CheckCorner(checkPos) && !field.IsGoal(checkPos)) continue; // Kiste würde noch weiter in einer Ecke laden
 
               iPortal.variantStateDict.Add(0, variantList.Add(0, 1, 1, new[] { (uint)boxPortalIndex }, oPortalIndex, 1, outgoingPortals[oPortalIndex].dirChar.ToString()));
+            }
+
+            // --- durchlaufen ---
+            for (uint oPortalIndex = 0; oPortalIndex < outgoingPortals.Length; oPortalIndex++)
+            {
+              if (iPortalIndex == oPortalIndex) continue; // nicht zum gleichen Portal zurück laufen
+
+              iPortal.variantStateDict.Add(1, variantList.Add(1, 1, 0, new uint[0], oPortalIndex, 1, outgoingPortals[oPortalIndex].dirChar.ToString()));
             }
           } break;
 
