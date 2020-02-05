@@ -9,6 +9,7 @@ using System.Text;
 // ReSharper disable RedundantIfElseBlock
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable MemberCanBePrivate.Local
+// ReSharper disable ConvertToConstant.Global
 
 namespace SokoWahnLib.Rooms
 {
@@ -296,8 +297,10 @@ namespace SokoWahnLib.Rooms
     /// verarbeitet eine Aufgabe und berechnet daraus weitere neue Aufgaben
     /// </summary>
     /// <param name="task">Aufgabe, welche abgearbeitet werden soll</param>
+    /// <param name="moveFilter">Filter zum verhindern von doppelten Laufschritten</param>
+    /// <param name="moveOffset">Offset für den Move-Filter</param>
     /// <returns>Enumerable der neuen Aufgaben</returns>
-    IEnumerable<TaskVariantInfo> ResolveTaskVariants(ulong[] task)
+    IEnumerable<TaskVariantInfo> ResolveTaskVariants(ulong[] task, HashCrc moveFilter, ulong moveOffset)
     {
       uint roomIndex = GetTaskRoomIndex(task);
       var room = rooms[roomIndex];
@@ -333,14 +336,42 @@ namespace SokoWahnLib.Rooms
 
         if (CheckTask(task, tmpTask, oPortal.toRoom, variant))
         {
-          DebugConsole("Next-Variant " + variant, task);
           variantData = oPortal.toRoom.variantList.GetData(variant);
+          ulong totalMoves = moveOffset + variantData.moves;
 
-          yield return new TaskVariantInfo(variantData.moves, variantData.pushes, Crc64.Get(task));
+          if (variantData.pushes > 0) // sinnvolle Variante mit Kistenverschiebungen erkannt?
+          {
+            DebugConsole("Next-Variant " + variant, task);
+
+            yield return new TaskVariantInfo(totalMoves, variantData.pushes, Crc64.Get(task));
+          }
+          else // Variante nur mit Laufwegen erkannt -> rekursiv weiter suchen
+          {
+            ulong crc = Crc64.Get(task);
+            ulong oldMoves = moveFilter.Get(crc, ulong.MaxValue);
+
+            if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
+            {
+              DebugConsoleV("Next-Move " + variant, task);
+              if (oldMoves == ulong.MaxValue) moveFilter.Add(crc, totalMoves); else moveFilter.Update(crc, totalMoves);
+            }
+            else
+            {
+              DebugConsoleV("Next-Move " + variant + " (skipped)", task);
+              continue;
+            }
+
+            Array.Copy(task, tmpTask, task.Length); // Backup erstellen
+            foreach (var subInfo in ResolveTaskVariants(task, moveFilter, totalMoves))
+            {
+              yield return subInfo;
+            }
+            Array.Copy(tmpTask, task, task.Length); // Backup wiederherstellen
+          }
         }
         else
         {
-          DebugConsole("Next-Variant " + variant + " (skipped)", task);
+          DebugConsoleV("Next-Variant " + variant + " (skipped)", task);
         }
       }
     }
@@ -498,22 +529,25 @@ namespace SokoWahnLib.Rooms
             DebugConsole("Search-Forward [" + forwardIndex + "], remain: " + (taskList.Count + 1).ToString("N0"));
 
             // --- Aufgabe abarbeiten und neue Einträge in die Aufgaben-Liste hinzufügen ---
-            foreach (var taskInfo in ResolveTaskVariants(currentTask))
+            using (var moveFilter = new HashCrcNormal())
             {
-              ulong totalMoves = (uint)forwardIndex + taskInfo.moves;
-              if (taskInfo.crc == 0)
+              foreach (var taskInfo in ResolveTaskVariants(currentTask, moveFilter, 0))
               {
-                throw new NotImplementedException("todo: gesamten Pfad ermitteln und als beste Lösung speichern"); // Ziel erreicht?
-              }
-              ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
+                ulong totalMoves = (uint)forwardIndex + taskInfo.moves;
+                if (taskInfo.crc == 0)
+                {
+                  throw new NotImplementedException("todo: gesamten Pfad ermitteln und als beste Lösung speichern"); // Ziel erreicht?
+                }
+                ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
 
-              if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
-              {
-                if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
+                if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
+                {
+                  if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
 
-                // --- Variante als neue Aufgabe hinzufügen ---
-                while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
-                forwardTasks[(int)(uint)totalMoves].Add(currentTask);
+                  // --- Variante als neue Aufgabe hinzufügen ---
+                  while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+                  forwardTasks[(int)(uint)totalMoves].Add(currentTask);
+                }
               }
             }
           }
@@ -585,6 +619,10 @@ namespace SokoWahnLib.Rooms
     /// gibt an, ob die Console verfügbar ist
     /// </summary>
     public static readonly bool IsConsoleApplication = Console.OpenStandardInput() != Stream.Null;
+    /// <summary>
+    /// gibt an, ob zusätzliche Debug-Infos in der Console ausgegeben werden sollen
+    /// </summary>
+    public static readonly bool DebugConsoleVerbose = false;
 
     /// <summary>
     /// gibt das Spielfeld mit der entsprechenden Aufgabe in der Console aus (nur Debug-Modus)
@@ -598,6 +636,18 @@ namespace SokoWahnLib.Rooms
       if (Console.CursorTop == 0) Console.WriteLine();
       if (!string.IsNullOrWhiteSpace(title)) title = "  --- " + title + " ---\r\n";
       Console.WriteLine(title + ("\r\n" + DebugStr(task)).Replace("\r\n", "\r\n  "));
+    }
+
+    /// <summary>
+    /// gleiche wie DebugConsole, jedoch für sehr häufige Ausgaben geeignet
+    /// </summary>
+    /// <param name="title">optionale Überschrift über dem Spielfeld</param>
+    /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
+    [Conditional("DEBUG")]
+    public void DebugConsoleV(string title = null, ulong[] task = null)
+    {
+      if (!DebugConsoleVerbose) return;
+      DebugConsole(title, task);
     }
     #endregion
 
