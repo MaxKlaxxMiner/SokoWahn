@@ -72,12 +72,22 @@ namespace SokoWahnLib.Rooms
     /// gibt die gespeicherte Raum-Nummer einer Aufgabe zurück
     /// </summary>
     /// <param name="task">Aufgabe, welche abgefragt werden soll</param>
-    ///  <returns>enthaltene Raum-Nummer</returns>
+    /// <returns>enthaltene Raum-Nummer</returns>
     public uint GetTaskRoomIndex(ulong[] task)
     {
       Debug.Assert(task.Length == taskSize);
       Debug.Assert((uint)(task[taskRoomPortalOfs] >> 32) < rooms.Length);
       return (uint)(task[taskRoomPortalOfs] >> 32);
+    }
+
+    /// <summary>
+    /// gibt den Raum einer Aufgabe zurück
+    /// </summary>
+    /// <param name="task">Aufgabe, welche abgefragt werden soll</param>
+    /// <returns>Raum, welcher aufgefragt wurde</returns>
+    public Room GetTaskRoom(ulong[] task)
+    {
+      return rooms[GetTaskRoomIndex(task)];
     }
 
     /// <summary>
@@ -143,301 +153,207 @@ namespace SokoWahnLib.Rooms
       }
     }
 
-    ///// <summary>
-    ///// aktualisiert die Kisten-Zustände innerhalb einer Aufgabe durch die Portale
-    ///// </summary>
-    ///// <param name="task">Aufgabe, welche bearbeitet werden soll</param>
-    ///// <param name="room">Room, welcher betroffen ist</param>
-    ///// <param name="boxPortalsIndices">Nummern der Portale, wodurch Kisten geschoben wurden</param>
-    ///// <returns>true, wenn der Vorgang erfolgreich war</returns>
-    //static bool ResolveTaskPortalBoxes(ulong[] task, Room room, uint[] boxPortalsIndices)
-    //{
-    //  foreach (var boxPortal in boxPortalsIndices) // Kisten durch benachbarte Portale schieben
-    //  {
-    //    var oPortal = room.outgoingPortals[boxPortal];
-    //    uint roomIndex = oPortal.toRoom.roomIndex;
-    //    ulong oldState = task[roomIndex];
-    //    ulong newState = oPortal.stateBoxSwap.Get(oldState);
-    //    if (oldState == newState) return false; // Kiste kann nicht vom banachbarten Raum aufgenommen werden -> gesamte Variante ungültig
+    /// <summary>
+    /// erstellt eine Kopie einer Aufgabe und gibt diese zurück
+    /// </summary>
+    /// <param name="task">Aufgabe, welche dupliziert werden soll</param>
+    /// <returns>fertig kopierte Aufgabe</returns>
+    static ulong[] TaskClone(ulong[] task)
+    {
+      var result = new ulong[task.Length];
+      for (int i = 0; i < task.Length; i++) result[i] = task[i];
+      return result;
+    }
 
-    //    task[roomIndex] = newState; // neuen Zustand im benachbarten Raum setzen
-    //  }
+    /// <summary>
+    /// kopierte eine Aufgabe
+    /// </summary>
+    /// <param name="srcTask">Aufgabe, welche kopierte werden soll</param>
+    /// <param name="dstTask">Ziel, wohin die Aufgabe kopiert werden soll</param>
+    static void TaskCopy(ulong[] srcTask, ulong[] dstTask)
+    {
+      if (srcTask == null) throw new NullReferenceException("srcTask");
+      if (dstTask == null) throw new NullReferenceException("dstTask");
+      if (srcTask.Length != dstTask.Length) throw new IndexOutOfRangeException("srcTask.Length != dstTask.Length");
+      for (int i = 0; i < srcTask.Length; i++) dstTask[i] = srcTask[i];
+    }
 
-    //  return true;
-    //}
 
-    ///// <summary>
-    ///// prüft, ob eine bestimmte Aufgabe gültig ist
-    ///// </summary>
-    ///// <param name="task">Aufgabe, welche geprüft werden soll</param>
-    ///// <param name="tmpTask">temporäres Array zum Zwischenspeichern einer Aufgabe</param>
-    ///// <param name="room">Raum, welcher betroffen ist</param>
-    ///// <param name="variant">Variante, welche geprüft werden soll</param>
-    ///// <returns>true, wenn die Aufgabe gültig ist (sonst false)</returns>
-    //static bool CheckTask(ulong[] task, ulong[] tmpTask, Room room, ulong variant)
-    //{
-    //  Debug.Assert(variant == task[task.Length - TaskInfoValues]);
-    //  var variantData = room.variantList.GetData(variant);
+    #region # struct TaskVariantInfo // Ergebnis-Information eines berechneten Sub-Zustandes
+    /// <summary>
+    /// Ergebnis-Information eines berechneten Sub-Zustandes
+    /// </summary>
+    struct TaskVariantInfo
+    {
+      /// <summary>
+      /// Anzahl der gemachten Laufschritte um diesen Zustand zu erreichen
+      /// </summary>
+      public readonly ulong moves;
+      /// <summary>
+      /// Anzahl der durchgeführten Kistenverschiebungen
+      /// </summary>
+      public readonly ulong pushes;
+      /// <summary>
+      /// berechnete Prüfsumme
+      /// </summary>
+      public readonly ulong crc;
+      /// <summary>
+      /// Konstruktor
+      /// </summary>
+      /// <param name="moves">Anzahl der gemachten Laufschritte</param>
+      /// <param name="pushes">Anzahl der durchgeführten Kistenverschiebungen</param>
+      /// <param name="crc">berechnete Prüfsumme oder 0, wenn das gesamte Spielfeld bereits gelöst wurde</param>
+      public TaskVariantInfo(ulong moves, ulong pushes, ulong crc = 0)
+      {
+        this.moves = moves;
+        this.pushes = pushes;
+        this.crc = crc;
+      }
 
-    //  if (variantData.oPortalIndexBoxes.Length > 0)
-    //  {
-    //    Array.Copy(task, tmpTask, task.Length); // Aufgabe temporär kopieren, damit Zustände geändert werden dürfen
+      /// <summary>
+      /// gibt den Inhalt als lesbare Zeichenkette zurück
+      /// </summary>
+      /// <returns>lesbare Zeichenkette</returns>
+      public override string ToString()
+      {
+        return new { moves, pushes, crc }.ToString();
+      }
+    }
+    #endregion
 
-    //    // Kisten-Zustände anpassen und prüfen
-    //    if (!ResolveTaskPortalBoxes(tmpTask, room, variantData.oPortalIndexBoxes)) return false;
+    /// <summary>
+    /// verarbeitet die Variante einer bestimmte Aufgabe und gibt alle möglichen folgenden Aufgaben zurück
+    /// </summary>
+    /// <param name="task">Aufgabe, welche verarbeitet werden soll</param>
+    /// <param name="variant">Variante der Aufgabe, welche verarbeitet werden soll</param>
+    /// <param name="outputTask">Rückgabe der neuen Aufgabe (wird pro Enumerable-Element geändert)</param>
+    /// <returns>Enumerable der neuen Aufgaben</returns>
+    IEnumerable<TaskVariantInfo> ResolveTask(ulong[] task, ulong variant, ulong[] outputTask)
+    {
+      uint startRoomIndex = GetTaskRoomIndex(task);
+      uint startPortalIndex = GetTaskPortalIndex(task);
+      ulong startCrc = Crc64.Start.Crc64Update(startRoomIndex).Crc64Update(startPortalIndex).Crc64Update(variant);
 
-    //    if (variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung erreicht?
-    //    {
-    //      tmpTask[room.roomIndex] = variantData.newState;
-    //      for (int i = 0; i < tmpTask.Length - TaskInfoValues; i++) if (tmpTask[i] != 0) return false; // unvollständiges Ende gefunden
-    //      return true; // Ende erreicht!
-    //    }
-    //    else
-    //    {
-    //      var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
-    //      return oPortal.variantStateDict.GetVariants(tmpTask[oPortal.toRoom.roomIndex]).Any(); // mindestens eine gültige Nachfolge-Variante gefunden?
-    //    }
-    //  }
-    //  else
-    //  {
-    //    if (variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung erreicht?
-    //    {
-    //      throw new NotImplementedException("todo: check debug");
+      // --- Liste mit allen Varianten erstellen, welche per Laufschritte direkt erreichbar sind ---
+      var list = Enumerable.Repeat(new
+      {
+        moves = 0UL,                     // Anzahl der bisher gemachten Laufschritte
+        roomIndex = startRoomIndex,      // Raum, welcher betroffen ist
+        iPortalIndex = startPortalIndex, // eingehendes Portal, welches betroffen ist (uint.MaxValue = kein Portal/Startvariante)
+        variant,                         // Variante, welche verarbeitet wird
+        crc = startCrc                   // Prüfsumme aus alle Infos außer Anzahl Laufschritte
+      }, 1).ToList();
 
-    //      for (int i = 0; i < task.Length - TaskInfoValues; i++) if (task[i] != 0) return false; // unvollständiges Ende gefunden
-    //      return true; // Ende erreicht!
-    //    }
-    //    else
-    //    {
-    //      var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
-    //      return oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]).Any(); // mindestens eine gültige Nachfolge-Variante gefunden?
-    //    }
-    //  }
-    //}
+      var movesDict = new Dictionary<ulong, ulong> { { startCrc, 0UL } }; // Dictionary zum vermeiden von doppelten bzw. ineffizienten Laufwegen (keine Loops)
+      var pushDict = new HashSet<ulong>(); // merkt sich alle Prüfsummen der Varianten, wo auch Kistenverschiebungen enthalten sind (nur diese werden zum Schluss als neue Aufgaben zurück gegeben)
 
-    ///// <summary>
-    ///// prüft, ob eine bestimmte Aufgabe nur mit Laufwegen gültig ist (keine Kistenverschiebungen)
-    ///// </summary>
-    ///// <param name="task">Aufgabe, welche geprüft werden soll</param>
-    ///// <param name="room">Raum, welcher betroffen ist</param>
-    ///// <param name="variant">Variante, welche geprüft werden soll</param>
-    ///// <returns>true, wenn die Aufgabe gültig ist (sonst false)</returns>
-    //static bool CheckMoveTask(ulong[] task, Room room, ulong variant)
-    //{
-    //  var variantData = room.variantList.GetData(variant);
-    //  Debug.Assert(variantData.pushes == 0);
-    //  Debug.Assert(variantData.moves > 0);
+      for (int listIndex = 0; listIndex < list.Count; listIndex++)
+      {
+        var step = list[listIndex];
+        var room = rooms[step.roomIndex];
+        var variantData = room.variantList.GetData(step.variant);
+        Debug.Assert(variantData.oldState == task[room.roomIndex]);
 
-    //  Debug.Assert(variantData.oPortalIndexBoxes.Length == 0);
-    //  Debug.Assert(variantData.oPortalIndexPlayer < room.outgoingPortals.Length);
+        if (variantData.pushes > 0) // fertige Variante mit Kistenverschiebungen gefunden -> kann nicht weiter durchsucht werden
+        {
+          DebugConsoleV("Move-Step " + (listIndex + 1) + " / " + list.Count + " (finish)", task, step.variant, step.roomIndex, step.iPortalIndex);
+          pushDict.Add(step.crc);
+          continue;
+        }
+        else
+        {
+          DebugConsoleV("Move-Step " + (listIndex + 1) + " / " + list.Count, task, step.variant, step.roomIndex, step.iPortalIndex);
+        }
+        Debug.Assert(variantData.oPortalIndexBoxes.Length == 0);
 
-    //  var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
-    //  return oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]).Any(); // mindestens eine gültige Nachfolge-Variante gefunden?
-    //}
+        ulong toMoves = step.moves + variantData.moves;
+        var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+        var toRoom = toPortal.toRoom;
+        ulong toCrc = Crc64.Start.Crc64Update(toRoom.roomIndex).Crc64Update(toPortal.iPortalIndex);
+        foreach (var toVariant in toPortal.variantStateDict.GetVariants(task[toRoom.roomIndex]))
+        {
+          ulong crc = toCrc.Crc64Update(toVariant);
+          ulong oldMoves;
+          if (!movesDict.TryGetValue(crc, out oldMoves)) oldMoves = ulong.MaxValue;
+          if (oldMoves <= toMoves) continue; // diese oder eine bessere Version schon bekannt? -> überspringen
 
-    //#region # struct TaskVariantInfo // Ergebnis-Informationen einer berechneten Variante
-    ///// <summary>
-    ///// Ergebnis-Informationen einer berechneten Variante
-    ///// </summary>
-    //struct TaskVariantInfo
-    //{
-    //  /// <summary>
-    //  /// Anzahl der gemachten Laufschritte
-    //  /// </summary>
-    //  public readonly ulong moves;
-    //  /// <summary>
-    //  /// Anzahl der durchgeführten Kistenverschiebungen
-    //  /// </summary>
-    //  public readonly ulong pushes;
-    //  /// <summary>
-    //  /// berechnete Prüfsumme
-    //  /// </summary>
-    //  public readonly ulong crc;
-    //  /// <summary>
-    //  /// Konstruktor
-    //  /// </summary>
-    //  /// <param name="moves">Anzahl der gemachten Laufschritte</param>
-    //  /// <param name="pushes">Anzahl der durchgeführten Kistenverschiebungen</param>
-    //  /// <param name="crc">berechnete Prüfsumme oder 0, wenn das gesamte Spielfeld bereits gelöst wurde</param>
-    //  public TaskVariantInfo(ulong moves, ulong pushes, ulong crc = 0)
-    //  {
-    //    this.moves = moves;
-    //    this.pushes = pushes;
-    //    this.crc = crc;
-    //  }
+          if (oldMoves == ulong.MaxValue) movesDict.Add(crc, toMoves); else movesDict[crc] = toMoves;
 
-    //  /// <summary>
-    //  /// gibt den Inhalt als lesbare Zeichenkette zurück
-    //  /// </summary>
-    //  /// <returns>lesbare Zeichenkette</returns>
-    //  public override string ToString()
-    //  {
-    //    return new { moves, pushes, crc }.ToString();
-    //  }
-    //}
-    //#endregion
+          list.Add(new
+          {
+            moves = toMoves,
+            toRoom.roomIndex,
+            toPortal.iPortalIndex,
+            variant = toVariant,
+            crc
+          });
+        }
+      }
 
-    //IEnumerable<ulong> ResolveTaskMoveVariants(ulong[] task, Dictionary<ulong, ulong> moveFilter, ulong moveOffset)
-    //{
-    //  uint roomIndex = GetTaskRoomIndex(task);
-    //  var room = rooms[roomIndex];
+      // --- alle gesammelten Varianten durchsuchen und nur gültige Aufgaben zurück geben, welche Kistenverschiebungen enthalten ---
+      foreach (var step in list)
+      {
+        if (step.moves > movesDict[step.crc]) continue; // eine andere Variante mit kürzerer Laufstrecke ist bekannt? -> diese hier überspringen
+        if (!pushDict.Contains(step.crc)) continue; // Variante enthält keine Kistenverschiebungen? -> überspringen
 
-    //  Debug.Assert(GetTaskVariant(task) < room.variantList.Count);
-    //  var variantData = room.variantList.GetData(GetTaskVariant(task));
-    //  Debug.Assert(variantData.oPortalIndexBoxes.Length == 0); // keine Kisten-Verschiebungen nach draußen
-    //  Debug.Assert(task[room.roomIndex] == variantData.newState); // keine Kisten-Verschiebungen innerhalb des Raumes
-    //  Debug.Assert(variantData.oPortalIndexPlayer < room.outgoingPortals.Length); // End-Stellung kann ohne Kistenverschiebung nie erreicht werden
+        var room = rooms[step.roomIndex];
+        var variantData = room.variantList.GetData(step.variant);
+        Debug.Assert(variantData.pushes > 0);
+        Debug.Assert(variantData.oldState == task[room.roomIndex]);
 
-    //  var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+        ulong toMoves = step.moves + variantData.moves;
 
-    //  SetTaskInfos(task, oPortal.toRoom.roomIndex, oPortal.iPortalIndex);
+        DebugConsoleV("Push-Step (Moves: " + toMoves + ")", task, step.variant, step.roomIndex, step.iPortalIndex);
 
-    //  // --- Sub-Varianten durcharbeiten ---
-    //  foreach (ulong variant in oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]))
-    //  {
-    //    variantData = oPortal.toRoom.variantList.GetData(variant);
-    //    if (variantData.pushes > 0) break; // alle weiteren Varianten mit Kistenverschiebungen ignorieren
+        TaskCopy(task, outputTask);
+        if (ResolveTaskPortalBoxes(outputTask, room, variantData.oPortalIndexBoxes))
+        {
+          outputTask[room.roomIndex] = variantData.newState;
 
-    //    if (CheckMoveTask(task, oPortal.toRoom, variant))
-    //    {
-    //      ulong totalMoves = moveOffset + variantData.moves;
+          if (variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung erreicht?
+          {
+            bool validEnd = true;
+            for (int i = 0; i < outputTask.Length - TaskInfoValues; i++) if (outputTask[i] != 0) { validEnd = false; break; } // unvollständigen Raum gefunden?
+            if (!validEnd) continue; // kein gültiges Ende erkannt -> überspringen
 
-    //      ulong moveCrc = Crc64.Start.Crc64Update(task[task.Length - 2]).Crc64Update(task[task.Length - 1]);
-    //      ulong oldMoves;
-    //      if (!moveFilter.TryGetValue(moveCrc, out oldMoves)) oldMoves = ulong.MaxValue;
+            SetTaskInfos(outputTask, room.roomIndex, uint.MaxValue); // im bisherigen Raum verbleibend, kein Portal zum verlassen benutzt
+            yield return new TaskVariantInfo(toMoves, variantData.pushes);
+          }
+          else
+          {
+            var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+            var toRoom = toPortal.toRoom;
+            if (toPortal.variantStateDict.GetVariants(outputTask[toRoom.roomIndex]).Any()) // mindestens eine gültige Nachfolge-Variante gefunden?
+            {
+              yield return new TaskVariantInfo(toMoves, variantData.pushes, Crc64.Get(outputTask));
+            }
+          }
+        }
+      }
+    }
 
-    //      if (totalMoves >= oldMoves) continue; // keine neuere/bessere Variante gefunden
+    /// <summary>
+    /// aktualisiert die Kisten-Zustände innerhalb einer Aufgabe durch die Portale
+    /// </summary>
+    /// <param name="task">Aufgabe, welche bearbeitet werden soll</param>
+    /// <param name="room">Room, welcher betroffen ist</param>
+    /// <param name="boxPortalsIndices">Nummern der Portale, wodurch Kisten geschoben wurden</param>
+    /// <returns>true, wenn der Vorgang erfolgreich war</returns>
+    static bool ResolveTaskPortalBoxes(ulong[] task, Room room, uint[] boxPortalsIndices)
+    {
+      foreach (var boxPortal in boxPortalsIndices) // Kisten durch benachbarte Portale schieben
+      {
+        var oPortal = room.outgoingPortals[boxPortal];
+        uint roomIndex = oPortal.toRoom.roomIndex;
+        ulong oldState = task[roomIndex];
+        ulong newState = oPortal.stateBoxSwap.Get(oldState);
+        if (oldState == newState) return false; // Kiste kann nicht vom banachbarten Raum aufgenommen werden -> gesamte Variante ungültig
 
-    //      SetTaskVariant(task, variant);
-    //      DebugConsoleV("Next-Move " + variant, task);
-    //      if (oldMoves == ulong.MaxValue) moveFilter.Add(moveCrc, totalMoves); else moveFilter[moveCrc] = totalMoves;
-    //      yield return totalMoves;
-    //    }
-    //  }
-    //}
+        task[roomIndex] = newState; // neuen Zustand im benachbarten Raum setzen
+      }
 
-    //IEnumerable<TaskVariantInfo> ResolveTaskPushVariants(ulong[] task, ulong moveOffset)
-    //{
-    //  uint roomIndex = GetTaskRoomIndex(task);
-    //  var room = rooms[roomIndex];
-
-    //  Debug.Assert(GetTaskVariant(task) < room.variantList.Count);
-    //  var variantData = room.variantList.GetData(GetTaskVariant(task));
-    //  Debug.Assert(variantData.oPortalIndexBoxes.Length == 0); // keine Kisten-Verschiebungen nach draußen
-    //  Debug.Assert(task[room.roomIndex] == variantData.newState); // keine Kisten-Verschiebungen innerhalb des Raumes
-    //  Debug.Assert(variantData.oPortalIndexPlayer < room.outgoingPortals.Length); // End-Stellung kann ohne Kistenverschiebung nie erreicht werden
-
-    //  var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
-
-    //  SetTaskInfos(task, oPortal.toRoom.roomIndex, oPortal.iPortalIndex);
-
-    //  var tmpTask = new ulong[taskSize];
-
-    //  // --- Sub-Varianten durcharbeiten ---
-    //  foreach (ulong variant in oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]))
-    //  {
-    //    variantData = oPortal.toRoom.variantList.GetData(variant);
-    //    if (variantData.pushes == 0) continue; // reine Move-Varianten ignorieren
-
-    //    SetTaskVariant(task, variant);
-    //    if (CheckTask(task, tmpTask, oPortal.toRoom, variant))
-    //    {
-    //      ulong totalMoves = moveOffset + variantData.moves;
-
-    //      DebugConsoleV("Next-Variant " + variant, task);
-
-    //      yield return new TaskVariantInfo(totalMoves, variantData.pushes, Crc64.Get(task));
-    //    }
-    //    else
-    //    {
-    //      DebugConsoleV("Next-Variant " + variant + " (skipped)", task);
-    //    }
-    //  }
-    //}
-
-    ///// <summary>
-    ///// verarbeitet eine Aufgabe und berechnet daraus weitere neue Aufgaben
-    ///// </summary>
-    ///// <param name="task">Aufgabe, welche abgearbeitet werden soll</param>
-    ///// <param name="moveFilter">Filter zum verhindern von doppelten Laufschritten</param>
-    ///// <param name="moveOffset">Offset für den Move-Filter</param>
-    ///// <returns>Enumerable der neuen Aufgaben</returns>
-    //IEnumerable<TaskVariantInfo> ResolveTaskVariants(ulong[] task, Dictionary<ulong, ulong> moveFilter, ulong moveOffset)
-    //{
-    //  uint roomIndex = GetTaskRoomIndex(task);
-    //  var room = rooms[roomIndex];
-
-    //  Debug.Assert(GetTaskVariant(task) < room.variantList.Count);
-    //  var variantData = room.variantList.GetData(GetTaskVariant(task));
-
-    //  if (!ResolveTaskPortalBoxes(task, room, variantData.oPortalIndexBoxes))
-    //  {
-    //    throw new Exception("invalid task (resolve portal-boxes)"); // Check-Funktion bei "AddStarts" nicht ausgeführt?
-    //  }
-
-    //  task[room.roomIndex] = variantData.newState; // neuen Zustand des eigenen Raumes setzen
-
-    //  if (variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung schon erreicht?
-    //  {
-    //    for (int i = 0; i < task.Length - TaskInfoValues; i++) if (task[i] != 0) throw new Exception("invalid task (end-states)");
-
-    //    yield return new TaskVariantInfo(variantData.moves, variantData.pushes);
-    //    yield break;
-    //  }
-
-    //  var oPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
-
-    //  SetTaskInfos(task, oPortal.toRoom.roomIndex, oPortal.iPortalIndex);
-
-    //  var tmpTask = new ulong[taskSize];
-
-    //  // --- Sub-Varianten durcharbeiten ---
-    //  foreach (ulong variant in oPortal.variantStateDict.GetVariants(task[oPortal.toRoom.roomIndex]))
-    //  {
-    //    SetTaskVariant(task, variant);
-
-    //    if (CheckTask(task, tmpTask, oPortal.toRoom, variant))
-    //    {
-    //      variantData = oPortal.toRoom.variantList.GetData(variant);
-    //      ulong totalMoves = moveOffset + variantData.moves;
-
-    //      if (variantData.pushes > 0) // sinnvolle Variante mit Kistenverschiebungen erkannt?
-    //      {
-    //        DebugConsoleV("Next-Variant " + variant, task);
-
-    //        yield return new TaskVariantInfo(totalMoves, variantData.pushes, Crc64.Get(task));
-    //      }
-    //      else // Variante nur mit Laufwegen erkannt -> rekursiv weiter suchen
-    //      {
-    //        ulong moveCrc = Crc64.Start.Crc64Update(task[task.Length - 2]).Crc64Update(task[task.Length - 1]);
-    //        ulong oldMoves;
-    //        if (!moveFilter.TryGetValue(moveCrc, out oldMoves)) oldMoves = ulong.MaxValue;
-
-    //        if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
-    //        {
-    //          DebugConsoleV("Next-Move " + variant, task);
-    //          if (oldMoves == ulong.MaxValue) moveFilter.Add(moveCrc, totalMoves); else moveFilter[moveCrc] = totalMoves;
-    //        }
-    //        else
-    //        {
-    //          DebugConsoleV("Next-Move " + variant + " (skipped)", task);
-    //          continue;
-    //        }
-
-    //        Array.Copy(task, tmpTask, task.Length); // Backup erstellen
-    //        foreach (var subInfo in ResolveTaskVariants(task, moveFilter, totalMoves))
-    //        {
-    //          yield return subInfo;
-    //        }
-    //        Array.Copy(tmpTask, task, task.Length); // Backup wiederherstellen
-    //      }
-    //    }
-    //    else
-    //    {
-    //      DebugConsoleV("Next-Variant " + variant + " (skipped)", task);
-    //    }
-    //  }
-    //}
+      return true;
+    }
     #endregion
 
     /// <summary>
@@ -550,32 +466,34 @@ namespace SokoWahnLib.Rooms
         #region # // --- AddStarts - Anfangswerte als Aufgaben hinzufügen ---
         case SolveState.AddStarts:
         {
-          uint startRoomIndex = GetTaskRoomIndex(currentTask);
-          var room = rooms[startRoomIndex];
           Debug.Assert(GetTaskPortalIndex(currentTask) == uint.MaxValue);
 
-          //var tmpTask = new ulong[taskSize];
+          var tmpTask = TaskClone(currentTask);
 
           for (; maxTicks > 0; maxTicks--)
           {
             // --- Start-Aufgabe prüfen und in die Aufgaben-Liste hinzufügen ---
-
-            //  if (CheckTask(currentTask, tmpTask, room, variant))
-            //  {
-            //    forwardTasks[0].Add(currentTask);
-            //    hashTable.Add(Crc64.Get(currentTask), 0);
             DebugConsole("Start-Variant");
-            //  }
-            //  else
-            //  {
-            //    DebugConsole("Start-Variant " + variant + " (skipped)");
-            //  }
+
+            foreach (var taskInfo in ResolveTask(currentTask, currentVariant, tmpTask))
+            {
+              ulong totalMoves = taskInfo.moves;
+
+              if (taskInfo.crc == 0)
+              {
+                throw new NotImplementedException(); // Ende erreicht?
+              }
+
+              while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+              forwardTasks[(int)(uint)totalMoves].Add(tmpTask);
+            }
 
             currentVariant++;
 
-            if (currentVariant == room.startVariantCount) // alle Start-Varianten bereits abgearbeitet?
+            if (currentVariant == currentVariantEnd) // alle Start-Varianten bereits abgearbeitet?
             {
               solveState = SolveState.ScanForward;
+              goto case SolveState.ScanForward;
             }
           }
         } break;
@@ -584,14 +502,14 @@ namespace SokoWahnLib.Rooms
         #region # // --- ScanForward - Lösungssuche vorwärts ---
         case SolveState.ScanForward:
         {
-          //if (forwardIndex >= forwardTasks.Count) return true; // Ende der Aufgaben-Listen erreicht?
-          //var taskList = forwardTasks[forwardIndex];
-          //if (taskList.Count == 0) // Aufgabenliste für diesen Zug bereits abgearbeitet?
-          //{
-          //  taskList.Dispose();
-          //  forwardIndex++;
-          //  goto case SolveState.ScanForward;
-          //}
+          if (forwardIndex >= forwardTasks.Count) return true; // Ende der Aufgaben-Listen erreicht?
+          var taskList = forwardTasks[forwardIndex];
+          if (taskList.Count == 0) // Aufgabenliste für diesen Zug bereits abgearbeitet?
+          {
+            taskList.Dispose();
+            forwardIndex++;
+            goto case SolveState.ScanForward;
+          }
 
           //for (; maxTicks > 0 && taskList.Count > 0; maxTicks--)
           //{
@@ -734,7 +652,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt an, ob zusätzliche Debug-Infos in der Console ausgegeben werden sollen
     /// </summary>
-    public static readonly bool DebugConsoleVerbose = false;
+    public static readonly bool DebugConsoleVerbose = true;
 
     /// <summary>
     /// gibt das Spielfeld mit der entsprechenden Aufgabe in der Console aus (nur Debug-Modus)
@@ -742,8 +660,10 @@ namespace SokoWahnLib.Rooms
     /// <param name="title">optionale Überschrift über dem Spielfeld</param>
     /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
     /// <param name="variant">optionale Variante, welche verwendet werden soll (default: currentVariant)</param>
+    /// <param name="roomIndex">optionaler expliziter Raum, welcher verwendet werden soll (default: Raum aus der Aufgabe)</param>
+    /// <param name="iPortalIndex">optional explizites Portal, welches verwendet werden soll (default: Portal aus der Aufgabe)</param>
     [Conditional("DEBUG")]
-    public void DebugConsole(string title = null, ulong[] task = null, ulong variant = ulong.MaxValue)
+    public void DebugConsole(string title = null, ulong[] task = null, ulong variant = ulong.MaxValue, uint roomIndex = uint.MaxValue, uint iPortalIndex = uint.MaxValue)
     {
       if (!IsConsoleApplication) return;
       if (Console.CursorTop == 0) Console.WriteLine();
@@ -758,7 +678,7 @@ namespace SokoWahnLib.Rooms
           title = "  --- " + title + (variant < ulong.MaxValue ? " (Variant: " + variant + ")" : "") + " ---\r\n";
         }
       }
-      Console.WriteLine(title + ("\r\n" + DebugStr(task, variant)).Replace("\r\n", "\r\n  "));
+      Console.WriteLine(title + ("\r\n" + DebugStr(task, variant, roomIndex, iPortalIndex)).Replace("\r\n", "\r\n  "));
     }
 
     /// <summary>
@@ -767,12 +687,14 @@ namespace SokoWahnLib.Rooms
     /// <param name="title">optionale Überschrift über dem Spielfeld</param>
     /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
     /// <param name="variant">optionale Variante, welche verwendet werden soll (default: currentVariant)</param>
+    /// <param name="roomIndex">optionaler expliziter Raum, welcher verwendet werden soll (default: Raum aus der Aufgabe)</param>
+    /// <param name="iPortalIndex">optional explizites Portal, welches verwendet werden soll (default: Portal aus der Aufgabe)</param>
     [Conditional("DEBUG")]
-    public void DebugConsoleV(string title = null, ulong[] task = null, ulong variant = ulong.MaxValue)
+    public void DebugConsoleV(string title = null, ulong[] task = null, ulong variant = ulong.MaxValue, uint roomIndex = uint.MaxValue, uint iPortalIndex = uint.MaxValue)
     {
       // ReSharper disable once RedundantJumpStatement
       if (!DebugConsoleVerbose) return;
-      DebugConsole(title, task, variant);
+      DebugConsole(title, task, variant, roomIndex, iPortalIndex);
     }
     #endregion
 
@@ -782,8 +704,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="task">optional: Aufgabe, welche angezeigt werden soll (default: currentTask)</param>
     /// <param name="variant">optionale Variante, welche verwendet werden soll (default: currentVariant)</param>
+    /// <param name="roomIndex">optionaler expliziter Raum, welcher verwendet werden soll (default: Raum aus der Aufgabe)</param>
+    /// <param name="iPortalIndex">optional explizites Portal, welches verwendet werden soll (default: Portal aus der Aufgabe)</param>
     /// <returns>Spielfeld als Text Standard-Notation</returns>
-    public string DebugStr(ulong[] task = null, ulong variant = ulong.MaxValue)
+    public string DebugStr(ulong[] task = null, ulong variant = ulong.MaxValue, uint roomIndex = uint.MaxValue, uint iPortalIndex = uint.MaxValue)
     {
       if (task == null)
       {
@@ -807,8 +731,11 @@ namespace SokoWahnLib.Rooms
         }
       }
 
-      uint roomIndex = GetTaskRoomIndex(task);
-      uint iPortalIndex = GetTaskPortalIndex(task);
+      if (roomIndex == uint.MaxValue)
+      {
+        roomIndex = GetTaskRoomIndex(task);
+        iPortalIndex = GetTaskPortalIndex(task);
+      }
       var variantData = rooms[roomIndex].variantList.GetData(variant);
 
       int playerPos = iPortalIndex < uint.MaxValue ? rooms[roomIndex].incomingPortals[iPortalIndex].fromPos : roomNetwork.field.PlayerPos;
