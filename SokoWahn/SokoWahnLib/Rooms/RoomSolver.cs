@@ -10,6 +10,7 @@ using System.Text;
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable MemberCanBePrivate.Local
 // ReSharper disable ConvertToConstant.Global
+// ReSharper disable UnusedMethodReturnValue.Local
 
 namespace SokoWahnLib.Rooms
 {
@@ -87,7 +88,9 @@ namespace SokoWahnLib.Rooms
     /// <returns>Raum, welcher aufgefragt wurde</returns>
     public Room GetTaskRoom(ulong[] task)
     {
-      return rooms[GetTaskRoomIndex(task)];
+      var room = rooms[GetTaskRoomIndex(task)];
+      if (room == null) throw new NullReferenceException("room");
+      return room;
     }
 
     /// <summary>
@@ -111,15 +114,22 @@ namespace SokoWahnLib.Rooms
     /// <returns>Enumerable der Spielerpositionen auf dem Spielfeld</returns>
     public IEnumerable<int> GetTaskPlayerPath(ulong[] task, ulong variant)
     {
-      uint roomIndex = GetTaskRoomIndex(task);
+      var room = GetTaskRoom(task);
       uint iPortalIndex = GetTaskPortalIndex(task);
       if (variant == ulong.MaxValue)
       {
-        yield return roomNetwork.field.PlayerPos;
+        if (iPortalIndex < uint.MaxValue)
+        {
+          yield return room.incomingPortals[iPortalIndex].fromPos;
+          yield return room.incomingPortals[iPortalIndex].toPos;
+        }
+        else
+        {
+          yield return roomNetwork.field.PlayerPos;
+        }
         yield break;
       }
 
-      var room = rooms[roomIndex];
       var variantData = room.variantList.GetData(variant);
       int playerPos;
 
@@ -256,7 +266,7 @@ namespace SokoWahnLib.Rooms
 
         if (variantData.pushes > 0) // fertige Variante mit Kistenverschiebungen gefunden -> kann nicht weiter durchsucht werden
         {
-          DebugConsoleV("Move-Step " + (listIndex + 1) + " / " + list.Count + " (finish)", task, step.variant, step.roomIndex, step.iPortalIndex);
+          DebugConsoleV("Move-Step " + (listIndex + 1) + " / " + list.Count + " (last)", task, step.variant, step.roomIndex, step.iPortalIndex);
           pushDict.Add(step.crc);
           continue;
         }
@@ -321,10 +331,17 @@ namespace SokoWahnLib.Rooms
           }
           else
           {
+            if (variantData.newState == 0)
+            {
+              bool end = true;
+              for (int i = 0; i < outputTask.Length - TaskInfoValues; i++) if (outputTask[i] != 0) { end = false; break; }
+              if (end) continue; // ineffizientes Ende gefunden -> überspringen
+            }
             var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
             var toRoom = toPortal.toRoom;
             if (toPortal.variantStateDict.GetVariants(outputTask[toRoom.roomIndex]).Any()) // mindestens eine gültige Nachfolge-Variante gefunden?
             {
+              SetTaskInfos(outputTask, toRoom.roomIndex, toPortal.iPortalIndex); // durch ein Portal zum nächsten Raum wechseln
               yield return new TaskVariantInfo(toMoves, variantData.pushes, Crc64.Get(outputTask));
             }
           }
@@ -411,6 +428,16 @@ namespace SokoWahnLib.Rooms
     int forwardIndex;
 
     /// <summary>
+    /// merkt sich die beste Lösung als Pfad
+    /// </summary>
+    string bestSolutionPath;
+
+    /// <summary>
+    /// merkt sich die Anzahl der Kistenverschiebungen der besten bekannten Lösung
+    /// </summary>
+    ulong bestSolutionPushes = ulong.MaxValue;
+
+    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="roomNetwork">Netzwerk, welches verwendet werden soll</param>
@@ -466,34 +493,40 @@ namespace SokoWahnLib.Rooms
         #region # // --- AddStarts - Anfangswerte als Aufgaben hinzufügen ---
         case SolveState.AddStarts:
         {
-          Debug.Assert(GetTaskPortalIndex(currentTask) == uint.MaxValue);
-
           var tmpTask = TaskClone(currentTask);
+
+          Debug.Assert(GetTaskPortalIndex(currentTask) == uint.MaxValue);
 
           for (; maxTicks > 0; maxTicks--)
           {
             // --- Start-Aufgabe prüfen und in die Aufgaben-Liste hinzufügen ---
             DebugConsole("Start-Variant");
 
+            #region # // --- Variante abarbeiten ---
             foreach (var taskInfo in ResolveTask(currentTask, currentVariant, tmpTask))
             {
               ulong totalMoves = taskInfo.moves;
 
-              if (taskInfo.crc == 0)
+              if (taskInfo.crc == 0) // Ende erreicht?
               {
-                throw new NotImplementedException(); // Ende erreicht?
+                UpdateBestSolution(tmpTask, totalMoves);
+                continue;
               }
 
-              while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
-              forwardTasks[(int)(uint)totalMoves].Add(tmpTask);
+              if (bestSolutionPath == null || totalMoves < (uint)bestSolutionPath.Length)
+              {
+                while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+                forwardTasks[(int)(uint)totalMoves].Add(tmpTask);
+              }
             }
+            #endregion
 
             currentVariant++;
 
             if (currentVariant == currentVariantEnd) // alle Start-Varianten bereits abgearbeitet?
             {
               solveState = SolveState.ScanForward;
-              goto case SolveState.ScanForward;
+              break;
             }
           }
         } break;
@@ -502,98 +535,128 @@ namespace SokoWahnLib.Rooms
         #region # // --- ScanForward - Lösungssuche vorwärts ---
         case SolveState.ScanForward:
         {
-          if (forwardIndex >= forwardTasks.Count) return true; // Ende der Aufgaben-Listen erreicht?
-          var taskList = forwardTasks[forwardIndex];
-          if (taskList.Count == 0) // Aufgabenliste für diesen Zug bereits abgearbeitet?
+          var tmpTask = TaskClone(currentTask);
+
+          for (; maxTicks > 0; )
           {
-            taskList.Dispose();
-            forwardIndex++;
-            goto case SolveState.ScanForward;
+            if (currentVariant < currentVariantEnd)
+            {
+              DebugConsole("Search-Forward [" + forwardIndex + "], task-remain: " + (forwardTasks[forwardIndex].Count + 1).ToString("N0") + ", remain variants: " + (currentVariantEnd - currentVariant));
+
+              #region # // --- Variante abarbeiten ---
+              foreach (var taskInfo in ResolveTask(currentTask, currentVariant, tmpTask))
+              {
+                ulong totalMoves = taskInfo.moves + (uint)forwardIndex;
+
+                if (taskInfo.crc == 0) // Ende erreicht?
+                {
+                  UpdateBestSolution(tmpTask, totalMoves);
+                  continue;
+                }
+
+                ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
+                if (oldMoves <= totalMoves) continue;
+                if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, (uint)forwardIndex); else hashTable.Update(taskInfo.crc, (uint)forwardIndex);
+
+                if (bestSolutionPath == null || totalMoves < (uint)bestSolutionPath.Length)
+                {
+                  while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+                  forwardTasks[(int)(uint)totalMoves].Add(tmpTask);
+                }
+              }
+              #endregion
+
+              maxTicks--;
+              currentVariant++;
+            }
+
+            #region # // --- neue Variante oder Aufgabe wählen (falls notwendig) ---
+            while (currentVariant == currentVariantEnd) // alle Varianten einer Aufgabe abgearbeitet?
+            {
+              if (forwardIndex >= forwardTasks.Count) return true; // Ende aller Aufgaben-Listen erreicht?
+              if (bestSolutionPath != null && forwardIndex >= bestSolutionPath.Length) // beste Lösung gefunden?
+              {
+                while (forwardIndex < forwardTasks.Count) forwardTasks[forwardIndex++].Dispose(); // restliche Aufgaben löschen
+                return true;
+              }
+              var taskList = forwardTasks[forwardIndex];
+
+              // --- neue Aufgaben abholen und zugehörige Varianten ermitteln ---
+              for (; ; )
+              {
+                if (!taskList.FetchFirst(currentTask))
+                {
+                  // gesamte Aufgabenliste für diesen Zug bereits abgearbeitet?
+                  taskList.Dispose();
+                  forwardIndex++;
+                  return false;
+                }
+                maxTicks--;
+
+                ulong crc = Crc64.Get(currentTask);
+                ulong oldMoves = hashTable.Get(crc, ulong.MaxValue);
+                if (oldMoves <= (uint)forwardIndex)
+                {
+                  if (maxTicks <= 0) return false;
+                  continue;
+                }
+                if (oldMoves == ulong.MaxValue) hashTable.Add(crc, (uint)forwardIndex); else hashTable.Update(crc, (uint)forwardIndex);
+
+                break; // nützliche Aufgabe gefunden
+              }
+
+              var room = GetTaskRoom(currentTask);
+              var iPortalIndex = GetTaskPortalIndex(currentTask);
+
+              // todo: Varianten in Ketten-Logik speichern, da diese immer zusammenhängend sind
+              ulong firstVariant = ulong.MaxValue;
+              ulong lastVariant = 0;
+              foreach (var variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariants(currentTask[room.roomIndex]))
+              {
+                if (variant < firstVariant) // erste Variante erkannt?
+                {
+                  Debug.Assert(firstVariant == ulong.MaxValue);
+                  firstVariant = variant;
+                  Debug.Assert(lastVariant == 0);
+                  lastVariant = variant;
+                  continue;
+                }
+                Debug.Assert(variant == lastVariant + 1); // fortlaufende Variante ohne Lücke erwartet
+                lastVariant = variant;
+              }
+              Debug.Assert(firstVariant < ulong.MaxValue);
+
+              currentVariant = firstVariant;
+              currentVariantEnd = lastVariant + 1;
+            }
+            #endregion
           }
-
-          //for (; maxTicks > 0 && taskList.Count > 0; maxTicks--)
-          //{
-          //taskList.PeekFirst(currentTask);
-          //DebugConsole("Search-Forward [" + forwardIndex + "], remain: " + (taskList.Count + 1).ToString("N0"));
-
-          //// todo: Move+Push Resolver zusammensetzen und Start-Varianten nur mit pushes erlauben
-
-          //// --- Laufwege checken ---
-          //var moveFilter = new Dictionary<ulong, ulong>();
-          //var moveTicks = ResolveTaskMoveVariants(currentTask, moveFilter, 0).Select(x => new { moves = x, task = currentTask.ToArray(), crc = Crc64.Get(currentTask) }).ToList();
-          //for (int tick = 0; tick < moveTicks.Count; tick++)
-          //{
-          //  ulong moves = moveTicks[tick].moves;
-          //  var task = moveTicks[tick].task.ToArray();
-          //  moveTicks.AddRange(ResolveTaskMoveVariants(task, moveFilter, moves).Select(x => new { moves = x, task = task.ToArray(), crc = Crc64.Get(task) }));
-          //}
-          //moveTicks.Sort((x, y) =>
-          //{
-          //  int dif = x.crc.CompareTo(y.crc);
-          //  if (dif == 0) dif = (int)(uint)(x.moves - y.moves);
-          //  return dif;
-          //});
-
-          //// --- alle Varianten mit Kistenverschiebungen ermitteln ---
-          //taskList.FetchFirst(currentTask);
-          //ulong lastCrc = 0;
-          //foreach (var moveTick in moveTicks)
-          //{
-          //  if (moveTick.crc == lastCrc) continue;
-          //  lastCrc = moveTick.crc;
-          //  Array.Copy(moveTick.task, currentTask, currentTask.Length);
-          //  foreach (var taskInfo in ResolveTaskPushVariants(currentTask, moveTick.moves))
-          //  {
-          //    ulong totalMoves = (uint)forwardIndex + taskInfo.moves;
-          //    if (taskInfo.crc == 0)
-          //    {
-          //      throw new NotImplementedException("todo: gesamten Pfad ermitteln und als beste Lösung speichern"); // Ziel erreicht?
-          //    }
-          //    ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
-          //    if (totalMoves >= oldMoves) continue; // keine neue oder bessere Variante gefunden?
-          //    if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
-
-          //    // --- Variante als neue Aufgabe hinzufügen ---
-          //    while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
-          //    forwardTasks[(int)(uint)totalMoves].Add(currentTask);
-          //  }
-          //}
-
-
-          // --- Aufgabe abarbeiten und neue Einträge in die Aufgaben-Liste hinzufügen ---
-          //var moveFilter = new Dictionary<ulong, ulong>();
-          //foreach (var taskInfo in ResolveTaskVariants(currentTask, moveFilter, 0))
-          //{
-          //  ulong totalMoves = (uint)forwardIndex + taskInfo.moves;
-          //  if (taskInfo.crc == 0)
-          //  {
-          //    throw new NotImplementedException("todo: gesamten Pfad ermitteln und als beste Lösung speichern"); // Ziel erreicht?
-          //  }
-          //  ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
-
-          //  if (totalMoves < oldMoves) // bessere bzw. erste Variante gefunden?
-          //  {
-          //    if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
-
-          //    // --- Variante als neue Aufgabe hinzufügen ---
-          //    while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
-          //    forwardTasks[(int)(uint)totalMoves].Add(currentTask);
-          //  }
-          //}
-          //}
-
-          //// --- nächsten Current-State nachladen (für Debugging) ---
-          //while (taskList.Count == 0 && forwardIndex + 1 < forwardTasks.Count)
-          //{
-          //  taskList.Dispose();
-          //  taskList = forwardTasks[++forwardIndex];
-          //}
-          //if (taskList.PeekFirst(currentTask)) DebugConsole("Next");
         } break;
         #endregion
         default: throw new NotSupportedException(solveState.ToString());
       }
 
+      return false;
+    }
+
+    /// <summary>
+    /// aktualisiert die beste Lösung
+    /// </summary>
+    /// <param name="endTask">End-Aufgabe (alle Raumzustände sind 0)</param>
+    /// <param name="moves">Anzahl der Laufschritte</param>
+    /// <returns>true, wenn eine bessere Lösung erkannt wurde</returns>
+    bool UpdateBestSolution(ulong[] endTask, ulong moves)
+    {
+      if (bestSolutionPath == null || moves <= (uint)bestSolutionPath.Length)
+      {
+        if (bestSolutionPath != null && moves < (uint)bestSolutionPath.Length) bestSolutionPushes = moves; // kürzeren Laufweg gefunden: beste Zahl der Kistenverschiebungen zurücksetzten
+
+        // todo: Pfad auflösen und bei gleicher Anzahl der Moves nach niedrigster Push-Variante suchen
+        bestSolutionPath = new string('x', (int)(uint)moves);
+        bestSolutionPushes = moves;
+
+        return true;
+      }
       return false;
     }
 
@@ -610,7 +673,7 @@ namespace SokoWahnLib.Rooms
           case SolveState.AddStarts:
           case SolveState.ScanForward:
           {
-            return GetTaskPlayerPath(currentTask, currentVariant).ToArray();
+            return GetTaskPlayerPath(currentTask, currentVariant < currentVariantEnd ? currentVariant : ulong.MaxValue).ToArray();
           }
           default: return new[] { roomNetwork.field.PlayerPos }; // nur Startposition des Spielers zurückgeben
         }
@@ -667,17 +730,7 @@ namespace SokoWahnLib.Rooms
     {
       if (!IsConsoleApplication) return;
       if (Console.CursorTop == 0) Console.WriteLine();
-      if (!string.IsNullOrWhiteSpace(title))
-      {
-        if (task == null)
-        {
-          title = "  --- " + title + (currentVariant < ulong.MaxValue ? " (Variant: " + (currentVariant + 1) + " / " + currentVariantEnd + ")" : "") + " ---\r\n";
-        }
-        else
-        {
-          title = "  --- " + title + (variant < ulong.MaxValue ? " (Variant: " + variant + ")" : "") + " ---\r\n";
-        }
-      }
+      if (!string.IsNullOrWhiteSpace(title)) title = "  --- " + title + " ---\r\n";
       Console.WriteLine(title + ("\r\n" + DebugStr(task, variant, roomIndex, iPortalIndex)).Replace("\r\n", "\r\n  "));
     }
 
@@ -808,26 +861,56 @@ namespace SokoWahnLib.Rooms
 
       if (solveState == SolveState.Init) return sb.ToString();
       uint roomIndex = GetTaskRoomIndex(currentTask);
-      ulong variant = currentVariant;
       switch (solveState)
       {
         case SolveState.AddStarts:
         {
-          sb.AppendLine(string.Format(" Add-Starts: {0:N0} / {1:N0}", variant + 1, rooms[roomIndex].startVariantCount)).AppendLine();
+          sb.AppendLine(string.Format(" Add-Starts: {0:N0} / {1:N0}", currentVariant + 1, rooms[roomIndex].startVariantCount)).AppendLine();
         } break;
       }
 
-      if (variant < ulong.MaxValue)
+      if (bestSolutionPath != null)
       {
-        sb.AppendLine(" Room: " + roomIndex);
-        sb.AppendLine(" V-ID: " + variant);
-        sb.AppendLine(" Path: " + rooms[roomIndex].variantList.GetData(variant).path);
-        sb.AppendLine();
-
-        for (int moveIndex = forwardIndex; moveIndex < forwardTasks.Count; moveIndex++)
+        if (forwardIndex >= forwardTasks.Count)
         {
-          sb.AppendLine(" [" + moveIndex.ToString("N0") + "]: " + forwardTasks[moveIndex].Count.ToString("N0"));
+          sb.AppendLine(" --- PERFECT SOLUTION (moves) ---");
         }
+        else
+        {
+          sb.AppendLine(" --- solution found (moves) ---");
+        }
+        sb.AppendLine();
+        sb.AppendLine("   Path: " + bestSolutionPath);
+        sb.AppendLine("  Moves: " + bestSolutionPath.Length.ToString("N0"));
+        sb.AppendLine(" Pushes: " + bestSolutionPushes.ToString("N0"));
+        sb.AppendLine();
+      }
+
+      if (forwardIndex < forwardTasks.Count)
+      {
+        if (currentVariant < ulong.MaxValue)
+        {
+          sb.AppendLine(" Room: " + roomIndex);
+          sb.AppendLine(" V-ID: " + (currentVariant + 1) + " / " + currentVariantEnd);
+          sb.AppendLine(" Path: " + (currentVariant < currentVariantEnd ? rooms[roomIndex].variantList.GetData(currentVariant).path : "-"));
+          sb.AppendLine();
+
+          for (int moveIndex = forwardIndex; moveIndex < forwardTasks.Count; moveIndex++)
+          {
+            if (moveIndex == forwardIndex && currentVariant < currentVariantEnd)
+            {
+              sb.AppendLine(" [" + moveIndex.ToString("N0") + "]: " + (forwardTasks[moveIndex].Count).ToString("N0") + " (+" + (currentVariantEnd - currentVariant) + " V)");
+            }
+            else
+            {
+              sb.AppendLine(" [" + moveIndex.ToString("N0") + "]: " + forwardTasks[moveIndex].Count.ToString("N0"));
+            }
+          }
+        }
+      }
+      else if (bestSolutionPath == null)
+      {
+        sb.AppendLine(" --- no solution found ---");
       }
 
       return sb.ToString();

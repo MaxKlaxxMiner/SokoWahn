@@ -31,6 +31,13 @@ namespace SokoWahnWin
       ######
     ");
 
+    static readonly SokoField FieldTest2 = new SokoField(@"
+      ########
+      #      #
+      # $ $+.#
+      ########
+    ");
+
     static readonly SokoField FieldStart = new SokoField(@"
           #####
           #   #
@@ -191,7 +198,8 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel
+      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste)
+      //roomNetwork = new RoomNetwork(FieldTest2);       // sehr einfaches Testlevel (zwei Kisten)
       //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
