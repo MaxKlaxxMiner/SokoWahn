@@ -52,7 +52,14 @@ namespace SokoWahnLib.Rooms
     readonly uint taskSize;
 
     /// <summary>
-    /// gibt an, ob die Hash-Table schonender behandelt werden soll: neue Hash-Einträge werden erst beim Abarbeiten Aufgaben hinzugefügt (nicht mehr beim Erstellen)
+    /// gibt an, ob die Hashtable schonender behandelt werden soll: neue Hash-Einträge werden erst beim Abarbeiten Aufgaben hinzugefügt (nicht beim Erstellen),
+    /// 
+    /// aktiv: Vorteil: geringerer Füllrate der Hashtable (besonders bei längeren Varianten)
+    ///        Nachteil: teils deutlich größere Aufgaben-Listen und dadurch höherer Rechenaufwand
+    ///        Info: Aufgaben-Listen wären streamfähig, was bei Hashtables nicht der Fall ist (kann bei maximaler Skalierung Speichervorteile bieten)
+    /// 
+    /// inaktiv: Vorteil: generell schnellere Verarbeitung durch kleinere Aufgaben-Listen (dank Vorfilterung per Hashtable)
+    ///          Nachteil: höherer Speicherverbrauch der Hashtable während der Verarbeitung, welche nicht streamfähig
     /// </summary>
     static readonly bool HashRelieve = false;
 
@@ -820,6 +827,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
     /// <param name="roomIndex">optionaler expliziter Raum, welcher verwendet werden soll (default: Raum aus der Aufgabe)</param>
     /// <param name="iPortalIndex">optional explizites Portal, welches verwendet werden soll (default: Portal aus der Aufgabe)</param>
+    [Conditional("DEBUG")]
     public void DebugConsoleTask(string title = null, ulong[] task = null, uint roomIndex = uint.MaxValue, uint iPortalIndex = uint.MaxValue)
     {
       if (!IsConsoleApplication) return;
@@ -938,11 +946,16 @@ namespace SokoWahnLib.Rooms
     {
       var sb = new StringBuilder("\r\n");
       sb.AppendLine("  Hash: " + hashTable.Count.ToString("N0"));
-      ulong totalTasks = 0;
-      for (int moveIndex = forwardIndex; moveIndex < forwardTasks.Count; moveIndex++) totalTasks += forwardTasks[moveIndex].Count;
-      sb.AppendLine(" Tasks: " + totalTasks.ToString("N0")).AppendLine();
-      sb.AppendLine(" Moves: " + forwardIndex.ToString("N0")).AppendLine();
-      sb.AppendLine(" State: " + solveState).AppendLine();
+
+      if (bestSolutionPath == null || forwardIndex < forwardTasks.Count)
+      {
+        ulong totalTasks = 0;
+        for (int moveIndex = forwardIndex; moveIndex < forwardTasks.Count; moveIndex++) totalTasks += forwardTasks[moveIndex].Count;
+        sb.AppendLine(" Tasks: " + totalTasks.ToString("N0")).AppendLine();
+        sb.AppendLine(" Moves: " + forwardIndex.ToString("N0")).AppendLine();
+        sb.AppendLine(" State: " + solveState);
+      }
+      sb.AppendLine();
 
       if (solveState == SolveState.Init) return sb.ToString();
       uint roomIndex = GetTaskRoomIndex(currentTask);
