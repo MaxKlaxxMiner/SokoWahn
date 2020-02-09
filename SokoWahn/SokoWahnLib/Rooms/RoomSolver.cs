@@ -12,6 +12,7 @@ using System.Text;
 // ReSharper disable MemberCanBePrivate.Local
 // ReSharper disable ConvertToConstant.Global
 // ReSharper disable UnusedMethodReturnValue.Local
+// ReSharper disable ConvertToConstant.Local
 
 namespace SokoWahnLib.Rooms
 {
@@ -49,6 +50,11 @@ namespace SokoWahnLib.Rooms
     /// merkt sich die gesamte Länge einer Aufgabe: Zustände[] + (Raum-Nummer und eingehende Portal-Nummer)
     /// </summary>
     readonly uint taskSize;
+
+    /// <summary>
+    /// gibt an, ob die Hash-Table schonender behandelt werden soll: neue Hash-Einträge werden erst beim Abarbeiten Aufgaben hinzugefügt (nicht mehr beim Erstellen)
+    /// </summary>
+    static readonly bool HashRelieve = false;
 
     #region # // --- Aufgaben-Hilfsmethoden ---
     /// <summary>
@@ -597,7 +603,10 @@ namespace SokoWahnLib.Rooms
 
                 ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
                 if (oldMoves <= totalMoves) continue;
-                if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
+                if (!HashRelieve)
+                {
+                  if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
+                }
 
                 if (bestSolutionPath == null || totalMoves < (uint)bestSolutionPath.Length)
                 {
@@ -638,10 +647,21 @@ namespace SokoWahnLib.Rooms
 
                 ulong crc = Crc64.Get(currentTask);
                 ulong oldMoves = hashTable.Get(crc, ulong.MaxValue);
-                if (oldMoves <= (uint)forwardIndex)
+                if (HashRelieve)
                 {
-                  if (maxTicks <= 0) return false;
-                  continue;
+                  if (oldMoves <= (uint)forwardIndex)
+                  {
+                    if (maxTicks <= 0) return false;
+                    continue;
+                  }
+                }
+                else
+                {
+                  if (oldMoves < (uint)forwardIndex)
+                  {
+                    if (maxTicks <= 0) return false;
+                    continue;
+                  }
                 }
                 if (oldMoves == ulong.MaxValue) hashTable.Add(crc, (uint)forwardIndex); else hashTable.Update(crc, (uint)forwardIndex);
 
@@ -938,11 +958,11 @@ namespace SokoWahnLib.Rooms
       {
         if (forwardIndex >= forwardTasks.Count)
         {
-          sb.AppendLine(" --- PERFECT SOLUTION (moves) ---");
+          sb.AppendLine(" --- PERFECT SOLUTION (" + bestSolutionPath.Length.ToString("N0") + " / " + bestSolutionPushes.ToString("N0") + ") ---");
         }
         else
         {
-          sb.AppendLine(" --- solution found (moves) ---");
+          sb.AppendLine(" --- solution found (" + bestSolutionPath.Length.ToString("N0") + " / " + bestSolutionPushes.ToString("N0") + ") ---");
         }
         sb.AppendLine();
         sb.AppendLine("   Path: " + bestSolutionPath);
