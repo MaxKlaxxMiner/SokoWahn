@@ -62,6 +62,10 @@ namespace SokoWahnLib.Rooms
     /// gibt die Anzahl der gespeicherten Aufgaben zurück
     /// </summary>
     public abstract ulong Count { get; }
+    /// <summary>
+    /// gibt die Anzahl der bereits abgefragten Aufgaben zurück (vom Anfang der Liste)
+    /// </summary>
+    public abstract ulong CountFetchedFirst { get; }
 
     #region # // --- Dispose ---
     /// <summary>

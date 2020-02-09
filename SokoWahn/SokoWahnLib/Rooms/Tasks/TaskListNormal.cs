@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Windows.Forms;
 
 // ReSharper disable UnusedMember.Global
 
@@ -112,6 +111,14 @@ namespace SokoWahnLib.Rooms
     public override ulong Count
     {
       get { return taskWritePos - taskReadPos; }
+    }
+
+    /// <summary>
+    /// gibt die Anzahl der bereits abgefragten Aufgaben zurück (vom Anfang der Liste)
+    /// </summary>
+    public override ulong CountFetchedFirst
+    {
+      get { return taskReadPos; }
     }
 
     /// <summary>

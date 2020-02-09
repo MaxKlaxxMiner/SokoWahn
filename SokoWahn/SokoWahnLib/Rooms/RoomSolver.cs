@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 // ReSharper disable UnusedMethodReturnValue.Global
 // ReSharper disable NotAccessedField.Local
@@ -313,7 +314,7 @@ namespace SokoWahnLib.Rooms
 
         ulong toMoves = step.moves + variantData.moves;
 
-        DebugConsoleV("Push-Step (Moves: " + toMoves + ")", task, step.variant, step.roomIndex, step.iPortalIndex);
+        DebugConsoleV("Push-Step (moves: " + toMoves + ")", task, step.variant, step.roomIndex, step.iPortalIndex);
 
         TaskCopy(task, outputTask);
         if (ResolveTaskPortalBoxes(outputTask, room, variantData.oPortalIndexBoxes))
@@ -339,13 +340,49 @@ namespace SokoWahnLib.Rooms
             }
             var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
             var toRoom = toPortal.toRoom;
-            if (toPortal.variantStateDict.GetVariants(outputTask[toRoom.roomIndex]).Any()) // mindestens eine gültige Nachfolge-Variante gefunden?
+            if (toPortal.variantStateDict.GetVariants(outputTask[toRoom.roomIndex]).Any(variantCheck => CheckTask(outputTask, toRoom, variantCheck, 0))) // mindestens eine gültige Nachfolge-Variante gefunden?
             {
               SetTaskInfos(outputTask, toRoom.roomIndex, toPortal.iPortalIndex); // durch ein Portal zum nächsten Raum wechseln
               yield return new TaskVariantInfo(toMoves, variantData.pushes, Crc64.Get(outputTask));
             }
           }
         }
+      }
+    }
+
+    /// <summary>
+    /// prüft, ob eine bestimmte Variante bei einer Aufgabe gültig ist
+    /// </summary>
+    /// <param name="task">Aufgabe, welche geprüft werden soll</param>
+    /// <param name="room">Raum, welcher betroffen ist</param>
+    /// <param name="variant">Variante, welche geprüft werden soll</param>
+    /// <param name="depth">zusätzlich Prüf-Tiefe</param>
+    /// <returns>true, wenn die Variante gültig ist</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    static bool CheckTask(ulong[] task, Room room, ulong variant, int depth)
+    {
+      var variantData = room.variantList.GetData(variant);
+
+      if (depth > 0)
+      {
+        var tmp = TaskClone(task);
+        if (!ResolveTaskPortalBoxes(tmp, room, variantData.oPortalIndexBoxes)) return false;
+        depth--;
+        var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
+        var toRoom = toPortal.toRoom;
+        return toPortal.variantStateDict.GetVariants(tmp[toRoom.roomIndex]).Any(checkVariant => CheckTask(tmp, toRoom, checkVariant, depth));
+      }
+      else
+      {
+        foreach (var boxPortal in variantData.oPortalIndexBoxes) // Kisten durch benachbarte Portale schieben (testen)
+        {
+          var oPortal = room.outgoingPortals[boxPortal];
+          uint roomIndex = oPortal.toRoom.roomIndex;
+          ulong oldState = task[roomIndex];
+          ulong newState = oPortal.stateBoxSwap.Get(oldState);
+          if (oldState == newState) return false; // Kiste kann nicht vom banachbarten Raum aufgenommen werden -> gesamte Variante ungültig
+        }
+        return true;
       }
     }
 
@@ -364,7 +401,7 @@ namespace SokoWahnLib.Rooms
         uint roomIndex = oPortal.toRoom.roomIndex;
         ulong oldState = task[roomIndex];
         ulong newState = oPortal.stateBoxSwap.Get(oldState);
-        if (oldState == newState) return false; // Kiste kann nicht vom banachbarten Raum aufgenommen werden -> gesamte Variante ungültig
+        if (oldState == newState) return false; // Kiste kann nicht vom benachbarten Raum aufgenommen werden -> gesamte Variante ungültig
 
         task[roomIndex] = newState; // neuen Zustand im benachbarten Raum setzen
       }
@@ -461,6 +498,9 @@ namespace SokoWahnLib.Rooms
     /// <returns>true, wenn eine Lösung gefunden wurde (bzw. Ende erreicht wurde), sonst: false</returns>
     public bool SearchCycle(int maxTicks)
     {
+#if DEBUG
+      if (IsConsoleApplication) Console.Clear();
+#endif
       switch (solveState)
       {
         #region # // --- Init - erste Initialisierung ---
@@ -516,6 +556,7 @@ namespace SokoWahnLib.Rooms
               if (bestSolutionPath == null || totalMoves < (uint)bestSolutionPath.Length)
               {
                 while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+                DebugConsoleTask("new Task [" + totalMoves + ", " + forwardTasks[(int)(uint)totalMoves].Count + "] (moves: " + taskInfo.moves + ", pushes: " + taskInfo.pushes + ")", tmpTask);
                 forwardTasks[(int)(uint)totalMoves].Add(tmpTask);
               }
             }
@@ -556,11 +597,12 @@ namespace SokoWahnLib.Rooms
 
                 ulong oldMoves = hashTable.Get(taskInfo.crc, ulong.MaxValue);
                 if (oldMoves <= totalMoves) continue;
-                if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, (uint)forwardIndex); else hashTable.Update(taskInfo.crc, (uint)forwardIndex);
+                if (oldMoves == ulong.MaxValue) hashTable.Add(taskInfo.crc, totalMoves); else hashTable.Update(taskInfo.crc, totalMoves);
 
                 if (bestSolutionPath == null || totalMoves < (uint)bestSolutionPath.Length)
                 {
                   while (totalMoves >= (ulong)forwardTasks.Count) forwardTasks.Add(new TaskListNormal(taskSize));
+                  DebugConsoleTask("new Task [" + totalMoves + ", " + forwardTasks[(int)(uint)totalMoves].Count + "] (moves: " + taskInfo.moves + ", pushes: " + taskInfo.pushes + ")", tmpTask);
                   forwardTasks[(int)(uint)totalMoves].Add(tmpTask);
                 }
               }
@@ -591,6 +633,7 @@ namespace SokoWahnLib.Rooms
                   forwardIndex++;
                   return false;
                 }
+                DebugConsoleTask("Fetch-Task [" + forwardIndex + ", " + (taskList.CountFetchedFirst - 1) + "]", currentTask);
                 maxTicks--;
 
                 ulong crc = Crc64.Get(currentTask);
@@ -715,10 +758,10 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt an, ob zusätzliche Debug-Infos in der Console ausgegeben werden sollen
     /// </summary>
-    public static readonly bool DebugConsoleVerbose = true;
+    public static readonly bool DebugConsoleVerbose = false;
 
     /// <summary>
-    /// gibt das Spielfeld mit der entsprechenden Aufgabe in der Console aus (nur Debug-Modus)
+    /// gibt das Spielfeld mit der entsprechenden Aufgabe + Variante in der Console aus (nur Debug-Modus)
     /// </summary>
     /// <param name="title">optionale Überschrift über dem Spielfeld</param>
     /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
@@ -748,6 +791,23 @@ namespace SokoWahnLib.Rooms
       // ReSharper disable once RedundantJumpStatement
       if (!DebugConsoleVerbose) return;
       DebugConsole(title, task, variant, roomIndex, iPortalIndex);
+    }
+
+    /// <summary>
+    /// gibt das Spielfeld einer Aufgabe ohne Variante in der Console aus
+    /// </summary>
+    /// <param name="title">optionale Überschrift über dem Spielfeld</param>
+    /// <param name="task">optionale Aufgabe, welche direkt angezeigt werden soll (default: currentTask)</param>
+    /// <param name="roomIndex">optionaler expliziter Raum, welcher verwendet werden soll (default: Raum aus der Aufgabe)</param>
+    /// <param name="iPortalIndex">optional explizites Portal, welches verwendet werden soll (default: Portal aus der Aufgabe)</param>
+    public void DebugConsoleTask(string title = null, ulong[] task = null, uint roomIndex = uint.MaxValue, uint iPortalIndex = uint.MaxValue)
+    {
+      if (!IsConsoleApplication) return;
+      if (Console.CursorTop == 0) Console.WriteLine();
+      if (!string.IsNullOrWhiteSpace(title)) title = "  --- " + title + " ---\r\n";
+      Console.ForegroundColor = ConsoleColor.Yellow;
+      Console.WriteLine(title + ("\r\n" + DebugStr(task, ulong.MaxValue, roomIndex, iPortalIndex)).Replace("\r\n", "\r\n  "));
+      Console.ForegroundColor = ConsoleColor.Gray;
     }
     #endregion
 
@@ -789,7 +849,6 @@ namespace SokoWahnLib.Rooms
         roomIndex = GetTaskRoomIndex(task);
         iPortalIndex = GetTaskPortalIndex(task);
       }
-      var variantData = rooms[roomIndex].variantList.GetData(variant);
 
       int playerPos = iPortalIndex < uint.MaxValue ? rooms[roomIndex].incomingPortals[iPortalIndex].fromPos : roomNetwork.field.PlayerPos;
       switch (outputChars[playerPos])
@@ -814,6 +873,12 @@ namespace SokoWahnLib.Rooms
         linesBefore = tmpField.GetText().Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries); // das Vorher-Spielfeld neu setzen
       }
 
+      if (variant == ulong.MaxValue) // Task-Version
+      {
+        return string.Join("\r\n", Enumerable.Range(0, height).Select(y => linesBefore[y])) + (invalidMove ? "\r\n\r\n--- BLOCKED ---" : "") + "\r\n\r\n";
+      }
+
+      var variantData = rooms[roomIndex].variantList.GetData(variant);
       int moves = 0;
       if (!invalidMove)
       {
