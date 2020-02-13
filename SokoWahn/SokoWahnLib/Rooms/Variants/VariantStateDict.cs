@@ -54,6 +54,16 @@ namespace SokoWahnLib.Rooms
     /// <returns>Enumerable der zugehörigen Varianten</returns>
     public abstract IEnumerable<ulong> GetVariants(ulong state);
 
+    /// <summary>
+    /// gibt an, wieviel Zustände insgesamt gespeichert wurden (wofür Varianten bekannt sind)
+    /// </summary>
+    public abstract ulong TotalStateCount { get; }
+
+    /// <summary>
+    /// gibt an, wieviel Varianten-Verlinkungen insgesamt gespeichert wurden
+    /// </summary>
+    public abstract ulong TotalVariantCount { get; }
+
     #region # // --- Dispose ---
     /// <summary>
     /// Destruktor

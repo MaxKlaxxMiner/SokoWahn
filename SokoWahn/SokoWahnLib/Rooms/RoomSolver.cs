@@ -52,14 +52,16 @@ namespace SokoWahnLib.Rooms
     readonly uint taskSize;
 
     /// <summary>
-    /// gibt an, ob die Hashtable schonender behandelt werden soll: neue Hash-Einträge werden erst beim Abarbeiten Aufgaben hinzugefügt (nicht beim Erstellen),
+    /// gibt an, ob die Hashtable schonender behandelt werden soll: neue Hash-Einträge werden erst beim Abarbeiten von Aufgaben hinzugefügt (nicht beim Erstellen),
     /// 
     /// aktiv: Vorteil: geringerer Füllrate der Hashtable (besonders bei längeren Varianten)
     ///        Nachteil: teils deutlich größere Aufgaben-Listen und dadurch höherer Rechenaufwand
     ///        Info: Aufgaben-Listen wären streamfähig, was bei Hashtables nicht der Fall ist (kann bei maximaler Skalierung Speichervorteile bieten)
     /// 
     /// inaktiv: Vorteil: generell schnellere Verarbeitung durch kleinere Aufgaben-Listen (dank Vorfilterung per Hashtable)
-    ///          Nachteil: höherer Speicherverbrauch der Hashtable während der Verarbeitung, welche nicht streamfähig
+    ///          Nachteil: höherer Speicherverbrauch der Hashtable während der Verarbeitung, welche nicht streamfähig ist
+    /// 
+    /// Default: false / inaktiv
     /// </summary>
     static readonly bool HashRelieve = false;
 

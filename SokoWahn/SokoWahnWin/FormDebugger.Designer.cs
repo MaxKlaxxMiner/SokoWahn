@@ -39,6 +39,7 @@
       this.textBoxInfo = new System.Windows.Forms.TextBox();
       this.buttonValidate = new System.Windows.Forms.Button();
       this.buttonSolver = new System.Windows.Forms.Button();
+      this.buttonMerge = new System.Windows.Forms.Button();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
       this.splitContainer1.Panel1.SuspendLayout();
@@ -49,7 +50,7 @@
       // buttonStep
       // 
       this.buttonStep.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.buttonStep.Location = new System.Drawing.Point(1162, 12);
+      this.buttonStep.Location = new System.Drawing.Point(1162, 54);
       this.buttonStep.Name = "buttonStep";
       this.buttonStep.Size = new System.Drawing.Size(92, 36);
       this.buttonStep.TabIndex = 0;
@@ -160,7 +161,7 @@
       // buttonValidate
       // 
       this.buttonValidate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.buttonValidate.Location = new System.Drawing.Point(1162, 54);
+      this.buttonValidate.Location = new System.Drawing.Point(1162, 96);
       this.buttonValidate.Name = "buttonValidate";
       this.buttonValidate.Size = new System.Drawing.Size(92, 36);
       this.buttonValidate.TabIndex = 6;
@@ -172,7 +173,7 @@
       // buttonSolver
       // 
       this.buttonSolver.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.buttonSolver.Location = new System.Drawing.Point(1162, 96);
+      this.buttonSolver.Location = new System.Drawing.Point(1162, 138);
       this.buttonSolver.Name = "buttonSolver";
       this.buttonSolver.Size = new System.Drawing.Size(92, 36);
       this.buttonSolver.TabIndex = 7;
@@ -181,12 +182,24 @@
       this.buttonSolver.Click += new System.EventHandler(this.buttonSolver_Click);
       this.buttonSolver.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
+      // buttonMerge
+      // 
+      this.buttonMerge.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonMerge.Location = new System.Drawing.Point(1162, 12);
+      this.buttonMerge.Name = "buttonMerge";
+      this.buttonMerge.Size = new System.Drawing.Size(92, 36);
+      this.buttonMerge.TabIndex = 8;
+      this.buttonMerge.Text = "Merge Rooms";
+      this.buttonMerge.UseVisualStyleBackColor = true;
+      this.buttonMerge.Click += new System.EventHandler(this.buttonMerge_Click);
+      // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.buttonMerge);
       this.Controls.Add(this.buttonSolver);
       this.Controls.Add(this.buttonValidate);
       this.Controls.Add(this.textBoxInfo);
@@ -221,6 +234,7 @@
     private System.Windows.Forms.TextBox textBoxInfo;
     private System.Windows.Forms.Button buttonValidate;
     private System.Windows.Forms.Button buttonSolver;
+    private System.Windows.Forms.Button buttonMerge;
   }
 }
 

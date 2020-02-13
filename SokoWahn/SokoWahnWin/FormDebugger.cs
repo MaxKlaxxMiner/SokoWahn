@@ -7,6 +7,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -36,6 +37,33 @@ namespace SokoWahnWin
       #      #
       # $ $+.#
       ########
+    ");
+
+    static readonly SokoField FieldTest3 = new SokoField(@"
+         ########
+      ####  #   #
+      #.   $#   #
+      #@     .$ #
+      #.   $#   #
+      ####  #   #
+         ########
+    ");
+
+    static readonly SokoField FieldTest4 = new SokoField(@"
+           #####
+          ##   #
+          #    #
+        ###    ######
+        #.#.# ##.   #
+      ### ###  ##   #
+      #   #  $  ## ##
+      #     $@$     #
+      #   #  $  #   #
+      ######   ### ##
+       #  .## #### #
+       #           #
+       ##  #########
+        ####
     ");
 
     static readonly SokoField FieldStart = new SokoField(@"
@@ -198,8 +226,10 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste)
-      //roomNetwork = new RoomNetwork(FieldTest2);       // sehr einfaches Testlevel (zwei Kisten)
+      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste, 6 Moves)
+      //roomNetwork = new RoomNetwork(FieldTest2);       // sehr einfaches Testlevel (zwei Kisten, 15 Moves)
+      //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
+      //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
@@ -937,6 +967,47 @@ namespace SokoWahnWin
     }
 
     /// <summary>
+    /// Merge-Button
+    /// </summary>
+    void buttonMerge_Click(object sender, EventArgs e)
+    {
+      var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
+      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Take(29999).ToArray();
+
+      listRooms.BeginUpdate();
+      listRooms.Items.Clear();
+      listRooms.EndUpdate();
+
+      var bestRoomConnections = new List<Tuple<BigInteger, Room, Room>>();
+      var useRooms = new HashSet<Room>(mergeRooms);
+      foreach (var room in mergeRooms)
+      {
+        var connectedRooms = room.incomingPortals.Select(iPortal => iPortal.fromRoom).Where(fromRoom => useRooms.Contains(fromRoom)).ToArray();
+        foreach (var room2 in connectedRooms)
+        {
+          if (room.roomIndex > room2.roomIndex) continue; // doppelte Raumverknüpfung vermeiden
+
+          bestRoomConnections.Add(new Tuple<BigInteger, Room, Room>
+          (
+            RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
+            room,
+            room2
+          ));
+        }
+      }
+
+      if (bestRoomConnections.Count == 0) return; // nichts zum verschmelzen gefunden?
+
+      var bestRoomConnection = bestRoomConnections.First();
+      foreach (var c in bestRoomConnections)
+      {
+        if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
+      }
+
+      throw new NotImplementedException("todo: Räume verschmelzen");
+    }
+
+    /// <summary>
     /// Step-Button
     /// </summary>
     void buttonStep_Click(object sender, EventArgs e)
@@ -1062,7 +1133,7 @@ namespace SokoWahnWin
 
     void FormDebugger_Load(object sender, EventArgs e)
     {
-      buttonSolver_Click(sender, e);
+      //buttonSolver_Click(sender, e);
     }
   }
 }

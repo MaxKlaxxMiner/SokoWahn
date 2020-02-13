@@ -18,6 +18,11 @@ namespace SokoWahnLib.Rooms
     public readonly Dictionary<ulong, List<ulong>> data = new Dictionary<ulong, List<ulong>>();
 
     /// <summary>
+    /// merkt sich die Anzahl der insgesamt gespeicherten Varianten
+    /// </summary>
+    ulong totalVariantCount;
+
+    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="stateList">Liste mit allen Zuständen im Raum</param>
@@ -45,6 +50,7 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(!list.Contains(variant));
 
       list.Add(variant);
+      totalVariantCount++;
     }
 
     /// <summary>
@@ -69,6 +75,16 @@ namespace SokoWahnLib.Rooms
 
       return data.TryGetValue(state, out resultList) ? resultList : Enumerable.Empty<ulong>();
     }
+
+    /// <summary>
+    /// gibt an, wieviel Zustände insgesamt gespeichert wurden (wofür Varianten bekannt sind)
+    /// </summary>
+    public override ulong TotalStateCount{get { return (uint)data.Count; }}
+
+    /// <summary>
+    /// gibt an, wieviel Varianten-Verlinkungen insgesamt gespeichert wurden
+    /// </summary>
+    public override ulong TotalVariantCount{get { return totalVariantCount; }}
 
     /// <summary>
     /// gibt alle Ressourcen wieder frei

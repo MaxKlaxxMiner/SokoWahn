@@ -350,16 +350,15 @@ namespace SokoWahnLib.Rooms
     /// <returns>Rechenaufwand als Zeichenkette</returns>
     public string Effort(int maxLen = 16777216)
     {
-      return MulNumber(rooms.Select(room => room.variantList.Count - room.variantList.EndVariantCount), maxLen);
+      return MulNumberStr(rooms.Select(room => room.variantList.Count - room.variantList.EndVariantCount), maxLen);
     }
 
     /// <summary>
-    /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück
+    /// multipliziert mehrere Nummern und gibt das Ergebnis als BigInteger zurück
     /// </summary>
     /// <param name="values">Werte, welche miteinander multipliziert werden sollen</param>
-    /// <param name="maxLen">maximale Länge der Ergebnis-Zeichenkette</param>
     /// <returns>fertiges Ergebnis</returns>
-    static string MulNumber(IEnumerable<ulong> values, int maxLen = 16777216)
+    public static BigInteger MulNumber(IEnumerable<ulong> values)
     {
       var mul = new BigInteger(1);
       ulong mulTmp = 1;
@@ -373,6 +372,19 @@ namespace SokoWahnLib.Rooms
         mulTmp = 1;
       }
       if (mulTmp > 1) mul *= mulTmp;
+
+      return mul;
+    }
+
+    /// <summary>
+    /// multipliziert mehrere Nummern und gibt das Ergebnis als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <param name="values">Werte, welche miteinander multipliziert werden sollen</param>
+    /// <param name="maxLen">maximale Länge der Ergebnis-Zeichenkette</param>
+    /// <returns>fertiges Ergebnis</returns>
+    public static string MulNumberStr(IEnumerable<ulong> values, int maxLen = 16777216)
+    {
+      var mul = MulNumber(values);
 
       string tmp = "";
       var txt = mul.ToString();
