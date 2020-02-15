@@ -7,6 +7,8 @@ using System.Linq;
 using System.Numerics;
 // ReSharper disable PossibleUnintendedReferenceComparison
 // ReSharper disable MemberCanBePrivate.Global
+// ReSharper disable LoopCanBePartlyConvertedToQuery
+// ReSharper disable RedundantIfElseBlock
 #endregion
 
 namespace SokoWahnLib.Rooms
@@ -130,6 +132,184 @@ namespace SokoWahnLib.Rooms
       // --- zum Schluss prüfen ---
       Validate(true);
     }
+    #endregion
+
+    #region # // --- MergeRooms ---
+    /// <summary>
+    /// verschmilz zwei Räume
+    /// </summary>
+    /// <param name="room1">erster Raum</param>
+    /// <param name="room2">zweiter Raum</param>
+    public void MergeRooms(Room room1, Room room2)
+    {
+      if (room1 == null) throw new NullReferenceException("room1");
+      if (room2 == null) throw new NullReferenceException("room2");
+      if (room1 == room2) throw new Exception("room1 == room2");
+      if (rooms[room1.roomIndex] != room1) throw new Exception("invalid room1");
+      if (rooms[room2.roomIndex] != room2) throw new Exception("invalid room2");
+      if (room1.outgoingPortals.All(oPortal => oPortal.toRoom != room2)) throw new Exception("no connected Portals");
+      if (room2.outgoingPortals.All(oPortal => oPortal.toRoom != room1)) throw new Exception("no connected Portals");
+
+      // --- innere Portale ermitteln, welche durchs Verschmelzen aufgelöst werden ---
+      var innerIncomingPortalsRoom1 = room1.incomingPortals.Where(iPortal => iPortal.fromRoom == room2).ToArray();
+      var innerIncomingPortalsRoom2 = room2.incomingPortals.Where(iPortal => iPortal.fromRoom == room1).ToArray();
+      Debug.Assert(innerIncomingPortalsRoom1.Length > 0);
+      Debug.Assert(innerIncomingPortalsRoom1.Length == innerIncomingPortalsRoom2.Length);
+
+      // --- äußere Portale ermitteln, welche durchs Verschmelzen erneuert werden ---
+      var outerIncomingPortalsRoom1 = room1.incomingPortals.Where(iPortal => iPortal.fromRoom != room2).ToArray();
+      var outerIncomingPortalsRoom2 = room2.incomingPortals.Where(iPortal => iPortal.fromRoom != room1).ToArray();
+      Debug.Assert(outerIncomingPortalsRoom1.Length + innerIncomingPortalsRoom1.Length == room1.incomingPortals.Length);
+      Debug.Assert(outerIncomingPortalsRoom2.Length + innerIncomingPortalsRoom2.Length == room2.incomingPortals.Length);
+
+      // --- neue Instanzen erstellen ---
+      var newIncomingPortals = new RoomPortal[outerIncomingPortalsRoom1.Length + outerIncomingPortalsRoom2.Length];
+      var newOutgoingPortals = new RoomPortal[newIncomingPortals.Length];
+      var newRoomIndex = Math.Min(room1.roomIndex, room2.roomIndex);
+      var newRoom = new Room(newRoomIndex, field, room1.fieldPosis.Concat(room2.fieldPosis).OrderBy(x => x).ToArray(), newIncomingPortals, newOutgoingPortals);
+      var newStateList = newRoom.stateList;
+      //var newVariantList = newRoom.variantList;
+
+      #region # // --- neue Zustands-Liste mit Zuständen befüllen ---
+      ulong state1Mul = room2.stateList.Count; // Multiplikator für alle Zustände aus Raum 1
+      foreach (var state1 in room1.stateList)
+      {
+        foreach (var state2 in room2.stateList)
+        {
+          var newBoxPosis = new int[state1.Value.Length + state2.Value.Length];
+          Array.Copy(state1.Value, newBoxPosis, state1.Value.Length);
+          Array.Copy(state2.Value, 0, newBoxPosis, state1.Value.Length, state2.Value.Length);
+          Array.Sort(newBoxPosis);
+          Debug.Assert(newBoxPosis.All(boxPos => field.GetWalkPosis().Contains(boxPos)));
+          Debug.Assert(newBoxPosis.GroupBy(x => x).Count() == newBoxPosis.Length);
+
+          ulong newState = newStateList.Add(newBoxPosis);
+          Debug.Assert(newState == state1.Key * state1Mul + state2.Key);
+        }
+      }
+      #endregion
+
+      #region # // --- neue eingehende Portale erstellen ---
+      var mapPortalIndex1 = Enumerable.Range(0, room1.incomingPortals.Length).Select(x => uint.MaxValue).ToArray();
+      var mapPortalIndex2 = Enumerable.Range(0, room2.incomingPortals.Length).Select(x => uint.MaxValue).ToArray();
+      for (uint iPortalIndex = 0; iPortalIndex < newIncomingPortals.Length; iPortalIndex++)
+      {
+        RoomPortal iPortalOld;
+        if (iPortalIndex < outerIncomingPortalsRoom1.Length)
+        {
+          iPortalOld = outerIncomingPortalsRoom1[iPortalIndex];
+          mapPortalIndex1[iPortalOld.iPortalIndex] = iPortalIndex;
+        }
+        else
+        {
+          iPortalOld = outerIncomingPortalsRoom2[iPortalIndex - outerIncomingPortalsRoom1.Length];
+          mapPortalIndex2[iPortalOld.iPortalIndex] = iPortalIndex;
+        }
+        newIncomingPortals[iPortalIndex] = new RoomPortal(iPortalOld.fromRoom, iPortalOld.fromPos, newRoom, iPortalOld.toPos, iPortalIndex)
+        {
+          stateBoxSwap = new StateBoxSwapNormal(newStateList),
+          variantStateDict = new VariantStateDictNormal(newStateList, newRoom.variantList)
+        };
+      }
+      #endregion
+
+      #region # // --- Start-Varianten erstellen ---
+      if (room1.startVariantCount + room2.startVariantCount > 0)
+      {
+        throw new NotImplementedException("todo");
+      }
+      #endregion
+
+      // --- Portale verschmelzen ---
+      for (uint iPortalIndex = 0; iPortalIndex < newIncomingPortals.Length; iPortalIndex++)
+      {
+        var iPortalOld = iPortalIndex < outerIncomingPortalsRoom1.Length ? outerIncomingPortalsRoom1[iPortalIndex] : outerIncomingPortalsRoom2[iPortalIndex - outerIncomingPortalsRoom1.Length];
+        var iPortalNew = newIncomingPortals[iPortalIndex];
+
+        #region # // --- Portal-Kisten-Zustandsänderungen neu erstellen ---
+        if (iPortalOld.toRoom == room1)
+        {
+          foreach (var swap1 in iPortalOld.stateBoxSwap)
+          {
+            for (ulong state2 = 0; state2 < room2.stateList.Count; state2++)
+            {
+              ulong newStateFrom = swap1.Key * state1Mul + state2;
+              ulong newStateTo = swap1.Value * state1Mul + state2;
+              iPortalNew.stateBoxSwap.Add(newStateFrom, newStateTo);
+            }
+          }
+        }
+        else
+        {
+          for (ulong state2 = 0; state2 < room2.stateList.Count; state2++)
+          {
+            foreach (var swap1 in iPortalOld.stateBoxSwap)
+            {
+              ulong newStateFrom = swap1.Key * state1Mul + state2;
+              ulong newStateTo = swap1.Value * state1Mul + state2;
+              iPortalNew.stateBoxSwap.Add(newStateFrom, newStateTo);
+            }
+          }
+        }
+        #endregion
+
+        #region # // --- reine Laufvarianten hinzufügen ---
+        if (iPortalOld.toRoom == room1)
+        {
+          MergeMoveVariants(iPortalOld, room2, (state1, state2) => state1 * state1Mul + state2, mapPortalIndex1, mapPortalIndex2, iPortalNew);
+        }
+        else
+        {
+          MergeMoveVariants(iPortalOld, room1, (state2, state1) => state1 * state1Mul + state2, mapPortalIndex2, mapPortalIndex1, iPortalNew);
+        }
+        #endregion
+      }
+    }
+
+    static void MergeMoveVariants(RoomPortal iPortal1, Room room2, Func<ulong, ulong, ulong> stateMix, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
+    {
+      var room1 = iPortal1.toRoom;
+      foreach (ulong state1 in iPortal1.variantStateDict.GetAllStates())
+      {
+        foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
+        {
+          var variantData1 = room1.variantList.GetData(variant1);
+          if (variantData1.pushes > 0) break; // Varianten mit Kistenverschiebungen jetzt noch nicht übertragen
+          Debug.Assert(variantData1.oPortalIndexPlayer < uint.MaxValue);
+          Debug.Assert(variantData1.newState == variantData1.oldState);
+          if (room1.outgoingPortals[variantData1.oPortalIndexPlayer].toRoom == room2) // zeigt das ausgehende Portal in den benachbarten, ebenfalls zu verschmelzenden Raum?
+          {
+            var iPortalOld2 = room1.outgoingPortals[variantData1.oPortalIndexPlayer].oppositePortal;
+            foreach (ulong state2 in iPortalOld2.variantStateDict.GetAllStates())
+            {
+              foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
+              {
+                var variantData2 = room2.variantList.GetData(variant2);
+                if (variantData2.pushes > 0) break; // Varianten mit Kistenverschiebungen jetzt noch nicht übertragen
+                Debug.Assert(variantData2.oPortalIndexPlayer < uint.MaxValue);
+                Debug.Assert(variantData2.newState == variantData2.oldState);
+                if (room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom == room1)
+                {
+                  throw new NotImplementedException("todo"); // Schleife
+                }
+                else
+                {
+                  ulong newState = stateMix(state1, state2);
+                  uint oPortalIndexPlayer = mapPortalIndex2[variantData2.oPortalIndexPlayer];
+                  Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
+                  iPortalNew.variantStateDict.Add(newState, iPortalNew.variantStateDict.variantList.Add(newState, variantData1.moves + variantData2.moves, 0, new uint[0], oPortalIndexPlayer, newState, variantData1.path + variantData2.path));
+                }
+              }
+            }
+          }
+          else // ausgehendes Portal erreicht
+          {
+            throw new NotImplementedException("todo");
+          }
+        }
+      }
+    }
+
     #endregion
 
     #region # // --- Validate ---

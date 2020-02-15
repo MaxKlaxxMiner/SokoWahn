@@ -192,6 +192,7 @@
       this.buttonMerge.Text = "Merge Rooms";
       this.buttonMerge.UseVisualStyleBackColor = true;
       this.buttonMerge.Click += new System.EventHandler(this.buttonMerge_Click);
+      this.buttonMerge.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // FormDebugger
       // 

@@ -51,9 +51,9 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// fügt einen weiteren Zustand in die Liste hinzu und gibt die entsprechende ID zurück
     /// </summary>
-    /// <param name="boxIndices">Kisten-Positionen des Zustandes</param>
+    /// <param name="boxPosis">Kisten-Positionen des Zustandes</param>
     /// <returns>ID des neuen Zustandes</returns>
-    public abstract ulong Add(int[] boxIndices);
+    public abstract ulong Add(int[] boxPosis);
 
     /// <summary>
     /// gibt die Kisten-Positionen eines bestimmten Zustandes zurück

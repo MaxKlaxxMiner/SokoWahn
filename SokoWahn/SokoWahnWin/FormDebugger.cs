@@ -639,6 +639,7 @@ namespace SokoWahnWin
     }
     #endregion
 
+    #region # // --- Optimize ---
     /// <summary>
     /// erster Optimierungsschritt
     /// </summary>
@@ -965,6 +966,7 @@ namespace SokoWahnWin
         portal.variantStateDict = newDict;
       }
     }
+    #endregion
 
     /// <summary>
     /// Merge-Button
@@ -1004,7 +1006,8 @@ namespace SokoWahnWin
         if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
       }
 
-      throw new NotImplementedException("todo: Räume verschmelzen");
+      roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
+      roomNetwork.Validate();
     }
 
     /// <summary>
