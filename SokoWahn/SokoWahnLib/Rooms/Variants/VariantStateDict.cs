@@ -48,11 +48,11 @@ namespace SokoWahnLib.Rooms
     public abstract IEnumerable<ulong> GetAllStates();
 
     /// <summary>
-    /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
+    /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese als Kette zurück
     /// </summary>
-    /// <param name="state">Raumzustand, welche abgefragt werden soll</param>
-    /// <returns>Enumerable der zugehörigen Varianten</returns>
-    public abstract IEnumerable<ulong> GetVariants(ulong state);
+    /// <param name="state">Raumzustand, welcher abgefragt werden soll</param>
+    /// <returns>entsprechende Variante-Kette</returns>
+    public abstract VariantSpan GetVariantSpan(ulong state);
 
     /// <summary>
     /// gibt an, wieviel Zustände insgesamt gespeichert wurden (wofür Varianten bekannt sind)

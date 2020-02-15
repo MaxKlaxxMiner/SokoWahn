@@ -68,6 +68,7 @@
     <Compile Include="Rooms\Tasks\TaskList.cs" />
     <Compile Include="Rooms\Tasks\TaskListNormal.cs" />
     <Compile Include="Rooms\Variants\VariantData.cs" />
+    <Compile Include="Rooms\Variants\VariantSpan.cs" />
     <Compile Include="Rooms\Variants\VariantStateDict.cs" />
     <Compile Include="Rooms\Variants\VariantListNormal.cs" />
     <Compile Include="Rooms\Variants\VariantList.cs" />

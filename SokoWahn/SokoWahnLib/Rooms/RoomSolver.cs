@@ -296,7 +296,7 @@ namespace SokoWahnLib.Rooms
         var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
         var toRoom = toPortal.toRoom;
         ulong toCrc = Crc64.Start.Crc64Update(toRoom.roomIndex).Crc64Update(toPortal.iPortalIndex);
-        foreach (var toVariant in toPortal.variantStateDict.GetVariants(task[toRoom.roomIndex]))
+        foreach (var toVariant in toPortal.variantStateDict.GetVariantSpan(task[toRoom.roomIndex]).AsEnumerable())
         {
           ulong crc = toCrc.Crc64Update(toVariant);
           ulong oldMoves;
@@ -355,7 +355,8 @@ namespace SokoWahnLib.Rooms
             }
             var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
             var toRoom = toPortal.toRoom;
-            if (toPortal.variantStateDict.GetVariants(outputTask[toRoom.roomIndex]).Any(variantCheck => CheckTask(outputTask, toRoom, variantCheck, 0))) // mindestens eine gültige Nachfolge-Variante gefunden?
+            if (toPortal.variantStateDict.GetVariantSpan(outputTask[toRoom.roomIndex]).AsEnumerable()
+                                         .Any(variantCheck => CheckTask(outputTask, toRoom, variantCheck, 0))) // mindestens eine gültige Nachfolge-Variante gefunden?
             {
               SetTaskInfos(outputTask, toRoom.roomIndex, toPortal.iPortalIndex); // durch ein Portal zum nächsten Raum wechseln
               yield return new TaskVariantInfo(toMoves, variantData.pushes, Crc64.Get(outputTask));
@@ -385,7 +386,8 @@ namespace SokoWahnLib.Rooms
         depth--;
         var toPortal = room.outgoingPortals[variantData.oPortalIndexPlayer];
         var toRoom = toPortal.toRoom;
-        return toPortal.variantStateDict.GetVariants(tmp[toRoom.roomIndex]).Any(checkVariant => CheckTask(tmp, toRoom, checkVariant, depth));
+        return toPortal.variantStateDict.GetVariantSpan(tmp[toRoom.roomIndex]).AsEnumerable()
+                                        .Any(checkVariant => CheckTask(tmp, toRoom, checkVariant, depth));
       }
       else
       {
@@ -680,10 +682,10 @@ namespace SokoWahnLib.Rooms
               var room = GetTaskRoom(currentTask);
               var iPortalIndex = GetTaskPortalIndex(currentTask);
 
-              // todo: Varianten in Ketten-Logik speichern, da diese immer zusammenhängend sind
+              // todo: Abfrage kürzen
               ulong firstVariant = ulong.MaxValue;
               ulong lastVariant = 0;
-              foreach (var variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariants(currentTask[room.roomIndex]))
+              foreach (var variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(currentTask[room.roomIndex]).AsEnumerable())
               {
                 if (variant < firstVariant) // erste Variante erkannt?
                 {

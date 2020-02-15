@@ -63,17 +63,23 @@ namespace SokoWahnLib.Rooms
     }
 
     /// <summary>
-    /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese zurück
+    /// fragt alle Varianten ab, welche zu einem bestimmten Zustand gehören und gibt diese als Kette zurück
     /// </summary>
-    /// <param name="state">Raumzustand, welche abgefragt werden soll</param>
-    /// <returns>Enumerable der zugehörigen Varianten</returns>
-    public override IEnumerable<ulong> GetVariants(ulong state)
+    /// <param name="state">Raumzustand, welcher abgefragt werden soll</param>
+    /// <returns>entsprechende Variante-Kette</returns>
+    public override VariantSpan GetVariantSpan(ulong state)
     {
       Debug.Assert(state < stateList.Count);
 
       List<ulong> resultList;
 
-      return data.TryGetValue(state, out resultList) ? resultList : Enumerable.Empty<ulong>();
+      if (!data.TryGetValue(state, out resultList)) return new VariantSpan(0, 0); // leere Kette zurück geben
+
+      Debug.Assert(resultList.Count > 0);
+      Debug.Assert(resultList[resultList.Count - 1] == resultList[0] + (uint)resultList.Count - 1);
+      Debug.Assert(Enumerable.Range(0, resultList.Count).All(i => resultList[i] == resultList[0] + (uint)i));
+
+      return new VariantSpan(resultList[0], (uint)resultList.Count);
     }
 
     /// <summary>

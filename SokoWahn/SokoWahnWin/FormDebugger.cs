@@ -372,7 +372,7 @@ namespace SokoWahnWin
           }
 
           int variantCount = 0;
-          foreach (ulong variant in portal.variantStateDict.GetVariants(stateItem.state))
+          foreach (ulong variant in portal.variantStateDict.GetVariantSpan(stateItem.state).AsEnumerable())
           {
             variantCount++;
             var variantData = variantList.GetData(variant);
@@ -687,7 +687,7 @@ namespace SokoWahnWin
           // --- Varianten der Portale prüfen ---
           foreach (var portal in room.incomingPortals)
           {
-            foreach (var variant in portal.variantStateDict.GetVariants(st.Key))
+            foreach (var variant in portal.variantStateDict.GetVariantSpan(st.Key).AsEnumerable())
             {
               var variantData = variantList.GetData(variant);
               if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
@@ -751,7 +751,7 @@ namespace SokoWahnWin
           foreach (var state in portal.variantStateDict.GetAllStates())
           {
             Debug.Assert(state < usingStates.Length);
-            foreach (var variant in portal.variantStateDict.GetVariants(state))
+            foreach (var variant in portal.variantStateDict.GetVariantSpan(state).AsEnumerable())
             {
               Debug.Assert(variant < variantList.Count);
               usingStates.SetBit(state);
@@ -863,7 +863,7 @@ namespace SokoWahnWin
         foreach (ulong state in oldDict.GetAllStates())
         {
           ulong skipVariants = 0;
-          foreach (ulong variant in oldDict.GetVariants(state))
+          foreach (ulong variant in oldDict.GetVariantSpan(state).AsEnumerable())
           {
             Debug.Assert(variant < (uint)skip.map.Length);
             if (skip.map[variant] == ulong.MaxValue) // Variante wird nicht mehr verwendet?
@@ -874,7 +874,7 @@ namespace SokoWahnWin
             Debug.Assert(skip.map[variant] < room.variantList.Count);
             newDict.Add(state, skip.map[variant]);
           }
-          Debug.Assert(oldDict.GetVariants(state).Count() == newDict.GetVariants(state).Count() + (int)skipVariants);
+          Debug.Assert(oldDict.GetVariantSpan(state).variantCount == newDict.GetVariantSpan(state).variantCount + skipVariants);
         }
         oldDict.Dispose();
         portal.variantStateDict = newDict;
@@ -953,12 +953,12 @@ namespace SokoWahnWin
           Debug.Assert(oldState < (uint)skip.map.Length);
           ulong newState = skip.map[oldState];
           Debug.Assert(newState < room.stateList.Count);
-          foreach (ulong variant in oldDict.GetVariants(oldState))
+          foreach (ulong variant in oldDict.GetVariantSpan(oldState).AsEnumerable())
           {
             Debug.Assert(variant < room.variantList.Count);
             newDict.Add(newState, variant);
           }
-          Debug.Assert(oldDict.GetVariants(oldState).Count() == newDict.GetVariants(newState).Count());
+          Debug.Assert(oldDict.GetVariantSpan(oldState).variantCount == newDict.GetVariantSpan(newState).variantCount);
         }
         Debug.Assert(newDict.GetAllStates().Count() == oldDict.GetAllStates().Count());
         oldDict.Dispose();
