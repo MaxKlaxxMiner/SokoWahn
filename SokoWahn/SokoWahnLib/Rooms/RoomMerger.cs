@@ -382,13 +382,35 @@ namespace SokoWahnLib.Rooms
       {
         var variantData1 = room1.variantList.GetData(variant1);
         if (variantData1.oPortalIndexPlayer == uint.MaxValue) break; // End-Varianten noch nicht übertragen
+
+        // --- Kisten verarbeiten ---
+        ulong nextState2 = state2;
+        foreach (uint boxPortalIndex in variantData1.oPortalIndexBoxes)
+        {
+          if (mapPortalIndex1[boxPortalIndex] == uint.MaxValue) // Kisten-Verschiebung nach Raum 2
+          {
+            throw new NotImplementedException();
+          }
+        }
+
         var iPortalOld2 = room1.outgoingPortals[variantData1.oPortalIndexPlayer];
         if (ReferenceEquals(iPortalOld2.toRoom, room2)) // zeigt auf das ausgehende Portal in den benachbarten Raum, welcher ebenfalls verschmolzen werden soll?
         {
-          foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
+          foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(nextState2).AsEnumerable())
           {
             var variantData2 = room2.variantList.GetData(variant2);
             if (variantData2.oPortalIndexPlayer == uint.MaxValue) break; // End-Varianten noch nicht übertragen
+
+            // --- Kisten verarbeiten ---
+            ulong nextState1 = state1;
+            foreach (uint boxPortalIndex in variantData2.oPortalIndexBoxes)
+            {
+              if (mapPortalIndex2[boxPortalIndex] == uint.MaxValue) // Kisten-Verschiebung nach Raum 1
+              {
+                throw new NotImplementedException();
+              }
+            }
+
             if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
             {
               throw new NotImplementedException(); // rekursiver Aufruf
