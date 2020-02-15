@@ -227,11 +227,22 @@ namespace SokoWahnLib.Rooms
           MergePushVariants(iPortalOld, room1, (state2, state1) => state1 * state1Mul + state2, mapPortalIndex2, mapPortalIndex1, iPortalNew);
         }
         #endregion
+
+        #region # // --- End-Varianten hinzufügen ---
+        if (ReferenceEquals(iPortalOld.toRoom, room1))
+        {
+          MergeEndVariants(iPortalOld, room2, (state1, state2) => state1 * state1Mul + state2, mapPortalIndex1, mapPortalIndex2, iPortalNew);
+        }
+        else
+        {
+          MergeEndVariants(iPortalOld, room1, (state2, state1) => state1 * state1Mul + state2, mapPortalIndex2, mapPortalIndex1, iPortalNew);
+        }
+        #endregion
       }
     }
     #endregion
 
-    #region # MergeMoveVariants(...) // verschmilzt alle Lauf-Varianten eines Portales
+    #region # // MergeMoveVariants(...) // verschmilzt alle Lauf-Varianten eines Portales
     /// <summary>
     /// verschmilzt alle Lauf-Varianten eines Portales
     /// </summary>
@@ -310,7 +321,16 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
-    #region # MergePushVariants(...) // verschmilzt alle Varianten mit Kistenverschiebungen eines Portales (ohne End-Varianten)
+    #region # // MergePushVariants(...) // verschmilzt alle Varianten mit Kistenverschiebungen eines Portales (ohne End-Varianten)
+    /// <summary>
+    /// verschmilzt alle Varianten mit Kistenverschiebungen eines Portales (ohne End-Varianten)
+    /// </summary>
+    /// <param name="iPortal1">eingehendes altes Portal vom 1. Raum</param>
+    /// <param name="room2">2. Raum</param>
+    /// <param name="stateCalc">Methode zum berechnen der neuen Zustandsnummer</param>
+    /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
+    /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
+    /// <param name="iPortalNew">Neues Portal, wohin die neu erzeugten Varianten gespeichert werden sollen</param>
     static void MergePushVariants(RoomPortal iPortal1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
     {
       var room1 = iPortal1.toRoom;
@@ -323,57 +343,103 @@ namespace SokoWahnLib.Rooms
           var iPortalOld2 = room1.outgoingPortals[variantData1.oPortalIndexPlayer];
           if (ReferenceEquals(iPortalOld2.toRoom, room2)) // zeigt auf das ausgehende Portal in den benachbarten Raum, welcher ebenfalls verschmolzen werden sollen?
           {
-            throw new NotImplementedException("todo");
-            //      foreach (ulong state2 in iPortalOld2.variantStateDict.GetAllStates())
-            //      {
-            //        foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
-            //        {
-            //          var variantData2 = room2.variantList.GetData(variant2);
-            //          if (variantData2.pushes > 0) break; // Varianten mit Kistenverschiebungen jetzt noch nicht übertragen
-            //          Debug.Assert(variantData2.oPortalIndexPlayer < uint.MaxValue);
-            //          Debug.Assert(variantData2.newState == variantData2.oldState);
-            //          if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
-            //          {
-            //            throw new NotImplementedException("todo"); // Schleife
-            //          }
-            //          else
-            //          {
-            //            ulong newState = stateCalc(state1, state2);
-            //            uint oPortalIndexPlayer = mapPortalIndex2[variantData2.oPortalIndexPlayer];
-            //            Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
-            //            ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
-            //              newState,                                 // vorheriger Raum-Zustand
-            //              variantData1.moves + variantData2.moves,  // Anzahl der Laufschritte
-            //              0,                                        // Anzahl der Kistenverschiebungen
-            //              new uint[0],                              // rausgeschobene Kisten
-            //              oPortalIndexPlayer,                       // Portal, worüber der Spieler den Raum wieder verlässt
-            //              newState,                                 // nachfolgender Raum-Zustand
-            //              variantData1.path + variantData2.path     // Laufweg als Pfad
-            //            );
-            //            iPortalNew.variantStateDict.Add(newState, newVariant);
-            //          }
-            //        }
-            //      }
+            foreach (ulong state2 in iPortalOld2.variantStateDict.GetAllStates())
+            {
+              foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
+              {
+                var variantData2 = room2.variantList.GetData(variant2);
+                if (variantData2.oPortalIndexPlayer == uint.MaxValue) break; // End-Varianten noch nicht übertragen
+                if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
+                {
+                  throw new NotImplementedException("todo"); // Schleife
+                }
+                else
+                {
+                  if (variantData1.pushes + variantData2.pushes == 0) continue; // keine Kistenverschiebungen gefunden?
+                  throw new NotImplementedException("todo");
+                  //  ulong newState = stateCalc(state1, state2);
+                  //  uint oPortalIndexPlayer = mapPortalIndex2[variantData2.oPortalIndexPlayer];
+                  //  Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
+                  //  ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
+                  //    newState,                                 // vorheriger Raum-Zustand
+                  //    variantData1.moves + variantData2.moves,  // Anzahl der Laufschritte
+                  //    0,                                        // Anzahl der Kistenverschiebungen
+                  //    new uint[0],                              // rausgeschobene Kisten
+                  //    oPortalIndexPlayer,                       // Portal, worüber der Spieler den Raum wieder verlässt
+                  //    newState,                                 // nachfolgender Raum-Zustand
+                  //    variantData1.path + variantData2.path     // Laufweg als Pfad
+                  //  );
+                  //  iPortalNew.variantStateDict.Add(newState, newVariant);
+                }
+              }
+            }
           }
           else // ausgehendes Portal direkt erreicht
           {
+            if (variantData1.pushes == 0) continue; // keine Kistenverschiebungen erkannt?
             throw new NotImplementedException("todo");
-            //      for (ulong state2 = 0; state2 < room2.stateList.Count; state2++) // 2. Raum könnte alle Zustände annehmen
-            //      {
-            //        ulong newState = stateCalc(state1, state2);
-            //        uint oPortalIndexPlayer = mapPortalIndex1[variantData1.oPortalIndexPlayer];
-            //        Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
-            //        ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
-            //          newState,            // vorheriger Raum-Zustand
-            //          variantData1.moves,  // Anzahl der Laufschritte
-            //          0,                   // Anzahl der Kistenverschiebungen
-            //          new uint[0],         // rausgeschobene Kisten
-            //          oPortalIndexPlayer,  // Portal, worüber der Spieler den Raum wieder verlässt
-            //          newState,            // nachfolgender Raum-Zustand
-            //          variantData1.path    // Laufweg als Pfad
-            //        );
-            //        iPortalNew.variantStateDict.Add(newState, newVariant);
-            //      }
+            //  for (ulong state2 = 0; state2 < room2.stateList.Count; state2++) // 2. Raum könnte alle Zustände annehmen
+            //  {
+            //    ulong newState = stateCalc(state1, state2);
+            //    uint oPortalIndexPlayer = mapPortalIndex1[variantData1.oPortalIndexPlayer];
+            //    Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
+            //    ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
+            //      newState,            // vorheriger Raum-Zustand
+            //      variantData1.moves,  // Anzahl der Laufschritte
+            //      0,                   // Anzahl der Kistenverschiebungen
+            //      new uint[0],         // rausgeschobene Kisten
+            //      oPortalIndexPlayer,  // Portal, worüber der Spieler den Raum wieder verlässt
+            //      newState,            // nachfolgender Raum-Zustand
+            //      variantData1.path    // Laufweg als Pfad
+            //    );
+            //    iPortalNew.variantStateDict.Add(newState, newVariant);
+            //  }
+          }
+        }
+      }
+    }
+    #endregion
+
+    #region # // MergeEndVariants(...) // verschmilzt alle Varianten eines Portales, welche das Spielende erreichen
+    /// <summary>
+    /// verschmilzt alle Varianten eines Portales, welche das Spielende erreichen
+    /// </summary>
+    /// <param name="iPortal1">eingehendes altes Portal vom 1. Raum</param>
+    /// <param name="room2">2. Raum</param>
+    /// <param name="stateCalc">Methode zum berechnen der neuen Zustandsnummer</param>
+    /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
+    /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
+    /// <param name="iPortalNew">Neues Portal, wohin die neu erzeugten Varianten gespeichert werden sollen</param>
+    static void MergeEndVariants(RoomPortal iPortal1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
+    {
+      var room1 = iPortal1.toRoom;
+      foreach (ulong state1 in iPortal1.variantStateDict.GetAllStates())
+      {
+        foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
+        {
+          var variantData1 = room1.variantList.GetData(variant1);
+          if (variantData1.oPortalIndexPlayer == uint.MaxValue) // End-Variante erreicht?
+          {
+            throw new NotImplementedException("todo");
+          }
+          var iPortalOld2 = room1.outgoingPortals[variantData1.oPortalIndexPlayer];
+          if (ReferenceEquals(iPortalOld2.toRoom, room2)) // zeigt auf das ausgehende Portal in den benachbarten Raum, welcher ebenfalls verschmolzen werden sollen
+          {
+            foreach (ulong state2 in iPortalOld2.variantStateDict.GetAllStates())
+            {
+              foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
+              {
+                var variantData2 = room2.variantList.GetData(variant2);
+                if (variantData1.oPortalIndexPlayer == uint.MaxValue) // End-Variante erreicht?
+                {
+                  throw new NotImplementedException("todo");
+                }
+                if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
+                {
+                  throw new NotImplementedException("todo"); // Schleife
+                }
+              }
+            }
           }
         }
       }
