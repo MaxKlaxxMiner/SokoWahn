@@ -266,6 +266,7 @@ namespace SokoWahnWin
         listRooms.EndUpdate();
 
         displaySettings.hBack = roomNetwork.rooms.Select(room => new Highlight(0x003366, 0.7f, room.fieldPosis)).ToArray();
+        displaySettings.hFront = new Highlight[0];
 
         listStates.BeginUpdate();
         listStates.Items.Clear();
@@ -1007,7 +1008,6 @@ namespace SokoWahnWin
       }
 
       roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
-      roomNetwork.Validate();
     }
 
     /// <summary>

@@ -33,7 +33,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// eigender Index des Rooms
     /// </summary>
-    public readonly uint roomIndex;
+    public uint roomIndex;
     /// <summary>
     /// eingehende Portale, welche zum eigenen Raum gehören
     /// </summary>

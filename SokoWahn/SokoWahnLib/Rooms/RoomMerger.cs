@@ -32,7 +32,7 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     readonly Room newRoom;
     /// <summary>
-    /// merkt sich die Portale beider alten Räume nach neuen Portal-Index
+    /// merkt sich die Portale der beiden alten Räume nach neuen Portal-Index
     /// </summary>
     readonly RoomPortal[] mapOldIncomingPortals;
     /// <summary>
@@ -89,8 +89,7 @@ namespace SokoWahnLib.Rooms
       // --- neue Portale erstellen und zugehörges Mapping befüllen ---
       var newIncomingPortals = new RoomPortal[outerIncomingPortalsRoom1.Length + outerIncomingPortalsRoom2.Length];
       var newOutgoingPortals = new RoomPortal[newIncomingPortals.Length];
-      var newRoomIndex = Math.Min(srcRoom1.roomIndex, srcRoom2.roomIndex);
-      newRoom = new Room(newRoomIndex, network.field, srcRoom1.fieldPosis.Concat(srcRoom2.fieldPosis).OrderBy(x => x).ToArray(), newIncomingPortals, newOutgoingPortals);
+      newRoom = new Room(uint.MaxValue, network.field, srcRoom1.fieldPosis.Concat(srcRoom2.fieldPosis).OrderBy(x => x).ToArray(), newIncomingPortals, newOutgoingPortals);
 
       mapOldIncomingPortals = new RoomPortal[newIncomingPortals.Length];
       mapPortalIndex1 = Enumerable.Range(0, srcRoom1.incomingPortals.Length).Select(x => uint.MaxValue).ToArray();
@@ -118,7 +117,7 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
-    #region # Step1_States() // Schritt 1: erstellt alle neuen Kisten-Zustände
+    #region # // Step1_States() // Schritt 1: erstellt alle neuen Kisten-Zustände
     /// <summary>
     /// Schritt 1: erstellt alle neuen Kisten-Zustände
     /// </summary>
@@ -147,7 +146,7 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
-    #region # Step2_StartVariants() // erstellt alle Startvarianten (falls der Spieler im eigenen Raum beginnt)
+    #region # // Step2_StartVariants() // erstellt alle Startvarianten (falls der Spieler im eigenen Raum beginnt)
     /// <summary>
     /// erstellt alle Startvarianten (falls der Spieler im eigenen Raum beginnt)
     /// </summary>
@@ -162,7 +161,7 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
-    #region # Step3_PortalVariants() // Portale mit allen Varianten veschmelzen
+    #region # // Step3_PortalVariants() // Portale mit allen Varianten veschmelzen
     /// <summary>
     /// Portale mit allen Varianten veschmelzen
     /// </summary>
@@ -443,6 +442,56 @@ namespace SokoWahnLib.Rooms
           }
         }
       }
+    }
+    #endregion
+
+    #region # // Step4_UpdatePortals() // aktualisiert die Portale und deren Verlinkungen
+    /// <summary>
+    /// aktualisiert die Portale und deren Verlinkungen
+    /// </summary>
+    public void Step4_UpdatePortals()
+    {
+      var room = newRoom;
+      var iPortals = room.incomingPortals;
+      var oPortals = room.outgoingPortals;
+
+      // --- ausgehende Portale neu verlinken ---
+      for (uint portalIndex = 0; portalIndex < iPortals.Length; portalIndex++)
+      {
+        var oPortal = mapOldIncomingPortals[portalIndex].oppositePortal;
+        iPortals[portalIndex].oppositePortal = oPortal;
+        oPortals[portalIndex] = oPortal;
+        oPortal.oppositePortal = iPortals[portalIndex];
+        oPortal.toRoom.outgoingPortals[oPortal.iPortalIndex] = iPortals[portalIndex];
+      }
+
+      // --- Räume in den Portale neu setzen ---
+      for (uint iPortalIndex = 0; iPortalIndex < iPortals.Length; iPortalIndex++)
+      {
+        var oPortal = mapOldIncomingPortals[iPortalIndex].oppositePortal;
+        oPortal.fromRoom = room;
+      }
+    }
+    #endregion
+
+    #region # // Step5_UpdateRooms() // aktualisiert die Räume und deren Indizierungen
+    /// <summary>
+    /// aktualisiert die Räume und deren Indizierungen
+    /// </summary>
+    public void Step5_UpdateRooms()
+    {
+      uint fillRoomIndex = 0;
+      for (uint roomIndex = 0; roomIndex < network.rooms.Length; roomIndex++)
+      {
+        var room = network.rooms[roomIndex];
+        if (ReferenceEquals(room, srcRoom1)) room = newRoom; // 1. Raum überschreiben
+        if (ReferenceEquals(room, srcRoom2)) continue; // 2. Raum überspringen
+        room.roomIndex = fillRoomIndex;
+        network.rooms[fillRoomIndex] = room;
+        fillRoomIndex++;
+      }
+      if (fillRoomIndex + 1 != network.rooms.Length) throw new Exception("Room-Index error");
+      Array.Resize(ref network.rooms, (int)fillRoomIndex);
     }
     #endregion
   }

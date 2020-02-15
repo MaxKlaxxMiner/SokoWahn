@@ -80,9 +80,9 @@
       this.pictureBoxField.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-      this.pictureBoxField.Location = new System.Drawing.Point(274, 2);
+      this.pictureBoxField.Location = new System.Drawing.Point(411, 2);
       this.pictureBoxField.Name = "pictureBoxField";
-      this.pictureBoxField.Size = new System.Drawing.Size(879, 600);
+      this.pictureBoxField.Size = new System.Drawing.Size(742, 600);
       this.pictureBoxField.TabIndex = 2;
       this.pictureBoxField.TabStop = false;
       this.pictureBoxField.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBoxField_MouseDown);
@@ -105,7 +105,7 @@
       this.listStates.ItemHeight = 15;
       this.listStates.Location = new System.Drawing.Point(0, 0);
       this.listStates.Name = "listStates";
-      this.listStates.Size = new System.Drawing.Size(137, 302);
+      this.listStates.Size = new System.Drawing.Size(270, 302);
       this.listStates.TabIndex = 3;
       this.listStates.SelectedIndexChanged += new System.EventHandler(this.listStates_SelectedIndexChanged);
       this.listStates.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
@@ -125,7 +125,7 @@
       // splitContainer1.Panel2
       // 
       this.splitContainer1.Panel2.Controls.Add(this.listVariants);
-      this.splitContainer1.Size = new System.Drawing.Size(137, 628);
+      this.splitContainer1.Size = new System.Drawing.Size(270, 628);
       this.splitContainer1.SplitterDistance = 302;
       this.splitContainer1.TabIndex = 4;
       this.splitContainer1.Resize += new System.EventHandler(this.splitContainer1_Resize);
@@ -140,7 +140,7 @@
       this.listVariants.ItemHeight = 15;
       this.listVariants.Location = new System.Drawing.Point(0, 0);
       this.listVariants.Name = "listVariants";
-      this.listVariants.Size = new System.Drawing.Size(137, 322);
+      this.listVariants.Size = new System.Drawing.Size(270, 322);
       this.listVariants.TabIndex = 4;
       this.listVariants.SelectedIndexChanged += new System.EventHandler(this.listVariants_SelectedIndexChanged);
       this.listVariants.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
@@ -152,9 +152,9 @@
       this.textBoxInfo.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
       this.textBoxInfo.Font = new System.Drawing.Font("Consolas", 9.75F);
       this.textBoxInfo.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(86)))), ((int)(((byte)(156)))), ((int)(((byte)(214)))));
-      this.textBoxInfo.Location = new System.Drawing.Point(278, 603);
+      this.textBoxInfo.Location = new System.Drawing.Point(411, 603);
       this.textBoxInfo.Name = "textBoxInfo";
-      this.textBoxInfo.Size = new System.Drawing.Size(976, 23);
+      this.textBoxInfo.Size = new System.Drawing.Size(843, 23);
       this.textBoxInfo.TabIndex = 5;
       this.textBoxInfo.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 

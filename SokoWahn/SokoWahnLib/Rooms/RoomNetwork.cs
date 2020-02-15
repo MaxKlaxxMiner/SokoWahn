@@ -150,6 +150,11 @@ namespace SokoWahnLib.Rooms
 
       roomMerger.Step3_PortalVariants();
 
+      roomMerger.Step4_UpdatePortals();
+
+      roomMerger.Step5_UpdateRooms();
+
+      Validate(); // einfache Validierung der Räume und Portale
     }
     #endregion
 

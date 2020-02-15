@@ -19,7 +19,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Quell-Raum, wo das Portal startet
     /// </summary>
-    public readonly Room fromRoom;
+    public Room fromRoom;
     /// <summary>
     /// genaue Position, wo das Portal startet
     /// </summary>
