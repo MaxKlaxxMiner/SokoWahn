@@ -682,26 +682,12 @@ namespace SokoWahnLib.Rooms
               var room = GetTaskRoom(currentTask);
               var iPortalIndex = GetTaskPortalIndex(currentTask);
 
-              // todo: Abfrage kürzen
-              ulong firstVariant = ulong.MaxValue;
-              ulong lastVariant = 0;
-              foreach (var variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(currentTask[room.roomIndex]).AsEnumerable())
-              {
-                if (variant < firstVariant) // erste Variante erkannt?
-                {
-                  Debug.Assert(firstVariant == ulong.MaxValue);
-                  firstVariant = variant;
-                  Debug.Assert(lastVariant == 0);
-                  lastVariant = variant;
-                  continue;
-                }
-                Debug.Assert(variant == lastVariant + 1); // fortlaufende Variante ohne Lücke erwartet
-                lastVariant = variant;
-              }
-              Debug.Assert(firstVariant < ulong.MaxValue);
+              var variantSpan = room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(currentTask[room.roomIndex]);
+              Debug.Assert(variantSpan.VariantEnd <= room.variantList.Count);
+              Debug.Assert(variantSpan.variantCount > 0);
 
-              currentVariant = firstVariant;
-              currentVariantEnd = lastVariant + 1;
+              currentVariant = variantSpan.variantStart;
+              currentVariantEnd = variantSpan.VariantEnd;
             }
             #endregion
           }

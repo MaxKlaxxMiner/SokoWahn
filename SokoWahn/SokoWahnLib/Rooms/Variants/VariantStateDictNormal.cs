@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -15,7 +13,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// merkt sich alle Zustand/Varianten Kombinationen
     /// </summary>
-    public readonly Dictionary<ulong, List<ulong>> data = new Dictionary<ulong, List<ulong>>();
+    public readonly Dictionary<ulong, VariantSpan> data = new Dictionary<ulong, VariantSpan>();
 
     /// <summary>
     /// merkt sich die Anzahl der insgesamt gespeicherten Varianten
@@ -39,18 +37,18 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(state < stateList.Count);
       Debug.Assert(variant < variantList.Count);
 
-      List<ulong> list;
-
-      if (!data.TryGetValue(state, out list))
-      {
-        list = new List<ulong>();
-        data.Add(state, list);
-      }
-
-      Debug.Assert(!list.Contains(variant));
-
-      list.Add(variant);
       totalVariantCount++;
+
+      VariantSpan oldSpan;
+      if (data.TryGetValue(state, out oldSpan))
+      {
+        Debug.Assert(variant == oldSpan.variantStart + oldSpan.variantCount);
+        data[state] = new VariantSpan(oldSpan.variantStart, oldSpan.variantCount + 1);
+      }
+      else
+      {
+        data.Add(state, new VariantSpan(variant, 1));
+      }
     }
 
     /// <summary>
@@ -71,15 +69,9 @@ namespace SokoWahnLib.Rooms
     {
       Debug.Assert(state < stateList.Count);
 
-      List<ulong> resultList;
+      VariantSpan result;
 
-      if (!data.TryGetValue(state, out resultList)) return new VariantSpan(0, 0); // leere Kette zurück geben
-
-      Debug.Assert(resultList.Count > 0);
-      Debug.Assert(resultList[resultList.Count - 1] == resultList[0] + (uint)resultList.Count - 1);
-      Debug.Assert(Enumerable.Range(0, resultList.Count).All(i => resultList[i] == resultList[0] + (uint)i));
-
-      return new VariantSpan(resultList[0], (uint)resultList.Count);
+      return data.TryGetValue(state, out result) ? result : new VariantSpan(0, 0);
     }
 
     /// <summary>

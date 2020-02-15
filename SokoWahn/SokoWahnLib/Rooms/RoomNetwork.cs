@@ -278,7 +278,6 @@ namespace SokoWahnLib.Rooms
                   currentState = state;
                   if (state >= usingStates.Length) throw new IndexOutOfRangeException();
                   pushVariant = false;
-                  // todo: Abfrage kürzen
                   foreach (var variant in portal.variantStateDict.GetVariantSpan(state).AsEnumerable())
                   {
                     if (variant != currentVariant + 1) throw new Exception("Varianten nicht Lückenfrei! erwartet: " + (currentVariant + 1) + ", vorhanden: " + variant);

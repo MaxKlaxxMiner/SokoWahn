@@ -1,7 +1,6 @@
 ﻿// ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable NotAccessedField.Global
 // ReSharper disable UnusedMember.Global
-// ReSharper disable FieldCanBeMadeReadOnly.Global
 using System.Collections.Generic;
 
 namespace SokoWahnLib.Rooms
@@ -18,7 +17,12 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Anzahl der fortlaufenden Varianten
     /// </summary>
-    public ulong variantCount;
+    public readonly ulong variantCount;
+
+    /// <summary>
+    /// zeigt auf das Ende der Kette
+    /// </summary>
+    public ulong VariantEnd { get { return variantStart + variantCount; } }
 
     /// <summary>
     /// Konstruktor
