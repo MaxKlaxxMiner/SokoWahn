@@ -63,10 +63,6 @@
     <Compile Include="Rooms\RoomPortal.cs" />
     <Compile Include="Rooms\Room.cs" />
     <Compile Include="Extras\Crc64.cs" />
-    <Compile Include="Rooms\old\Room_old.cs" />
-    <Compile Include="Rooms\old\RoomPortal_old.cs" />
-    <Compile Include="Rooms\old\RoomSearchForward_old.cs" />
-    <Compile Include="Rooms\old\RoomSolver_old.cs" />
     <Compile Include="Rooms\RoomNetwork.cs" />
     <Compile Include="Rooms\States\StateListNormal.cs" />
     <Compile Include="Rooms\Tasks\TaskList.cs" />
