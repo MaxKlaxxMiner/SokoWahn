@@ -975,39 +975,45 @@ namespace SokoWahnWin
     void buttonMerge_Click(object sender, EventArgs e)
     {
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
-      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Take(29999).ToArray();
+      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Where(x => x.goalPosis.Length == 0 && x.startVariantCount == 0 && x.stateList.Count == 1).ToArray();
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
       listRooms.EndUpdate();
 
-      var bestRoomConnections = new List<Tuple<BigInteger, Room, Room>>();
-      var useRooms = new HashSet<Room>(mergeRooms);
-      foreach (var room in mergeRooms)
+      var mergeFields = new HashSet<int>(mergeRooms.SelectMany(room => room.fieldPosis));
+
+      for (; ; )
       {
-        var connectedRooms = room.incomingPortals.Select(iPortal => iPortal.fromRoom).Where(fromRoom => useRooms.Contains(fromRoom)).ToArray();
-        foreach (var room2 in connectedRooms)
+        mergeRooms = roomNetwork.rooms.Where(room => room.fieldPosis.Any(pos => mergeFields.Contains(pos))).ToArray();
+        var bestRoomConnections = new List<Tuple<BigInteger, Room, Room>>();
+        var useRooms = new HashSet<Room>(mergeRooms);
+        foreach (var room in mergeRooms)
         {
-          if (room.roomIndex > room2.roomIndex) continue; // doppelte Raumverknüpfung vermeiden
+          var connectedRooms = room.incomingPortals.Select(iPortal => iPortal.fromRoom).Where(fromRoom => useRooms.Contains(fromRoom)).ToArray();
+          foreach (var room2 in connectedRooms)
+          {
+            if (room.roomIndex > room2.roomIndex) continue; // doppelte Raumverknüpfung vermeiden
 
-          bestRoomConnections.Add(new Tuple<BigInteger, Room, Room>
-          (
-            RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
-            room,
-            room2
-          ));
+            bestRoomConnections.Add(new Tuple<BigInteger, Room, Room>
+            (
+              RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
+              room,
+              room2
+            ));
+          }
         }
+
+        if (bestRoomConnections.Count == 0) return; // nichts zum verschmelzen gefunden?
+
+        var bestRoomConnection = bestRoomConnections.First();
+        foreach (var c in bestRoomConnections)
+        {
+          if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
+        }
+
+        roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
       }
-
-      if (bestRoomConnections.Count == 0) return; // nichts zum verschmelzen gefunden?
-
-      var bestRoomConnection = bestRoomConnections.First();
-      foreach (var c in bestRoomConnections)
-      {
-        if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
-      }
-
-      roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
     }
 
     /// <summary>
