@@ -156,10 +156,27 @@ namespace SokoWahnLib.Rooms
     {
       var room1 = srcRoom1;
       var room2 = srcRoom2;
+      ulong state1Mul = srcRoom2.stateList.Count;
 
       if (room1.startVariantCount + room2.startVariantCount == 0) return; // keine Startvarianten vorhanden?
+      Debug.Assert(room1.startVariantCount == 0 || room2.startVariantCount == 0);
 
-      throw new NotImplementedException("todo");
+      if (room1.startVariantCount > 0) // im ersten Raum wird gestartet
+      {
+        MergeMoveStartVariants(room1, room2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, newRoom);
+
+        MergePushStartVariants(room1, room2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, newRoom);
+
+        MergeStartEndVariants(room1, room2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, newRoom);
+      }
+      else // in zweiten Raum wird gestartet
+      {
+        MergeMoveStartVariants(room2, room1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, newRoom);
+
+        MergePushStartVariants(room2, room1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, newRoom);
+
+        MergeStartEndVariants(room2, room1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, newRoom);
+      }
     }
     #endregion
 
@@ -291,6 +308,54 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
+    #region # // MergeMoveStartVariants(...) // verschmilzt alle Lauf-Varianten, welche beim Start beginnen
+    /// <summary>
+    /// verschmilzt alle Lauf-Varianten, welche beim Start beginnen
+    /// </summary>
+    /// <param name="room1">erster Raum, wo gestartet wird</param>
+    /// <param name="room2">zweiter Raum, welcher verschmolzen wird</param>
+    /// <param name="stateCalc">Funktion zum berechnen der kombinierten Zustandsnummer</param>
+    /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
+    /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
+    /// <param name="roomNew">neuer Raum, wohin die neuen Startvarianten gespeichert werden sollen</param>
+    static void MergeMoveStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
+    {
+      throw new NotImplementedException();
+    }
+    #endregion
+
+    #region # // MergePushStartVariants(...) // verschmilzt alle Start-Varianten mit Kistenverschiebungen des Start-Raumes (ohne End-Varianten)
+    /// <summary>
+    /// verschmilzt alle Start-Varianten mit Kistenverschiebungen des Start-Raumes (ohne End-Varianten)
+    /// </summary>
+    /// <param name="room1">erster Raum, wo gestartet wird</param>
+    /// <param name="room2">zweiter Raum, welcher verschmolzen wird</param>
+    /// <param name="stateCalc">Funktion zum berechnen der kombinierten Zustandsnummer</param>
+    /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
+    /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
+    /// <param name="roomNew">neuer Raum, wohin die neuen Startvarianten gespeichert werden sollen</param>
+    static void MergePushStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
+    {
+      throw new NotImplementedException();
+    }
+    #endregion
+
+    #region # // MergeStartEndVariants(...) // verschmilzt alle Start-Varianten des Start-Raumes, welche das Spielende erreichen
+    /// <summary>
+    /// verschmilzt alle Start-Varianten des Start-Raumes, welche das Spielende erreichen
+    /// </summary>
+    /// <param name="room1">erster Raum, wo gestartet wird</param>
+    /// <param name="room2">zweiter Raum, welcher verschmolzen wird</param>
+    /// <param name="stateCalc">Funktion zum berechnen der kombinierten Zustandsnummer</param>
+    /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
+    /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
+    /// <param name="roomNew">neuer Raum, wohin die neuen Startvarianten gespeichert werden sollen</param>
+    static void MergeStartEndVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
+    {
+      throw new NotImplementedException();
+    }
+    #endregion
+
     #region # // MergeMoveVariants(...) // verschmilzt alle Lauf-Varianten eines Portales
     /// <summary>
     /// verschmilzt alle reinen Lauf-Varianten eines Portales
@@ -302,7 +367,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="stateCalc">Funktion zum berechnen der kombinierten Zustandsnummer</param>
     /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
     /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
-    /// <param name="iPortalNew">Neues Portal, wohin die neu erzeugten Varianten gespeichert werden sollen</param>
+    /// <param name="iPortalNew">neues Portal, wohin die neu erzeugten Varianten gespeichert werden sollen</param>
     static void MergeMoveVariants(RoomPortal iPortal1, Room room2, ulong state1, ulong state2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
     {
       var room1 = iPortal1.toRoom;

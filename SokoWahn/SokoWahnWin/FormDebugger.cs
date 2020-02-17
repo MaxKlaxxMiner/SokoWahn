@@ -66,6 +66,18 @@ namespace SokoWahnWin
         ####
     ");
 
+    static readonly SokoField FieldTest5 = new SokoField(@"
+        #####     
+      ###   ####  
+      #@  #    #  
+      ### # ## ## 
+        #   #   # 
+        ##### $ ##
+           #  #  #
+           #  .  #
+           #######
+    ");
+
     static readonly SokoField FieldStart = new SokoField(@"
           #####
           #   #
@@ -226,10 +238,11 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste, 6 Moves)
+      //roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste, 6 Moves)
       //roomNetwork = new RoomNetwork(FieldTest2);       // sehr einfaches Testlevel (zwei Kisten, 15 Moves)
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
+      roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
       //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
@@ -975,7 +988,7 @@ namespace SokoWahnWin
     void buttonMerge_Click(object sender, EventArgs e)
     {
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
-      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Where(x => x.goalPosis.Length == 0 && x.startVariantCount == 0 && x.stateList.Count == 1).ToArray();
+      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Where(x => x.stateList.Count == 1).ToArray();
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -1012,7 +1025,11 @@ namespace SokoWahnWin
           if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
         }
 
+        // 2 besten Räume verschmelzen und Zeit messen
+        int tick = Environment.TickCount;
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
+        tick = Environment.TickCount - tick;
+        if (tick > 100) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat
       }
     }
 
