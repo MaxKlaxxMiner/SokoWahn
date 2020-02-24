@@ -988,7 +988,7 @@ namespace SokoWahnWin
     void buttonMerge_Click(object sender, EventArgs e)
     {
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
-      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Where(x => x.stateList.Count == 1).ToArray();
+      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.Where(x => x.stateList.Count == 1 && x.startVariantCount == 0).ToArray();
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -1025,11 +1025,16 @@ namespace SokoWahnWin
           if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
         }
 
-        // 2 besten Räume verschmelzen und Zeit messen
+#if DEBUG
+        // die 2 besten Räume verschmelzen
+        roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
+#else
+        // die 2 besten Räume verschmelzen und Zeit messen
         int tick = Environment.TickCount;
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
         tick = Environment.TickCount - tick;
         if (tick > 100) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat
+#endif
       }
     }
 

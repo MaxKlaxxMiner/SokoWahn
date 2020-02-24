@@ -1,5 +1,6 @@
 ﻿#region # using *.*
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 // ReSharper disable NotAccessedField.Local
@@ -372,6 +373,7 @@ namespace SokoWahnLib.Rooms
     {
       var room1 = iPortal1.toRoom;
       ulong newState = stateCalc(state1, state2);
+      var tasks1 = new List<MoveSearchTask>();
       foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
       {
         var variantData1 = room1.variantList.GetData(variant1);
@@ -381,34 +383,14 @@ namespace SokoWahnLib.Rooms
         var iPortalOld2 = room1.outgoingPortals[variantData1.oPortalIndexPlayer];
         if (ReferenceEquals(iPortalOld2.toRoom, room2)) // zeigt auf das ausgehende Portal in den benachbarten Raum, welcher ebenfalls verschmolzen werden sollen?
         {
-          foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
+          tasks1.Add(new MoveSearchTask
           {
-            var variantData2 = room2.variantList.GetData(variant2);
-            if (variantData2.pushes > 0) break; // Varianten mit Kistenverschiebungen jetzt noch nicht übertragen
-            Debug.Assert(variantData2.oPortalIndexPlayer < uint.MaxValue);
-            Debug.Assert(variantData2.newState == variantData2.oldState);
-            if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
-            {
-              throw new NotImplementedException(); // todo: rekursive Suche
-            }
-            else
-            {
-              uint oPortalIndexPlayer = mapPortalIndex2[variantData2.oPortalIndexPlayer];
-              Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
-              ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
-                newState,                                 // vorheriger Raum-Zustand
-                variantData1.moves + variantData2.moves,  // Anzahl der Laufschritte
-                0,                                        // Anzahl der Kistenverschiebungen
-                new uint[0],                              // rausgeschobene Kisten
-                oPortalIndexPlayer,                       // Portal, worüber der Spieler den Raum wieder verlässt
-                newState,                                 // nachfolgender Raum-Zustand
-                variantData1.path + variantData2.path     // Laufweg als Pfad
-              );
-              iPortalNew.variantStateDict.Add(newState, newVariant);
-            }
-          }
+            oPortalIndexPlayer = variantData1.oPortalIndexPlayer,
+            moves = variantData1.moves,
+            path = variantData1.path
+          });
         }
-        else // ausgehendes Portal direkt erreicht
+        else
         {
           uint oPortalIndexPlayer = mapPortalIndex1[variantData1.oPortalIndexPlayer];
           Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
@@ -423,6 +405,120 @@ namespace SokoWahnLib.Rooms
           );
           iPortalNew.variantStateDict.Add(newState, newVariant);
         }
+      }
+      if (tasks1.Count == 0) return;
+
+      var moveDict = new Dictionary<ulong, ulong>();
+      var tasks2 = new List<MoveSearchTask>();
+      while (tasks1.Count > 0)
+      {
+        foreach (var task1 in tasks1)
+        {
+          ulong crc = task1.GetCrc() + 1;
+          ulong crcMoves;
+          if (!moveDict.TryGetValue(crc, out crcMoves)) crcMoves = ulong.MaxValue;
+          if (task1.moves >= crcMoves) continue; // bereits abgearbeitet?
+          moveDict[crc] = task1.moves;
+
+          var iPortalOld2 = room1.outgoingPortals[task1.oPortalIndexPlayer];
+          foreach (ulong variant2 in iPortalOld2.variantStateDict.GetVariantSpan(state2).AsEnumerable())
+          {
+            var variantData2 = room2.variantList.GetData(variant2);
+            if (variantData2.pushes > 0) break; // Varianten mit Kistenverschiebungen jetzt noch nicht übertragen
+            Debug.Assert(variantData2.oPortalIndexPlayer < uint.MaxValue);
+            Debug.Assert(variantData2.newState == variantData2.oldState);
+            if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
+            {
+              tasks2.Add(new MoveSearchTask
+              {
+                oPortalIndexPlayer = variantData2.oPortalIndexPlayer,
+                moves = task1.moves + variantData2.moves,
+                path = task1.path + variantData2.path
+              });
+            }
+            else
+            {
+              uint oPortalIndexPlayer = mapPortalIndex2[variantData2.oPortalIndexPlayer];
+              Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
+              ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
+                newState,                          // vorheriger Raum-Zustand
+                task1.moves + variantData2.moves,  // Anzahl der Laufschritte
+                0,                                 // Anzahl der Kistenverschiebungen
+                new uint[0],                       // rausgeschobene Kisten
+                oPortalIndexPlayer,                // Portal, worüber der Spieler den Raum wieder verlässt
+                newState,                          // nachfolgender Raum-Zustand
+                task1.path + variantData2.path     // Laufweg als Pfad
+              );
+              iPortalNew.variantStateDict.Add(newState, newVariant);
+            }
+          }
+        }
+        tasks1.Clear();
+
+        foreach (var task2 in tasks2)
+        {
+          ulong crc = task2.GetCrc() + 2;
+          ulong crcMoves;
+          if (!moveDict.TryGetValue(crc, out crcMoves)) crcMoves = ulong.MaxValue;
+          if (task2.moves >= crcMoves) continue; // bereits abgearbeitet?
+          moveDict[crc] = task2.moves;
+
+          var iPortalOld1 = room2.outgoingPortals[task2.oPortalIndexPlayer];
+          foreach (ulong variant1 in iPortalOld1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
+          {
+            var variantData1 = room1.variantList.GetData(variant1);
+            if (variantData1.pushes > 0) break; // Varianten mit Kistenverschiebungen jetzt noch nicht übertragen
+            Debug.Assert(variantData1.oPortalIndexPlayer < uint.MaxValue);
+            Debug.Assert(variantData1.newState == variantData1.oldState);
+            if (ReferenceEquals(room1.outgoingPortals[variantData1.oPortalIndexPlayer].toRoom, room2))
+            {
+              tasks1.Add(new MoveSearchTask
+              {
+                oPortalIndexPlayer = variantData1.oPortalIndexPlayer,
+                moves = task2.moves + variantData1.moves,
+                path = task2.path + variantData1.path
+              });
+            }
+            else
+            {
+              if (variantData1.oPortalIndexPlayer == iPortal1.iPortalIndex) continue; // ausgendes Portal = eingehendes Portal?
+              uint oPortalIndexPlayer = mapPortalIndex1[variantData1.oPortalIndexPlayer];
+              Debug.Assert(oPortalIndexPlayer < uint.MaxValue);
+              ulong newVariant = iPortalNew.variantStateDict.variantList.Add(
+                newState,                          // vorheriger Raum-Zustand
+                task2.moves + variantData1.moves,  // Anzahl der Laufschritte
+                0,                                 // Anzahl der Kistenverschiebungen
+                new uint[0],                       // rausgeschobene Kisten
+                oPortalIndexPlayer,                // Portal, worüber der Spieler den Raum wieder verlässt
+                newState,                          // nachfolgender Raum-Zustand
+                task2.path + variantData1.path     // Laufweg als Pfad
+              );
+              iPortalNew.variantStateDict.Add(newState, newVariant);
+            }
+          }
+        }
+        tasks2.Clear();
+      }
+    }
+
+    /// <summary>
+    /// Suchaufgabe für reine Laufwege
+    /// </summary>
+    struct MoveSearchTask
+    {
+      public uint oPortalIndexPlayer;
+
+      public ulong moves;
+      public string path;
+
+      public ulong GetCrc()
+      {
+        return Crc64.Start.Crc64Update(oPortalIndexPlayer);
+      }
+
+      public override string ToString()
+      {
+        return path;
       }
     }
     #endregion
@@ -478,6 +574,7 @@ namespace SokoWahnLib.Rooms
 
             if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
             {
+              continue;
               throw new NotImplementedException(); // rekursiver Aufruf
             }
             else
@@ -560,6 +657,7 @@ namespace SokoWahnLib.Rooms
             }
             if (ReferenceEquals(room2.outgoingPortals[variantData2.oPortalIndexPlayer].toRoom, room1))
             {
+              continue;
               throw new NotImplementedException(); // rekursiver Aufruf
             }
           }
