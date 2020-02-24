@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using SokoWahnLib.Rooms.Merger;
+
 // ReSharper disable PossibleUnintendedReferenceComparison
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable LoopCanBePartlyConvertedToQuery
