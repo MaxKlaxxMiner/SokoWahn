@@ -37,7 +37,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// gibt an, ob der erste Raum die Basis darstellt (sonst: zweite Raum)
     /// </summary>
-    public readonly bool mainRoom1;
+    public readonly bool main1;
 
     /// <summary>
     /// Nummer des eingehenden Portales (oder uint.MaxValue, wenn es sich um eine Start-Variante handelt)
@@ -61,11 +61,11 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="moves">Anzahl der Laufschritte insgesamt</param>
     /// <param name="pushes">Anzahl der Kistenverschiebungen insgesamt</param>
     /// <param name="path">zurückgelegter Pfad insgesamt</param>
-    /// <param name="mainRoom1">gibt an, ob der erste Raum die Basis darstellt (sonst: zweite Raum)</param>
+    /// <param name="main1">gibt an, ob der erste Raum die Basis darstellt (sonst: zweite Raum)</param>
     /// <param name="iPortalIndex">Nummer des eingehenden Portals (oder uint.MaxValue, wenn es sich um eine Start-Variante handelt)</param>
     /// <param name="variant">Variante, welche verarbeitet wurde</param>
     /// <param name="variantData">die zugehörigen Daten der Variante</param>
-    public MergeTask(ulong state1, ulong state2, uint[] oPortalBoxes, ulong moves, ulong pushes, string path, bool mainRoom1, uint iPortalIndex, ulong variant, VariantData variantData)
+    public MergeTask(ulong state1, ulong state2, uint[] oPortalBoxes, ulong moves, ulong pushes, string path, bool main1, uint iPortalIndex, ulong variant, VariantData variantData)
     {
       this.state1 = state1;
       this.state2 = state2;
@@ -75,7 +75,7 @@ namespace SokoWahnLib.Rooms.Merger
       this.pushes = pushes;
       this.path = path;
 
-      this.mainRoom1 = mainRoom1;
+      this.main1 = main1;
       this.iPortalIndex = iPortalIndex;
       this.variant = variant;
       this.variantData = variantData;
@@ -90,7 +90,7 @@ namespace SokoWahnLib.Rooms.Merger
       return Crc64.Start.Crc64Update(state1)
                         .Crc64Update(state2)
                         .Crc64Update(oPortalBoxes)
-                        .Crc64Update(mainRoom1 ? 1 : 2)
+                        .Crc64Update(main1 ? 1 : 2)
                         .Crc64Update(variantData.oPortalIndexPlayer);
     }
 

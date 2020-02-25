@@ -321,10 +321,14 @@ namespace SokoWahnLib.Rooms.Merger
     static void MergePortalVariants(RoomPortal iPortal1, Room room2, ulong state1, ulong state2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
     {
       var room1 = iPortal1.toRoom;
+      ulong startState = stateCalc(state1, state2);
       var dict = new Dictionary<ulong, ulong>();
       var tasks = new List<MergeTask>();
+      var moveTasks = new List<int>();
+      var pushTasks = new List<int>();
+      var endTasks = new List<int>();
 
-      // --- erste Aufgaben sammeln ---
+      #region # // --- erste Aufgaben sammeln ---
       foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
       {
         var variantData1 = room1.variantList.GetData(variant1);
@@ -356,9 +360,85 @@ namespace SokoWahnLib.Rooms.Merger
         dict[crc] = newTask.moves;
         tasks.Add(newTask);
       }
+      #endregion
 
-      // --- Aufgaben abarbeiten und alle Varianten ermitteln, welche zwischen den beiden Räumen möglich sind ---
+      #region # // --- Aufgaben abarbeiten und alle Varianten ermitteln, welche zwischen den beiden Räumen möglich sind ---
       for (int taskIndex = 0; taskIndex < tasks.Count; taskIndex++)
+      {
+        var task = tasks[taskIndex];
+        ulong checkCrc = task.GetCrc();
+        ulong moves = dict[checkCrc];
+        Debug.Assert(moves <= task.moves);
+        if (moves != task.moves) continue; // nicht die beste Variante dieser Aufgabe erkannt?
+
+        if (task.variantData.pushes > 0) // Variante mit Kistenverschiebungen erkannt?
+        {
+          if (task.variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung erreicht?
+          {
+            throw new NotImplementedException();
+
+            // endTasks.Add()
+          }
+
+          throw new NotImplementedException();
+
+          // pushTasks.Add()
+        }
+        else // Variante nur mit Laufweg
+        {
+          uint oPortalIndex = task.main1 ? mapPortalIndex1[task.variantData.oPortalIndexPlayer] : mapPortalIndex2[task.variantData.oPortalIndexPlayer];
+          if (oPortalIndex == uint.MaxValue) // Laufweg in den benachbarten Raum erkannt?
+          {
+            if (task.main1)
+            {
+              var iPortal2 = room1.outgoingPortals[task.variantData.oPortalIndexPlayer];
+              foreach (ulong variant2 in iPortal2.variantStateDict.GetVariantSpan(task.state2).AsEnumerable())
+              {
+                var variantData2 = room2.variantList.GetData(variant2);
+
+                ulong nextState1 = task.state1;
+                ulong nextState2 = task.state2;
+                var oPortalBoxes = ResolveBoxes(task.oPortalBoxes, ref nextState2, ref nextState1, variantData2, mapPortalIndex2, room2, room1);
+                if (oPortalBoxes == null) continue; // ungültige Variante erkannt?
+
+                var newTask = new MergeTask
+                (
+                  task.state1,                        // Kistenzustand des ersten Raumes
+                  task.state2,                        // Kistenzustand des zweiten Raumes
+                  oPortalBoxes.ToArray(),             // rausgeschobene Kisten
+                  task.moves + variantData2.moves,    // Anzahl der Laufschritte insgesamt
+                  task.pushes + variantData2.pushes,  // Anzahl der Kistenverschiebungen insgesamt
+                  task.path + variantData2.path,      // zurückgelegter Pfad
+                  false,                              // Main-Room1 setzen
+                  iPortal2.iPortalIndex,              // Nummer des eingehenden Portals
+                  variant2,                           // die zu verarbeitende Variante
+                  variantData2                        // Daten der Variante
+                );
+
+                ulong crc = newTask.GetCrc();
+                ulong bestMoves;
+                if (!dict.TryGetValue(crc, out bestMoves)) bestMoves = ulong.MaxValue;
+                if (bestMoves <= newTask.moves) continue; // war eine bessere Variante bereits bekannt?
+
+                dict[crc] = newTask.moves;
+                tasks.Add(newTask);
+              }
+            }
+            else
+            {
+              throw new NotImplementedException();
+            }
+          }
+          else
+          {
+            moveTasks.Add(taskIndex); // reine Laufvariante merken
+          }
+        }
+      }
+      #endregion
+
+      #region # // --- reine Laufwege abarbeiten ---
+      foreach (var taskIndex in moveTasks)
       {
         var task = tasks[taskIndex];
         ulong crc = task.GetCrc();
@@ -366,8 +446,40 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(moves <= task.moves);
         if (moves != task.moves) continue; // nicht die beste Variante dieser Aufgabe erkannt?
 
+        uint oPortalIndexPlayer = task.main1 ? mapPortalIndex1[task.variantData.oPortalIndexPlayer] : mapPortalIndex2[task.variantData.oPortalIndexPlayer];
+        Debug.Assert(oPortalIndexPlayer < iPortalNew.toRoom.outgoingPortals.Length);
+        Debug.Assert(stateCalc(task.state1, task.state2) == startState);
+        Debug.Assert(task.pushes == 0);
+        Debug.Assert(task.oPortalBoxes.Length == 0);
+        Debug.Assert((uint)task.path.Length == task.moves);
+
+        var newVariant = iPortalNew.toRoom.variantList.Add
+        (
+          startState,           // vorheriger Kistenzustand
+          task.moves,           // Anzahl der Laufschritte
+          task.pushes,          // Anzahl der Kistenverschiebungen
+          task.oPortalBoxes,    // rausgeschobene Kisten
+          oPortalIndexPlayer,   // Portal, worüber der Spieler den Raum verlässt
+          startState,           // nachfolgender Kistenzustand
+          task.path             // zurückgelegter Pfad
+        );
+        iPortalNew.variantStateDict.Add(startState, newVariant);
+      }
+      #endregion
+
+      #region # // --- Varianten mit Kistenverschiebungen abarbeiten ---
+      foreach (var taskIndex in pushTasks)
+      {
         throw new NotImplementedException();
       }
+      #endregion
+
+      #region # // --- End-Varianten abarbeiten ---
+      foreach (var taskIndex in endTasks)
+      {
+        throw new NotImplementedException();
+      }
+      #endregion
     }
 
     /// <summary>
@@ -381,7 +493,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="room1">Referenz auf den ersten Raum</param>
     /// <param name="room2">Referenz auf den zweiten Raum</param>
     /// <returns>neue Liste mit Kisten, oder null, wenn die Variante ungültig ist</returns>
-    static List<uint> ResolveBoxes(uint[] oldPortalBoxes,  ref ulong state1, ref ulong state2, VariantData variantData1, uint[] mapPortalIndex1, Room room1, Room room2)
+    static List<uint> ResolveBoxes(uint[] oldPortalBoxes, ref ulong state1, ref ulong state2, VariantData variantData1, uint[] mapPortalIndex1, Room room1, Room room2)
     {
       var oPortalBoxes = new List<uint>(oldPortalBoxes.Length + variantData1.oPortalIndexBoxes.Length);
       oPortalBoxes.AddRange(oldPortalBoxes);
