@@ -718,13 +718,29 @@ namespace SokoWahnLib.Rooms.Merger
     /// <returns>neue Liste mit Kisten, oder null, wenn die Variante ungültig ist</returns>
     static List<uint> ResolveBoxes(uint[] oldPortalBoxes, ref ulong state1, ref ulong state2, VariantData variantData1, uint[] mapPortalIndex1, Room room1, Room room2)
     {
+      if (variantData1.pushes == 0) return oldPortalBoxes.ToList(); // keine Kistenverschiebungen vorhanden?
+
       var oPortalBoxes = new List<uint>(oldPortalBoxes.Length + variantData1.oPortalIndexBoxes.Length);
       oPortalBoxes.AddRange(oldPortalBoxes);
 
+      Debug.Assert(state1 == variantData1.oldState);
+      Debug.Assert(variantData1.oldState != variantData1.newState);
+
       foreach (uint oPortalBox1 in variantData1.oPortalIndexBoxes)
       {
-        throw new NotImplementedException();
+        uint oPortalBox = mapPortalIndex1[oPortalBox1];
+        if (oPortalBox == uint.MaxValue) // Kiste wurde in den benachbarten Raum geschoben?
+        {
+          throw new NotImplementedException();
+        }
+        else // Kiste wurde aus dem Raum heraus geschoben 
+        {
+          if (oPortalBoxes.Contains(oPortalBox)) return null; // ungültig: Kiste wurde doppelt durch das gleiche Portal rausgeschoben
+          oPortalBoxes.Add(oPortalBox);
+        }
       }
+
+      state1 = variantData1.newState;
 
       oPortalBoxes.Sort((x, y) => x.CompareTo(y));
       return oPortalBoxes;
