@@ -304,7 +304,198 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="roomNew">neuer Raum, wohin die neuen Startvarianten gespeichert werden sollen</param>
     static void MergeStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
     {
-      throw new NotImplementedException();
+      ulong startState = stateCalc(room1.startState, room2.startState);
+      var dict = new Dictionary<ulong, ulong>();
+      var tasks = new List<MergeTask>();
+      var moveTasks = new List<int>();
+      var pushTasks = new List<int>();
+      var endTasks = new List<int>();
+
+      #region # // --- erste Aufgaben sammeln ---
+      for (ulong variant1 = 0; variant1 < room1.startVariantCount; variant1++)
+      {
+        var variantData1 = room1.variantList.GetData(variant1);
+
+        ulong nextState1 = room1.startState;
+        ulong nextState2 = room2.startState;
+        var oPortalBoxes = ResolveBoxes(new uint[0], ref nextState1, ref nextState2, variantData1, mapPortalIndex1, room1, room2);
+        if (oPortalBoxes == null) continue; // ungültige Variante erkannt?
+
+        var newTask = new MergeTask
+        (
+          room1.startState,        // Kistenzustand des ersten Raumes
+          room2.startState,        // Kistenzustand des zweiten Raumes
+          oPortalBoxes.ToArray(),  // rausgeschobene Kisten
+          variantData1.moves,      // Anzahl der Laufschritte insgesamt
+          variantData1.pushes,     // Anzahl der Kistenverschiebungen insgesamt
+          variantData1.path,       // zurückgelegter Pfad
+          true,                    // Main-Room1 setzen
+          uint.MaxValue,           // Nummer des eingehenden Portals
+          variant1,                // die zu verarbeitende Variante
+          variantData1             // Daten der Variante
+        );
+
+        ulong crc = newTask.GetCrc();
+        ulong bestMoves;
+        if (!dict.TryGetValue(crc, out bestMoves)) bestMoves = ulong.MaxValue;
+        if (bestMoves <= newTask.moves) continue; // war eine bessere Variante bereits bekannt?
+
+        dict[crc] = newTask.moves;
+        tasks.Add(newTask);
+      }
+      #endregion
+
+      #region # // --- Aufgaben abarbeiten und alle Varianten ermitteln, welche zwischen den beiden Räumen möglich sind ---
+      for (int taskIndex = 0; taskIndex < tasks.Count; taskIndex++)
+      {
+        var task = tasks[taskIndex];
+        ulong checkCrc = task.GetCrc();
+        ulong moves = dict[checkCrc];
+        Debug.Assert(moves <= task.moves);
+        if (moves != task.moves) continue; // nicht die beste Variante dieser Aufgabe erkannt?
+
+        if (task.variantData.pushes > 0) // Variante mit Kistenverschiebungen erkannt?
+        {
+          if (task.variantData.oPortalIndexPlayer == uint.MaxValue) // End-Stellung erreicht?
+          {
+            throw new NotImplementedException();
+
+            // endTasks.Add()
+          }
+
+          throw new NotImplementedException();
+
+          // pushTasks.Add()
+        }
+        else // Variante nur mit Laufweg
+        {
+          uint oPortalIndex = task.main1 ? mapPortalIndex1[task.variantData.oPortalIndexPlayer] : mapPortalIndex2[task.variantData.oPortalIndexPlayer];
+          if (oPortalIndex == uint.MaxValue) // Laufweg in den benachbarten Raum erkannt?
+          {
+            if (task.main1)
+            {
+              var iPortal2 = room1.outgoingPortals[task.variantData.oPortalIndexPlayer];
+              foreach (ulong variant2 in iPortal2.variantStateDict.GetVariantSpan(task.state2).AsEnumerable())
+              {
+                var variantData2 = room2.variantList.GetData(variant2);
+
+                ulong nextState1 = task.state1;
+                ulong nextState2 = task.state2;
+                var oPortalBoxes = ResolveBoxes(task.oPortalBoxes, ref nextState2, ref nextState1, variantData2, mapPortalIndex2, room2, room1);
+                if (oPortalBoxes == null) continue; // ungültige Variante erkannt?
+
+                var newTask = new MergeTask
+                (
+                  task.state1,                        // Kistenzustand des ersten Raumes
+                  task.state2,                        // Kistenzustand des zweiten Raumes
+                  oPortalBoxes.ToArray(),             // rausgeschobene Kisten
+                  task.moves + variantData2.moves,    // Anzahl der Laufschritte insgesamt
+                  task.pushes + variantData2.pushes,  // Anzahl der Kistenverschiebungen insgesamt
+                  task.path + variantData2.path,      // zurückgelegter Pfad
+                  false,                              // Main-Room1 setzen
+                  iPortal2.iPortalIndex,              // Nummer des eingehenden Portals
+                  variant2,                           // die zu verarbeitende Variante
+                  variantData2                        // Daten der Variante
+                );
+
+                ulong crc = newTask.GetCrc();
+                ulong bestMoves;
+                if (!dict.TryGetValue(crc, out bestMoves)) bestMoves = ulong.MaxValue;
+                if (bestMoves <= newTask.moves) continue; // war eine bessere Variante bereits bekannt?
+
+                dict[crc] = newTask.moves;
+                tasks.Add(newTask);
+              }
+            }
+            else
+            {
+              var iPortal1 = room2.outgoingPortals[task.variantData.oPortalIndexPlayer];
+              foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(task.state1).AsEnumerable())
+              {
+                var variantData1 = room1.variantList.GetData(variant1);
+
+                ulong nextState1 = task.state1;
+                ulong nextState2 = task.state2;
+                var oPortalBoxes = ResolveBoxes(task.oPortalBoxes, ref nextState1, ref nextState2, variantData1, mapPortalIndex1, room1, room2);
+                if (oPortalBoxes == null) continue; // ungültige Variante erkannt?
+
+                var newTask = new MergeTask
+                (
+                  task.state1,                        // Kistenzustand des ersten Raumes
+                  task.state2,                        // Kistenzustand des zweiten Raumes
+                  oPortalBoxes.ToArray(),             // rausgeschobene Kisten
+                  task.moves + variantData1.moves,    // Anzahl der Laufschritte insgesamt
+                  task.pushes + variantData1.pushes,  // Anzahl der Kistenverschiebungen insgesamt
+                  task.path + variantData1.path,      // zurückgelegter Pfad
+                  true,                               // Main-Room1 setzen
+                  iPortal1.iPortalIndex,              // Nummer des eingehenden Portals
+                  variant1,                           // die zu verarbeitende Variante
+                  variantData1                        // Daten der Variante
+                );
+
+                ulong crc = newTask.GetCrc();
+                ulong bestMoves;
+                if (!dict.TryGetValue(crc, out bestMoves)) bestMoves = ulong.MaxValue;
+                if (bestMoves <= newTask.moves) continue; // war eine bessere Variante bereits bekannt?
+
+                dict[crc] = newTask.moves;
+                tasks.Add(newTask);
+              }
+            }
+          }
+          else
+          {
+            moveTasks.Add(taskIndex); // reine Laufvariante merken
+          }
+        }
+      }
+      #endregion
+
+      #region # // --- reine Laufwege abarbeiten ---
+      foreach (var taskIndex in moveTasks)
+      {
+        var task = tasks[taskIndex];
+        ulong crc = task.GetCrc();
+        ulong moves = dict[crc];
+        Debug.Assert(moves <= task.moves);
+        if (moves != task.moves) continue; // nicht die beste Variante dieser Aufgabe erkannt?
+
+        uint oPortalIndexPlayer = task.main1 ? mapPortalIndex1[task.variantData.oPortalIndexPlayer] : mapPortalIndex2[task.variantData.oPortalIndexPlayer];
+        Debug.Assert(oPortalIndexPlayer < roomNew.outgoingPortals.Length);
+        Debug.Assert(stateCalc(task.state1, task.state2) == startState);
+        Debug.Assert(task.pushes == 0);
+        Debug.Assert(task.oPortalBoxes.Length == 0);
+        Debug.Assert((uint)task.path.Length == task.moves);
+
+        var newVariant = roomNew.variantList.Add
+        (
+          startState,           // vorheriger Kistenzustand
+          task.moves,           // Anzahl der Laufschritte
+          task.pushes,          // Anzahl der Kistenverschiebungen
+          task.oPortalBoxes,    // rausgeschobene Kisten
+          oPortalIndexPlayer,   // Portal, worüber der Spieler den Raum verlässt
+          startState,           // nachfolgender Kistenzustand
+          task.path             // zurückgelegter Pfad
+        );
+        Debug.Assert(roomNew.startVariantCount == newVariant);
+        roomNew.startVariantCount++;
+        Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
+      }
+      #endregion
+
+      #region # // --- Varianten mit Kistenverschiebungen abarbeiten ---
+      foreach (var taskIndex in pushTasks)
+      {
+        throw new NotImplementedException();
+      }
+      #endregion
+
+      #region # // --- End-Varianten abarbeiten ---
+      foreach (var taskIndex in endTasks)
+      {
+        throw new NotImplementedException();
+      }
+      #endregion
     }
 
     /// <summary>
