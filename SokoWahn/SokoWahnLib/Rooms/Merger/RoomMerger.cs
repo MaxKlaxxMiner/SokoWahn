@@ -310,7 +310,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// verschmilzt alle Varianten eines Portales
     /// </summary>
-    /// <param name="iPortal1">eingehendes altes Portal vom 1. Raum</param>
+    /// <param name="inPortal1">eingehendes altes Portal vom 1. Raum</param>
     /// <param name="room2">2. Raum</param>
     /// <param name="state1">Kistenzustand vom 1. Raum</param>
     /// <param name="state2">Kistenzustand vom 2. Raum</param>
@@ -318,9 +318,9 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
     /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
     /// <param name="iPortalNew">neues Portal, wohin die neu erzeugten Varianten gespeichert werden sollen</param>
-    static void MergePortalVariants(RoomPortal iPortal1, Room room2, ulong state1, ulong state2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
+    static void MergePortalVariants(RoomPortal inPortal1, Room room2, ulong state1, ulong state2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
     {
-      var room1 = iPortal1.toRoom;
+      var room1 = inPortal1.toRoom;
       ulong startState = stateCalc(state1, state2);
       var dict = new Dictionary<ulong, ulong>();
       var tasks = new List<MergeTask>();
@@ -329,7 +329,7 @@ namespace SokoWahnLib.Rooms.Merger
       var endTasks = new List<int>();
 
       #region # // --- erste Aufgaben sammeln ---
-      foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
+      foreach (ulong variant1 in inPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
       {
         var variantData1 = room1.variantList.GetData(variant1);
 
@@ -347,7 +347,7 @@ namespace SokoWahnLib.Rooms.Merger
           variantData1.pushes,     // Anzahl der Kistenverschiebungen insgesamt
           variantData1.path,       // zurückgelegter Pfad
           true,                    // Main-Room1 setzen
-          iPortal1.iPortalIndex,   // Nummer des eingehenden Portals
+          inPortal1.iPortalIndex,   // Nummer des eingehenden Portals
           variant1,                // die zu verarbeitende Variante
           variantData1             // Daten der Variante
         );
@@ -426,7 +426,38 @@ namespace SokoWahnLib.Rooms.Merger
             }
             else
             {
-              throw new NotImplementedException();
+              var iPortal1 = room2.outgoingPortals[task.variantData.oPortalIndexPlayer];
+              foreach (ulong variant1 in iPortal1.variantStateDict.GetVariantSpan(task.state1).AsEnumerable())
+              {
+                var variantData1 = room1.variantList.GetData(variant1);
+
+                ulong nextState1 = task.state1;
+                ulong nextState2 = task.state2;
+                var oPortalBoxes = ResolveBoxes(task.oPortalBoxes, ref nextState1, ref nextState2, variantData1, mapPortalIndex1, room1, room2);
+                if (oPortalBoxes == null) continue; // ungültige Variante erkannt?
+
+                var newTask = new MergeTask
+                (
+                  task.state1,                        // Kistenzustand des ersten Raumes
+                  task.state2,                        // Kistenzustand des zweiten Raumes
+                  oPortalBoxes.ToArray(),             // rausgeschobene Kisten
+                  task.moves + variantData1.moves,    // Anzahl der Laufschritte insgesamt
+                  task.pushes + variantData1.pushes,  // Anzahl der Kistenverschiebungen insgesamt
+                  task.path + variantData1.path,      // zurückgelegter Pfad
+                  true,                               // Main-Room1 setzen
+                  iPortal1.iPortalIndex,              // Nummer des eingehenden Portals
+                  variant1,                           // die zu verarbeitende Variante
+                  variantData1                        // Daten der Variante
+                );
+
+                ulong crc = newTask.GetCrc();
+                ulong bestMoves;
+                if (!dict.TryGetValue(crc, out bestMoves)) bestMoves = ulong.MaxValue;
+                if (bestMoves <= newTask.moves) continue; // war eine bessere Variante bereits bekannt?
+
+                dict[crc] = newTask.moves;
+                tasks.Add(newTask);
+              }
             }
           }
           else
@@ -453,6 +484,7 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(task.oPortalBoxes.Length == 0);
         Debug.Assert((uint)task.path.Length == task.moves);
 
+        if (task.main1 && task.variantData.oPortalIndexPlayer == inPortal1.iPortalIndex) continue; // unnötige Laufwege ignorieren
         var newVariant = iPortalNew.toRoom.variantList.Add
         (
           startState,           // vorheriger Kistenzustand
