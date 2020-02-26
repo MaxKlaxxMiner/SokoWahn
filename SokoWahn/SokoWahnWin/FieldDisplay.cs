@@ -135,10 +135,10 @@ namespace SokoWahnWin
           if (!r) g.DrawLine(pen, x2, u ? y : y1, x2, d ? y + 1 : y2);
           if (!u) g.DrawLine(pen, l ? x : x1, y1, r ? x + 1 : x2, y1);
           if (!d) g.DrawLine(pen, l ? x : x1, y2, r ? x + 1 : x2, y2);
-          if (l && u) { g.DrawLine(pen, x, y1, x1, y1); g.DrawLine(pen, x1, y1, x1, y); }
-          if (l && d) { g.DrawLine(pen, x, y2, x1, y2); g.DrawLine(pen, x1, y2, x1, y + 1); }
-          if (r && u) { g.DrawLine(pen, x + 1, y1, x2, y1); g.DrawLine(pen, x2, y1, x2, y); }
-          if (r && d) { g.DrawLine(pen, x + 1, y2, x2, y2); g.DrawLine(pen, x2, y2, x2, y + 1); }
+          if (l && u && !posis.Contains(f - 1 - w)) { g.DrawLine(pen, x, y1, x1, y1); g.DrawLine(pen, x1, y1, x1, y); }
+          if (l && d && !posis.Contains(f - 1 + w)) { g.DrawLine(pen, x, y2, x1, y2); g.DrawLine(pen, x1, y2, x1, y + 1); }
+          if (r && u && !posis.Contains(f + 1 - w)) { g.DrawLine(pen, x + 1, y1, x2, y1); g.DrawLine(pen, x2, y1, x2, y); }
+          if (r && d && !posis.Contains(f + 1 + w)) { g.DrawLine(pen, x + 1, y2, x2, y2); g.DrawLine(pen, x2, y2, x2, y + 1); }
         }
       }
     }

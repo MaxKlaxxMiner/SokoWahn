@@ -27,6 +27,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly int[] goalPosis;
     /// <summary>
+    /// maximale Anzahl der Kisten, welche im Raum theoretisch sein dürfen
+    /// </summary>
+    public readonly uint maxBoxes;
+    /// <summary>
     /// Positionen der Kisten am Start, welche sich am Anfang im Raum befinden
     /// </summary>
     public readonly int[] startBoxPosis;
@@ -68,7 +72,8 @@ namespace SokoWahnLib.Rooms
     /// <param name="fieldPosis">Positionen der Spielfelder, welche dem Raum zugeordnet werden</param>
     /// <param name="incomingPortals">eingehende Portale, welche zum eigenen Raum gehören</param>
     /// <param name="outgoingPortals">ausgehende Portale, welche zu anderen Räumen gehören</param>
-    public Room(uint roomIndex, ISokoField field, int[] fieldPosis, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals)
+    /// <param name="maxBoxes">maximale Anzahl der Kisten, welche theoretisch im Raum sein dürfen</param>
+    public Room(uint roomIndex, ISokoField field, int[] fieldPosis, RoomPortal[] incomingPortals, RoomPortal[] outgoingPortals, uint maxBoxes)
     {
       #region # // --- Parameter prüfen und Werte initialisieren ---
       this.roomIndex = roomIndex;
@@ -81,9 +86,9 @@ namespace SokoWahnLib.Rooms
       if (fieldPosis.Any(pos => !walkPosis.Contains(pos))) throw new ArgumentOutOfRangeException("fieldPosis");
       this.fieldPosis = fieldPosis;
 
-      if (incomingPortals == null || incomingPortals.Length == 0) throw new ArgumentNullException("incomingPortals");
+      if (incomingPortals == null) throw new ArgumentNullException("incomingPortals");
       this.incomingPortals = incomingPortals;
-      if (outgoingPortals == null || outgoingPortals.Length == 0) throw new ArgumentNullException("outgoingPortals");
+      if (outgoingPortals == null) throw new ArgumentNullException("outgoingPortals");
       this.outgoingPortals = outgoingPortals;
       if (incomingPortals.Length != outgoingPortals.Length) throw new ArgumentException("iPortals.Length != oPortals.Length");
       #endregion
@@ -94,6 +99,8 @@ namespace SokoWahnLib.Rooms
       stateList = new StateListNormal(fieldPosis, goalPosis);
 
       variantList = new VariantListNormal((uint)incomingPortals.Length);
+
+      this.maxBoxes = maxBoxes;
     }
     #endregion
 

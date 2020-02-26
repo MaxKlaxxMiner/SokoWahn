@@ -24,7 +24,7 @@ namespace SokoWahnLib.Rooms
     /// <param name="portalCount">Anzahl der vorhandenen Portale</param>
     protected VariantList(uint portalCount)
     {
-      Debug.Assert(portalCount > 0 && portalCount < ushort.MaxValue);
+      Debug.Assert(portalCount < ushort.MaxValue);
 
       this.portalCount = portalCount;
     }

@@ -45,13 +45,14 @@ namespace SokoWahnLib.Rooms
       var walkPosis = field.GetWalkPosis();
 
       uint roomIndex = 0;
+      uint maxBoxes = (uint)walkPosis.Sum(pos => field.IsBox(pos) ? 1 : 0);
       rooms = walkPosis.OrderBy(pos => pos).ToArray().Select(pos =>
       {
         int portalCount = (walkPosis.Contains(pos - 1) ? 1 : 0) + // eingehendes Portal von der linken Seite
                           (walkPosis.Contains(pos + 1) ? 1 : 0) + // eingegendes Portal von der rechten Seite
                           (walkPosis.Contains(pos - field.Width) ? 1 : 0) + // eingehendes Portal von oben
                           (walkPosis.Contains(pos + field.Width) ? 1 : 0); // eingehendes Portal von unten
-        return new Room(roomIndex++, field, new[] { pos }, new RoomPortal[portalCount], new RoomPortal[portalCount]);
+        return new Room(roomIndex++, field, new[] { pos }, new RoomPortal[portalCount], new RoomPortal[portalCount], maxBoxes);
       }).ToArray();
 
       if (rooms.Sum(room => room.goalPosis.Length) != rooms.Sum(room => room.startBoxPosis.Length)) throw new SokoFieldException("goal count != box count");
@@ -155,6 +156,8 @@ namespace SokoWahnLib.Rooms
       roomMerger.Step4_UpdatePortals();
 
       roomMerger.Step5_UpdateRooms();
+
+      roomMerger.Step6_OptimizeStates();
 
       Validate(); // einfache Validierung der Räume und Portale
     }

@@ -238,11 +238,11 @@ namespace SokoWahnWin
 
       fieldDisplay = new FieldDisplay(pictureBoxField);
 
-      roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste, 6 Moves)
+      //roomNetwork = new RoomNetwork(FieldTest1);       // sehr einfaches Testlevel (eine Kiste, 6 Moves)
       //roomNetwork = new RoomNetwork(FieldTest2);       // sehr einfaches Testlevel (zwei Kisten, 15 Moves)
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
-      //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
+      roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
       //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
@@ -613,8 +613,8 @@ namespace SokoWahnWin
         for (int i = 0; i < roomNetwork.rooms.Length; i++) if (roomNetwork.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
         if (roomIndex >= 0)
         {
-          if (e.Button == MouseButtons.Left) listRooms.SelectedIndices.Add(roomIndex);
-          if (e.Button == MouseButtons.Right) listRooms.SelectedIndices.Remove(roomIndex);
+          if (e.Button == MouseButtons.Left && roomIndex < listRooms.Items.Count) listRooms.SelectedIndices.Add(roomIndex);
+          if (e.Button == MouseButtons.Right && roomIndex < listRooms.Items.Count) listRooms.SelectedIndices.Remove(roomIndex);
         }
       }
     }
@@ -631,8 +631,8 @@ namespace SokoWahnWin
         for (int i = 0; i < roomNetwork.rooms.Length; i++) if (roomNetwork.rooms[i].fieldPosis.Contains(pos)) roomIndex = i;
         if (roomIndex >= 0)
         {
-          if (e.Button == MouseButtons.Left) listRooms.SelectedIndices.Add(roomIndex);
-          if (e.Button == MouseButtons.Right) listRooms.SelectedIndices.Remove(roomIndex);
+          if (e.Button == MouseButtons.Left && roomIndex < listRooms.Items.Count) listRooms.SelectedIndices.Add(roomIndex);
+          if (e.Button == MouseButtons.Right && roomIndex < listRooms.Items.Count) listRooms.SelectedIndices.Remove(roomIndex);
         }
       }
     }
@@ -786,7 +786,7 @@ namespace SokoWahnWin
     }
 
     /// <summary>
-    /// entfernt alle Kistenzustände aus einem Raum
+    /// entfernt alle unnötigen Kistenzustände aus einem Raum
     /// </summary>
     /// <param name="room">Raum, welcher bearbeitet werden soll</param>
     /// <returns>true, wenn Kisten-Zustände entfernt wurden</returns>
@@ -906,6 +906,9 @@ namespace SokoWahnWin
       Debug.Assert(skip.usedCount > 0);
       Debug.Assert(skip.usedCount < (uint)skip.map.Length);
 
+      // --- Startzustand des Raumes neu setzen ---
+      room.startState = skip.map[room.startState];
+
       // --- Zustandsliste neu erstellen und gefiltert befüllen ---
       var oldStates = room.stateList;
       var newStates = new StateListNormal(room.fieldPosis, room.goalPosis);
@@ -934,8 +937,9 @@ namespace SokoWahnWin
         Debug.Assert(variant == newVariants.Count);
         newVariants.Add(skip.map[v.oldState], v.moves, v.pushes, v.oPortalIndexBoxes, v.oPortalIndexPlayer, skip.map[v.newState], v.path);
       }
-      oldVariants.Dispose();
       Debug.Assert(newVariants.Count == oldVariants.Count);
+      oldVariants.Dispose();
+      room.variantList = newVariants;
 
       // --- verlinkte Zustände in den Portalen neu setzen ---
       foreach (var portal in room.incomingPortals)
@@ -1015,7 +1019,8 @@ namespace SokoWahnWin
 
             bestRoomConnections.Add(new Tuple<BigInteger, Room, Room>
             (
-              RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
+              //RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
+              RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalStateCount)),
               room,
               room2
             ));
@@ -1107,11 +1112,11 @@ namespace SokoWahnWin
             return;
           }
         }
-        if (OptimizeStep1(room))
-        {
-          buttonStep.Text = "1-Room " + roomIndex;
-          return;
-        }
+        //if (OptimizeStep1(room))
+        //{
+        //  buttonStep.Text = "1-Room " + roomIndex;
+        //  return;
+        //}
         if (OptimizeUnusedStates(room))
         {
           buttonStep.Text = "S-Room " + roomIndex;
