@@ -109,7 +109,7 @@ namespace SokoWahnLib.Rooms.Merger
           mapPortalIndex2[iPortalOld.iPortalIndex] = iPortalIndex;
         }
         mapOldIncomingPortals[iPortalIndex] = iPortalOld;
-        newIncomingPortals[iPortalIndex] = new RoomPortal(iPortalOld.fromRoom, iPortalOld.fromPos, newRoom, iPortalOld.toPos, iPortalIndex)
+        newIncomingPortals[iPortalIndex] = new RoomPortal(iPortalOld.fromRoom, iPortalOld.fromPos, newRoom, iPortalOld.toPos, iPortalIndex, iPortalOld.blockedBox)
         {
           stateBoxSwap = new StateBoxSwapNormal(newRoom.stateList),
           variantStateDict = new VariantStateDictNormal(newRoom.stateList, newRoom.variantList)

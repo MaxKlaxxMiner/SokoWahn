@@ -37,6 +37,10 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public readonly uint iPortalIndex;
     /// <summary>
+    /// gibt an, ob man nicht mehr durch das Portal laufen darf, wenn zuvor eine Kiste durchgeschoben wurde
+    /// </summary>
+    public bool blockedBox;
+    /// <summary>
     /// das gegenüberliegende/zurückführende Portal
     /// </summary>
     public RoomPortal oppositePortal;
@@ -50,6 +54,7 @@ namespace SokoWahnLib.Rooms
     public VariantStateDict variantStateDict;
 
     #region # // --- Konstruktor ---
+
     /// <summary>
     /// Konstruktor
     /// </summary>
@@ -58,7 +63,8 @@ namespace SokoWahnLib.Rooms
     /// <param name="toRoom">Ziel-Raum, wohin das Portal führt</param>
     /// <param name="toPos">genaue Position im Ziel-Raum, wohin das Portal führt</param>
     /// <param name="iPortalIndex">eigene Portalnummer der eingehenden Portale</param>
-    public RoomPortal(Room fromRoom, int fromPos, Room toRoom, int toPos, uint iPortalIndex)
+    /// <param name="blockedBox">gibt an, ob man nicht mehr durch das Portal laufen darf, wenn zuvor eine Kiste durchgeschoben wurde</param>
+    public RoomPortal(Room fromRoom, int fromPos, Room toRoom, int toPos, uint iPortalIndex, bool blockedBox)
     {
       #region # // --- Parameter prüfen ---
       if (fromRoom == null) throw new ArgumentNullException("fromRoom");
@@ -84,6 +90,7 @@ namespace SokoWahnLib.Rooms
       else throw new ArgumentException("invalid from/to pos");
 
       this.iPortalIndex = iPortalIndex;
+      this.blockedBox = blockedBox;
       #endregion
     }
     #endregion

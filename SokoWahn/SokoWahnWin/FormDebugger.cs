@@ -373,15 +373,15 @@ namespace SokoWahnWin
         for (int portalIndex = 0; portalIndex < incomingPortals.Length; portalIndex++)
         {
           var portal = incomingPortals[portalIndex];
-          listVariants.Items.Add("-- Portal " + (portalIndex + 1) + " --");
+          listVariants.Items.Add("-- Portal " + (portalIndex + 1) + (portal.blockedBox ? " - [BB] --" : " --"));
 
           var boxState = portal.stateBoxSwap.Get(stateItem.state);
           if (boxState != stateItem.state) // Variante mit reinschiebbarer Kiste vorhanden?
           {
             listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ")", new[]
             {
-              new VariantPathElement(portal.fromPos + portal.fromPos - portal.toPos, new [] { portal.fromPos }),
-              new VariantPathElement(portal.fromPos, new [] { portal.toPos }),
+              new VariantPathElement(portal.fromPos + portal.fromPos - portal.toPos, room.stateList.Get(stateItem.state).Concat(new [] { portal.fromPos }).ToArray()),
+              new VariantPathElement(portal.fromPos, room.stateList.Get(boxState)),
             }));
           }
 
@@ -1038,7 +1038,7 @@ namespace SokoWahnWin
 #if DEBUG
         // die 2 besten Räume verschmelzen
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
-        break;
+        //break;
 #else
         // die 2 besten Räume verschmelzen und Zeit messen
         int tick = Environment.TickCount;

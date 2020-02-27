@@ -40,6 +40,9 @@ namespace SokoWahnLib.Rooms
       if (field == null) throw new ArgumentNullException("field");
       this.field = field;
 
+      var boxScan = SokoBoxScanner.ScanSingleBoxPushes(field);
+      //boxScan = null; // Test ohne Scanner
+
       #region # // --- Räume erstellen ---
       // --- begehbare Felder abfragen und daraus Basis-Räume erstellen ---
       var walkPosis = field.GetWalkPosis();
@@ -69,28 +72,32 @@ namespace SokoWahnLib.Rooms
         // eingehendes Portal von der linken Seite
         if (walkPosis.Contains(pos - 1))
         {
-          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - 1), pos - 1, room, pos, (uint)portalIndex);
+          bool boxBlocked = boxScan.All(push => push.Key != pos - 1 || push.Value != pos) || boxScan.All(push => push.Key != pos || push.Value != pos + 1);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - 1), pos - 1, room, pos, (uint)portalIndex, boxBlocked);
           portalIndex++;
         }
 
         // eingehendes Portal von der rechten Seite
         if (walkPosis.Contains(pos + 1))
         {
-          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + 1), pos + 1, room, pos, (uint)portalIndex);
+          bool boxBlocked = boxScan.All(push => push.Key != pos + 1 || push.Value != pos) || boxScan.All(push => push.Key != pos || push.Value != pos - 1);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + 1), pos + 1, room, pos, (uint)portalIndex, boxBlocked);
           portalIndex++;
         }
 
         // eingehendes Portal von der oberen Seite
         if (walkPosis.Contains(pos - field.Width))
         {
-          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - field.Width), pos - field.Width, room, pos, (uint)portalIndex);
+          bool boxBlocked = boxScan.All(push => push.Key != pos - field.Width || push.Value != pos) || boxScan.All(push => push.Key != pos || push.Value != pos + field.Width);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos - field.Width), pos - field.Width, room, pos, (uint)portalIndex, boxBlocked);
           portalIndex++;
         }
 
         // eingehendes Portal von der unteren Seite
         if (walkPosis.Contains(pos + field.Width))
         {
-          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + field.Width), pos + field.Width, room, pos, (uint)portalIndex);
+          bool boxBlocked = boxScan.All(push => push.Key != pos + field.Width || push.Value != pos) || boxScan.All(push => push.Key != pos || push.Value != pos - field.Width);
+          portals[portalIndex] = new RoomPortal(rooms.First(r => r.fieldPosis[0] == pos + field.Width), pos + field.Width, room, pos, (uint)portalIndex, boxBlocked);
           portalIndex++;
         }
 
@@ -114,9 +121,6 @@ namespace SokoWahnLib.Rooms
         }
       }
       #endregion
-
-      var boxScan = SokoBoxScanner.ScanSingleBoxPushes(field);
-      //boxScan = null; // Test ohne Scanner
 
       #region # // --- Raumzustände erstellen ---
       foreach (var room in rooms)
