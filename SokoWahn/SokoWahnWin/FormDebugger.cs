@@ -309,10 +309,11 @@ namespace SokoWahnWin
         foreach (int roomIndex in listRooms.SelectedIndices.Cast<int>())
         {
           ulong stateCount = roomNetwork.rooms[roomIndex].stateList.Count;
+          ulong startState = roomNetwork.rooms[roomIndex].startState;
           listStates.Items.Add("-- Room " + (roomIndex + 1) + " [" + stateCount.ToString("N0") + "] --");
           for (ulong i = 0; i < stateCount; i++)
           {
-            listStates.Items.Add(new StateListItem(roomIndex, i));
+            listStates.Items.Add(new StateListItem(roomIndex, i, i == startState));
           }
         }
         listStates.EndUpdate();
@@ -373,6 +374,8 @@ namespace SokoWahnWin
                 variantPath.Add(el);
               }
 
+              if (variantData.oPortalIndexBoxes.Length > 0) path += " > " + string.Join(",", variantData.oPortalIndexBoxes.Select(x => (x + 1) + "" + room.outgoingPortals[x].dirChar));
+
               listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
             else
@@ -386,7 +389,7 @@ namespace SokoWahnWin
         for (int portalIndex = 0; portalIndex < incomingPortals.Length; portalIndex++)
         {
           var portal = incomingPortals[portalIndex];
-          listVariants.Items.Add("-- Portal " + (portalIndex + 1) + (portal.blockedBox ? " - [BB] --" : " --"));
+          listVariants.Items.Add("-- Portal " + (portalIndex + 1) + portal.dirChar + (portal.blockedBox ? " - [BB] --" : " --"));
 
           var boxState = portal.stateBoxSwap.Get(stateItem.state);
           if (boxState != stateItem.state) // Variante mit reinschiebbarer Kiste vorhanden?
@@ -433,6 +436,8 @@ namespace SokoWahnWin
 
                 variantPath.Add(el);
               }
+
+              if (variantData.oPortalIndexBoxes.Length > 0) path += " > " + string.Join(",", variantData.oPortalIndexBoxes.Select(x => (x + 1) + "" + room.outgoingPortals[x].dirChar));
 
               listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
             }
@@ -1055,7 +1060,7 @@ namespace SokoWahnWin
 #if DEBUG
         // die 2 besten Räume verschmelzen
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
-        //break;
+        break;
 #else
         // die 2 besten Räume verschmelzen und Zeit messen
         int tick = Environment.TickCount;

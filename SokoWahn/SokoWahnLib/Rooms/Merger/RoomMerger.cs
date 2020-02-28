@@ -323,12 +323,24 @@ namespace SokoWahnLib.Rooms.Merger
           usingStates.SetBit(v.newState);
         }
 
+        // --- Zustandsveränderungen durch reingeschobene Kisten hinzufügen ---
+        foreach (var iPortal in room.incomingPortals)
+        {
+          foreach (ulong state in iPortal.stateBoxSwap.GetAllKeys())
+          {
+            usingStates.SetBit(state);
+            usingStates.SetBit(iPortal.stateBoxSwap.Get(state));
+          }
+        }
+
         if (usingStates.CountMarkedBits(0) != usingStates.Length)
         {
           var skip = new SkipMapper(usingStates);
           RenewStates(room, skip);
         }
       }
+
+      Debug.Assert(newRoom.startVariantCount > 0 || (newRoom.startVariantCount + srcRoom1.startVariantCount + srcRoom2.startVariantCount == 0));
     }
 
     /// <summary>

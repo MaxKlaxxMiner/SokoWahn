@@ -15,16 +15,22 @@ namespace SokoWahnWin
     /// Zustand-ID des Raumes
     /// </summary>
     public readonly ulong state;
+    /// <summary>
+    /// merkt sich, ob es sich um den Startzustand handelt
+    /// </summary>
+    readonly bool startState;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="roomIndex">Raum-Index, wohin der Zustand gehört</param>
     /// <param name="state">Zustand-ID des Raumes</param>
-    public StateListItem(int roomIndex, ulong state)
+    /// <param name="startState">gibt an, ob es sich um den Startzustand handelt</param>
+    public StateListItem(int roomIndex, ulong state, bool startState)
     {
       this.roomIndex = roomIndex;
       this.state = state;
+      this.startState = startState;
     }
 
     /// <summary>
@@ -34,6 +40,7 @@ namespace SokoWahnWin
     public override string ToString()
     {
       if (state == 0) return "State finish";
+      if (startState) return "State " + state + " (start)";
       return "State " + state;
     }
   }
