@@ -1104,7 +1104,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <returns>neue Liste mit Kisten, oder null, wenn die Variante ungültig ist</returns>
     static List<uint> ResolveBoxes(uint[] oldPortalBoxes, ref ulong state1, ref ulong state2, VariantData variantData1, uint[] mapPortalIndex1, Room room1, Room room2)
     {
-      if (variantData1.pushes == 0) return oldPortalBoxes.ToList(); // keine Kistenverschiebungen vorhanden?
+      if (variantData1.pushes == 0 && oldPortalBoxes.Length == 0) return oldPortalBoxes.ToList(); // keine Kistenverschiebungen vorhanden?
 
       var oPortalBoxes = new List<uint>(oldPortalBoxes.Length + variantData1.oPortalIndexBoxes.Length);
       oPortalBoxes.AddRange(oldPortalBoxes);
@@ -1126,6 +1126,14 @@ namespace SokoWahnLib.Rooms.Merger
           if (oPortalBoxes.Contains(oPortalBox)) return null; // ungültig: Kiste wurde doppelt durch das gleiche Portal rausgeschoben
           oPortalBoxes.Add(oPortalBox);
         }
+      }
+
+      if (variantData1.oPortalIndexPlayer < uint.MaxValue
+       && mapPortalIndex1[variantData1.oPortalIndexPlayer] < uint.MaxValue
+       && room1.outgoingPortals[variantData1.oPortalIndexPlayer].blockedBox
+       && oPortalBoxes.Contains(mapPortalIndex1[variantData1.oPortalIndexPlayer]))
+      {
+        return null;
       }
 
       state1 = variantData1.newState;

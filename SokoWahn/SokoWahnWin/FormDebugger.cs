@@ -242,8 +242,8 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest2);       // sehr einfaches Testlevel (zwei Kisten, 15 Moves)
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
-      roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
+      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
@@ -295,8 +295,8 @@ namespace SokoWahnWin
         listStates.BeginUpdate();
         foreach (int roomIndex in listRooms.SelectedIndices.Cast<int>())
         {
-          listStates.Items.Add("-- Room " + (roomIndex + 1) + " --");
           ulong stateCount = roomNetwork.rooms[roomIndex].stateList.Count;
+          listStates.Items.Add("-- Room " + (roomIndex + 1) + " [" + stateCount.ToString("N0") + "] --");
           for (ulong i = 0; i < stateCount; i++)
           {
             listStates.Items.Add(new StateListItem(roomIndex, i));
@@ -1020,7 +1020,9 @@ namespace SokoWahnWin
             bestRoomConnections.Add(new Tuple<BigInteger, Room, Room>
             (
               //RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
-              RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalStateCount)),
+              //room.stateList.Count * room2.stateList.Count,
+              //(room.stateList.Count + room.stateList.Count) * (room2.stateList.Count + room2.stateList.Count),
+              room.stateList.Count * room2.stateList.Count * (ulong)(room.incomingPortals.Length + room2.incomingPortals.Length),
               room,
               room2
             ));
@@ -1034,6 +1036,8 @@ namespace SokoWahnWin
         {
           if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
         }
+
+        Text = "Calc: " + bestRoomConnection.Item1.ToString("N0");
 
 #if DEBUG
         // die 2 besten Räume verschmelzen

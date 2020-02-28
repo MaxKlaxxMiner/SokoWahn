@@ -63,7 +63,7 @@ namespace SokoWahnLib.Rooms
     /// 
     /// Default: false / inaktiv
     /// </summary>
-    static readonly bool HashRelieve = false;
+    static readonly bool HashRelieve = true;
 
     #region # // --- Aufgaben-Hilfsmethoden ---
     /// <summary>
