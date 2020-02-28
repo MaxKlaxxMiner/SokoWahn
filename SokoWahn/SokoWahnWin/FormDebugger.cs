@@ -94,6 +94,17 @@ namespace SokoWahnWin
     #endregion
 
     #region # // --- bisher unlösbare Spielfelder ---
+    static readonly SokoField FieldBuggy = new SokoField(@"
+      ######
+      #..*.#
+      #.$  #
+      ## $ #
+      ##$ ##
+      #@$ # 
+      ##  # 
+       ####
+    ");
+
     static readonly SokoField Field628 = new SokoField(@"
       ####################
       #+.... #   #   #   #
@@ -243,12 +254,14 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
       //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //roomNetwork = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
+
+      roomNetwork = new RoomNetwork(FieldBuggy);         // Spielfeld um Bugs zu lösen
 
       displaySettings = new DisplaySettings(roomNetwork.field);
     }
