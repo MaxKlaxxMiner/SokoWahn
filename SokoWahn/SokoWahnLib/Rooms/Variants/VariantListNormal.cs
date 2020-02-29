@@ -18,11 +18,6 @@ namespace SokoWahnLib.Rooms
     public readonly List<VariantData> variantData = new List<VariantData>();
 
     /// <summary>
-    /// merkt sich die Anzahl der End-Varianten (wo der Spieler im Raum verbleibt)
-    /// </summary>
-    uint endVariants;
-
-    /// <summary>
     /// Konstruktor
     /// </summary>
     /// <param name="portalCount">Anzahl der vorhandenen Portale</param>
@@ -32,11 +27,6 @@ namespace SokoWahnLib.Rooms
     /// gibt die Anzahl der gespeicherten Varianten insgesamt zurück
     /// </summary>
     public override ulong Count { get { return (uint)variantData.Count; } }
-
-    /// <summary>
-    /// gibt die Anzahl der jeweiligen End-Varianten zurück
-    /// </summary>
-    public override ulong EndVariantCount { get { return endVariants; } }
 
     /// <summary>
     /// fügt eine weitere Variante hinzu und gibt deren ID zurück
@@ -51,9 +41,9 @@ namespace SokoWahnLib.Rooms
     /// <returns>neue Varianten-ID</returns>
     public override ulong Add(ulong oldState, ulong moves, ulong pushes, uint[] oPortalIndexBoxes, uint oPortalIndexPlayer, ulong newState, string path = null)
     {
+#if DEBUG
       if (oPortalIndexPlayer == uint.MaxValue)
       {
-        endVariants++;
         Debug.Assert(moves + 1 >= pushes);
       }
       else
@@ -61,6 +51,7 @@ namespace SokoWahnLib.Rooms
         Debug.Assert(moves > 0);
         Debug.Assert(moves  >= pushes);
       }
+#endif
       Debug.Assert(oPortalIndexBoxes.All(portal => portal < portalCount));
       Debug.Assert(oPortalIndexPlayer < portalCount || (oPortalIndexPlayer == uint.MaxValue && newState == 0)); // Spieler verlässt den Raum oder kann bleiben, wenn der End-Zustand erreicht wurde
       Debug.Assert(path != null && (ulong)VariantData.UncompressPath(path).Length == moves);

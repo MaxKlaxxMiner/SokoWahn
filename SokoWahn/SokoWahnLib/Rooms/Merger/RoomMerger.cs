@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+// ReSharper disable RedundantAssignment
 // ReSharper disable NotAccessedField.Local
 // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
 // ReSharper disable RedundantIfElseBlock
@@ -122,7 +123,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// Schritt 1: erstellt alle neuen Kisten-Zustände
     /// </summary>
-    public void Step1_States()
+    public void Step1_MixStates()
     {
       ulong state1Mul = srcRoom2.stateList.Count;
       var oldStateList1 = srcRoom1.stateList;
@@ -177,15 +178,22 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// Portale mit allen Varianten veschmelzen
     /// </summary>
-    public void Step3_PortalVariants()
+    /// <param name="mergeInfo">Status-Meldung</param>
+    public bool Step3_PortalVariants(Func<string, bool> mergeInfo)
     {
       var room1 = srcRoom1;
       var room2 = srcRoom2;
       var newIncomingPortals = newRoom.incomingPortals;
       ulong state1Mul = srcRoom2.stateList.Count;
 
+      ulong maxStepCount = (uint)newIncomingPortals.Length * room1.stateList.Count * room2.stateList.Count;
+      ulong finishedStepCount = 0;
+      ulong calcMoves = 0;
+
       for (uint iPortalIndex = 0; iPortalIndex < newIncomingPortals.Length; iPortalIndex++)
       {
+        string txtLine = "portals " + (iPortalIndex + 1) + " / " + newIncomingPortals.Length + " - ";
+
         var iPortalOld = mapOldIncomingPortals[iPortalIndex];
         var iPortalNew = newIncomingPortals[iPortalIndex];
 
@@ -226,7 +234,11 @@ namespace SokoWahnLib.Rooms.Merger
           {
             for (ulong state2 = 0; state2 < room2.stateList.Count; state2++)
             {
-              MergePortalVariants(iPortalOld, room2, state1, state2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, iPortalNew);
+              if (Tools.TickRefresh())
+              {
+                if (!mergeInfo(txtLine + "states " + (state1 * room2.stateList.Count + state2 + finishedStepCount).ToString("N0") + " / " + maxStepCount.ToString("N0") + " - (" + calcMoves.ToString("N0") + " moves)")) return false;
+              }
+              calcMoves += MergePortalVariants(iPortalOld, room2, state1, state2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, iPortalNew);
             }
           }
         }
@@ -236,12 +248,19 @@ namespace SokoWahnLib.Rooms.Merger
           {
             for (ulong state1 = 0; state1 < room1.stateList.Count; state1++)
             {
-              MergePortalVariants(iPortalOld, room1, state2, state1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, iPortalNew);
+              if (Tools.TickRefresh())
+              {
+                if (!mergeInfo(txtLine + "states " + (state2 * room1.stateList.Count + state1 + finishedStepCount).ToString("N0") + " / " + maxStepCount.ToString("N0") + " - (" + calcMoves.ToString("N0") + " moves)")) return false;
+              }
+              calcMoves += MergePortalVariants(iPortalOld, room1, state2, state1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, iPortalNew);
             }
           }
         }
+        finishedStepCount += room1.stateList.Count * room2.stateList.Count;
         #endregion
       }
+
+      return true;
     }
     #endregion
 
@@ -274,32 +293,11 @@ namespace SokoWahnLib.Rooms.Merger
     }
     #endregion
 
-    #region # // Step5_UpdateRooms() // aktualisiert die Räume und deren Indizierungen
-    /// <summary>
-    /// aktualisiert die Räume und deren Indizierungen
-    /// </summary>
-    public void Step5_UpdateRooms()
-    {
-      uint fillRoomIndex = 0;
-      for (uint roomIndex = 0; roomIndex < network.rooms.Length; roomIndex++)
-      {
-        var room = network.rooms[roomIndex];
-        if (ReferenceEquals(room, srcRoom1)) room = newRoom; // 1. Raum überschreiben
-        if (ReferenceEquals(room, srcRoom2)) continue; // 2. Raum überspringen
-        room.roomIndex = fillRoomIndex;
-        network.rooms[fillRoomIndex] = room;
-        fillRoomIndex++;
-      }
-      if (fillRoomIndex + 1 != network.rooms.Length) throw new Exception("Room-Index error");
-      Array.Resize(ref network.rooms, (int)fillRoomIndex);
-    }
-    #endregion
-
-    #region # // Step6_OptimizeStates()
+    #region # // Step5_OptimizeStates() // entfernt unbenutzte Kisten-Zustände im neuen Raum
     /// <summary>
     /// entfernt unbenutzte Kisten-Zustände im neuen Raum
     /// </summary>
-    public void Step6_OptimizeStates()
+    public void Step5_OptimizeStates()
     {
       var room = newRoom;
       var stateList = room.stateList;
@@ -433,8 +431,30 @@ namespace SokoWahnLib.Rooms.Merger
     }
     #endregion
 
+    #region # // Step6_UpdateRooms() // aktualisiert die Räume und deren Indizierungen
     /// <summary>
-    /// verschmilzt alle Varianten, welche beim Start beginen
+    /// aktualisiert die Räume und deren Indizierungen
+    /// </summary>
+    public void Step6_UpdateRooms()
+    {
+      uint fillRoomIndex = 0;
+      for (uint roomIndex = 0; roomIndex < network.rooms.Length; roomIndex++)
+      {
+        var room = network.rooms[roomIndex];
+        if (ReferenceEquals(room, srcRoom1)) room = newRoom; // 1. Raum überschreiben
+        if (ReferenceEquals(room, srcRoom2)) continue; // 2. Raum überspringen
+        room.roomIndex = fillRoomIndex;
+        network.rooms[fillRoomIndex] = room;
+        fillRoomIndex++;
+      }
+      if (fillRoomIndex + 1 != network.rooms.Length) throw new Exception("Room-Index error");
+      Array.Resize(ref network.rooms, (int)fillRoomIndex);
+    }
+    #endregion
+
+    #region # // MergeStartVariants(...) // verschmilzt alle Varianten, welche beim Start beginnen
+    /// <summary>
+    /// verschmilzt alle Varianten, welche beim Start beginnen
     /// </summary>
     /// <param name="room1">erster Raum, wo gestartet wird</param>
     /// <param name="room2">zweiter Raum, welcher verschmolzen wird</param>
@@ -442,7 +462,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
     /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
     /// <param name="roomNew">neuer Raum, wohin die neuen Startvarianten gespeichert werden sollen</param>
-    static void MergeStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
+    static ulong MergeStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
     {
       ulong startState = stateCalc(room1.startState, room2.startState);
       var dict = new Dictionary<ulong, ulong>();
@@ -450,6 +470,7 @@ namespace SokoWahnLib.Rooms.Merger
       var moveTasks = new List<int>();
       var pushTasks = new List<int>();
       var endTasks = new List<int>();
+      ulong calcMoves = 0;
 
       #region # // --- erste Aufgaben sammeln ---
       for (ulong variant1 = 0; variant1 < room1.startVariantCount; variant1++)
@@ -702,6 +723,7 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(roomNew.startVariantCount == newVariant);
         roomNew.startVariantCount++;
         Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
+        calcMoves += task.moves;
       }
       #endregion
 
@@ -733,6 +755,7 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(roomNew.startVariantCount == newVariant);
         roomNew.startVariantCount++;
         Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
+        calcMoves += task.moves;
       }
       #endregion
 
@@ -764,10 +787,15 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(roomNew.startVariantCount == newVariant);
         roomNew.startVariantCount++;
         Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
+        calcMoves += task.moves;
       }
       #endregion
-    }
 
+      return calcMoves;
+    }
+    #endregion
+
+    #region # // MergePortalVariants(...) // verschmilzt alle Varianten eines Portales
     /// <summary>
     /// verschmilzt alle Varianten eines Portales
     /// </summary>
@@ -779,16 +807,17 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
     /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
     /// <param name="iPortalNew">neues Portal, wohin die neu erzeugten Varianten gespeichert werden sollen</param>
-    static void MergePortalVariants(RoomPortal inPortal1, Room room2, ulong state1, ulong state2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
+    static ulong MergePortalVariants(RoomPortal inPortal1, Room room2, ulong state1, ulong state2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, RoomPortal iPortalNew)
     {
       var room1 = inPortal1.toRoom;
       ulong startState = stateCalc(state1, state2);
-      if (iPortalNew.toRoom.stateList.Get(startState).Length > iPortalNew.toRoom.maxBoxes) return; // zuviele Kisten sind im Raum
+      if (iPortalNew.toRoom.stateList.Get(startState).Length > iPortalNew.toRoom.maxBoxes) return 0; // zuviele Kisten sind im Raum
       var dict = new Dictionary<ulong, ulong>();
       var tasks = new List<MergeTask>();
       var moveTasks = new List<int>();
       var pushTasks = new List<int>();
       var endTasks = new List<int>();
+      ulong calcMoves = 0;
 
       #region # // --- erste Aufgaben sammeln ---
       foreach (ulong variant1 in inPortal1.variantStateDict.GetVariantSpan(state1).AsEnumerable())
@@ -1040,6 +1069,7 @@ namespace SokoWahnLib.Rooms.Merger
           task.path             // zurückgelegter Pfad
         );
         iPortalNew.variantStateDict.Add(startState, newVariant);
+        calcMoves += task.moves;
       }
       #endregion
 
@@ -1070,6 +1100,7 @@ namespace SokoWahnLib.Rooms.Merger
           task.path             // zurückgelegter Pfad
         );
         iPortalNew.variantStateDict.Add(startState, newVariant);
+        calcMoves += task.moves;
       }
       #endregion
 
@@ -1099,12 +1130,17 @@ namespace SokoWahnLib.Rooms.Merger
           task.path             // zurückgelegter Pfad
         );
         iPortalNew.variantStateDict.Add(startState, newVariant);
+        calcMoves += task.moves;
       }
       #endregion
-    }
 
+      return calcMoves;
+    }
+    #endregion
+
+    #region # // ResolveBoxes(...) // Methode zum Auflösen der Kisten und Prüfen der Variante
     /// <summary>
-    /// Methode zum Auflösen der Kisten
+    /// Methode zum Auflösen der Kisten und Prüfen der Variante
     /// </summary>
     /// <param name="oldPortalBoxes">bisherige Kisten, welche bereits rausgeschoben wurden</param>
     /// <param name="state1">Zustand des ersten Raumes</param>
@@ -1153,5 +1189,6 @@ namespace SokoWahnLib.Rooms.Merger
       oPortalBoxes.Sort((x, y) => x.CompareTo(y));
       return oPortalBoxes;
     }
+    #endregion
   }
 }

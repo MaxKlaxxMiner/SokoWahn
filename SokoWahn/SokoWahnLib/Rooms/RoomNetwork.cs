@@ -147,23 +147,34 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     /// <param name="room1">erster Raum</param>
     /// <param name="room2">zweiter Raum</param>
-    public void MergeRooms(Room room1, Room room2)
+    /// <param name="mergeInfo">optionale Status-Meldung zum Ablauf des Merge-Vorganges</param>
+    public void MergeRooms(Room room1, Room room2, Func<string, bool> mergeInfo = null)
     {
+      if (mergeInfo == null) mergeInfo = x => true;
+
       var roomMerger = new RoomMerger(this, room1, room2);
 
-      roomMerger.Step1_States();
+      if (Tools.TickRefresh() && !mergeInfo("Merge: mix states")) return;
+      roomMerger.Step1_MixStates();
 
+      if (Tools.TickRefresh() && !mergeInfo("Merge: start variants")) return;
       roomMerger.Step2_StartVariants();
 
-      roomMerger.Step3_PortalVariants();
+      if (!roomMerger.Step3_PortalVariants(txt => mergeInfo("Merge: portal variants - " + txt))) return;
 
+      if (Tools.TickRefresh() && !mergeInfo("Merge: update portals")) return;
       roomMerger.Step4_UpdatePortals();
 
-      roomMerger.Step5_UpdateRooms();
+      if (Tools.TickRefresh() && !mergeInfo("Merge: optimize states")) return;
+      roomMerger.Step5_OptimizeStates();
 
-      roomMerger.Step6_OptimizeStates();
+      if (Tools.TickRefresh() && !mergeInfo("Merge: update rooms")) return;
+      roomMerger.Step6_UpdateRooms();
 
+      if (Tools.TickRefresh() && !mergeInfo("Merge: validate")) return;
       Validate(); // einfache Validierung der Räume und Portale
+
+      mergeInfo("Merge: ok, remain: " + rooms.Length);
     }
     #endregion
 
@@ -385,7 +396,7 @@ namespace SokoWahnLib.Rooms
     /// <returns>Rechenaufwand als Zeichenkette</returns>
     public string Effort(int maxLen = 16777216)
     {
-      return MulNumberStr(rooms.Select(room => room.variantList.Count - room.variantList.EndVariantCount), maxLen);
+      return MulNumberStr(rooms.Select(room => room.variantList.Count), maxLen);
     }
 
     /// <summary>

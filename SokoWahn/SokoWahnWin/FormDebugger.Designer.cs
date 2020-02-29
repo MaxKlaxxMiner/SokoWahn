@@ -210,6 +210,7 @@
       this.Controls.Add(this.buttonStep);
       this.Name = "FormDebugger";
       this.Text = "Rooms Debugger";
+      this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FormDebugger_FormClosed);
       this.Load += new System.EventHandler(this.FormDebugger_Load);
       this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       this.Resize += new System.EventHandler(this.FormDebugger_Resize);

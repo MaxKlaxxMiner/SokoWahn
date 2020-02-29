@@ -72,6 +72,7 @@
     <Compile Include="VariantPathElement.cs" />
     <EmbeddedResource Include="FormDebugger.resx">
       <DependentUpon>FormDebugger.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="FormSolver.resx">
       <DependentUpon>FormSolver.cs</DependentUpon>

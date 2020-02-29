@@ -45,6 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extras\Bitter.cs" />
+    <Compile Include="Extras\Tools.cs" />
     <Compile Include="ISokoField.cs" />
     <Compile Include="MoveType.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

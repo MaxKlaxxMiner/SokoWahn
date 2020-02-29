@@ -35,11 +35,6 @@ namespace SokoWahnLib.Rooms
     public abstract ulong Count { get; }
 
     /// <summary>
-    /// gibt die Anzahl der jeweiligen End-Varianten zurück
-    /// </summary>
-    public abstract ulong EndVariantCount { get; }
-
-    /// <summary>
     /// fügt eine weitere Variante hinzu und gibt deren ID zurück
     /// </summary>
     /// <param name="oldState">vorheriger Raum-Zustand</param>

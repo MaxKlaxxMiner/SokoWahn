@@ -495,6 +495,8 @@ namespace SokoWahnWin
     /// <param name="e">zusätzliche Event-Infos</param>
     void listRooms_SelectedIndexChanged(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+
       displaySettings.hFront = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i])
         .Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
 
@@ -513,6 +515,8 @@ namespace SokoWahnWin
     /// <param name="e">zusätzliche Event-Infos</param>
     void listStates_SelectedIndexChanged(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+
       for (int i = 0; i < displaySettings.hFront.Length; i++)
       {
         if (displaySettings.hFront[i].color == 0xffff00)
@@ -555,6 +559,8 @@ namespace SokoWahnWin
     /// </summary>
     void listVariants_SelectedIndexChanged(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+
       variantTime = 0;
       if (listStates.SelectedItem is StateListItem)
       {
@@ -596,6 +602,7 @@ namespace SokoWahnWin
     /// </summary>
     void timerDisplay_Tick(object sender, EventArgs e)
     {
+      if (activeMerge) return;
       if (innerTimer) return;
       innerTimer = true;
       DisplayUpdate();
@@ -607,6 +614,7 @@ namespace SokoWahnWin
     /// </summary>
     void FormDebugger_Resize(object sender, EventArgs e)
     {
+      if (activeMerge) return;
       if (innerTimer) return;
       innerTimer = true;
       DisplayUpdate();
@@ -622,6 +630,7 @@ namespace SokoWahnWin
     /// </summary>
     void pictureBoxField_MouseDown(object sender, MouseEventArgs e)
     {
+      if (activeMerge) return;
       if (e.Button == MouseButtons.None) return;
       fieldMouseActive = true;
       int pos = fieldDisplay.GetFieldPos(e.X, e.Y);
@@ -641,6 +650,7 @@ namespace SokoWahnWin
     /// </summary>
     void pictureBoxField_MouseMove(object sender, MouseEventArgs e)
     {
+      if (activeMerge) return;
       if (!fieldMouseActive) return;
       int pos = fieldDisplay.GetFieldPos(e.X, e.Y);
       if (pos >= 0)
@@ -1004,18 +1014,17 @@ namespace SokoWahnWin
     }
     #endregion
 
+    bool activeMerge;
     /// <summary>
     /// Merge-Button
     /// </summary>
     void buttonMerge_Click(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+      activeMerge = true;
+
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
-      if (mergeRooms.Length == 0)
-      {
-        //mergeRooms = roomNetwork.rooms.Where(x => x.stateList.Count == 1).ToArray();
-        //if (mergeRooms.Length == 1) mergeRooms = roomNetwork.rooms.ToArray();
-        mergeRooms = roomNetwork.rooms.ToArray();
-      }
+      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.ToArray(); // alle Räume mergen, wenn keine ausgewählt wurden
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -1023,10 +1032,11 @@ namespace SokoWahnWin
 
       var mergeFields = new HashSet<int>(mergeRooms.SelectMany(room => room.fieldPosis));
 
+      bool first = true;
       for (; ; )
       {
         mergeRooms = roomNetwork.rooms.Where(room => room.fieldPosis.Any(pos => mergeFields.Contains(pos))).ToArray();
-        var bestRoomConnections = new List<Tuple<BigInteger, Room, Room>>();
+        var bestRoomConnections = new List<Tuple<ulong, Room, Room>>();
         var useRooms = new HashSet<Room>(mergeRooms);
         foreach (var room in mergeRooms)
         {
@@ -1035,11 +1045,8 @@ namespace SokoWahnWin
           {
             if (room.roomIndex > room2.roomIndex) continue; // doppelte Raumverknüpfung vermeiden
 
-            bestRoomConnections.Add(new Tuple<BigInteger, Room, Room>
+            bestRoomConnections.Add(new Tuple<ulong, Room, Room>
             (
-              //RoomNetwork.MulNumber(room.incomingPortals.Where(iPortal => iPortal.fromRoom.roomIndex == room2.roomIndex).Select(x => x.variantStateDict.TotalVariantCount)),
-              //room.stateList.Count * room2.stateList.Count,
-              //(room.stateList.Count + room.stateList.Count) * (room2.stateList.Count + room2.stateList.Count),
               room.stateList.Count * room2.stateList.Count * (ulong)(room.incomingPortals.Length + room2.incomingPortals.Length),
               room,
               room2
@@ -1047,28 +1054,90 @@ namespace SokoWahnWin
           }
         }
 
-        if (bestRoomConnections.Count == 0) return; // nichts zum verschmelzen gefunden?
+        if (bestRoomConnections.Count == 0) break; // nichts zum Verschmelzen gefunden?
+
+        if (bestRoomConnections.Min(x => x.Item1) > 100) // nur noch Varianten-Aufwand beachten
+        {
+          bestRoomConnections.Clear();
+          foreach (var room in mergeRooms)
+          {
+            var connectedRooms = room.incomingPortals.Select(iPortal => iPortal.fromRoom).Where(fromRoom => useRooms.Contains(fromRoom)).ToArray();
+            foreach (var room2 in connectedRooms)
+            {
+              if (room.roomIndex > room2.roomIndex) continue; // doppelte Raumverknüpfung vermeiden
+
+              bestRoomConnections.Add(new Tuple<ulong, Room, Room>
+              (
+                room.variantList.Count * room2.variantList.Count,
+                room,
+                room2
+              ));
+            }
+          }
+        }
 
         var bestRoomConnection = bestRoomConnections.First();
         foreach (var c in bestRoomConnections)
         {
           if (c.Item1 < bestRoomConnection.Item1) bestRoomConnection = c;
         }
+        ulong effort = bestRoomConnection.Item2.variantList.Count * bestRoomConnection.Item3.variantList.Count;
+
+        if (effort > 10000000 && !first) break;
+        first = false;
+
+        bool liveView = effort > 100000;
+        if (liveView)
+        {
+          displaySettings.hFront = new[] { bestRoomConnection.Item2, bestRoomConnection.Item3 }.Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
+
+          for (int i = 0; i < displaySettings.hFront.Length; i++)
+          {
+            if (displaySettings.hFront[i].fields.Contains(bestRoomConnection.Item2.fieldPosis[0]) || displaySettings.hFront[i].fields.Contains(bestRoomConnection.Item3.fieldPosis[0]))
+            {
+              displaySettings.hFront[i].color = 0xffff00;
+            }
+          }
+          fieldDisplay.Update(roomNetwork, displaySettings);
+          Application.DoEvents();
+        }
 
         Text = "Calc: " + bestRoomConnection.Item1.ToString("N0");
 
+        int oldWidth = pictureBoxField.Width;
+        int oldHeight = pictureBoxField.Height;
+
+        Func<string, bool> status = txt =>
+        {
+          textBoxInfo.Text = txt;
+          Application.DoEvents();
+          if (oldWidth != pictureBoxField.Width || oldHeight != pictureBoxField.Height)
+          {
+            fieldDisplay.Update(roomNetwork, displaySettings);
+            Application.DoEvents();
+            oldWidth = pictureBoxField.Width;
+            oldHeight = pictureBoxField.Height;
+          }
+          return activeMerge;
+        };
+
 #if DEBUG
         // die 2 besten Räume verschmelzen
-        roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
+        roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3, status);
         break;
 #else
         // die 2 besten Räume verschmelzen und Zeit messen
         int tick = Environment.TickCount;
-        roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3);
+        roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3, status);
+        if (!activeMerge) return;
         tick = Environment.TickCount - tick;
-        if (tick > 100) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat
+        if (tick > 10000) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat
 #endif
+
+        if (liveView) DisplayUpdate();
       }
+
+      activeMerge = false;
     }
 
     /// <summary>
@@ -1076,6 +1145,8 @@ namespace SokoWahnWin
     /// </summary>
     void buttonStep_Click(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
       listRooms.EndUpdate();
@@ -1154,6 +1225,8 @@ namespace SokoWahnWin
     /// </summary>
     void buttonValidate_Click(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+
       try
       {
         roomNetwork.Validate(true);
@@ -1175,6 +1248,8 @@ namespace SokoWahnWin
     /// <returns>gehovertes Element (oder null)</returns>
     VariantListItem DetermineHoveredItem()
     {
+      if (activeMerge) return null;
+
       var screenPosition = MousePosition;
       var listBoxClientAreaPosition = listVariants.PointToClient(screenPosition);
 
@@ -1191,6 +1266,8 @@ namespace SokoWahnWin
     /// </summary>
     void buttonSolver_Click(object sender, EventArgs e)
     {
+      if (activeMerge) return;
+
       formSolver.InitRoomNetwork(roomNetwork);
       formSolver.ShowDialog();
     }
@@ -1198,6 +1275,11 @@ namespace SokoWahnWin
     void FormDebugger_Load(object sender, EventArgs e)
     {
       //buttonSolver_Click(sender, e);
+    }
+
+    void FormDebugger_FormClosed(object sender, FormClosedEventArgs e)
+    {
+      activeMerge = false;
     }
   }
 }
