@@ -51,6 +51,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rooms\HashCrc\HashCrcNormal.cs" />
     <Compile Include="Rooms\HashCrc\HashCrc.cs" />
+    <Compile Include="Rooms\Merger\DeadlockTask.cs" />
+    <Compile Include="Rooms\Merger\RoomDeadlockScanner.cs" />
     <Compile Include="Rooms\Merger\MergeTask.cs" />
     <Compile Include="Rooms\QuickScan\SokoBoxScanner.cs" />
     <Compile Include="Rooms\QuickScan\SokowahnHash.cs" />

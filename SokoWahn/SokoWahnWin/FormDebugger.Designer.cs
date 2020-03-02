@@ -29,7 +29,7 @@
     private void InitializeComponent()
     {
       this.components = new System.ComponentModel.Container();
-      this.buttonStep = new System.Windows.Forms.Button();
+      this.buttonOptimize = new System.Windows.Forms.Button();
       this.listRooms = new System.Windows.Forms.ListBox();
       this.pictureBoxField = new System.Windows.Forms.PictureBox();
       this.timerDisplay = new System.Windows.Forms.Timer(this.components);
@@ -47,17 +47,17 @@
       this.splitContainer1.SuspendLayout();
       this.SuspendLayout();
       // 
-      // buttonStep
+      // buttonOptimize
       // 
-      this.buttonStep.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.buttonStep.Location = new System.Drawing.Point(1162, 54);
-      this.buttonStep.Name = "buttonStep";
-      this.buttonStep.Size = new System.Drawing.Size(92, 36);
-      this.buttonStep.TabIndex = 0;
-      this.buttonStep.Text = "Step";
-      this.buttonStep.UseVisualStyleBackColor = true;
-      this.buttonStep.Click += new System.EventHandler(this.buttonStep_Click);
-      this.buttonStep.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      this.buttonOptimize.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonOptimize.Location = new System.Drawing.Point(1162, 54);
+      this.buttonOptimize.Name = "buttonOptimize";
+      this.buttonOptimize.Size = new System.Drawing.Size(92, 36);
+      this.buttonOptimize.TabIndex = 0;
+      this.buttonOptimize.Text = "Optimize";
+      this.buttonOptimize.UseVisualStyleBackColor = true;
+      this.buttonOptimize.Click += new System.EventHandler(this.buttonOptimize_Click);
+      this.buttonOptimize.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
       // listRooms
       // 
@@ -207,7 +207,7 @@
       this.Controls.Add(this.splitContainer1);
       this.Controls.Add(this.pictureBoxField);
       this.Controls.Add(this.listRooms);
-      this.Controls.Add(this.buttonStep);
+      this.Controls.Add(this.buttonOptimize);
       this.Name = "FormDebugger";
       this.Text = "Rooms Debugger";
       this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FormDebugger_FormClosed);
@@ -226,7 +226,7 @@
 
     #endregion
 
-    private System.Windows.Forms.Button buttonStep;
+    private System.Windows.Forms.Button buttonOptimize;
     private System.Windows.Forms.ListBox listRooms;
     private System.Windows.Forms.PictureBox pictureBoxField;
     private System.Windows.Forms.Timer timerDisplay;

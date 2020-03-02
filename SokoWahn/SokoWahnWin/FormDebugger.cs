@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using SokoWahnLib;
 using SokoWahnLib.Rooms;
+using SokoWahnLib.Rooms.Merger;
+
 // ReSharper disable FieldCanBeMadeReadOnly.Local
 // ReSharper disable UnusedMember.Local
 // ReSharper disable RedundantCommaInInitializer
@@ -254,14 +256,14 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
       //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //roomNetwork = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
 
-      roomNetwork = new RoomNetwork(FieldBuggy);         // Spielfeld um Bugs zu lösen
+      //roomNetwork = new RoomNetwork(FieldBuggy);         // Spielfeld um Bugs zu lösen
 
       displaySettings = new DisplaySettings(roomNetwork.field);
     }
@@ -1024,7 +1026,19 @@ namespace SokoWahnWin
       activeMerge = true;
 
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
-      if (mergeRooms.Length == 0) mergeRooms = roomNetwork.rooms.ToArray(); // alle Räume mergen, wenn keine ausgewählt wurden
+      if (mergeRooms.Length == 0)
+      {
+        if (roomNetwork.rooms.Length == 56) // Test-Mode
+        {
+          mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
+               .Concat(roomNetwork.rooms.Skip(39).Take(5))
+               .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
+        }
+        else
+        {
+          mergeRooms = roomNetwork.rooms.ToArray(); // alle Räume mergen, wenn keine ausgewählt wurden
+        }
+      }
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -1124,7 +1138,7 @@ namespace SokoWahnWin
 #if DEBUG
         // die 2 besten Räume verschmelzen
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3, status);
-        break;
+        //break;
 #else
         // die 2 besten Räume verschmelzen und Zeit messen
         int tick = Environment.TickCount;
@@ -1143,7 +1157,7 @@ namespace SokoWahnWin
     /// <summary>
     /// Step-Button
     /// </summary>
-    void buttonStep_Click(object sender, EventArgs e)
+    void buttonOptimize_Click(object sender, EventArgs e)
     {
       if (activeMerge) return;
 
@@ -1151,73 +1165,11 @@ namespace SokoWahnWin
       listRooms.Items.Clear();
       listRooms.EndUpdate();
 
-      // --- Kisten-Netzwerke filtern ---
-      var roomsBoxesStart = new HashSet<Room>();  // Räume mit Kisten am Anfang
-      var roomsBoxesGoals = new HashSet<Room>();  // Räume mit Kisten-Zielfeldern
-      var roomsBoxesPass = new HashSet<Room>();   // Räume mit Kisten
-      var roomsBoxesEmpty = new HashSet<Room>();  // Räume ohne Kisten
-      var roomsCheck = new Stack<Room>(); // Räume, welche noch geprüft werden müssen
+      var room = roomNetwork.rooms[23];
 
-      // --- roomsBoxesStart und roomsBoxesGoals befüllen ---
-      foreach (var room in roomNetwork.rooms)
-      {
-        if (room.startBoxPosis.Length > 0) { roomsBoxesStart.Add(room); roomsCheck.Push(room); }
-        if (room.goalPosis.Length > 0) { roomsBoxesGoals.Add(room); roomsCheck.Push(room); }
-      }
+      var scanner = new RoomDeadlockScanner(room);
 
-      // --- roomsBoxesPass befüllen ---
-      while (roomsCheck.Count > 0)
-      {
-        var checkRoom = roomsCheck.Pop();
-        if (roomsBoxesPass.Contains(checkRoom)) continue;
-
-        var variantList = checkRoom.variantList;
-        var outgoingBoxPortals = new bool[checkRoom.incomingPortals.Length];
-        for (ulong variant = 0; variant < variantList.Count; variant++)
-        {
-          var v = variantList.GetData(variant);
-          foreach (uint p in v.oPortalIndexBoxes) outgoingBoxPortals[p] = true;
-        }
-        if (outgoingBoxPortals.Any(x => x)) roomsBoxesPass.Add(checkRoom);
-        for (uint p = 0; p < outgoingBoxPortals.Length; p++)
-        {
-          if (outgoingBoxPortals[p]) roomsCheck.Push(checkRoom.outgoingPortals[p].toRoom);
-        }
-      }
-
-      foreach (var room in roomNetwork.rooms)
-      {
-        if (roomsBoxesStart.Contains(room)) continue;
-        if (roomsBoxesGoals.Contains(room)) continue;
-        if (roomsBoxesPass.Contains(room)) continue;
-        roomsBoxesEmpty.Add(room);
-      }
-
-      int roomIndex = 0;
-      foreach (var room in roomNetwork.rooms)
-      {
-        roomIndex++;
-        if (roomsBoxesEmpty.Contains(room))
-        {
-          if (RemoveBoxStates(room))
-          {
-            buttonStep.Text = "B-Room " + roomIndex;
-            return;
-          }
-        }
-        //if (OptimizeStep1(room))
-        //{
-        //  buttonStep.Text = "1-Room " + roomIndex;
-        //  return;
-        //}
-        if (OptimizeUnusedStates(room))
-        {
-          buttonStep.Text = "S-Room " + roomIndex;
-          return;
-        }
-      }
-
-      buttonStep.Text = "ok.";
+      buttonOptimize.Text = "ok.";
     }
 
     /// <summary>
