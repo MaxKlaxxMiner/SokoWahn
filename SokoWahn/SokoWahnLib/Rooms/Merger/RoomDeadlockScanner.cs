@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace SokoWahnLib.Rooms.Merger
 {
@@ -20,6 +21,31 @@ namespace SokoWahnLib.Rooms.Merger
     {
       if (room == null) throw new NullReferenceException("room");
       this.room = room;
+    }
+
+    /// <summary>
+    /// Vorwärts-Suche nach allen erreichbaren Varianten
+    /// </summary>
+    public void Step1_StartScan()
+    {
+      if (room.startVariantCount == 0) return; // keine Startvarianten gefunden
+
+      var tasks = new List<MergeTask>();
+      var variantList = room.variantList;
+
+      using (var usingVariants = new Bitter(variantList.Count))
+      {
+        usingVariants.SetBits(0, room.startVariantCount);
+
+        #region # // --- erste Aufgaben sammeln ---
+        for (ulong variant = 0; variant < room.startVariantCount; variant++)
+        {
+          var variantData = variantList.GetData(variant);
+
+
+        }
+        #endregion
+      }
     }
   }
 }

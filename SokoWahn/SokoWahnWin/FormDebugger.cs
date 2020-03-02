@@ -679,7 +679,7 @@ namespace SokoWahnWin
     /// </summary>
     void splitContainer1_Resize(object sender, EventArgs e)
     {
-      splitContainer1.SplitterDistance = (int)(splitContainer1.ClientSize.Height * (1 - 0.618));
+      splitContainer1.SplitterDistance = (int)(splitContainer1.ClientSize.Height * 0.618);
     }
     #endregion
 
@@ -1031,8 +1031,8 @@ namespace SokoWahnWin
         if (roomNetwork.rooms.Length == 56) // Test-Mode
         {
           mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
-               .Concat(roomNetwork.rooms.Skip(39).Take(5))
-               .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
+               .Concat(roomNetwork.rooms.Skip(36).Take(8))
+               .Concat(roomNetwork.rooms.Skip(46).Take(5)).ToArray();
         }
         else
         {
@@ -1161,6 +1161,11 @@ namespace SokoWahnWin
     {
       if (activeMerge) return;
 
+      if (roomNetwork.rooms.Length == 56)
+      {
+        buttonMerge_Click(sender, e);
+      }
+
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
       listRooms.EndUpdate();
@@ -1168,6 +1173,8 @@ namespace SokoWahnWin
       var room = roomNetwork.rooms[23];
 
       var scanner = new RoomDeadlockScanner(room);
+
+      scanner.Step1_StartScan();
 
       buttonOptimize.Text = "ok.";
     }
