@@ -6,7 +6,7 @@ namespace SokoWahnLib.Rooms.Merger
   /// <summary>
   /// Klasse zum Suchen von nicht lösbaren Varianten in einem Raum
   /// </summary>
-  public class RoomDeadlockScanner
+  public sealed class RoomDeadlockScanner
   {
     /// <summary>
     /// merkt sich den Raum, welcher optimiert werden soll
@@ -24,27 +24,44 @@ namespace SokoWahnLib.Rooms.Merger
     }
 
     /// <summary>
+    /// erstellt die Rückwärts-Varianten für die Suche
+    /// </summary>
+    public void Step1_CreateReverseMap()
+    {
+      var reverseMap = new RoomReverse(room);
+
+      reverseMap.Step1_CollectVariantsPerState();
+
+
+    }
+
+    /// <summary>
     /// Vorwärts-Suche nach allen erreichbaren Varianten
     /// </summary>
-    public void Step1_StartScan()
+    public void Step2_StartScan()
     {
-      if (room.startVariantCount == 0) return; // keine Startvarianten gefunden
-
       var tasks = new List<MergeTask>();
       var variantList = room.variantList;
 
       using (var usingVariants = new Bitter(variantList.Count))
       {
-        usingVariants.SetBits(0, room.startVariantCount);
-
-        #region # // --- erste Aufgaben sammeln ---
-        for (ulong variant = 0; variant < room.startVariantCount; variant++)
+        if (room.startVariantCount > 0) // Start-Varianten corhanden?
         {
-          var variantData = variantList.GetData(variant);
+          usingVariants.SetBits(0, room.startVariantCount);
+          #region # // --- erste Aufgaben sammeln ---
+          for (ulong variant = 0; variant < room.startVariantCount; variant++)
+          {
+            var variantData = variantList.GetData(variant);
 
 
+          }
+          #endregion
         }
-        #endregion
+        else
+        {
+          // todo: Start-Zustand verwenden für erste Varianten der eingehenden Portale
+        }
+
       }
     }
   }

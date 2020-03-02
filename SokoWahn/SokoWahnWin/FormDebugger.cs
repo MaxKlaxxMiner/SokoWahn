@@ -1174,7 +1174,9 @@ namespace SokoWahnWin
 
       var scanner = new RoomDeadlockScanner(room);
 
-      scanner.Step1_StartScan();
+      scanner.Step1_CreateReverseMap();
+
+      scanner.Step2_StartScan();
 
       buttonOptimize.Text = "ok.";
     }

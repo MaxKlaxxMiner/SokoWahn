@@ -61,6 +61,7 @@
     <Compile Include="Rooms\QuickScan\SokoFieldQuickScan.cs" />
     <Compile Include="Extras\SkipMapper.cs" />
     <Compile Include="Rooms\Merger\RoomMerger.cs" />
+    <Compile Include="Rooms\RoomReverse.cs" />
     <Compile Include="Rooms\RoomSolver.cs" />
     <Compile Include="Rooms\States\StateBoxSwapNormal.cs" />
     <Compile Include="Rooms\States\StateBoxSwap.cs" />
