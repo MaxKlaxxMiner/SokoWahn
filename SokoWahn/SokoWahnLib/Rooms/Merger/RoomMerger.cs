@@ -491,9 +491,7 @@ namespace SokoWahnLib.Rooms.Merger
           variantData1.pushes,     // Anzahl der Kistenverschiebungen insgesamt
           variantData1.path,       // zurückgelegter Pfad
           true,                    // Main-Room1 setzen
-          uint.MaxValue,           // Nummer des eingehenden Portals
-          variant1,                // die zu verarbeitende Variante
-          variantData1             // Daten der Variante
+          variantData1             // die zu verarbeitende Variante
         );
 
         ulong crc = newTask.GetCrc();
@@ -547,9 +545,7 @@ namespace SokoWahnLib.Rooms.Merger
                     task.pushes + variantData2.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                     task.path + variantData2.path,      // zurückgelegter Pfad
                     false,                              // Main-Room1 setzen
-                    iPortal2.iPortalIndex,              // Nummer des eingehenden Portals
-                    variant2,                           // die zu verarbeitende Variante
-                    variantData2                        // Daten der Variante
+                    variantData2                        // die zu verarbeitende Variante
                   );
 
                   ulong crc = newTask.GetCrc();
@@ -582,9 +578,7 @@ namespace SokoWahnLib.Rooms.Merger
                     task.pushes + variantData1.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                     task.path + variantData1.path,      // zurückgelegter Pfad
                     true,                               // Main-Room1 setzen
-                    iPortal1.iPortalIndex,              // Nummer des eingehenden Portals
-                    variant1,                           // die zu verarbeitende Variante
-                    variantData1                        // Daten der Variante
+                    variantData1                        // die zu verarbeitende Variante
                   );
 
                   ulong crc = newTask.GetCrc();
@@ -629,9 +623,7 @@ namespace SokoWahnLib.Rooms.Merger
                   task.pushes + variantData2.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                   task.path + variantData2.path,      // zurückgelegter Pfad
                   false,                              // Main-Room1 setzen
-                  iPortal2.iPortalIndex,              // Nummer des eingehenden Portals
-                  variant2,                           // die zu verarbeitende Variante
-                  variantData2                        // Daten der Variante
+                  variantData2                        // die zu verarbeitende Variante
                 );
 
                 ulong crc = newTask.GetCrc();
@@ -664,9 +656,7 @@ namespace SokoWahnLib.Rooms.Merger
                   task.pushes + variantData1.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                   task.path + variantData1.path,      // zurückgelegter Pfad
                   true,                               // Main-Room1 setzen
-                  iPortal1.iPortalIndex,              // Nummer des eingehenden Portals
-                  variant1,                           // die zu verarbeitende Variante
-                  variantData1                        // Daten der Variante
+                  variantData1                        // die zu verarbeitende Variante
                 );
 
                 ulong crc = newTask.GetCrc();
@@ -838,9 +828,7 @@ namespace SokoWahnLib.Rooms.Merger
           variantData1.pushes,     // Anzahl der Kistenverschiebungen insgesamt
           variantData1.path,       // zurückgelegter Pfad
           true,                    // Main-Room1 setzen
-          inPortal1.iPortalIndex,  // Nummer des eingehenden Portals
-          variant1,                // die zu verarbeitende Variante
-          variantData1             // Daten der Variante
+          variantData1             // die zu verarbeitende Variante
         );
 
         ulong crc = newTask.GetCrc();
@@ -894,9 +882,7 @@ namespace SokoWahnLib.Rooms.Merger
                     task.pushes + variantData2.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                     task.path + variantData2.path,      // zurückgelegter Pfad
                     false,                              // Main-Room1 setzen
-                    iPortal2.iPortalIndex,              // Nummer des eingehenden Portals
-                    variant2,                           // die zu verarbeitende Variante
-                    variantData2                        // Daten der Variante
+                    variantData2                        // die zu verarbeitende Variante
                   );
 
                   ulong crc = newTask.GetCrc();
@@ -929,9 +915,7 @@ namespace SokoWahnLib.Rooms.Merger
                     task.pushes + variantData1.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                     task.path + variantData1.path,      // zurückgelegter Pfad
                     true,                               // Main-Room1 setzen
-                    iPortal1.iPortalIndex,              // Nummer des eingehenden Portals
-                    variant1,                           // die zu verarbeitende Variante
-                    variantData1                        // Daten der Variante
+                    variantData1                        // die zu verarbeitende Variante
                   );
 
                   ulong crc = newTask.GetCrc();
@@ -976,9 +960,7 @@ namespace SokoWahnLib.Rooms.Merger
                   task.pushes + variantData2.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                   task.path + variantData2.path,      // zurückgelegter Pfad
                   false,                              // Main-Room1 setzen
-                  iPortal2.iPortalIndex,              // Nummer des eingehenden Portals
-                  variant2,                           // die zu verarbeitende Variante
-                  variantData2                        // Daten der Variante
+                  variantData2                        // die zu verarbeitende Variante
                 );
 
                 ulong crc = newTask.GetCrc();
@@ -1011,9 +993,7 @@ namespace SokoWahnLib.Rooms.Merger
                   task.pushes + variantData1.pushes,  // Anzahl der Kistenverschiebungen insgesamt
                   task.path + variantData1.path,      // zurückgelegter Pfad
                   true,                               // Main-Room1 setzen
-                  iPortal1.iPortalIndex,              // Nummer des eingehenden Portals
-                  variant1,                           // die zu verarbeitende Variante
-                  variantData1                        // Daten der Variante
+                  variantData1                        // die zu verarbeitende Variante
                 );
 
                 ulong crc = newTask.GetCrc();
