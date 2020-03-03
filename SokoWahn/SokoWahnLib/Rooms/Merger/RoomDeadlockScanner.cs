@@ -69,13 +69,13 @@ namespace SokoWahnLib.Rooms.Merger
         for (ulong variant = 0; variant < room.startVariantCount; variant++)
         {
           var variantData = room.variantList.GetData(variant);
-          if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten können nicht weiter verfolgt werden
+          if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten brauchen nicht weiter verfolgt werden
 
           var newTask = new DeadlockTask
           (
-            variantData.oPortalIndexPlayer,
-            variantData.oPortalIndexBoxes.Contains(variantData.oPortalIndexPlayer),
-            variantData.newState
+            variantData.oPortalIndexPlayer,            // Portalnummer, worüber der Spieler den Raum verlassen hat
+            variantData.oPortalIndexBoxes.Length > 0,  // Angabe, ob der Spieler eine Kiste rausgeschoben hat
+            variantData.newState                       // neuer Kistenzustand des Raumes
           );
           tasks.Push(newTask);
         }
@@ -84,13 +84,79 @@ namespace SokoWahnLib.Rooms.Merger
       {
         var newTask = new DeadlockTask
         (
-          uint.MaxValue,
-          false,
-          room.startState
+          uint.MaxValue,   // Portalnummer, worüber der Spieler den Raum verlassen hat
+          false,           // Angabe, ob der Spieler eine Kiste mitgenommen hat
+          room.startState  // neuer Kistenzustand des Raumes
         );
         tasks.Push(newTask);
       }
       #endregion
+
+      ulong portalMask = 1;
+      for (int i = 0; i < room.incomingPortals.Length; i++) portalMask <<= 1;
+
+      while (tasks.Count > 0)
+      {
+        var task = tasks.Pop();
+
+        for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+        {
+          if (iPortalIndex == task.oPortalIndexPlayer && !task.exportedBox) continue; // einfaches Zurücklaufen durch das gleiche Portal nicht erlaubt, außer wenn vorher eine Kiste aus dem Raum geschoben wurde
+
+          foreach (ulong variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(task.state).AsEnumerable())
+          {
+            if (usedVariants.GetBit(variant)) continue; // Variante schon bekannt?
+            usedVariants.SetBit(variant);
+
+            var variantData = room.variantList.GetData(variant);
+            if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten brauchen nicht weiter verfolgt werden
+
+            var newTask = new DeadlockTask
+            (
+              variantData.oPortalIndexPlayer,            // Portalnummer, worüber der Spieler den Raum verlassen hat
+              variantData.oPortalIndexBoxes.Length > 0,  // Angabe, ob der Spieler eine Kiste rausgeschoben hat
+              variantData.newState                       // neuer Kistenzustand des Raumes
+            );
+            tasks.Push(newTask);
+          }
+        }
+
+        for (ulong mask = 1; mask < portalMask; mask++)
+        {
+          bool valid = true; // merkt sich, ob die Kisten-Variante gütig ist
+          ulong state = task.state;
+          for (int iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+          {
+            if ((mask & 1UL << iPortalIndex) == 0) continue;
+
+            // --- Kiste über das Portal reinschieben ---
+            ulong nextState = room.incomingPortals[iPortalIndex].stateBoxSwap.Get(state);
+            if (nextState == state) { valid = false; break; } // ungültige Kiste erkannt?
+            state = nextState; // neuen Kistenzustand übernehmen
+          }
+          if (!valid) continue; // ungültigen Kistenzustand erkannt?
+
+          for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+          {
+            foreach (ulong variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(state).AsEnumerable())
+            {
+              if (usedVariants.GetBit(variant)) continue; // Variante schon bekannt?
+              usedVariants.SetBit(variant);
+
+              var variantData = room.variantList.GetData(variant);
+              if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten brauchen nicht weiter verfolgt werden
+
+              var newTask = new DeadlockTask
+              (
+                variantData.oPortalIndexPlayer,            // Portalnummer, worüber der Spieler den Raum verlassen hat
+                variantData.oPortalIndexBoxes.Length > 0,  // Angabe, ob der Spieler eine Kiste rausgeschoben hat
+                variantData.newState                       // neuer Kistenzustand des Raumes
+              );
+              tasks.Push(newTask);
+            }
+          }
+        }
+      }
     }
 
     /// <summary>

@@ -454,6 +454,46 @@ namespace SokoWahnLib
     }
 
     /// <summary>
+    /// gibt die Anzahl der freien Bits insgesamt zurück
+    /// </summary>
+    public ulong TotalCountFreeBits
+    {
+      get
+      {
+        ulong freeBits = 0;
+        for (ulong pos = 0; pos < bitCount; )
+        {
+          ulong count = CountFreeBits(pos);
+          freeBits += count;
+          pos += count;
+          count = CountMarkedBits(pos);
+          pos += count;
+        }
+        return freeBits;
+      }
+    }
+
+    /// <summary>
+    /// gibt die Anzahl der markierten Bits insgesamt zurück
+    /// </summary>
+    public ulong TotalCountMarkedBits
+    {
+      get
+      {
+        ulong markedBits = 0;
+        for (ulong pos = 0; pos < bitCount; )
+        {
+          ulong count = CountFreeBits(pos);
+          pos += count;
+          count = CountMarkedBits(pos);
+          markedBits += count;
+          pos += count;
+        }
+        return markedBits;
+      }
+    }
+
+    /// <summary>
     /// verschiebt eine Reihe von mehrere Bits von einer Position zu einer anderen
     /// </summary>
     /// <param name="destBitPos">Ziel-Position, wohin die Bits geschoben werden sollen</param>
@@ -497,7 +537,7 @@ namespace SokoWahnLib
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
-      return new { bitCount, bytes = (bitCount + 63) / 64 * 8 }.ToString();
+      return new { bitCount, marked = TotalCountMarkedBits, memoryBytes = (bitCount + 63) / 64 * 8 }.ToString();
     }
   }
 }

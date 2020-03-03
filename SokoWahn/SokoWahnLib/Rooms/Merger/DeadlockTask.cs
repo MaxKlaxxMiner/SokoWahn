@@ -14,9 +14,9 @@ namespace SokoWahnLib.Rooms.Merger
     public readonly uint oPortalIndexPlayer;
 
     /// <summary>
-    /// gibt an, ob der Spieler zusammen mit einer Kiste durch das Portal gelaufen ist
+    /// gibt an, ob der Spieler eine Kiste aus den Raum geschoben hat
     /// </summary>
-    public readonly bool leaveWithBox;
+    public readonly bool exportedBox;
 
     /// <summary>
     /// Kistenzustand beim verlassen des Raumes
@@ -27,13 +27,22 @@ namespace SokoWahnLib.Rooms.Merger
     /// Konstruktor
     /// </summary>
     /// <param name="oPortalIndexPlayer">Portalnummer, worüber der Spieler den Raum verlassen hat</param>
-    /// <param name="leaveWithBox">gibt an, ob der Spieler zusammen mit einer Kiste durch das Portal gelaufen ist</param>
+    /// <param name="exportedBox">gibt an, ob der Spieler eine Kiste aus den Raum geschoben hat</param>
     /// <param name="state">Kistenzustand beim verlassen des Raumes</param>
-    public DeadlockTask(uint oPortalIndexPlayer, bool leaveWithBox, ulong state)
+    public DeadlockTask(uint oPortalIndexPlayer, bool exportedBox, ulong state)
     {
       this.oPortalIndexPlayer = oPortalIndexPlayer;
-      this.leaveWithBox = leaveWithBox;
+      this.exportedBox = exportedBox;
       this.state = state;
+    }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { oPortalIndexPlayer, exportBox = exportedBox, state }.ToString();
     }
   }
 }

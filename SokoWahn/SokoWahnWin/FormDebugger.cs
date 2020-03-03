@@ -1031,8 +1031,8 @@ namespace SokoWahnWin
         if (roomNetwork.rooms.Length == 56) // Test-Mode
         {
           mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
-               .Concat(roomNetwork.rooms.Skip(36).Take(8))
-               .Concat(roomNetwork.rooms.Skip(46).Take(5)).ToArray();
+               .Concat(roomNetwork.rooms.Skip(40).Take(4))
+               .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
         }
         else
         {
