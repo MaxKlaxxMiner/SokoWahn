@@ -15,7 +15,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// Liste mit allen Zuständen im Raum
     /// </summary>
-    public readonly StateList stateList;
+    protected readonly StateList stateList;
 
     /// <summary>
     /// Konstruktor
@@ -100,5 +100,14 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public abstract void Dispose();
     #endregion
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { Count }.ToString();
+    }
   }
 }

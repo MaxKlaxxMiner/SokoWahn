@@ -39,7 +39,7 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt an, ob man nicht mehr durch das Portal laufen darf, wenn zuvor eine Kiste durchgeschoben wurde
     /// </summary>
-    public bool blockedBox;
+    public readonly bool blockedBox;
     /// <summary>
     /// das gegenüberliegende/zurückführende Portal
     /// </summary>
@@ -101,6 +101,20 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public void Dispose()
     {
+      if (stateBoxSwap != null)
+      {
+        stateBoxSwap.Dispose();
+        stateBoxSwap = null;
+      }
+
+      if (variantStateDict != null)
+      {
+        variantStateDict.Dispose();
+        variantStateDict = null;
+      }
+
+      oppositePortal = null;
+      fromRoom = null;
     }
 
     /// <summary>

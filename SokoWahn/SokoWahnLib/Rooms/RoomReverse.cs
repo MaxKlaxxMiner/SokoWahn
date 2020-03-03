@@ -5,7 +5,7 @@ namespace SokoWahnLib.Rooms
   /// <summary>
   /// Klasse zum Erstellen und Speichern von Rückwärts-Varianten
   /// </summary>
-  public sealed class RoomReverse
+  public sealed class RoomReverse : IDisposable
   {
     /// <summary>
     /// merkt sich den zugehörigen Raum der Varianten
@@ -13,9 +13,14 @@ namespace SokoWahnLib.Rooms
     readonly Room room;
 
     /// <summary>
+    /// merkt sich die Zustandsänderungen des Raumes pro Portal, wenn Kisten wieder herrausgezogen werden
+    /// </summary>
+    readonly StateBoxSwap[] portalStateSwaps;
+
+    /// <summary>
     /// merkt sich die gesammelten Daten der Rückwärts-Varianten
     /// </summary>
-    VariantMap[] variantMap;
+    readonly VariantMap[] variantMap;
 
     /// <summary>
     /// Konstruktor
@@ -25,6 +30,8 @@ namespace SokoWahnLib.Rooms
     {
       if (room == null) throw new NullReferenceException("room");
       this.room = room;
+      portalStateSwaps = new StateBoxSwap[room.incomingPortals.Length];
+      variantMap = new VariantMap[room.variantList.Count];
     }
 
     #region # struct VariantMap // Struktur zum Merken der jeweiligen Varianten und Zustand/Portal Kombinationen
@@ -76,13 +83,33 @@ namespace SokoWahnLib.Rooms
     }
     #endregion
 
+    #region # public void Step1_FillPortalStateSwaps() // Schritt 1: füllt die Zustandsänderungen des Raumes pro Portal, wenn Kisten wieder herrausgezogen werden
     /// <summary>
-    /// Schritt 1: sammelt die Varianten der jeweiligen Raumzustände
+    /// Schritt 1: füllt die Zustandsänderungen des Raumes pro Portal, wenn Kisten wieder herrausgezogen werden
     /// </summary>
-    public void Step1_CollectVariantsPerState()
+    public void Step1_FillPortalStateSwaps()
+    {
+      for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+      {
+        var stateSwap = room.incomingPortals[iPortalIndex].stateBoxSwap;
+        var newStateSwap = portalStateSwaps[iPortalIndex] = new StateBoxSwapNormal(room.stateList);
+        foreach (ulong oldState in stateSwap.GetAllKeys())
+        {
+          ulong newState = stateSwap.Get(oldState);
+          newStateSwap.Add(newState, oldState);
+        }
+      }
+    }
+    #endregion
+
+    #region # public void Step2_CollectVariantsPerState() // Schritt 2: sammelt die Varianten der jeweiligen Raumzustände
+    /// <summary>
+    /// Schritt 2: sammelt die Varianten der jeweiligen Raumzustände
+    /// </summary>
+    public void Step2_CollectVariantsPerState()
     {
       var variantList = room.variantList;
-      var variantMap = new VariantMap[variantList.Count];
+      var variantMap = this.variantMap;
       uint variantMapIndex = 0;
 
       // --- Startvarianten abarbeiten ---
@@ -132,8 +159,32 @@ namespace SokoWahnLib.Rooms
         diff = (x.onlyMoves ? 0 : 1) - (y.onlyMoves ? 0 : 1);
         return diff != 0 ? diff : x.variant.CompareTo(y.variant);
       });
-
-      this.variantMap = variantMap;
     }
+    #endregion
+
+    #region # // --- Dispose ---
+    /// <summary>
+    /// gibt alle Ressourcen wieder frei
+    /// </summary>
+    public void Dispose()
+    {
+      for (uint iPortalIndex = 0; iPortalIndex < portalStateSwaps.Length; iPortalIndex++)
+      {
+        if (portalStateSwaps[iPortalIndex] != null)
+        {
+          portalStateSwaps[iPortalIndex].Dispose();
+          portalStateSwaps[iPortalIndex] = null;
+        }
+      }
+    }
+
+    /// <summary>
+    /// Destruktor
+    /// </summary>
+    ~RoomReverse()
+    {
+      Dispose();
+    }
+    #endregion
   }
 }

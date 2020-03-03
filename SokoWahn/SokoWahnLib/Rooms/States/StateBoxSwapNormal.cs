@@ -39,7 +39,8 @@ namespace SokoWahnLib.Rooms
       Debug.Assert(newState < stateList.Count);
       Debug.Assert(oldState != newState);
 
-      Debug.Assert(stateList.Get(oldState).Length + 1 == stateList.Get(newState).Length); // Kisten-Anzahl muss beim neuen Zustand genau um eins höher sein
+      Debug.Assert(stateList.Get(oldState).Length + 1 == stateList.Get(newState).Length   // Kisten-Anzahl muss beim neuen Zustand genau um eins höher sein
+                || stateList.Get(oldState).Length == stateList.Get(newState).Length + 1); // oder eins niedriger, wenn Kisten herrausgezeogen werden
       Debug.Assert(stateList.Get(oldState).Concat(stateList.Get(newState)).GroupBy(x => x).Count(x => x.Count() != 2) == 1); // nur eine Kistenänderung darf enthalten sein
 
       data.Add(oldState, newState);

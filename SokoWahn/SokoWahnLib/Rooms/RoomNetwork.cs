@@ -171,6 +171,10 @@ namespace SokoWahnLib.Rooms
       if (Tools.TickRefresh() && !mergeInfo("Merge: update rooms")) return;
       roomMerger.Step6_UpdateRooms();
 
+      // Ressourcen der alten Räume wieder freigeben
+      room1.Dispose();
+      room2.Dispose();
+
       if (Tools.TickRefresh() && !mergeInfo("Merge: validate")) return;
       Validate(); // einfache Validierung der Räume und Portale
 

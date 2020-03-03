@@ -1,7 +1,7 @@
 ﻿namespace SokoWahnLib.Rooms.Merger
 {
   /// <summary>
-  /// Aufgabe zum suchen nach unlösbaren Varianten
+  /// Aufgabe zum Suchen nach unlösbaren Varianten
   /// </summary>
   public struct DeadlockTask
   {

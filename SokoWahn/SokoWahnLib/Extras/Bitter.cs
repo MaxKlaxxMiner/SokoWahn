@@ -490,5 +490,14 @@ namespace SokoWahnLib
     {
       Marshal.FreeHGlobal((IntPtr)data);
     }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { bitCount, bytes = (bitCount + 63) / 64 * 8 }.ToString();
+    }
   }
 }
