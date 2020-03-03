@@ -59,27 +59,38 @@ namespace SokoWahnLib.Rooms.Merger
     public void Step2_ScanForward()
     {
       var tasks = new Stack<DeadlockTask>();
-      var variantList = room.variantList;
+      var room = this.room;
       var usedVariants = usedVariantsForward;
 
-
+      #region # // --- erste Aufgaben sammeln ---
       if (room.startVariantCount > 0) // Start-Varianten vorhanden?
       {
         usedVariants.SetBits(0, room.startVariantCount);
-        #region # // --- erste Aufgaben sammeln ---
         for (ulong variant = 0; variant < room.startVariantCount; variant++)
         {
-          var variantData = variantList.GetData(variant);
+          var variantData = room.variantList.GetData(variant);
+          if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten können nicht weiter verfolgt werden
 
-
+          var newTask = new DeadlockTask
+          (
+            variantData.oPortalIndexPlayer,
+            variantData.oPortalIndexBoxes.Contains(variantData.oPortalIndexPlayer),
+            variantData.newState
+          );
+          tasks.Push(newTask);
         }
-        #endregion
       }
       else
       {
-        // todo: Start-Zustand verwenden für erste Varianten der eingehenden Portale
-        throw new NotImplementedException();
+        var newTask = new DeadlockTask
+        (
+          uint.MaxValue,
+          false,
+          room.startState
+        );
+        tasks.Push(newTask);
       }
+      #endregion
     }
 
     /// <summary>

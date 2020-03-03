@@ -13,7 +13,7 @@ namespace SokoWahnLib
   /// <summary>
   /// Klasse mit Hilfsmethoden
   /// </summary>
-  public class Tools
+  public static class Tools
   {
     #region # // --- TickRefresh() ---
     /// <summary>

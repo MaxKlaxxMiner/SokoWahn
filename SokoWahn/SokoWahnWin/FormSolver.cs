@@ -147,7 +147,7 @@ namespace SokoWahnWin
       var variantPath = new List<VariantPathElement> { el };
       foreach (int nextPlayerPos in playerPosis)
       {
-        if (el.boxes.Any(pos => pos == nextPlayerPos)) // wurde eine Kiste verschoben?
+        if (el.boxes.Contains(nextPlayerPos)) // wurde eine Kiste verschoben?
         {
           el = new VariantPathElement(nextPlayerPos, el.boxes.Select(pos => pos == nextPlayerPos ? nextPlayerPos - el.playerPos + pos : pos).ToArray());
         }

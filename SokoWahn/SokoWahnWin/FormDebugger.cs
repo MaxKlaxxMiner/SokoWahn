@@ -364,7 +364,7 @@ namespace SokoWahnWin
                   case 'd': newPlayerPos = el.playerPos + room.field.Width; break; // nach unten
                   default: throw new Exception("invalid Path-Char: " + c);
                 }
-                if (el.boxes.Any(pos => pos == newPlayerPos)) // wurde eine Kiste verschoben?
+                if (el.boxes.Contains(newPlayerPos)) // wurde eine Kiste verschoben?
                 {
                   el = new VariantPathElement(newPlayerPos, el.boxes.Select(pos => pos == newPlayerPos ? newPlayerPos - el.playerPos + pos : pos).ToArray());
                 }
@@ -427,7 +427,7 @@ namespace SokoWahnWin
                   case 'd': newPlayerPos = el.playerPos + room.field.Width; break; // nach unten
                   default: throw new Exception("invalid Path-Char: " + c);
                 }
-                if (el.boxes.Any(pos => pos == newPlayerPos)) // wurde eine Kiste verschoben?
+                if (el.boxes.Contains(newPlayerPos)) // wurde eine Kiste verschoben?
                 {
                   el = new VariantPathElement(newPlayerPos, el.boxes.Select(pos => pos == newPlayerPos ? newPlayerPos - el.playerPos + pos : pos).ToArray());
                 }
