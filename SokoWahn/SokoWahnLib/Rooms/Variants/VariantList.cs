@@ -68,5 +68,14 @@ namespace SokoWahnLib.Rooms
     /// </summary>
     public abstract void Dispose();
     #endregion
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { Count, portalCount }.ToString();
+    }
   }
 }

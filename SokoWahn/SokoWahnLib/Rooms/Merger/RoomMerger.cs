@@ -32,7 +32,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// merkt sich den neuen Raum, welcher neu erstellt wird
     /// </summary>
-    readonly Room newRoom;
+    public readonly Room newRoom;
     /// <summary>
     /// merkt sich die Portale der beiden alten Räume nach neuen Portal-Index
     /// </summary>
@@ -299,135 +299,9 @@ namespace SokoWahnLib.Rooms.Merger
     /// </summary>
     public void Step5_OptimizeStates()
     {
-      var room = newRoom;
-      var stateList = room.stateList;
-      var variantList = room.variantList;
-
-      using (var usingStates = new Bitter(stateList.Count))
-      {
-        usingStates.SetBit(0); // ersten Zustand immer pauschal markieren (End-Zustand)
-        usingStates.SetBit(room.startState); // Start-Zustand ebenfalls markieren
-
-        // --- alle Varianten prüfen ---
-        for (ulong variant = 0; variant < variantList.Count; variant++)
-        {
-          Debug.Assert(variant < variantList.Count);
-          var v = variantList.GetData(variant);
-
-          Debug.Assert(v.oldState < stateList.Count);
-          usingStates.SetBit(v.oldState);
-
-          Debug.Assert(v.newState < stateList.Count);
-          usingStates.SetBit(v.newState);
-        }
-
-        // --- Zustandsveränderungen durch reingeschobene Kisten hinzufügen ---
-        foreach (var iPortal in room.incomingPortals)
-        {
-          foreach (ulong state in iPortal.stateBoxSwap.GetAllKeys())
-          {
-            usingStates.SetBit(state);
-            usingStates.SetBit(iPortal.stateBoxSwap.Get(state));
-          }
-        }
-
-        if (usingStates.CountMarkedBits(0) != usingStates.Length)
-        {
-          var skip = new SkipMapper(usingStates);
-          RenewStates(room, skip);
-        }
-      }
+      OptimizeTools.RemoveUnusedStates(newRoom);
 
       Debug.Assert(newRoom.startVariantCount > 0 || (newRoom.startVariantCount + srcRoom1.startVariantCount + srcRoom2.startVariantCount == 0));
-    }
-
-    /// <summary>
-    /// erneuert die Zustände im Raum und deren Verlinkungen
-    /// </summary>
-    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
-    /// <param name="skip">Liste mit allen überpringbaren bzw. weiter zu verwendenden Zuständen</param>
-    static void RenewStates(Room room, SkipMapper skip)
-    {
-      Debug.Assert(skip.usedCount > 0);
-      Debug.Assert(skip.usedCount < (uint)skip.map.Length);
-
-      // --- Startzustand des Raumes neu setzen ---
-      room.startState = skip.map[room.startState];
-
-      // --- Zustandsliste neu erstellen und gefiltert befüllen ---
-      var oldStates = room.stateList;
-      var newStates = new StateListNormal(room.fieldPosis, room.goalPosis);
-      for (ulong state = 0; state < oldStates.Count; state++)
-      {
-        ulong map = skip.map[state];
-        if (map == ulong.MaxValue) continue;
-        Debug.Assert(map == newStates.Count);
-        newStates.Add(oldStates.Get(state));
-        Debug.Assert(newStates.Get(map).Length == oldStates.Get(state).Length);
-      }
-      Debug.Assert(newStates.Count == skip.usedCount);
-      oldStates.Dispose();
-      room.stateList = newStates;
-
-      // --- verlinkte Zustände innerhalb der Varianten neu setzen ---
-      var oldVariants = room.variantList;
-      var newVariants = new VariantListNormal(oldVariants.portalCount);
-      for (ulong variant = 0; variant < oldVariants.Count; variant++)
-      {
-        var v = oldVariants.GetData(variant);
-        Debug.Assert(v.oldState < oldStates.Count);
-        Debug.Assert(skip.map[v.oldState] < newStates.Count);
-        Debug.Assert(v.newState < oldStates.Count);
-        Debug.Assert(skip.map[v.newState] < newStates.Count);
-        Debug.Assert(variant == newVariants.Count);
-        newVariants.Add(skip.map[v.oldState], v.moves, v.pushes, v.oPortalIndexBoxes, v.oPortalIndexPlayer, skip.map[v.newState], v.path);
-      }
-      Debug.Assert(newVariants.Count == oldVariants.Count);
-      oldVariants.Dispose();
-      room.variantList = newVariants;
-
-      // --- verlinkte Zustände in den Portalen neu setzen ---
-      foreach (var portal in room.incomingPortals)
-      {
-        // --- stateBoxSwap übertragen ---
-        var oldSwap = portal.stateBoxSwap;
-        var newSwap = new StateBoxSwapNormal(room.stateList);
-        ulong skipSwaps = 0;
-        foreach (ulong oldKey in oldSwap.GetAllKeys())
-        {
-          ulong newKey = skip.map[oldKey];
-          if (newKey == ulong.MaxValue) { skipSwaps++; continue; } // nicht mehr gültige Swaps überspringen
-          Debug.Assert(newKey < room.stateList.Count);
-          ulong oldState = oldSwap.Get(oldKey);
-          Debug.Assert(oldState != oldKey);
-          ulong newState = skip.map[oldState];
-          if (newState == ulong.MaxValue) { skipSwaps++; continue; }  // nicht mehr gültige Swaps überspringen
-          Debug.Assert(newState < room.stateList.Count);
-          newSwap.Add(newKey, newState);
-        }
-        Debug.Assert(newSwap.Count + skipSwaps == oldSwap.Count);
-        oldSwap.Dispose();
-        portal.stateBoxSwap = newSwap;
-
-        // --- variantStateDict übertragen ---
-        var oldDict = portal.variantStateDict;
-        var newDict = new VariantStateDictNormal(room.stateList, room.variantList);
-        foreach (ulong oldState in oldDict.GetAllStates())
-        {
-          Debug.Assert(oldState < (uint)skip.map.Length);
-          ulong newState = skip.map[oldState];
-          Debug.Assert(newState < room.stateList.Count);
-          foreach (ulong variant in oldDict.GetVariantSpan(oldState).AsEnumerable())
-          {
-            Debug.Assert(variant < room.variantList.Count);
-            newDict.Add(newState, variant);
-          }
-          Debug.Assert(oldDict.GetVariantSpan(oldState).variantCount == newDict.GetVariantSpan(newState).variantCount);
-        }
-        Debug.Assert(newDict.GetAllStates().Count() == oldDict.GetAllStates().Count());
-        oldDict.Dispose();
-        portal.variantStateDict = newDict;
-      }
     }
     #endregion
 

@@ -178,6 +178,14 @@ namespace SokoWahnLib.Rooms
       if (Tools.TickRefresh() && !mergeInfo("Merge: validate")) return;
       Validate(); // einfache Validierung der Räume und Portale
 
+      //if (!mergeInfo("Merge: deadlock")) return;
+
+      //var scanner = new RoomDeadlockScanner(roomMerger.newRoom);
+      //scanner.Step1_CreateReverseMap();
+      //scanner.Step2_ScanForward();
+      //scanner.Step3_ScanBackward();
+      //scanner.Step4_RemoveUnusedVariants();
+
       mergeInfo("Merge: ok, remain: " + rooms.Length);
     }
     #endregion
@@ -361,6 +369,7 @@ namespace SokoWahnLib.Rooms
                   if (boxSwap.Key >= usingStates.Length) throw new IndexOutOfRangeException();
                   if (boxSwap.Value >= usingStates.Length) throw new IndexOutOfRangeException();
                   if (boxSwap.Key == boxSwap.Value) throw new Exception("unnötige BoxSwap erkannt");
+                  usingStates.SetBit(boxSwap.Key);
                   //usingStates.SetBit(boxSwap.Value); // -> wird doch ignoriert, da der Ziel-Zustand aus dem eventuell erkannten Zustand nicht mehr erreichbar ist
                 }
                 currentPortalIndex++;
@@ -370,10 +379,12 @@ namespace SokoWahnLib.Rooms
               if (usingStates.CountMarkedBits(0) != usingStates.Length)
               {
                 currentState = usingStates.CountMarkedBits(0);
+                currentVariant = ulong.MaxValue;
                 throw new Exception("nicht alle Zustände werden verwendet");
               }
               if (usingVariants.CountMarkedBits(0) != usingVariants.Length)
               {
+                currentState = ulong.MaxValue;
                 currentVariant = usingVariants.CountMarkedBits(0);
                 throw new Exception("nicht alle Varianten werden verwendet");
               }
@@ -382,10 +393,10 @@ namespace SokoWahnLib.Rooms
         }
         catch (Exception exc)
         {
-          string txt = exc.Message + "\r\n\r\nRoom-Index " + currentRoomIndex;
-          if (currentState < ulong.MaxValue) txt += "\r\nState " + (currentState == 0 ? "finish" : currentState.ToString());
-          if (currentPortalIndex >= 0) txt += "\r\nPortal-Index " + currentPortalIndex;
-          if (currentVariant < ulong.MaxValue) txt += "\r\nVariant " + currentVariant;
+          string txt = exc.Message + "\r\n\r\nRoom-Index: " + currentRoomIndex;
+          if (currentState < ulong.MaxValue) txt += "\r\nState: " + (currentState == 0 ? "finish" : currentState.ToString());
+          if (currentPortalIndex >= 0) txt += "\r\nPortal-Index: " + currentPortalIndex;
+          if (currentVariant < ulong.MaxValue) txt += "\r\nVariant: " + currentVariant;
           throw new Exception(txt + "\r\n");
         }
       }

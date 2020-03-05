@@ -166,6 +166,16 @@ namespace SokoWahnLib.Rooms.Merger
     {
     }
 
+    /// <summary>
+    /// entfernt unbenutzte Varianten
+    /// </summary>
+    public void Step4_RemoveUnusedVariants()
+    {
+      OptimizeTools.RenewVariants(room, new SkipMapper(usedVariantsForward));
+
+      OptimizeTools.RemoveUnusedStates(room);
+    }
+
     #region # // --- Dispose ---
     /// <summary>
     /// gibt alle Ressourcen wieder frei

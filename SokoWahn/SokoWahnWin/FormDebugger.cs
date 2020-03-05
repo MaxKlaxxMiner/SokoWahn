@@ -256,10 +256,10 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
-      //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
+      roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
       //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //roomNetwork = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
 
@@ -378,7 +378,7 @@ namespace SokoWahnWin
 
               if (variantData.oPortalIndexBoxes.Length > 0) path += " > " + string.Join(",", variantData.oPortalIndexBoxes.Select(x => (x + 1) + "" + room.outgoingPortals[x].dirChar));
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " -> " + variantData.newState + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -396,7 +396,7 @@ namespace SokoWahnWin
           var boxState = portal.stateBoxSwap.Get(stateItem.state);
           if (boxState != stateItem.state) // Variante mit reinschiebbarer Kiste vorhanden?
           {
-            listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ")", new[]
+            listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ") -> " + boxState, new[]
             {
               new VariantPathElement(portal.fromPos + portal.fromPos - portal.toPos, room.stateList.Get(stateItem.state).Concat(new [] { portal.fromPos }).ToArray()),
               new VariantPathElement(portal.fromPos, room.stateList.Get(boxState)),
@@ -441,7 +441,7 @@ namespace SokoWahnWin
 
               if (variantData.oPortalIndexBoxes.Length > 0) path += " > " + string.Join(",", variantData.oPortalIndexBoxes.Select(x => (x + 1) + "" + room.outgoingPortals[x].dirChar));
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " -> " + variantData.newState + " (" + path + ")", variantPath.ToArray()));
             }
             else
             {
@@ -683,339 +683,9 @@ namespace SokoWahnWin
     }
     #endregion
 
-    #region # // --- Optimize ---
     /// <summary>
-    /// erster Optimierungsschritt
+    /// merkt sich, ob eine Merge-Vorgang bereits aktiv arbeitet
     /// </summary>
-    /// <param name="room">Raum, welcher optimiert werden soll</param>
-    /// <returns>true, wenn etwas optimiert werden konnte</returns>
-    static bool OptimizeStep1(Room room)
-    {
-      var stateList = room.stateList;
-      var variantList = room.variantList;
-
-      var boxPortals = new HashSet<uint>(); // merkt sich die Portale, wohin Kisten geschoben wurden
-
-      #region # // --- befüllen: boxPortals ---
-      // --- alle Varianten prüfen (inkl. Start-Varianten) ---
-      for (ulong variant = 0; variant < variantList.Count; variant++)
-      {
-        var variantData = variantList.GetData(variant);
-        if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
-        foreach (var boxPortal in variantData.oPortalIndexBoxes) boxPortals.Add(boxPortal);
-      }
-      #endregion
-
-      #region # // --- Kisten-Varianten entfernen, wenn der benachbarte Raum keine Kiste aufnehmen kann ---
-      using (var killVariants = new Bitter(variantList.Count))
-      {
-        // --- Start-Varianten prüfen ---
-        for (ulong variant = 0; variant < room.startVariantCount; variant++)
-        {
-          var variantData = variantList.GetData(variant);
-          if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
-
-          foreach (var boxPortal in variantData.oPortalIndexBoxes)
-          {
-            var oPortal = room.outgoingPortals[boxPortal];
-            if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
-            {
-              killVariants.SetBit(variant); // Variante als löschbar markieren
-            }
-          }
-        }
-
-        foreach (var st in stateList)
-        {
-          if (st.Value.Length == 0) continue; // keine Kisten-Zustände im Raum vorhanden
-
-          // --- Varianten der Portale prüfen ---
-          foreach (var portal in room.incomingPortals)
-          {
-            foreach (var variant in portal.variantStateDict.GetVariantSpan(st.Key).AsEnumerable())
-            {
-              var variantData = variantList.GetData(variant);
-              if (variantData.oPortalIndexBoxes.Length == 0) continue; // keine Kiste hat bei dieser Variante den Raum verlassen
-
-              foreach (var boxPortal in variantData.oPortalIndexBoxes)
-              {
-                var oPortal = room.outgoingPortals[boxPortal];
-                if (oPortal.stateBoxSwap.Count == 0) // keine Aufnahmemöglichkeit von Kisten erkannt?
-                {
-                  killVariants.SetBit(variant); // Variante als löschbar markieren
-                }
-              }
-            }
-          }
-        }
-
-        ulong freeBits = killVariants.CountFreeBits(0);
-        if (freeBits < killVariants.Length) // als gelöscht markierte Varianten erkannt?
-        {
-          var skip = new SkipMapper(killVariants, false);
-          RenewVariants(room, skip);
-          return true;
-        }
-      }
-      #endregion
-
-      return false;
-    }
-
-    /// <summary>
-    /// Optimierung: entfernt nicht mehr benutzte/verlinkte Zustände
-    /// </summary>
-    /// <param name="room">Raum, welcher optimiert werden soll</param>
-    /// <returns>true, wenn veraltete Zustände erkannt und entfernt wurden</returns>
-    static bool OptimizeUnusedStates(Room room)
-    {
-      var stateList = room.stateList;
-      var variantList = room.variantList;
-
-      using (var usingStates = new Bitter(stateList.Count))
-      {
-        usingStates.SetBit(0); // ersten Zustand immer pauschal markieren (End-Zustand)
-        usingStates.SetBit(room.startState); // Start-Zustand ebenfalls markieren
-
-        // Start-Varianten durchsuchen
-        for (ulong variant = 0; variant < room.startVariantCount; variant++)
-        {
-          Debug.Assert(variant < variantList.Count);
-          var v = variantList.GetData(variant);
-
-          Debug.Assert(v.oldState < stateList.Count);
-          usingStates.SetBit(v.oldState);
-
-          Debug.Assert(v.newState < stateList.Count);
-          usingStates.SetBit(v.newState);
-        }
-
-        // Portal-Varianten durchsuchen
-        foreach (var portal in room.incomingPortals)
-        {
-          foreach (var state in portal.variantStateDict.GetAllStates())
-          {
-            Debug.Assert(state < usingStates.Length);
-            foreach (var variant in portal.variantStateDict.GetVariantSpan(state).AsEnumerable())
-            {
-              Debug.Assert(variant < variantList.Count);
-              usingStates.SetBit(state);
-            }
-          }
-        }
-
-        if (usingStates.CountMarkedBits(0) != usingStates.Length)
-        {
-          var skip = new SkipMapper(usingStates);
-          RenewStates(room, skip);
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    /// <summary>
-    /// entfernt alle unnötigen Kistenzustände aus einem Raum
-    /// </summary>
-    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
-    /// <returns>true, wenn Kisten-Zustände entfernt wurden</returns>
-    static bool RemoveBoxStates(Room room)
-    {
-      Debug.Assert(room.fieldPosis.All(pos => !room.field.IsGoal(pos)));
-
-      var stateList = room.stateList;
-      var variantList = room.variantList;
-
-      using (var usingStates = new Bitter(stateList.Count))
-      {
-        for (ulong state = 0; state < stateList.Count; state++)
-        {
-          if (stateList.Get(state).Length == 0) usingStates.SetBit(state);
-        }
-
-        if (usingStates.CountMarkedBits(0) != usingStates.Length)
-        {
-          var skipStates = new SkipMapper(usingStates);
-          Debug.Assert(skipStates.map[0] < usingStates.Length);
-
-          using (var usingVariants = new Bitter(variantList.Count))
-          {
-            for (ulong variant = 0; variant < variantList.Count; variant++)
-            {
-              var variantData = variantList.GetData(variant);
-              if (variantData.oPortalIndexBoxes.Length == 0 && skipStates.map[variantData.oldState] != ulong.MaxValue && skipStates.map[variantData.newState] != ulong.MaxValue)
-              {
-                usingVariants.SetBit(variant);
-              }
-            }
-
-            ulong markedBits = usingVariants.CountMarkedBits(0);
-            if (markedBits < usingVariants.Length)
-            {
-              var skipVariants = new SkipMapper(usingVariants);
-              RenewVariants(room, skipVariants);
-            }
-          }
-
-          RenewStates(room, skipStates);
-          return true;
-        }
-      }
-
-      return false;
-    }
-
-    /// <summary>
-    /// erneuert die Varianten im Raum und deren Verlinkungen
-    /// </summary>
-    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
-    /// <param name="skip">Liste mit allen überspringbaren bzw. weiter zu verwendenden Varianten</param>
-    static void RenewVariants(Room room, SkipMapper skip)
-    {
-      Debug.Assert(skip.usedCount > 0);
-      Debug.Assert(skip.usedCount < (uint)skip.map.Length);
-
-      // --- Variantenliste neu erstellen und gefiltert befüllen ---
-      var oldVariants = room.variantList;
-      var newVariants = new VariantListNormal((uint)room.incomingPortals.Length);
-      for (ulong variant = 0; variant < oldVariants.Count; variant++)
-      {
-        ulong map = skip.map[variant];
-        if (map == ulong.MaxValue) continue;
-        Debug.Assert(map == newVariants.Count);
-        var v = oldVariants.GetData(variant);
-        newVariants.Add(v.oldState, v.moves, v.pushes, v.oPortalIndexBoxes, v.oPortalIndexPlayer, v.newState, v.path);
-      }
-      Debug.Assert(newVariants.Count == skip.usedCount);
-      oldVariants.Dispose();
-      room.variantList = newVariants;
-
-      // --- Start-Varianten neu zählen ---
-      ulong newStartVariants = 0;
-      for (ulong i = room.startVariantCount - 1; i < room.startVariantCount; i--)
-      {
-        if (skip.map[i] < ulong.MaxValue) newStartVariants++;
-      }
-      room.startVariantCount = newStartVariants;
-
-      // --- verlinkte Varianten in den Portalen neu setzen ---
-      foreach (var portal in room.incomingPortals)
-      {
-        // --- variantStateDict übertragen ---
-        var oldDict = portal.variantStateDict;
-        var newDict = new VariantStateDictNormal(room.stateList, room.variantList);
-        foreach (ulong state in oldDict.GetAllStates())
-        {
-          ulong skipVariants = 0;
-          foreach (ulong variant in oldDict.GetVariantSpan(state).AsEnumerable())
-          {
-            Debug.Assert(variant < (uint)skip.map.Length);
-            if (skip.map[variant] == ulong.MaxValue) // Variante wird nicht mehr verwendet?
-            {
-              skipVariants++;
-              continue;
-            }
-            Debug.Assert(skip.map[variant] < room.variantList.Count);
-            newDict.Add(state, skip.map[variant]);
-          }
-          Debug.Assert(oldDict.GetVariantSpan(state).variantCount == newDict.GetVariantSpan(state).variantCount + skipVariants);
-        }
-        oldDict.Dispose();
-        portal.variantStateDict = newDict;
-      }
-    }
-
-    /// <summary>
-    /// erneuert die Zustände im Raum und deren Verlinkungen
-    /// </summary>
-    /// <param name="room">Raum, welcher bearbeitet werden soll</param>
-    /// <param name="skip">Liste mit allen überpringbaren bzw. weiter zu verwendenden Zuständen</param>
-    static void RenewStates(Room room, SkipMapper skip)
-    {
-      Debug.Assert(skip.usedCount > 0);
-      Debug.Assert(skip.usedCount < (uint)skip.map.Length);
-
-      // --- Startzustand des Raumes neu setzen ---
-      room.startState = skip.map[room.startState];
-
-      // --- Zustandsliste neu erstellen und gefiltert befüllen ---
-      var oldStates = room.stateList;
-      var newStates = new StateListNormal(room.fieldPosis, room.goalPosis);
-      for (ulong state = 0; state < oldStates.Count; state++)
-      {
-        ulong map = skip.map[state];
-        if (map == ulong.MaxValue) continue;
-        Debug.Assert(map == newStates.Count);
-        newStates.Add(oldStates.Get(state));
-        Debug.Assert(newStates.Get(map).Length == oldStates.Get(state).Length);
-      }
-      Debug.Assert(newStates.Count == skip.usedCount);
-      oldStates.Dispose();
-      room.stateList = newStates;
-
-      // --- verlinkte Zustände innerhalb der Varianten neu setzen ---
-      var oldVariants = room.variantList;
-      var newVariants = new VariantListNormal(oldVariants.portalCount);
-      for (ulong variant = 0; variant < oldVariants.Count; variant++)
-      {
-        var v = oldVariants.GetData(variant);
-        Debug.Assert(v.oldState < oldStates.Count);
-        Debug.Assert(skip.map[v.oldState] < newStates.Count);
-        Debug.Assert(v.newState < oldStates.Count);
-        Debug.Assert(skip.map[v.newState] < newStates.Count);
-        Debug.Assert(variant == newVariants.Count);
-        newVariants.Add(skip.map[v.oldState], v.moves, v.pushes, v.oPortalIndexBoxes, v.oPortalIndexPlayer, skip.map[v.newState], v.path);
-      }
-      Debug.Assert(newVariants.Count == oldVariants.Count);
-      oldVariants.Dispose();
-      room.variantList = newVariants;
-
-      // --- verlinkte Zustände in den Portalen neu setzen ---
-      foreach (var portal in room.incomingPortals)
-      {
-        // --- stateBoxSwap übertragen ---
-        var oldSwap = portal.stateBoxSwap;
-        var newSwap = new StateBoxSwapNormal(room.stateList);
-        ulong skipSwaps = 0;
-        foreach (ulong oldKey in oldSwap.GetAllKeys())
-        {
-          ulong newKey = skip.map[oldKey];
-          if (newKey == ulong.MaxValue) { skipSwaps++; continue; } // nicht mehr gültige Swaps überspringen
-          Debug.Assert(newKey < room.stateList.Count);
-          ulong oldState = oldSwap.Get(oldKey);
-          Debug.Assert(oldState != oldKey);
-          ulong newState = skip.map[oldState];
-          if (newState == ulong.MaxValue) { skipSwaps++; continue; }  // nicht mehr gültige Swaps überspringen
-          Debug.Assert(newState < room.stateList.Count);
-          newSwap.Add(newKey, newState);
-        }
-        Debug.Assert(newSwap.Count + skipSwaps == oldSwap.Count);
-        oldSwap.Dispose();
-        portal.stateBoxSwap = newSwap;
-
-        // --- variantStateDict übertragen ---
-        var oldDict = portal.variantStateDict;
-        var newDict = new VariantStateDictNormal(room.stateList, room.variantList);
-        foreach (ulong oldState in oldDict.GetAllStates())
-        {
-          Debug.Assert(oldState < (uint)skip.map.Length);
-          ulong newState = skip.map[oldState];
-          Debug.Assert(newState < room.stateList.Count);
-          foreach (ulong variant in oldDict.GetVariantSpan(oldState).AsEnumerable())
-          {
-            Debug.Assert(variant < room.variantList.Count);
-            newDict.Add(newState, variant);
-          }
-          Debug.Assert(oldDict.GetVariantSpan(oldState).variantCount == newDict.GetVariantSpan(newState).variantCount);
-        }
-        Debug.Assert(newDict.GetAllStates().Count() == oldDict.GetAllStates().Count());
-        oldDict.Dispose();
-        portal.variantStateDict = newDict;
-      }
-    }
-    #endregion
-
     bool activeMerge;
     /// <summary>
     /// Merge-Button
@@ -1028,13 +698,13 @@ namespace SokoWahnWin
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
       if (mergeRooms.Length == 0)
       {
-        if (roomNetwork.rooms.Length == 56) // Test-Mode
-        {
-          mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
-               .Concat(roomNetwork.rooms.Skip(40).Take(4))
-               .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
-        }
-        else
+        //if (roomNetwork.rooms.Length == 56) // Test-Mode
+        //{
+        //  mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
+        //       .Concat(roomNetwork.rooms.Skip(40).Take(4))
+        //       .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
+        //}
+        //else
         {
           mergeRooms = roomNetwork.rooms.ToArray(); // alle Räume mergen, wenn keine ausgewählt wurden
         }
@@ -1161,24 +831,33 @@ namespace SokoWahnWin
     {
       if (activeMerge) return;
 
-      if (roomNetwork.rooms.Length == 56)
-      {
-        buttonMerge_Click(sender, e);
-      }
+      var optimizeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
+
+      //if (roomNetwork.rooms.Length == 56)
+      //{
+      //  buttonMerge_Click(sender, e);
+      //  optimizeRooms = new[] { roomNetwork.rooms[23] };
+      //}
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
       listRooms.EndUpdate();
 
-      var room = roomNetwork.rooms[23];
+      ulong oldValue = 0;
+      ulong newValue = 0;
+      foreach (var room in optimizeRooms)
+      {
+        oldValue += room.variantList.Count + room.stateList.Count;
+        var scanner = new RoomDeadlockScanner(room);
 
-      var scanner = new RoomDeadlockScanner(room);
+        scanner.Step1_CreateReverseMap();
+        scanner.Step2_ScanForward();
+        scanner.Step3_ScanBackward();
+        scanner.Step4_RemoveUnusedVariants();
+        newValue += room.variantList.Count + room.stateList.Count;
+      }
 
-      scanner.Step1_CreateReverseMap();
-      scanner.Step2_ScanForward();
-      scanner.Step3_ScanBackward();
-
-      buttonOptimize.Text = "ok.";
+      buttonOptimize.Text = "ok. (" + (oldValue - newValue).ToString("N0") + ")";
     }
 
     /// <summary>
