@@ -102,28 +102,23 @@ namespace SokoWahnLib.Rooms.Merger
           usingStates.SetBit(v.oldState);
         }
 
-        // --- Zustandsveränderungen durch reingeschobene Kisten hinzufügen ---
         foreach (var iPortal in room.incomingPortals)
         {
+          // --- Kistenzustände mit gültigen Varianten hinzufügen ---
           foreach (ulong state in iPortal.variantStateDict.GetAllStates())
           {
-            foreach (ulong variant in iPortal.variantStateDict.GetVariantSpan(state).AsEnumerable())
-            {
-              Debug.Assert(variant < variantList.Count);
-              var v = variantList.GetData(variant);
-
-              Debug.Assert(v.oldState < stateList.Count);
-              usingStates.SetBit(v.oldState);
-            }
+            Debug.Assert(state < stateList.Count);
+            Debug.Assert(iPortal.variantStateDict.GetVariantSpan(state).variantCount > 0);
+            usingStates.SetBit(state);
           }
 
-          //if (!room.field.IsGoal(iPortal.toPos)) continue;
+          // --- Zustandsveränderungen durch reingeschobene Kisten hinzufügen ---
           foreach (ulong state in iPortal.stateBoxSwap.GetAllKeys())
           {
             ulong nextState = iPortal.stateBoxSwap.Get(state);
-            //if (stateList.Get(nextState).Any(pos => !room.field.IsGoal(pos))) continue;
+            if (iPortal.variantStateDict.GetVariantSpan(nextState).variantCount == 0 // keine Varianten im nachfolgenden Zustand mehr möglich?
+              && stateList.Get(nextState).Any(pos => !room.field.IsGoal(pos))) continue; // und nicht alle Kisten auf den Zielfeldern? -> Kistenzustand ungültig
             usingStates.SetBit(state);
-            //usingStates.SetBit(nextState);
           }
         }
 

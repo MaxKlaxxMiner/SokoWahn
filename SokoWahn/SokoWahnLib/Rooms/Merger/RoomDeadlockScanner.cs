@@ -54,7 +54,7 @@ namespace SokoWahnLib.Rooms.Merger
     }
 
     /// <summary>
-    /// Vorwärts-Suche nach allen erreichbaren Varianten
+    /// Vorwärts-Suche durch alle erreichbaren Varianten
     /// </summary>
     public void Step2_ScanForward()
     {
@@ -169,11 +169,13 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// entfernt unbenutzte Varianten
     /// </summary>
-    public void Step4_RemoveUnusedVariants()
+    public ulong Step4_RemoveUnusedVariants()
     {
       OptimizeTools.RenewVariants(room, new SkipMapper(usedVariantsForward));
 
       OptimizeTools.RemoveUnusedStates(room);
+
+      return usedVariantsForward.Length - usedVariantsForward.TotalCountMarkedBits;
     }
 
     #region # // --- Dispose ---

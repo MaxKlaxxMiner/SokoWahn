@@ -144,6 +144,7 @@
       this.listVariants.TabIndex = 4;
       this.listVariants.SelectedIndexChanged += new System.EventHandler(this.listVariants_SelectedIndexChanged);
       this.listVariants.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
+      this.listVariants.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listVariants_MouseDoubleClick);
       // 
       // textBoxInfo
       // 

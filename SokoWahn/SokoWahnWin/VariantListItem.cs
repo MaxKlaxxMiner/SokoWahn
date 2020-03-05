@@ -15,6 +15,11 @@ namespace SokoWahnWin
     public readonly string txt;
 
     /// <summary>
+    /// merkt sich den nächsten Kistenzustand, welcher durch diese Variante erreicht werden kann
+    /// </summary>
+    public readonly ulong nextState;
+
+    /// <summary>
     /// Pfad der Varianten
     /// </summary>
     public readonly VariantPathElement[] variantPath;
@@ -23,10 +28,12 @@ namespace SokoWahnWin
     /// Konstruktor
     /// </summary>
     /// <param name="txt">Listbox-Zeile, welche angezeigt wird</param>
+    /// <param name="nextState">nächster Kistenzustand, welcher durch diese Variante erreicht werden kann</param>
     /// <param name="variantPath">vollständiger Pfad in Moves</param>
-    public VariantListItem(string txt, VariantPathElement[] variantPath)
+    public VariantListItem(string txt, ulong nextState, VariantPathElement[] variantPath)
     {
       this.txt = txt;
+      this.nextState = nextState;
       this.variantPath = variantPath;
     }
 

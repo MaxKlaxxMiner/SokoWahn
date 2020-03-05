@@ -256,10 +256,10 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
-      roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
+      //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
       //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //roomNetwork = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
 
@@ -378,7 +378,7 @@ namespace SokoWahnWin
 
               if (variantData.oPortalIndexBoxes.Length > 0) path += " > " + string.Join(",", variantData.oPortalIndexBoxes.Select(x => (x + 1) + "" + room.outgoingPortals[x].dirChar));
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " -> " + variantData.newState + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " -> " + variantData.newState + " (" + path + ")", variantData.newState, variantPath.ToArray()));
             }
             else
             {
@@ -396,7 +396,7 @@ namespace SokoWahnWin
           var boxState = portal.stateBoxSwap.Get(stateItem.state);
           if (boxState != stateItem.state) // Variante mit reinschiebbarer Kiste vorhanden?
           {
-            listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ") -> " + boxState, new[]
+            listVariants.Items.Add(new VariantListItem("Variant B (" + portal.dirChar + ") -> " + boxState, boxState, new[]
             {
               new VariantPathElement(portal.fromPos + portal.fromPos - portal.toPos, room.stateList.Get(stateItem.state).Concat(new [] { portal.fromPos }).ToArray()),
               new VariantPathElement(portal.fromPos, room.stateList.Get(boxState)),
@@ -441,7 +441,7 @@ namespace SokoWahnWin
 
               if (variantData.oPortalIndexBoxes.Length > 0) path += " > " + string.Join(",", variantData.oPortalIndexBoxes.Select(x => (x + 1) + "" + room.outgoingPortals[x].dirChar));
 
-              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " -> " + variantData.newState + " (" + path + ")", variantPath.ToArray()));
+              listVariants.Items.Add(new VariantListItem("Variant " + (variantData.oPortalIndexPlayer < uint.MaxValue ? variantCount.ToString() : "End") + " -> " + variantData.newState + " (" + path + ")", variantData.newState, variantPath.ToArray()));
             }
             else
             {
@@ -681,6 +681,39 @@ namespace SokoWahnWin
     {
       splitContainer1.SplitterDistance = (int)(splitContainer1.ClientSize.Height * 0.618);
     }
+
+    /// <summary>
+    /// Button zum öffnen des Lösung-Fensters
+    /// </summary>
+    void buttonSolver_Click(object sender, EventArgs e)
+    {
+      if (activeMerge) return;
+
+      formSolver.InitRoomNetwork(roomNetwork);
+      formSolver.ShowDialog();
+    }
+
+    /// <summary>
+    /// Doppelklick in die Varianten-Liste (wählt den nachfolgenden Kistenzustand aus)
+    /// </summary>
+    void listVariants_MouseDoubleClick(object sender, MouseEventArgs e)
+    {
+      if (activeMerge) return;
+
+      var listItem = listVariants.SelectedItem as VariantListItem;
+      if (listItem != null)
+      {
+        ulong state = listItem.nextState;
+        int index = -1;
+        for (int i = 0; i < listStates.Items.Count; i++)
+        {
+          var item = listStates.Items[i];
+          if (!(item is StateListItem)) continue;
+          if (((StateListItem)item).state == state) { index = i; break; }
+        }
+        if (index >= 0) listStates.SelectedIndex = index;
+      }
+    }
     #endregion
 
     /// <summary>
@@ -698,13 +731,13 @@ namespace SokoWahnWin
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
       if (mergeRooms.Length == 0)
       {
-        //if (roomNetwork.rooms.Length == 56) // Test-Mode
-        //{
-        //  mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
-        //       .Concat(roomNetwork.rooms.Skip(40).Take(4))
-        //       .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
-        //}
-        //else
+        if (roomNetwork.rooms.Length == 56) // Test-Mode
+        {
+          mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
+               .Concat(roomNetwork.rooms.Skip(40).Take(4))
+               .Concat(roomNetwork.rooms.Skip(47).Take(4)).ToArray();
+        }
+        else
         {
           mergeRooms = roomNetwork.rooms.ToArray(); // alle Räume mergen, wenn keine ausgewählt wurden
         }
@@ -833,11 +866,11 @@ namespace SokoWahnWin
 
       var optimizeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
 
-      //if (roomNetwork.rooms.Length == 56)
-      //{
-      //  buttonMerge_Click(sender, e);
-      //  optimizeRooms = new[] { roomNetwork.rooms[23] };
-      //}
+      if (roomNetwork.rooms.Length == 56)
+      {
+        buttonMerge_Click(sender, e);
+        optimizeRooms = new[] { roomNetwork.rooms[23] };
+      }
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -848,12 +881,13 @@ namespace SokoWahnWin
       foreach (var room in optimizeRooms)
       {
         oldValue += room.variantList.Count + room.stateList.Count;
-        var scanner = new RoomDeadlockScanner(room);
 
+        var scanner = new RoomDeadlockScanner(room);
         scanner.Step1_CreateReverseMap();
         scanner.Step2_ScanForward();
         scanner.Step3_ScanBackward();
         scanner.Step4_RemoveUnusedVariants();
+
         newValue += room.variantList.Count + room.stateList.Count;
       }
 
@@ -899,17 +933,6 @@ namespace SokoWahnWin
         return listVariants.Items[hoveredIndex] as VariantListItem;
       }
       return null;
-    }
-
-    /// <summary>
-    /// Button zum öffnen des Lösung-Fensters
-    /// </summary>
-    void buttonSolver_Click(object sender, EventArgs e)
-    {
-      if (activeMerge) return;
-
-      formSolver.InitRoomNetwork(roomNetwork);
-      formSolver.ShowDialog();
     }
 
     void FormDebugger_Load(object sender, EventArgs e)
