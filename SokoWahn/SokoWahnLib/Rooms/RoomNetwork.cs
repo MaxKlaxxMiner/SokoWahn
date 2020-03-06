@@ -408,10 +408,12 @@ namespace SokoWahnLib.Rooms
     /// <summary>
     /// gibt den theoretischen Rechenaufwand als Zeichenkettenzahl zurück
     /// </summary>
+    /// <param name="rooms">optional: Räume, welche speziell zusammengerechnet werden soll: default: alle</param>
     /// <returns>Rechenaufwand als Zeichenkette</returns>
-    public string Effort(int maxLen = 16777216)
+    public string Effort(Room[] rooms = null)
     {
-      return MulNumberStr(rooms.Select(room => room.variantList.Count), maxLen);
+      if (rooms == null || rooms.Length == 0) rooms = this.rooms;
+      return MulNumberStr(rooms.Select(room => room.variantList.Count));
     }
 
     /// <summary>

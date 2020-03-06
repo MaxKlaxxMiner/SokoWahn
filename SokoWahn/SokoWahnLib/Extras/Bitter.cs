@@ -522,6 +522,31 @@ namespace SokoWahnLib
         }
       }
     }
+    /// <summary>
+    /// verschmilzt eine eine weiter Bit-Kette mit der Oder-Verknüpfung (0|0 = 0), (0|1 = 1), (1|0 = 1), (1|1 = 1)
+    /// </summary>
+    /// <param name="bits">Bits, welche zum verrechnen verwendet werden sollen</param>
+    public void FullOr(Bitter bits)
+    {
+      if (bits.bitCount != bitCount) throw new ArgumentException("bits.Length != this.Length");
+      ulong count = (bitCount + 63) / 64;
+      var ptr1 = data;
+      var ptr2 = bits.data;
+      for (ulong i = 0; i < count; i++) ptr1[i] |= ptr2[i];
+    }
+
+    /// <summary>
+    /// verschmilzt eine eine weiter Bit-Kette mit der Und-Verknüpfung (0|0 = 0), (0|1 = 0), (1|0 = 0), (1|1 = 1)
+    /// </summary>
+    /// <param name="bits">Bits, welche zum verrechnen verwendet werden sollen</param>
+    public void FullAnd(Bitter bits)
+    {
+      if (bits.bitCount != bitCount) throw new ArgumentException("bits.Length != this.Length");
+      ulong count = (bitCount + 63) / 64;
+      var ptr1 = data;
+      var ptr2 = bits.data;
+      for (ulong i = 0; i < count; i++) ptr1[i] &= ptr2[i];
+    }
 
     /// <summary>
     /// gibt den nicht gemanagten Speicher wieder frei

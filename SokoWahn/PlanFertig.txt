@@ -77,6 +77,7 @@ d: SokoBoxScanner vorher mit einer einzelnen Kiste durchgeführt
 e: Merge 1: alle Laufwege ohne Kisten verschmolzen
 f: Merge 2: alles verschmolzen bis über 5 Minuten Rechenzeit
 g: Deadlock 1: erster Deadlock-Schritt bei der Optimierung
+h: Deadlock 2: zweiter Deadlock-Schritt abgeschlossen
 
 --- Room-Portals ---
 - Hauptklasse (RoomSolver) erstellen

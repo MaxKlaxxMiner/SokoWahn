@@ -256,9 +256,9 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
       //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
-      //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
+      roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
       //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
       //roomNetwork = new RoomNetwork(FieldRunner);      // einfach zu lösen, jedoch sehr viele Moves notwendig (rund 50k)
@@ -498,9 +498,11 @@ namespace SokoWahnWin
     void listRooms_SelectedIndexChanged(object sender, EventArgs e)
     {
       if (activeMerge) return;
+      activeMerge = true;
 
-      displaySettings.hFront = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i])
-        .Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
+      var selectedRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
+
+      displaySettings.hFront = selectedRooms.Select(room => new Highlight(0x0080ff, 0.7f, room.fieldPosis)).ToArray();
 
       listStates.BeginUpdate();
       listStates.Items.Clear();
@@ -508,6 +510,10 @@ namespace SokoWahnWin
 
       displaySettings.boxes = Enumerable.Range(0, roomNetwork.field.Width * roomNetwork.field.Height).Where(roomNetwork.field.IsBox).ToArray();
       displaySettings.playerPos = roomNetwork.field.PlayerPos;
+
+      textBoxInfo.Text = "Effort: " + roomNetwork.Effort(selectedRooms);
+
+      activeMerge = false;
     }
 
     /// <summary>
@@ -518,6 +524,7 @@ namespace SokoWahnWin
     void listStates_SelectedIndexChanged(object sender, EventArgs e)
     {
       if (activeMerge) return;
+      activeMerge = true;
 
       for (int i = 0; i < displaySettings.hFront.Length; i++)
       {
@@ -554,6 +561,8 @@ namespace SokoWahnWin
 
         DisplayUpdate();
       }
+
+      activeMerge = false;
     }
 
     /// <summary>
@@ -562,6 +571,7 @@ namespace SokoWahnWin
     void listVariants_SelectedIndexChanged(object sender, EventArgs e)
     {
       if (activeMerge) return;
+      activeMerge = true;
 
       variantTime = 0;
       if (listStates.SelectedItem is StateListItem)
@@ -582,6 +592,8 @@ namespace SokoWahnWin
         displaySettings.boxes = Enumerable.Range(0, roomNetwork.field.Width * roomNetwork.field.Height).Where(roomNetwork.field.IsBox).ToArray();
         displaySettings.playerPos = roomNetwork.field.PlayerPos;
       }
+
+      activeMerge = false;
     }
 
     /// <summary>
@@ -731,7 +743,16 @@ namespace SokoWahnWin
       var mergeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
       if (mergeRooms.Length == 0)
       {
-        if (roomNetwork.rooms.Length == 56) // Test-Mode
+        if (roomNetwork.rooms.Length == 35) // Test-Mode
+        {
+          mergeRooms = roomNetwork.rooms.Skip(0).Take(2)
+               .Concat(roomNetwork.rooms.Skip(8).Take(2))
+               .Concat(roomNetwork.rooms.Skip(16).Take(2))
+               .Concat(roomNetwork.rooms.Skip(25).Take(2))
+               .Concat(roomNetwork.rooms.Skip(30).Take(2))
+               .ToArray();
+        }
+        else if (roomNetwork.rooms.Length == 56) // Test-Mode
         {
           mergeRooms = roomNetwork.rooms.Skip(23).Take(4)
                .Concat(roomNetwork.rooms.Skip(40).Take(4))
@@ -863,10 +884,16 @@ namespace SokoWahnWin
     void buttonOptimize_Click(object sender, EventArgs e)
     {
       if (activeMerge) return;
+      activeMerge = true;
 
       var optimizeRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
 
-      if (roomNetwork.rooms.Length == 56)
+      if (roomNetwork.rooms.Length == 35)
+      {
+        buttonMerge_Click(sender, e);
+        optimizeRooms = new[] { roomNetwork.rooms[0] };
+      }
+      else if (roomNetwork.rooms.Length == 56)
       {
         buttonMerge_Click(sender, e);
         optimizeRooms = new[] { roomNetwork.rooms[23] };
@@ -876,22 +903,53 @@ namespace SokoWahnWin
       listRooms.Items.Clear();
       listRooms.EndUpdate();
 
+      int oldWidth = pictureBoxField.Width;
+      int oldHeight = pictureBoxField.Height;
+
+      Func<string, bool> status = txt =>
+      {
+        textBoxInfo.Text = txt;
+        Application.DoEvents();
+        if (oldWidth != pictureBoxField.Width || oldHeight != pictureBoxField.Height)
+        {
+          fieldDisplay.Update(roomNetwork, displaySettings);
+          Application.DoEvents();
+          oldWidth = pictureBoxField.Width;
+          oldHeight = pictureBoxField.Height;
+        }
+        return activeMerge;
+      };
+
       ulong oldValue = 0;
       ulong newValue = 0;
       foreach (var room in optimizeRooms)
       {
         oldValue += room.variantList.Count + room.stateList.Count;
 
+        displaySettings.hFront = new[] { new Highlight(0xffff00, 0.7f, room.fieldPosis) };
+        fieldDisplay.Update(roomNetwork, displaySettings);
+        Application.DoEvents();
+
+        if (!status("Optimize[" + room.fieldPosis.First() + "]: (1 / 5) init")) return;
         var scanner = new RoomDeadlockScanner(room);
+
+        if (!status("Optimize[" + room.fieldPosis.First() + "]: (2 / 5) reverse map")) return;
         scanner.Step1_CreateReverseMap();
+
+        if (!status("Optimize[" + room.fieldPosis.First() + "]: (3 / 5) scan forward")) return;
         scanner.Step2_ScanForward();
+
+        if (!status("Optimize[" + room.fieldPosis.First() + "]: (4 / 5) scan backward")) return;
         scanner.Step3_ScanBackward();
+
+        if (!status("Optimize[" + room.fieldPosis.First() + "]: (5 / 5) remove unused variants")) return;
         scanner.Step4_RemoveUnusedVariants();
 
         newValue += room.variantList.Count + room.stateList.Count;
       }
 
       buttonOptimize.Text = "ok. (" + (oldValue - newValue).ToString("N0") + ")";
+      activeMerge = false;
     }
 
     /// <summary>

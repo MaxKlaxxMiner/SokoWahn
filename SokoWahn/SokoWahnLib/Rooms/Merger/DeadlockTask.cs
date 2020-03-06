@@ -9,29 +9,29 @@ namespace SokoWahnLib.Rooms.Merger
   public struct DeadlockTask
   {
     /// <summary>
-    /// Portalnummer, worüber der Spieler den Raum verlassen hat
+    /// Portalnummer, worüber der Spieler den Raum verlassen bzw. betreten hat
     /// </summary>
-    public readonly uint oPortalIndexPlayer;
+    public readonly uint portalIndexPlayer;
 
     /// <summary>
-    /// gibt an, ob der Spieler eine Kiste aus den Raum geschoben hat
+    /// gibt an, ob der Spieler eine Kiste aus dem Raum geschoben bzw. zurück gezogen hat
     /// </summary>
     public readonly bool exportedBox;
 
     /// <summary>
-    /// Kistenzustand beim verlassen des Raumes
+    /// Kistenzustand beim Verlassen des Raumes, bzw. beim Betreten des Raumes
     /// </summary>
     public readonly ulong state;
 
     /// <summary>
     /// Konstruktor
     /// </summary>
-    /// <param name="oPortalIndexPlayer">Portalnummer, worüber der Spieler den Raum verlassen hat</param>
-    /// <param name="exportedBox">gibt an, ob der Spieler eine Kiste aus den Raum geschoben hat</param>
-    /// <param name="state">Kistenzustand beim verlassen des Raumes</param>
-    public DeadlockTask(uint oPortalIndexPlayer, bool exportedBox, ulong state)
+    /// <param name="portalIndexPlayer">Portalnummer, worüber der Spieler den Raum verlassen bzw. betreten hat</param>
+    /// <param name="exportedBox">gibt an, ob der Spieler eine Kiste aus dem Raum geschoben bzw. zurück gezogen hat</param>
+    /// <param name="state">Kistenzustand beim Verlassen des Raumes, bzw. beim Betreten des Raumes</param>
+    public DeadlockTask(uint portalIndexPlayer, bool exportedBox, ulong state)
     {
-      this.oPortalIndexPlayer = oPortalIndexPlayer;
+      this.portalIndexPlayer = portalIndexPlayer;
       this.exportedBox = exportedBox;
       this.state = state;
     }
@@ -42,7 +42,7 @@ namespace SokoWahnLib.Rooms.Merger
     /// <returns>lesbare Zeichenkette</returns>
     public override string ToString()
     {
-      return new { oPortalIndexPlayer, exportBox = exportedBox, state }.ToString();
+      return new { portalIndexPlayer, exportedBox, state }.ToString();
     }
   }
 }
