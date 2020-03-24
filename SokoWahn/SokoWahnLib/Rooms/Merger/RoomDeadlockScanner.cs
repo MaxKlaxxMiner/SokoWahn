@@ -104,6 +104,7 @@ namespace SokoWahnLib.Rooms.Merger
       var maskStateCache = new ulong[room.stateList.Count][];
       for (ulong checkState = 0; checkState < room.stateList.Count; checkState++)
       {
+        if (Tools.TickRefresh() && !scanInfo("Build State-Mask: " + checkState.ToString("N0") + " / " + room.stateList.Count.ToString("N0"))) return false;
         var list = new List<ulong>();
         for (ulong mask = 1; mask < portalMask; mask++)
         {
@@ -208,6 +209,7 @@ namespace SokoWahnLib.Rooms.Merger
       var maskStateCache = new ulong[room.stateList.Count][];
       for (ulong checkState = 0; checkState < room.stateList.Count; checkState++)
       {
+        if (Tools.TickRefresh() && !scanInfo("Build State-Mask: " + checkState.ToString("N0") + " / " + room.stateList.Count.ToString("N0"))) return false;
         var list = new List<ulong>();
         for (ulong mask = 0; mask < portalMask; mask++)
         {
@@ -322,11 +324,10 @@ namespace SokoWahnLib.Rooms.Merger
       if (reverseMap != null)
       {
         reverseMap.Dispose();
+        usedVariantsForward.Dispose();
+        usedVariantsBackward.Dispose();
         reverseMap = null;
       }
-
-      usedVariantsForward.Dispose();
-      usedVariantsBackward.Dispose();
     }
 
     /// <summary>

@@ -178,13 +178,25 @@ namespace SokoWahnLib.Rooms
       if (Tools.TickRefresh() && !mergeInfo("Merge: validate")) return;
       Validate(); // einfache Validierung der Räume und Portale
 
-      //if (!mergeInfo("Merge: deadlock")) return;
+      // --- Optimize ---
+      var room = roomMerger.newRoom;
+      if (room.incomingPortals.Length < 20) // dürfen nicht zuviele Portale sein
+      {
+        if (!mergeInfo("Optimize[" + room.fieldPosis.First() + "]: (1 / 5) init")) return;
+        var scanner = new RoomDeadlockScanner(room);
 
-      //var scanner = new RoomDeadlockScanner(roomMerger.newRoom);
-      //scanner.Step1_CreateReverseMap();
-      //scanner.Step2_ScanForward();
-      //scanner.Step3_ScanBackward();
-      //scanner.Step4_RemoveUnusedVariants();
+        if (!mergeInfo("Optimize[" + room.fieldPosis.First() + "]: (2 / 5) reverse map")) return;
+        scanner.Step1_CreateReverseMap();
+
+        if (!scanner.Step2_ScanForward(txt => mergeInfo("Optimize[" + room.fieldPosis.First() + "]: (3 / 5) scan forward - " + txt))) return;
+
+        if (!scanner.Step3_ScanBackward(txt => mergeInfo("Optimize[" + room.fieldPosis.First() + "]: (4 / 5) scan backward - " + txt))) return;
+
+        if (!mergeInfo("Optimize[" + room.fieldPosis.First() + "]: (5 / 5) remove unused variants")) return;
+        scanner.Step4_RemoveUnusedVariants();
+
+        scanner.Dispose();
+      }
 
       mergeInfo("Merge: ok, remain: " + rooms.Length);
     }

@@ -256,8 +256,8 @@ namespace SokoWahnWin
       //roomNetwork = new RoomNetwork(FieldTest3);       // einfaches Testlevel (drei Kisten, 52 Moves)
       //roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
       //roomNetwork = new RoomNetwork(FieldTest5);       // sehr einfaches Testlevel zum Prüfen erster Optimierungsfunktionen (eine Kiste, 21 Moves)
-      roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
-      //roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
+      //roomNetwork = new RoomNetwork(FieldStart);       // Klassik Sokoban 1. Level
+      roomNetwork = new RoomNetwork(Field628);         // bisher nie gefundene Lösung mit 628 Moves
       //roomNetwork = new RoomNetwork(FieldMoves105022); // Spielfeld mit über 100k Moves
       //roomNetwork = new RoomNetwork(FieldMonster);     // aufwendiges Spielfeld mit vielen Möglichkeiten
       //roomNetwork = new RoomNetwork(FieldDiamond);     // Diamand geformter Klumpen mit vielen Deadlock-Situaonen
@@ -803,7 +803,7 @@ namespace SokoWahnWin
         }
         ulong effort = bestRoomConnection.Item2.variantList.Count * bestRoomConnection.Item3.variantList.Count;
 
-        if (effort > 10000000 && !first) break;
+        if (effort > 10000000 && !first && roomNetwork.rooms.Length > 2) break; // Abbruch, wenn der Aufwand zu hoch ist, Ausnahme: es sind die letzten beiden Räume oder es war der erste Schmelzvorgang
         first = false;
 
         bool liveView = effort > 100000;
@@ -851,7 +851,7 @@ namespace SokoWahnWin
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3, status);
         if (!activeMerge) return;
         tick = Environment.TickCount - tick;
-        if (tick > 10000) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat
+        if (tick > 10000 && roomNetwork.rooms.Length > 2) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat, Ausnahme: es sind die letzten beiden Räume
 #endif
 
         if (liveView) DisplayUpdate();
