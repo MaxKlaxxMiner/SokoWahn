@@ -102,7 +102,6 @@ namespace SokoWahnLib.Rooms.Merger
       for (int i = 0; i < room.incomingPortals.Length; i++) portalMask <<= 1;
 
       var maskStateCache = new ulong[room.stateList.Count][];
-      var emptyList = new ulong[0];
       for (ulong checkState = 0; checkState < room.stateList.Count; checkState++)
       {
         var list = new List<ulong>();
@@ -122,12 +121,16 @@ namespace SokoWahnLib.Rooms.Merger
           if (!valid) continue; // ungültigen Kistenzustand erkannt?
           list.Add(state);
         }
-        if (list.Count == 0) maskStateCache[checkState] = emptyList; else maskStateCache[checkState] = list.ToArray();
+        maskStateCache[checkState] = list.ToArray();
       }
 
       while (tasks.Count > 0)
       {
-        if (Tools.TickRefresh() && !scanInfo(usedVariantCount.ToString("N0") + " / " + usedVariants.Length.ToString("N0") + ", Tasks: " + tasks.Count.ToString("N0"))) return false;
+        if (Tools.TickRefresh())
+        {
+          if (!scanInfo(usedVariantCount.ToString("N0") + " / " + usedVariants.Length.ToString("N0") + ", Tasks: " + tasks.Count.ToString("N0"))) return false;
+          if (usedVariantCount == usedVariants.Length) return true; // alle Varianten sind in Benutzung?
+        }
         var task = tasks.Pop();
 
         // --- Varianten ohne Kistenwechsel abarbeiten ---
@@ -161,12 +164,11 @@ namespace SokoWahnLib.Rooms.Merger
           for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
           {
             var span = room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(state);
-            ulong variantEnd = span.VariantEnd;
+            if (usedVariants.GetBit(span.variantStart) && span.variantCount > 0) continue;
 
+            ulong variantEnd = span.VariantEnd;
             for (ulong variant = span.variantStart; variant < variantEnd; variant++)
             {
-              if (usedVariants.GetBit(variant)) continue;
-
               usedVariants.SetBit(variant);
               usedVariantCount++;
 
@@ -203,13 +205,36 @@ namespace SokoWahnLib.Rooms.Merger
       ulong portalMask = 1;
       for (int i = 0; i < room.incomingPortals.Length; i++) portalMask <<= 1;
 
+      var maskStateCache = new ulong[room.stateList.Count][];
+      for (ulong checkState = 0; checkState < room.stateList.Count; checkState++)
+      {
+        var list = new List<ulong>();
+        for (ulong mask = 0; mask < portalMask; mask++)
+        {
+          bool valid = true; // merkt sich, ob der Kistenwechsel gütig ist
+          ulong state = checkState;
+          for (int iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+          {
+            if ((mask & 1UL << iPortalIndex) == 0) continue;
+
+            // --- Kiste über das Portal herrausziehen ---
+            ulong nextState = reverseMap.portalStateSwaps[iPortalIndex].Get(state);
+            if (nextState == state) { valid = false; break; } // ungültige Kiste erkannt?
+            state = nextState; // neuen Kistenzustand übernehmen
+          }
+          if (!valid) continue; // ungültigen Kistenzustand erkannt?
+          list.Add(state);
+        }
+        maskStateCache[checkState] = list.ToArray();
+      }
+
       #region # // --- erste Aufgaben sammeln ---
       foreach (var vMap in reverseMap.variantMap)
       {
         var variantData = room.variantList.GetData(vMap.variant);
         if (variantData.newState != 0) continue; // alle Varianten filtern, welche nicht das Ende erreichen
 
-        usedVariants.SetBit(vMap.variant); // Variante als benutzt markieren
+        usedVariants.SetBit(vMap.variant); // End-Variante als benutzt markieren
         usedVariantCount++;
         var newTask = new DeadlockTask
         (
@@ -237,31 +262,21 @@ namespace SokoWahnLib.Rooms.Merger
 
       while (tasks.Count > 0)
       {
-        if (Tools.TickRefresh() && !scanInfo(usedVariantCount.ToString("N0") + " / " + usedVariants.Length.ToString("N0") + ", Tasks: " + tasks.Count.ToString("N0"))) return false;
+        if (Tools.TickRefresh())
+        {
+          if (!scanInfo(usedVariantCount.ToString("N0") + " / " + usedVariants.Length.ToString("N0") + ", Tasks: " + tasks.Count.ToString("N0"))) return false;
+          if (usedVariantCount == usedVariants.Length) return true; // alle Varianten sind in Benutzung?
+        }
 
         var task = tasks.Pop();
 
         // --- Varianten mit allen möglichen Kistenwechseln abarbeiten ---
-        for (ulong mask = 0; mask < portalMask; mask++)
+        foreach (ulong state in maskStateCache[task.state])
         {
-          bool valid = true; // merkt sich, ob der Kistenwechsel gütig ist
-          ulong state = task.state;
-          for (int iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
-          {
-            if ((mask & 1UL << iPortalIndex) == 0) continue;
-
-            // --- Kiste über das Portal herrausziehen ---
-            ulong nextState = reverseMap.portalStateSwaps[iPortalIndex].Get(state);
-            if (nextState == state) { valid = false; break; } // ungültige Kiste erkannt?
-            state = nextState; // neuen Kistenzustand übernehmen
-          }
-          if (!valid) continue; // ungültigen Kistenzustand erkannt?
-
           for (uint oPortalIndex = 0; oPortalIndex < room.outgoingPortals.Length; oPortalIndex++)
           {
             foreach (var vMap in reverseMap.GetVariants(oPortalIndex, state, usedVariants))
             {
-              //if (usedVariants.GetBit(vMap.variant)) continue; // Variante schon bekannt?
               usedVariants.SetBit(vMap.variant);
               usedVariantCount++;
 

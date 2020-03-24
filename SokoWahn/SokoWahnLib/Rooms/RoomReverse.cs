@@ -236,10 +236,10 @@ namespace SokoWahnLib.Rooms
       ulong val = dictVariantMap[(oPortalIndex + 1) * stateListCount + newState];
 
       uint ofs = (uint)val;
+      if (val < uint.MaxValue || skipVariants.GetBit(variantMap[ofs].variant)) yield break;
       uint count = (uint)(val >> 32);
       for (uint i = 0; i < count; i++)
       {
-        if (skipVariants.GetBit(variantMap[i + ofs].variant)) continue;
         yield return variantMap[i + ofs];
       }
     }
