@@ -357,6 +357,7 @@ namespace SokoWahnLib
     /// </summary>
     /// <param name="bitPos">Startposition der Bits, wo die Zählung beginnen soll</param>
     /// <returns>Anzahl der markierten Bits</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ulong CountMarkedBits(ulong bitPos)
     {
       Debug.Assert(bitPos <= bitCount);

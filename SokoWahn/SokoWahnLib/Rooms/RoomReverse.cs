@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 // ReSharper disable NotAccessedField.Local
 // ReSharper disable MemberCanBePrivate.Local
@@ -30,9 +31,14 @@ namespace SokoWahnLib.Rooms
     public readonly VariantMap[] variantMap;
 
     /// <summary>
+    /// merkt sich die Anzahl der Kistenzustände im Raum
+    /// </summary>
+    readonly uint stateListCount;
+
+    /// <summary>
     /// merkt sich das Inhaltsverzeichnis der VariantMap
     /// </summary>
-    readonly Dictionary<ulong, ulong>[] dictVariantMap;
+    readonly ulong[] dictVariantMap;
 
     /// <summary>
     /// merkt sich die Anzahl der End-Varianten
@@ -49,7 +55,8 @@ namespace SokoWahnLib.Rooms
       this.room = room;
       portalStateSwaps = new StateBoxSwap[room.incomingPortals.Length];
       variantMap = new VariantMap[room.variantList.Count];
-      dictVariantMap = Enumerable.Range(0, room.incomingPortals.Length + 1).Select(i => new Dictionary<ulong, ulong>()).ToArray();
+      stateListCount = (uint)room.stateList.Count;
+      dictVariantMap = new ulong[((uint)room.incomingPortals.Length + 1) * stateListCount];
     }
 
     #region # struct VariantMap // Struktur zum Merken der jeweiligen Varianten und Zustand/Portal Kombinationen
@@ -74,10 +81,6 @@ namespace SokoWahnLib.Rooms
       /// merkt sich den neuen Zustand des Raumes
       /// </summary>
       public readonly ulong newState;
-      /// <summary>
-      /// merkt sich, ob nur Laufwege benutzt und keine Kisten verschoben wurden
-      /// </summary>
-      public readonly bool onlyMoves;
 
       /// <summary>
       /// Konstruktor
@@ -86,14 +89,12 @@ namespace SokoWahnLib.Rooms
       /// <param name="iPortalIndex">eingehendes Portal</param>
       /// <param name="oPortalIndex">ausgehendes Portal</param>
       /// <param name="newState">neuer Zustand des Raumes</param>
-      /// <param name="onlyMoves">es wurden nur Laufwege benutzt (keine Kisten wurden verschoben)</param>
-      public VariantMap(ulong variant, uint iPortalIndex, uint oPortalIndex, ulong newState, bool onlyMoves)
+      public VariantMap(ulong variant, uint iPortalIndex, uint oPortalIndex, ulong newState)
       {
         this.variant = variant;
         this.iPortalIndex = iPortalIndex;
         this.oPortalIndex = oPortalIndex;
         this.newState = newState;
-        this.onlyMoves = onlyMoves;
       }
 
       /// <summary>
@@ -102,7 +103,7 @@ namespace SokoWahnLib.Rooms
       /// <returns>lesbare Zeichenkette</returns>
       public override string ToString()
       {
-        return new { oPortalIndex, newState, onlyMoves, variant, iPortalIndex }.ToString();
+        return new { oPortalIndex, newState, variant, iPortalIndex }.ToString();
       }
     }
     #endregion
@@ -145,8 +146,7 @@ namespace SokoWahnLib.Rooms
           variant,
           uint.MaxValue,
           variantData.oPortalIndexPlayer,
-          variantData.newState,
-          variantData.pushes == 0
+          variantData.newState
         );
         variantMap[variantMapIndex++] = v;
       }
@@ -165,8 +165,7 @@ namespace SokoWahnLib.Rooms
               variant,
               iPortalIndex,
               variantData.oPortalIndexPlayer,
-              variantData.newState,
-              variantData.pushes == 0
+              variantData.newState
             );
             variantMap[variantMapIndex++] = v;
           }
@@ -181,8 +180,6 @@ namespace SokoWahnLib.Rooms
         int diff = (int)x.oPortalIndex - (int)y.oPortalIndex;
         if (diff != 0) return diff;
         diff = x.newState.CompareTo(y.newState);
-        if (diff != 0) return diff;
-        diff = (x.onlyMoves ? 0 : 1) - (y.onlyMoves ? 0 : 1);
         return diff != 0 ? diff : x.variant.CompareTo(y.variant);
       });
 
@@ -202,7 +199,7 @@ namespace SokoWahnLib.Rooms
         ulong newState = variantMap[index].newState;
         uint ofs;
         for (ofs = index; ofs < variantMap.Length && variantMap[ofs].oPortalIndex == oPortalIndex && variantMap[ofs].newState == newState; ofs++) { }
-        dictVariantMap[oPortalIndex + 1].Add(newState, index | ((ulong)(ofs - index) << 32));
+        dictVariantMap[(oPortalIndex + 1) * stateListCount + newState] = index | (ulong)(ofs - index) << 32;
         index = ofs;
       }
     }
@@ -216,15 +213,33 @@ namespace SokoWahnLib.Rooms
     /// <returns>Enumerable der Varianten</returns>
     public IEnumerable<VariantMap> GetVariants(uint oPortalIndex, ulong newState)
     {
-      var dict = dictVariantMap[oPortalIndex + 1];
-
-      ulong val;
-      if (!dict.TryGetValue(newState, out val)) yield break; // Zustand nicht gefunden?
+      ulong val = dictVariantMap[(oPortalIndex + 1) * stateListCount + newState];
 
       uint ofs = (uint)val;
       uint count = (uint)(val >> 32);
       for (uint i = 0; i < count; i++)
       {
+        yield return variantMap[i + ofs];
+      }
+    }
+
+    /// <summary>
+    /// gibt die Varianten eines ausgehendes Portals zurück
+    /// </summary>
+    /// <param name="oPortalIndex">Portal, worüber der Spieler den Raum verlässt (oder uint.MaxValue, wenn es sich um Endvarianten handelt)</param>
+    /// <param name="newState">neuer Kistenzustand nach verlassen des Raumes</param>
+    /// <param name="skipVariants">Varianten, welche von vornherein übersprungen werden sollen</param>
+    /// <returns>Enumerable der Varianten</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IEnumerable<VariantMap> GetVariants(uint oPortalIndex, ulong newState, Bitter skipVariants)
+    {
+      ulong val = dictVariantMap[(oPortalIndex + 1) * stateListCount + newState];
+
+      uint ofs = (uint)val;
+      uint count = (uint)(val >> 32);
+      for (uint i = 0; i < count; i++)
+      {
+        if (skipVariants.GetBit(variantMap[i + ofs].variant)) continue;
         yield return variantMap[i + ofs];
       }
     }

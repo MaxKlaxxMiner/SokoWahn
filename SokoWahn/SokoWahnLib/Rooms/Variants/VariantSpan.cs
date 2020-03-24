@@ -42,5 +42,14 @@ namespace SokoWahnLib.Rooms
     {
       for (ulong i = 0; i < variantCount; i++) yield return variantStart + i;
     }
+
+    /// <summary>
+    /// gibt den Inhalt als lesbare Zeichenkette zurück
+    /// </summary>
+    /// <returns>lesbare Zeichenkette</returns>
+    public override string ToString()
+    {
+      return new { variantStart, variantCount }.ToString();
+    }
   }
 }

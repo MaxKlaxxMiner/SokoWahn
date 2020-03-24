@@ -40,6 +40,7 @@
       this.buttonValidate = new System.Windows.Forms.Button();
       this.buttonSolver = new System.Windows.Forms.Button();
       this.buttonMerge = new System.Windows.Forms.Button();
+      this.buttonFilter = new System.Windows.Forms.Button();
       ((System.ComponentModel.ISupportInitialize)(this.pictureBoxField)).BeginInit();
       ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
       this.splitContainer1.Panel1.SuspendLayout();
@@ -162,7 +163,7 @@
       // buttonValidate
       // 
       this.buttonValidate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.buttonValidate.Location = new System.Drawing.Point(1162, 96);
+      this.buttonValidate.Location = new System.Drawing.Point(1162, 138);
       this.buttonValidate.Name = "buttonValidate";
       this.buttonValidate.Size = new System.Drawing.Size(92, 36);
       this.buttonValidate.TabIndex = 6;
@@ -174,7 +175,7 @@
       // buttonSolver
       // 
       this.buttonSolver.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-      this.buttonSolver.Location = new System.Drawing.Point(1162, 138);
+      this.buttonSolver.Location = new System.Drawing.Point(1162, 180);
       this.buttonSolver.Name = "buttonSolver";
       this.buttonSolver.Size = new System.Drawing.Size(92, 36);
       this.buttonSolver.TabIndex = 7;
@@ -195,12 +196,24 @@
       this.buttonMerge.Click += new System.EventHandler(this.buttonMerge_Click);
       this.buttonMerge.KeyDown += new System.Windows.Forms.KeyEventHandler(this.Form_KeyDown);
       // 
+      // buttonFilter
+      // 
+      this.buttonFilter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+      this.buttonFilter.Location = new System.Drawing.Point(1162, 96);
+      this.buttonFilter.Name = "buttonFilter";
+      this.buttonFilter.Size = new System.Drawing.Size(92, 36);
+      this.buttonFilter.TabIndex = 9;
+      this.buttonFilter.Text = "Filter";
+      this.buttonFilter.UseVisualStyleBackColor = true;
+      this.buttonFilter.Click += new System.EventHandler(this.buttonFilter_Click);
+      // 
       // FormDebugger
       // 
       this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
       this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
       this.BackColor = System.Drawing.Color.Black;
       this.ClientSize = new System.Drawing.Size(1266, 632);
+      this.Controls.Add(this.buttonFilter);
       this.Controls.Add(this.buttonMerge);
       this.Controls.Add(this.buttonSolver);
       this.Controls.Add(this.buttonValidate);
@@ -238,6 +251,7 @@
     private System.Windows.Forms.Button buttonValidate;
     private System.Windows.Forms.Button buttonSolver;
     private System.Windows.Forms.Button buttonMerge;
+    private System.Windows.Forms.Button buttonFilter;
   }
 }
 
