@@ -152,13 +152,13 @@ namespace SokoWahnLib.Rooms
     {
       if (mergeInfo == null) mergeInfo = x => true;
 
+      int fastTime = Environment.TickCount + 250;
       var roomMerger = new RoomMerger(this, room1, room2);
 
       if (Tools.TickRefresh() && !mergeInfo("Merge: mix states")) return;
       roomMerger.Step1_MixStates();
 
-      if (Tools.TickRefresh() && !mergeInfo("Merge: start variants")) return;
-      roomMerger.Step2_StartVariants();
+      if (!roomMerger.Step2_StartVariants(txt => mergeInfo("Merge: start variants - " + txt))) return;
 
       if (!roomMerger.Step3_PortalVariants(txt => mergeInfo("Merge: portal variants - " + txt))) return;
 
@@ -180,8 +180,11 @@ namespace SokoWahnLib.Rooms
 
       // --- Optimize ---
       var room = roomMerger.newRoom;
-      if (room.incomingPortals.Length < 20) // dürfen nicht zuviele Portale sein
+      // es dürfen nicht zuviele Portale sein, maximal 10 Mio Varianten enthalten und sollten weniger als zwei Räume übrig sein
+      if (room.incomingPortals.Length <= 12 && rooms.Length > 2 && room.variantList.Count < 10000000)
       {
+        if (Environment.TickCount < fastTime) mergeInfo = x => true;
+
         if (!mergeInfo("Optimize[" + room.fieldPosis.First() + "]: (1 / 5) init")) return;
         var scanner = new RoomDeadlockScanner(room);
 

@@ -154,22 +154,23 @@ namespace SokoWahnLib.Rooms.Merger
     /// <summary>
     /// erstellt alle Startvarianten (falls der Spieler im eigenen Raum beginnt)
     /// </summary>
-    public void Step2_StartVariants()
+    /// <param name="mergeInfo">Status-Meldung</param>
+    public bool Step2_StartVariants(Func<string, bool> mergeInfo)
     {
       var room1 = srcRoom1;
       var room2 = srcRoom2;
       ulong state1Mul = srcRoom2.stateList.Count;
 
-      if (room1.startVariantCount + room2.startVariantCount == 0) return; // keine Startvarianten vorhanden?
+      if (room1.startVariantCount + room2.startVariantCount == 0) return true; // keine Startvarianten vorhanden?
       Debug.Assert(room1.startVariantCount == 0 || room2.startVariantCount == 0);
 
       if (room1.startVariantCount > 0) // im ersten Raum wird gestartet
       {
-        MergeStartVariants(room1, room2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, newRoom);
+        return MergeStartVariants(room1, room2, (s1, s2) => s1 * state1Mul + s2, mapPortalIndex1, mapPortalIndex2, newRoom, mergeInfo);
       }
       else // im zweiten Raum wird gestartet
       {
-        MergeStartVariants(room2, room1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, newRoom);
+        return MergeStartVariants(room2, room1, (s1, s2) => s2 * state1Mul + s1, mapPortalIndex2, mapPortalIndex1, newRoom, mergeInfo);
       }
     }
     #endregion
@@ -336,7 +337,8 @@ namespace SokoWahnLib.Rooms.Merger
     /// <param name="mapPortalIndex1">Mapping der Portalnummern vom 1. Raum</param>
     /// <param name="mapPortalIndex2">Mapping der Portalnummern vom 2. Raum</param>
     /// <param name="roomNew">neuer Raum, wohin die neuen Startvarianten gespeichert werden sollen</param>
-    static ulong MergeStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew)
+    /// <param name="mergeInfo">Status-Meldung</param>
+    static bool MergeStartVariants(Room room1, Room room2, Func<ulong, ulong, ulong> stateCalc, uint[] mapPortalIndex1, uint[] mapPortalIndex2, Room roomNew, Func<string, bool> mergeInfo)
     {
       ulong startState = stateCalc(room1.startState, room2.startState);
       var dict = new Dictionary<ulong, ulong>();
@@ -344,11 +346,11 @@ namespace SokoWahnLib.Rooms.Merger
       var moveTasks = new List<int>();
       var pushTasks = new List<int>();
       var endTasks = new List<int>();
-      ulong calcMoves = 0;
 
       #region # // --- erste Aufgaben sammeln ---
       for (ulong variant1 = 0; variant1 < room1.startVariantCount; variant1++)
       {
+        if (Tools.TickRefresh() && !mergeInfo("Variants " + variant1.ToString("N0") + " / " + room1.startVariantCount.ToString("N0"))) return false;
         var variantData1 = room1.variantList.GetData(variant1);
 
         ulong nextState1 = room1.startState;
@@ -379,13 +381,16 @@ namespace SokoWahnLib.Rooms.Merger
       #endregion
 
       #region # // --- Aufgaben abarbeiten und alle Varianten ermitteln, welche zwischen den beiden Räumen möglich sind ---
+      ulong calcMoves = 0;
       for (int taskIndex = 0; taskIndex < tasks.Count; taskIndex++)
       {
+        if (Tools.TickRefresh() && !mergeInfo("Tasks remain: " + (tasks.Count - taskIndex).ToString("N0") + (endTasks.Count > 0 ? " - ends found: " + endTasks.Count.ToString("N0") : "") + " (" + calcMoves.ToString("N0") + " moves)")) return false;
         var task = tasks[taskIndex];
         ulong checkCrc = task.GetCrc();
         ulong moves = dict[checkCrc];
         Debug.Assert(moves <= task.moves);
         if (moves != task.moves) continue; // nicht die beste Variante dieser Aufgabe erkannt?
+        calcMoves += task.moves;
 
         if (task.variantData.pushes > 0) // Variante mit Kistenverschiebungen erkannt?
         {
@@ -587,7 +592,6 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(roomNew.startVariantCount == newVariant);
         roomNew.startVariantCount++;
         Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
-        calcMoves += task.moves;
       }
       #endregion
 
@@ -619,7 +623,6 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(roomNew.startVariantCount == newVariant);
         roomNew.startVariantCount++;
         Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
-        calcMoves += task.moves;
       }
       #endregion
 
@@ -651,11 +654,10 @@ namespace SokoWahnLib.Rooms.Merger
         Debug.Assert(roomNew.startVariantCount == newVariant);
         roomNew.startVariantCount++;
         Debug.Assert(roomNew.startVariantCount == roomNew.variantList.Count);
-        calcMoves += task.moves;
       }
       #endregion
 
-      return calcMoves;
+      return true;
     }
     #endregion
 

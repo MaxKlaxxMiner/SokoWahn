@@ -752,6 +752,59 @@ namespace SokoWahnWin
 
       var mergeFields = new HashSet<int>(mergeRooms.SelectMany(room => room.fieldPosis));
 
+      const int PatterSizeX = 3;
+      const int PatterSizeY = 1;
+
+      int width = roomNetwork.field.Width;
+      int height = roomNetwork.field.Height;
+      int bestOfx = -1;
+      int bestOfy = -1;
+      int bestCount = int.MaxValue;
+
+      for (int ofy = 0; ofy < PatterSizeY; ofy++)
+      {
+        for (int ofx = 0; ofx < PatterSizeX; ofx++)
+        {
+          int count = 0;
+          for (int cy = ofy - PatterSizeY; cy < height + PatterSizeY; cy += PatterSizeY)
+          {
+            for (int cx = ofx - PatterSizeX; cx < width + PatterSizeX; cx += PatterSizeX)
+            {
+              bool foundField = false;
+              for (int y = 0; y < PatterSizeY; y++)
+              {
+                for (int x = 0; x < PatterSizeX; x++)
+                {
+                  if (cx + x < 0 || cx + x >= width) continue;
+                  if (mergeFields.Contains((cx + x) + (cy + y) * width)) foundField = true;
+                }
+              }
+              if (foundField) count++;
+            }
+          }
+          if (count < bestCount)
+          {
+            bestCount = count;
+            bestOfx = ofx;
+            bestOfy = ofy;
+          }
+        }
+      }
+
+      Func<Room, int> patternCheck = room =>
+      {
+        if (room.fieldPosis.Length >= PatterSizeX * PatterSizeY) return -1;
+
+        int minX = (room.fieldPosis[0] % width - bestOfx) / PatterSizeX * PatterSizeX + bestOfx;
+        int minY = (room.fieldPosis[0] / width - bestOfy) / PatterSizeY * PatterSizeY + bestOfy;
+        int maxX = minX + PatterSizeX;
+        int maxY = minY + PatterSizeY;
+
+        if (room.fieldPosis.Select(pos => new Point(pos % width, pos / width)).All(pos => pos.X >= minX && pos.X < maxX && pos.Y >= minY && pos.Y < maxY)) return minX + minY * width;
+
+        return -1;
+      };
+
       bool first = true;
       for (; ; )
       {
@@ -765,9 +818,15 @@ namespace SokoWahnWin
           {
             if (room.roomIndex > room2.roomIndex) continue; // doppelte Raumverknüpfung vermeiden
 
+            ulong p = room.stateList.Count * room2.stateList.Count * (ulong)(room.incomingPortals.Length + room2.incomingPortals.Length) * (ulong)connectedRooms.Length;
+
+            int room1Pattern = patternCheck(room);
+            int room2Pattern = patternCheck(room2);
+            if (room1Pattern == room2Pattern && room1Pattern >= 0) p = (ulong)((room.fieldPosis.Length + 1) * (room2.fieldPosis.Length + 1));
+
             bestRoomConnections.Add(new Tuple<ulong, Room, Room>
             (
-              room.stateList.Count * room2.stateList.Count * (ulong)(room.incomingPortals.Length + room2.incomingPortals.Length),
+              p,
               room,
               room2
             ));
@@ -776,7 +835,7 @@ namespace SokoWahnWin
 
         if (bestRoomConnections.Count == 0) break; // nichts zum Verschmelzen gefunden?
 
-        if (bestRoomConnections.Min(x => x.Item1) > 100) // nur noch Varianten-Aufwand beachten
+        if (bestRoomConnections.Min(x => x.Item1) > 1000) // nur noch Varianten-Aufwand beachten
         {
           bestRoomConnections.Clear();
           foreach (var room in mergeRooms)
@@ -803,7 +862,8 @@ namespace SokoWahnWin
         }
         ulong effort = bestRoomConnection.Item2.variantList.Count * bestRoomConnection.Item3.variantList.Count;
 
-        if (effort > 10000000 && !first && roomNetwork.rooms.Length > 2) break; // Abbruch, wenn der Aufwand zu hoch ist, Ausnahme: es sind die letzten beiden Räume oder es war der erste Schmelzvorgang
+        // Abbruch, wenn der Aufwand zu hoch ist, Ausnahmen: es sind die letzten beiden Räume, es war der erste Schmelzvorgang oder es sind weniger als 10 Felder in der Summe
+        if (effort > 10000000 && !first && roomNetwork.rooms.Length > 2 && bestRoomConnection.Item2.fieldPosis.Length + bestRoomConnection.Item3.fieldPosis.Length > PatterSizeX * PatterSizeY) break;
         first = false;
 
         bool liveView = effort > 100000;
@@ -851,7 +911,8 @@ namespace SokoWahnWin
         roomNetwork.MergeRooms(bestRoomConnection.Item2, bestRoomConnection.Item3, status);
         if (!activeMerge) return;
         tick = Environment.TickCount - tick;
-        if (tick > 10000 && roomNetwork.rooms.Length > 2) break; // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat, Ausnahme: es sind die letzten beiden Räume
+        // Abbruch, wenn das Verschmelzen zweier Räume zu lange gedauert hat, Ausnahme: es sind die letzten beiden Räume, oder es waren weniger als 10 Felder in der Summe
+        if (tick > 10000 && roomNetwork.rooms.Length > 2 && bestRoomConnection.Item2.fieldPosis.Length + bestRoomConnection.Item3.fieldPosis.Length > 9) break;
 #endif
 
         if (liveView) DisplayUpdate();

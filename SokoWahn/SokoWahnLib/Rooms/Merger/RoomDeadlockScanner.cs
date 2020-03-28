@@ -306,6 +306,8 @@ namespace SokoWahnLib.Rooms.Merger
     /// </summary>
     public ulong Step4_RemoveUnusedVariants()
     {
+      if (usedVariantsForward.CountMarkedBits(0) == usedVariantsForward.Length && usedVariantsBackward.CountMarkedBits(0) == usedVariantsBackward.Length) return 0; // weiter zu Rechnen macht keinen Sinn
+
       usedVariantsForward.FullAnd(usedVariantsBackward);
 
       OptimizeTools.RenewVariants(room, new SkipMapper(usedVariantsForward));
