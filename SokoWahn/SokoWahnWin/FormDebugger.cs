@@ -250,7 +250,7 @@ namespace SokoWahnWin
     const int VariantDelay = 300;
 
     /// <summary>
-    /// Kostruktor
+    /// Konstruktor
     /// </summary>
     public FormDebugger()
     {
