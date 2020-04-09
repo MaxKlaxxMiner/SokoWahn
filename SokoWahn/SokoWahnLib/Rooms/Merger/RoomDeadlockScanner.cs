@@ -144,10 +144,22 @@ namespace SokoWahnLib.Rooms.Merger
             if (usedVariants.GetBit(variant)) continue; // Variante schon bekannt?
             usedVariants.SetBit(variant);
             usedVariantCount++;
-            if (Tools.TickRefresh() && !scanInfo(usedVariantCount.ToString("N0") + " / " + usedVariants.Length.ToString("N0"))) return false;
+            if (Tools.TickRefresh() && !scanInfo(usedVariantCount.ToString("N0") + " / " + usedVariants.Length.ToString("N0") + ", Tasks: " + tasks.Count.ToString("N0"))) return false;
 
             var variantData = room.variantList.GetData(variant);
-            if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten brauchen nicht weiter verfolgt werden
+            if (variantData.oPortalIndexPlayer == uint.MaxValue)
+            {
+              foreach (var oPortalIndexBox in variantData.oPortalIndexBoxes)
+              {
+                if (!room.field.IsGoal(room.outgoingPortals[oPortalIndexBox].toPos)) // rausgeschobene Kiste steht nicht auf einem Zielfeld?
+                {
+                  usedVariants.ClearBit(variant); // End-Variante wieder als ungültig markieren
+                  usedVariantCount--;
+                  break;
+                }
+              }
+              continue; // End-Varianten brauchen nicht weiter verfolgt werden
+            }
 
             var newTask = new DeadlockTask
             (
@@ -174,7 +186,19 @@ namespace SokoWahnLib.Rooms.Merger
               usedVariantCount++;
 
               var variantData = room.variantList.GetData(variant);
-              if (variantData.oPortalIndexPlayer == uint.MaxValue) continue; // End-Varianten brauchen nicht weiter verfolgt werden
+              if (variantData.oPortalIndexPlayer == uint.MaxValue)
+              {
+                foreach (var oPortalIndexBox in variantData.oPortalIndexBoxes)
+                {
+                  if (!room.field.IsGoal(room.outgoingPortals[oPortalIndexBox].toPos)) // rausgeschobene Kiste steht nicht auf einem Zielfeld?
+                  {
+                    usedVariants.ClearBit(variant); // End-Variante wieder als ungültig markieren
+                    usedVariantCount--;
+                    break;
+                  }
+                }
+                continue; // End-Varianten brauchen nicht weiter verfolgt werden
+              }
 
               var newTask = new DeadlockTask
               (
@@ -238,6 +262,8 @@ namespace SokoWahnLib.Rooms.Merger
 
         usedVariants.SetBit(vMap.variant); // End-Variante als benutzt markieren
         usedVariantCount++;
+        if (!usedVariantsForward.GetBit(vMap.variant)) continue; // unbenutzte Vorwärts-Varianten nicht weiter beachten
+
         var newTask = new DeadlockTask
         (
           vMap.iPortalIndex,                         // Portalnummer, worüber der Spieler den Raum betreten hat
