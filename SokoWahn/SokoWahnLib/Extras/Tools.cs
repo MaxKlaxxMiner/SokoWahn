@@ -4,9 +4,9 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 // ReSharper disable UnusedMember.Global
 
-/* * * * * * * *  * *
- *  Quelle: ngMax   *
- * * * * * * * *  * */
+/* * * * * * * * * *
+ *  Quelle: ngMax  *
+ * * * * * * * * * */
 
 namespace SokoWahnLib
 {
@@ -51,5 +51,18 @@ namespace SokoWahnLib
       return true;
     }
     #endregion
+
+    /// <summary>
+    /// zählt die gesetzten Bits eines Wertes
+    /// </summary>
+    /// <param name="n">Wert, welcher verwendet werden soll</param>
+    /// <returns>Anzahl der gezählten Bits</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static uint BitCount(ulong n)
+    {
+      n = n - (n >> 1 & 0x5555555555555555UL);
+      n = (n & 0x3333333333333333UL) + (n >> 2 & 0x3333333333333333UL);
+      return (uint)((n + (n >> 4) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL >> 56);
+    }
   }
 }
