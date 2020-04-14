@@ -6,8 +6,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using SokoWahnLib;
+using SokoWahnLib.Rooms;
 using SokoWahnWin;
-
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
 #pragma warning disable 169
@@ -15,7 +15,7 @@ using SokoWahnWin;
 
 namespace SokoWahnTest
 {
-  class Program
+  static class Program
   {
     #region # public struct ChainTask // einzelne Aufgabe in der Kette
     /// <summary>
@@ -65,6 +65,44 @@ namespace SokoWahnTest
     }
     #endregion
 
+    #region # public struct RealTask // speichert eine gefundene Lösung der zugeordneten Aufgabe
+    /// <summary>
+    /// speichert eine gefundene Lösung der zugeordneten Aufgabe
+    /// </summary>
+    public struct SolutionTask
+    {
+      /// <summary>
+      /// merkt sich die Variante, welche durchgeführt wurde
+      /// </summary>
+      public readonly ulong variant;
+      /// <summary>
+      /// merkt sich den Kistenzustand am Ende der Aufgabe
+      /// </summary>
+      public readonly ulong state;
+
+      /// <summary>
+      /// Konstruktor
+      /// </summary>
+      /// <param name="variant">Variante, welche durchgeführt wurde</param>
+      /// <param name="state">Kistenzustand am Ende der Aufgabe</param>
+      public SolutionTask(ulong variant, ulong state)
+      {
+        this.variant = variant;
+        this.state = state;
+      }
+
+      /// <summary>
+      /// gibt den Inhalt als lesbare Zeichenkette zurück
+      /// </summary>
+      /// <returns>lesbare Zeichenkette</returns>
+      public override string ToString()
+      {
+        return new { variant, state }.ToString();
+      }
+    }
+    #endregion
+
+    #region # public sealed class ChainVariant // merkt sich eine komplette Ketten-Variante
     /// <summary>
     /// merkt sich eine komplette Ketten-Variante
     /// </summary>
@@ -75,9 +113,13 @@ namespace SokoWahnTest
       /// </summary>
       public readonly uint boxes;
       /// <summary>
-      /// merkt sich die die Kette der abzuarbeitenden Aufgaben
+      /// merkt sich die Kette der abzuarbeitenden Aufgaben
       /// </summary>
       public readonly ChainTask[] tasks;
+      /// <summary>
+      /// merkt sich die gefundenen dazugehörigen Lösungen
+      /// </summary>
+      public readonly List<List<SolutionTask>> solutions;
       /// <summary>
       /// Konstruktor (für neue Aufgaben-Ketten)
       /// </summary>
@@ -86,6 +128,7 @@ namespace SokoWahnTest
       {
         boxes = startBoxes;
         tasks = new ChainTask[0];
+        solutions = new List<List<SolutionTask>>();
       }
       /// <summary>
       /// Konstruktor (für neue Aufgaben-Ketten mit erster Start-Variante)
@@ -97,6 +140,7 @@ namespace SokoWahnTest
         Debug.Assert((int)(startBoxes + Tools.BitCount(startTask.iBoxesBits) - Tools.BitCount(startTask.oBoxesBits)) >= 0);
         boxes = startBoxes + Tools.BitCount(startTask.iBoxesBits) - Tools.BitCount(startTask.oBoxesBits);
         tasks = new[] { startTask };
+        solutions = new List<List<SolutionTask>>();
       }
       /// <summary>
       /// Konstruktor (Kopien erstellen von bestehenden Aufgaben-Ketten)
@@ -111,6 +155,7 @@ namespace SokoWahnTest
         tasks = new ChainTask[oldChain.tasks.Length + 1];
         Array.Copy(oldChain.tasks, tasks, oldChain.tasks.Length);
         tasks[oldChain.tasks.Length] = nextTask;
+        solutions = oldChain.solutions.Select(x => x.ToList()).ToList();
       }
       /// <summary>
       /// gibt den Inhalt als lesbare Zeichenkette zurück
@@ -118,11 +163,17 @@ namespace SokoWahnTest
       /// <returns>lesbare Zeichenkette</returns>
       public override string ToString()
       {
-        return new { boxes, tasks = tasks.Length }.ToString();
+        return new { boxes, tasks = tasks.Length, solutions = solutions.Count }.ToString();
       }
     }
+    #endregion
 
-    static void Main(string[] args)
+    static void UpdateChainSolutions(ChainVariant chain, Room room)
+    {
+
+    }
+
+    static void Main()
     {
       var testRooms = FormDebugger.CreateTestRooms();
 
@@ -149,14 +200,35 @@ namespace SokoWahnTest
       var finalVariants = new List<ChainVariant>(); // fertig berechnete Varianten
       var variants = new List<ChainVariant>(); // noch abzuarbeitende Varianten
 
-      // --- Startaufgaben erstellen ---
+      #region # // --- Startaufgaben erstellen ---
+      if (startBoxes == endBoxes) finalVariants.Add(new ChainVariant(startBoxes)); // End-Zustand hinzufügen (ohne etwas zu tun)
       if (room.startVariantCount > 0)
       {
-        throw new NotImplementedException();
+        throw new NotImplementedException("debug-check");
+        for (ulong outputBoxMask = 0; outputBoxMask < portalMask; outputBoxMask++)
+        {
+          uint outputBoxes = Tools.BitCount(outputBoxMask);
+          if (outputBoxes > startBoxes) continue; // zuviele Kisten rausgeschoben
+          uint nextBoxes = startBoxes - outputBoxes;
+          for (uint oPortalIndex = 0; oPortalIndex < portalCount; oPortalIndex++)
+          {
+            finalVariants.Add(new ChainVariant(startBoxes, new ChainTask(uint.MaxValue, uint.MaxValue, 0, outputBoxMask))); // direkt erreichbaren End-Zustand hinzufügen
+          }
+          if (nextBoxes >= minBoxes && nextBoxes <= maxBoxes)
+          {
+            for (uint oPortalIndex = 0; oPortalIndex < portalCount; oPortalIndex++)
+            {
+              variants.Add(new ChainVariant(startBoxes, new ChainTask(uint.MaxValue, oPortalIndex, 0, outputBoxMask)));
+              if (nextBoxes == endBoxes)
+              {
+                finalVariants.Add(new ChainVariant(startBoxes, new ChainTask(uint.MaxValue, oPortalIndex, 0, outputBoxMask))); // direkt erreichbaren End-Zustand hinzufügen (mit Verlassen des Raumes)
+              }
+            }
+          }
+        }
       }
       else
       {
-        if (startBoxes == endBoxes) finalVariants.Add(new ChainVariant(startBoxes)); // End-Zustand hinzufügen (ohne etwas zu tun)
         for (ulong inputBoxMask = 0; inputBoxMask < portalMask; inputBoxMask++)
         {
           uint inputBoxes = Tools.BitCount(inputBoxMask);
@@ -166,7 +238,7 @@ namespace SokoWahnTest
           {
             uint outputBoxes = Tools.BitCount(outputBoxMask);
             if (outputBoxes > boxes) continue; // zuviele Kisten rausgeschoben
-            uint nextBoxes = boxes + outputBoxes;
+            uint nextBoxes = boxes - outputBoxes;
             if (nextBoxes == endBoxes)
             {
               for (uint iPortalIndex = 0; iPortalIndex < portalCount; iPortalIndex++)
@@ -193,6 +265,12 @@ namespace SokoWahnTest
             }
           }
         }
+      }
+      #endregion
+
+      foreach (var f in finalVariants)
+      {
+        UpdateChainSolutions(f, room);
       }
 
       // todo 1: reale Lösungen für bereits gefundene End-Ketten zuordnen und ineffizienteste Ketten entfernen
