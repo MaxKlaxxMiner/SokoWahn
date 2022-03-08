@@ -50,7 +50,7 @@ namespace Sokosolver.SokowahnTools
     /// <summary>
     /// Anzahl der Hasheinträge
     /// </summary>
-    const int hashesAnzahl = 4;
+    const int hashesAnzahl = 16;
 
     /// <summary>
     /// Bits, welche benutzt werden müssen

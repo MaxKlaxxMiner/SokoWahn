@@ -150,7 +150,18 @@
             "Stop bei 26,0 GB",
             "Stop bei 28,0 GB",
             "Stop bei 30,0 GB",
-            "Stop bei 32,0 GB"});
+            "Stop bei 32,0 GB",
+            "Stop bei 36,0 GB",
+            "Stop bei 40,0 GB",
+            "Stop bei 44,0 GB",
+            "Stop bei 48,0 GB",
+            "Stop bei 52,0 GB",
+            "Stop bei 56,0 GB",
+            "Stop bei 64,0 GB",
+            "Stop bei 72,0 GB",
+            "Stop bei 80,0 GB",
+            "Stop bei 88,0 GB",
+            "Stop bei 96,0 GB"});
       this.comboBox2.Location = new System.Drawing.Point(13, 178);
       this.comboBox2.Name = "comboBox2";
       this.comboBox2.Size = new System.Drawing.Size(228, 21);

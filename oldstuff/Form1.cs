@@ -191,7 +191,7 @@ namespace Sokosolver
 #else
       textBox5.Text = "-200";
 #endif
-      comboBox2.Text = (string)comboBox2.Items[16];
+      comboBox2.Text = (string)comboBox2.Items[comboBox2.Items.Count - 1];
 
       comboBox1.Items.AddRange(GetSokowahnInterfaces().Select(x => x.Item1).ToArray());
 #if DEBUG
