@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using SokoWahnLib;
 using SokoWahnLib.Rooms;
+using SokoWahnLib.Rooms.Filter;
 using SokoWahnLib.Rooms.Merger;
 
 // ReSharper disable FieldCanBeMadeReadOnly.Local
@@ -1037,6 +1038,7 @@ namespace SokoWahnWin
       activeMerge = true;
 
       var filterRooms = listRooms.SelectedIndices.Cast<int>().Select(i => roomNetwork.rooms[i]).ToArray();
+      if (filterRooms.Length == 0) filterRooms = new[] { roomNetwork.rooms[1] };
 
       listRooms.BeginUpdate();
       listRooms.Items.Clear();
@@ -1069,31 +1071,12 @@ namespace SokoWahnWin
         fieldDisplay.Update(roomNetwork, displaySettings);
         Application.DoEvents();
 
-        int minBoxes = int.MaxValue;
-        int maxBoxes = int.MinValue;
-        foreach (var state in room.stateList)
+        using (var filter = new RoomProfileFilter(room))
         {
-          var boxes = state.Value;
-          if (boxes.Length > maxBoxes) maxBoxes = boxes.Length;
-          if (boxes.Length < minBoxes) minBoxes = boxes.Length;
+          filter.Step1_GenerateProfiles();
         }
 
-        buttonFilter.Text = "Boxes: " + minBoxes + " - " + maxBoxes;
-
         //if (!status("Optimize[" + room.fieldPosis.First() + "]: (1 / 5) init")) return;
-        //var scanner = new RoomDeadlockScanner(room);
-
-        //if (!status("Optimize[" + room.fieldPosis.First() + "]: (2 / 5) reverse map")) return;
-        //scanner.Step1_CreateReverseMap();
-
-        //if (!status("Optimize[" + room.fieldPosis.First() + "]: (3 / 5) scan forward")) return;
-        //scanner.Step2_ScanForward();
-
-        //if (!status("Optimize[" + room.fieldPosis.First() + "]: (4 / 5) scan backward")) return;
-        //scanner.Step3_ScanBackward();
-
-        //if (!status("Optimize[" + room.fieldPosis.First() + "]: (5 / 5) remove unused variants")) return;
-        //scanner.Step4_RemoveUnusedVariants();
 
         newValue += room.variantList.Count + room.stateList.Count;
       }

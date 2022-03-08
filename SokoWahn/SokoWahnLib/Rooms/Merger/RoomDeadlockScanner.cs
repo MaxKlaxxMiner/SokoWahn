@@ -137,7 +137,7 @@ namespace SokoWahnLib.Rooms.Merger
         // --- Varianten ohne Kistenwechsel abarbeiten ---
         for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
         {
-          if (iPortalIndex == task.portalIndexPlayer && !task.exportedBox) continue; // einfaches Zurücklaufen durch das gleiche Portal nicht erlaubt, außer wenn vorher eine Kiste aus dem Raum geschoben wurde
+          if (iPortalIndex == task.portalIndexPlayer && !task.exportedBox) continue; // todo: bug? einfaches Zurücklaufen durch das gleiche Portal nicht erlaubt, außer wenn vorher eine Kiste aus dem Raum geschoben wurde
 
           foreach (ulong variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(task.state).AsEnumerable())
           {
