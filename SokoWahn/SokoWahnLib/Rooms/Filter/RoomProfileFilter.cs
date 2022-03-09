@@ -55,6 +55,18 @@ namespace SokoWahnLib.Rooms.Filter
       /// </summary>
       public uint[] portalBoxOuputCount;
       /// <summary>
+      /// Portal, worüber der Spieler den Raum betreten hat (uint.MaxValue = wenn der Spieler vorher bereits im Raum war)
+      /// </summary>
+      public uint playerIncomingPortalIndex;
+      /// <summary>
+      /// Portal, worüber der Spieler den Raum wieder verlassen hat (uint.MaxValue = wenn der Raum nicht verlassen wurde)
+      /// </summary>
+      public uint playerOutgoingPortalIndex;
+      /// <summary>
+      /// Variante, welche benutzt wurde (oder ulong.MaxValue, wenn es nur eine Statusänderung war)
+      /// </summary>
+      public ulong variant;
+      /// <summary>
       /// nächster Zug auf gleicher Ebene
       /// </summary>
       public ProfileMove nextMove;
@@ -75,6 +87,9 @@ namespace SokoWahnLib.Rooms.Filter
         totalPushCount = cloneMove.totalPushCount;
         portalBoxInputCount = cloneMove.portalBoxInputCount.ToArray();
         portalBoxOuputCount = cloneMove.portalBoxOuputCount.ToArray();
+        playerIncomingPortalIndex = cloneMove.playerIncomingPortalIndex;
+        playerOutgoingPortalIndex = cloneMove.playerOutgoingPortalIndex;
+        variant = cloneMove.variant;
         nextMove = cloneMove.nextMove;
       }
       /// <summary>
@@ -83,7 +98,17 @@ namespace SokoWahnLib.Rooms.Filter
       /// <returns>lesbare Zeichenkette</returns>
       public override string ToString()
       {
-        return new { state, totalMoveCount, totalPushCount, nextMove }.ToString();
+        return new { state, variant, totalMoveCount, totalPushCount, playerIncomingPortalIndex, playerOutgoingPortalIndex, portalBoxInputCount = string.Join(", ", portalBoxInputCount), portalBoxOuputCount = string.Join(", ", portalBoxOuputCount), nextMove }.ToString();
+      }
+      /// <summary>
+      /// berechnet die Prüfsumme des Zuges (für Doppler-Prüfung)
+      /// </summary>
+      public ulong Crc
+      {
+        get
+        {
+          return Crc64.Start.Crc64Update(state).Crc64Update(playerIncomingPortalIndex).Crc64Update(playerOutgoingPortalIndex).Crc64Update(variant);
+        }
       }
     }
 
@@ -93,7 +118,7 @@ namespace SokoWahnLib.Rooms.Filter
 
       if (room.startVariantCount > 0) throw new NotImplementedException();
 
-      var moves = new List<ProfileMove> { new ProfileMove { state = room.startState, portalBoxInputCount = new uint[room.incomingPortals.Length], portalBoxOuputCount = new uint[room.outgoingPortals.Length] } };
+      var moves = new List<ProfileMove> { new ProfileMove { state = room.startState, variant = ulong.MaxValue, playerIncomingPortalIndex = uint.MaxValue, playerOutgoingPortalIndex = uint.MaxValue, portalBoxInputCount = new uint[room.incomingPortals.Length], portalBoxOuputCount = new uint[room.outgoingPortals.Length] } };
 
       while (moves.Count > 0)
       {
@@ -104,38 +129,67 @@ namespace SokoWahnLib.Rooms.Filter
           if (moves.Count > 0) moves[moves.Count - 1] = moves[moves.Count - 1].nextMove;
           continue;
         }
-        ProfileMove nextMove = null;
 
-        for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+        if (move.state == 0) // wurde ein Ende erreicht?
         {
-          var portal = room.incomingPortals[iPortalIndex];
-
-          var boxState = portal.stateBoxSwap.Get(move.state);
-          if (boxState != move.state) // Variante mit reinschiebbarer Kiste vorhanden?
+          string path = move.totalMoveCount + "-" + move.totalPushCount;
+          for (int i = 1; i < moves.Count; i++)
           {
-            nextMove = new ProfileMove(move) { nextMove = nextMove, state = boxState };
-            nextMove.totalMoveCount++;
-            nextMove.totalPushCount++;
-            nextMove.portalBoxInputCount[iPortalIndex]++;
+            if (moves[i].playerIncomingPortalIndex < uint.MaxValue) path += ",i" + moves[i].playerIncomingPortalIndex;
+            for (int p = 0; p < moves[i].portalBoxInputCount.Length; p++)
+            {
+              if (moves[i].portalBoxInputCount[p] > moves[i - 1].portalBoxInputCount[p]) path += ",bi" + p;
+            }
+            for (int p = 0; p < moves[i].portalBoxOuputCount.Length; p++)
+            {
+              if (moves[i].portalBoxOuputCount[p] > moves[i - 1].portalBoxOuputCount[p]) path += ",bo" + p;
+            }
+            if (moves[i].playerOutgoingPortalIndex < uint.MaxValue) path += ",o" + moves[i].playerOutgoingPortalIndex;
           }
 
-          foreach (ulong variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(move.state).AsEnumerable())
-          {
-            var variantData = room.variantList.GetData(variant);
+          int stop = 0;
+        }
 
-            nextMove = new ProfileMove(move) { nextMove = nextMove, state = variantData.newState };
-            nextMove.totalMoveCount += variantData.moves;
-            nextMove.totalPushCount += variantData.pushes;
-            foreach (uint portalBoxOutput in variantData.oPortalIndexBoxes)
+        ProfileMove nextMove = null;
+
+        if (move.playerOutgoingPortalIndex < uint.MaxValue || move.variant == ulong.MaxValue)
+        {
+          for (uint iPortalIndex = 0; iPortalIndex < room.incomingPortals.Length; iPortalIndex++)
+          {
+            var portal = room.incomingPortals[iPortalIndex];
+
+            // --- auf eingehende Kisten prüfen ---
+            var boxState = portal.stateBoxSwap.Get(move.state);
+            if (boxState != move.state) // Variante mit reinschiebbarer Kiste vorhanden?
             {
-              nextMove.portalBoxOuputCount[portalBoxOutput]++;
+              nextMove = new ProfileMove(move) { nextMove = nextMove, state = boxState, variant = ulong.MaxValue, playerIncomingPortalIndex = uint.MaxValue, playerOutgoingPortalIndex = uint.MaxValue };
+              nextMove.portalBoxInputCount[iPortalIndex]++;
+
+              ulong crc = nextMove.Crc;
+              if (moves.Count(m => m.Crc == crc) >= 2) nextMove = nextMove.nextMove;
+            }
+
+            // --- Varianten prüfen ---
+            foreach (ulong variant in room.incomingPortals[iPortalIndex].variantStateDict.GetVariantSpan(move.state).AsEnumerable())
+            {
+              var variantData = room.variantList.GetData(variant);
+
+              nextMove = new ProfileMove(move) { nextMove = nextMove, state = variantData.newState, variant = variant, playerIncomingPortalIndex = iPortalIndex, playerOutgoingPortalIndex = variantData.oPortalIndexPlayer };
+              nextMove.totalMoveCount += variantData.moves;
+              nextMove.totalPushCount += variantData.pushes;
+              foreach (uint portalBoxOutput in variantData.oPortalIndexBoxes)
+              {
+                nextMove.portalBoxOuputCount[portalBoxOutput]++;
+              }
+
+              ulong crc = nextMove.Crc;
+              if (moves.Count(m => m.Crc == crc) >= 2) nextMove = nextMove.nextMove;
             }
           }
         }
 
         if (nextMove != null)
         {
-          // todo: dopplercheck
           moves.Add(nextMove);
         }
         else
