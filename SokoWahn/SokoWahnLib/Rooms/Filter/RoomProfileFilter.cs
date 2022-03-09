@@ -112,11 +112,114 @@ namespace SokoWahnLib.Rooms.Filter
       }
     }
 
+    struct ProfileList
+    {
+      public ProfileMove[] move;
+      public string Path
+      {
+        get
+        {
+          string path = "";
+          for (int i = 1; i < move.Length; i++)
+          {
+            if (move[i].playerIncomingPortalIndex < uint.MaxValue) path += ",i" + move[i].playerIncomingPortalIndex;
+            for (int p = 0; p < move[i].portalBoxInputCount.Length; p++)
+            {
+              if (move[i].portalBoxInputCount[p] > move[i - 1].portalBoxInputCount[p]) path += ",bi" + p;
+            }
+            for (int p = 0; p < move[i].portalBoxOuputCount.Length; p++)
+            {
+              if (move[i].portalBoxOuputCount[p] > move[i - 1].portalBoxOuputCount[p]) path += ",bo" + p;
+            }
+            if (move[i].playerOutgoingPortalIndex < uint.MaxValue) path += ",o" + move[i].playerOutgoingPortalIndex;
+          }
+          return path.TrimStart(',');
+        }
+      }
+      public ulong moves;
+      public ulong pushes;
+      public override string ToString()
+      {
+        return new { Path, moves, pushes }.ToString();
+      }
+    }
+
+    struct ProfileStep
+    {
+      public uint incomingBox;
+      public uint playerIncomingPortal;
+      public uint playerOutgoingPortal;
+      public ulong outgoingBoxes;
+      public uint[] OutgoingBoxes
+      {
+        get
+        {
+          var result = new List<uint>();
+          for (int i = 0; i < 64; i++)
+          {
+            if ((outgoingBoxes & (1UL << i)) != 0) result.Add((uint)i);
+          }
+          return result.ToArray();
+        }
+      }
+      public override string ToString()
+      {
+        return (incomingBox < uint.MaxValue ? ",bi" + incomingBox : "") +
+               (playerIncomingPortal < uint.MaxValue ? ",i" + playerIncomingPortal : "") +
+               (OutgoingBoxes.Length > 0 ? "," + string.Join(",", OutgoingBoxes.Select(b => "bi" + b)) : "") +
+               (playerOutgoingPortal < uint.MaxValue ? ",o" + playerOutgoingPortal : "");
+      }
+    }
+
+    static void TestProfiler(Room room)
+    {
+      if (room.startVariantCount > 0) throw new NotImplementedException();
+
+      uint portals = (uint)room.incomingPortals.Length;
+      ulong maxOutgoingBoxes = 1UL << (int)portals;
+
+      for (int len = 0; len < 10; len++)
+      {
+        var searchProfile = new ProfileStep[len];
+        for (int p = len - 1; ; )
+        {
+          searchProfile[p].outgoingBoxes++;
+          if (searchProfile[p].outgoingBoxes == maxOutgoingBoxes)
+          {
+            searchProfile[p].outgoingBoxes = 0;
+            if (searchProfile[p].playerOutgoingPortal == uint.MaxValue) searchProfile[p].playerOutgoingPortal = portals;
+            searchProfile[p].playerOutgoingPortal++;
+            if (searchProfile[p].playerOutgoingPortal > portals)
+            {
+              searchProfile[p].playerOutgoingPortal = 0;
+
+              if (searchProfile[p].playerIncomingPortal == uint.MaxValue) searchProfile[p].playerIncomingPortal = portals;
+              searchProfile[p].playerIncomingPortal++;
+              if (searchProfile[p].playerIncomingPortal > portals)
+              {
+                searchProfile[p].playerIncomingPortal = 0;
+
+
+              }
+              if (searchProfile[p].playerIncomingPortal == portals) searchProfile[p].playerIncomingPortal = uint.MaxValue;
+            }
+            if (searchProfile[p].playerOutgoingPortal == portals) searchProfile[p].playerOutgoingPortal = uint.MaxValue;
+          }
+        }
+      }
+
+    }
+
     public void Step1_GenerateProfiles()
     {
       var room = this.room;
 
+      TestProfiler(room);
+      return;
+
       if (room.startVariantCount > 0) throw new NotImplementedException();
+
+      var moveLists = new List<ProfileList>();
 
       var moves = new List<ProfileMove> { new ProfileMove { state = room.startState, variant = ulong.MaxValue, playerIncomingPortalIndex = uint.MaxValue, playerOutgoingPortalIndex = uint.MaxValue, portalBoxInputCount = new uint[room.incomingPortals.Length], portalBoxOuputCount = new uint[room.outgoingPortals.Length] } };
 
@@ -132,22 +235,7 @@ namespace SokoWahnLib.Rooms.Filter
 
         if (move.state == 0) // wurde ein Ende erreicht?
         {
-          string path = move.totalMoveCount + "-" + move.totalPushCount;
-          for (int i = 1; i < moves.Count; i++)
-          {
-            if (moves[i].playerIncomingPortalIndex < uint.MaxValue) path += ",i" + moves[i].playerIncomingPortalIndex;
-            for (int p = 0; p < moves[i].portalBoxInputCount.Length; p++)
-            {
-              if (moves[i].portalBoxInputCount[p] > moves[i - 1].portalBoxInputCount[p]) path += ",bi" + p;
-            }
-            for (int p = 0; p < moves[i].portalBoxOuputCount.Length; p++)
-            {
-              if (moves[i].portalBoxOuputCount[p] > moves[i - 1].portalBoxOuputCount[p]) path += ",bo" + p;
-            }
-            if (moves[i].playerOutgoingPortalIndex < uint.MaxValue) path += ",o" + moves[i].playerOutgoingPortalIndex;
-          }
-
-          int stop = 0;
+          moveLists.Add(new ProfileList { move = moves.ToArray(), moves = move.totalMoveCount, pushes = move.totalPushCount });
         }
 
         ProfileMove nextMove = null;
