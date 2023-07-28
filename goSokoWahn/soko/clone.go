@@ -5,7 +5,7 @@ func (f *Field) Clone() *Field {
 		fieldData:     f.fieldData,
 		width:         f.width,
 		height:        f.height,
-		walkSize:      f.walkSize,
+		walkEof:       f.walkEof,
 		walkLeft:      f.walkLeft,
 		walkRight:     f.walkRight,
 		walkUp:        f.walkUp,

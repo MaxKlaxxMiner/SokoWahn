@@ -164,32 +164,32 @@ func Parse(sokoMap string) (f *Field, err error) {
 			doCheck = append(doCheck, np)
 		}
 	}
-	f.walkSize = Wpos(len(walkable))
+	f.walkEof = Wpos(len(walkable))
 
 	// --- hin und her Map erstellen ---
 	posToW := make([]Wpos, len(rawEmpty))
-	wToPos := make([]int, 0, f.walkSize)
+	wToPos := make([]int, 0, f.walkEof)
 	for pos := range rawEmpty {
 		if walkable[pos] {
 			posToW[pos] = Wpos(len(wToPos))
 			wToPos = append(wToPos, pos)
 		} else {
-			posToW[pos] = f.walkSize
+			posToW[pos] = f.walkEof
 		}
 	}
 	f.fieldToWpos = posToW
 	f.wposToField = wToPos
 
 	// --- walkable-arrays befüllen ---
-	f.walkLeft = make([]Wpos, f.walkSize)
-	f.walkRight = make([]Wpos, f.walkSize)
-	f.walkUp = make([]Wpos, f.walkSize)
-	f.walkDown = make([]Wpos, f.walkSize)
-	for i := 0; i < int(f.walkSize); i++ {
-		f.walkLeft[i] = f.walkSize
-		f.walkRight[i] = f.walkSize
-		f.walkUp[i] = f.walkSize
-		f.walkDown[i] = f.walkSize
+	f.walkLeft = make([]Wpos, f.walkEof)
+	f.walkRight = make([]Wpos, f.walkEof)
+	f.walkUp = make([]Wpos, f.walkEof)
+	f.walkDown = make([]Wpos, f.walkEof)
+	for i := 0; i < int(f.walkEof); i++ {
+		f.walkLeft[i] = f.walkEof
+		f.walkRight[i] = f.walkEof
+		f.walkUp[i] = f.walkEof
+		f.walkDown[i] = f.walkEof
 	}
 
 	for _, pos := range wToPos {
@@ -216,7 +216,7 @@ func Parse(sokoMap string) (f *Field, err error) {
 
 	f.initBoxes = make([]Wpos, 0, f.boxCount)
 	for _, pos := range foundBoxes {
-		if posToW[pos] == f.walkSize {
+		if posToW[pos] == f.walkEof {
 			return nil, errors.New("unreachable box found")
 		}
 		f.initBoxes = append(f.initBoxes, posToW[pos])
@@ -224,13 +224,13 @@ func Parse(sokoMap string) (f *Field, err error) {
 
 	f.goals = make([]Wpos, 0, f.boxCount)
 	for _, pos := range foundGoals {
-		if posToW[pos] == f.walkSize {
+		if posToW[pos] == f.walkEof {
 			return nil, errors.New("unreachable goal found")
 		}
 		f.goals = append(f.goals, posToW[pos])
 	}
 
-	f.wposToBoxes = make([]uint32, f.walkSize)
+	f.wposToBoxes = make([]uint32, f.walkEof+1)
 	for i := range f.wposToBoxes {
 		f.wposToBoxes[i] = f.boxCount
 	}
@@ -240,9 +240,9 @@ func Parse(sokoMap string) (f *Field, err error) {
 		f.wposToBoxes[f.boxes[i]] = uint32(i)
 	}
 
-	f.tmpCheckPos = make([]Wpos, f.walkSize)
-	f.tmpCheckDepth = make([]uint32, f.walkSize)
-	f.tmpCheckDone = make([]bool, f.walkSize+1)
+	f.tmpCheckPos = make([]Wpos, f.walkEof)
+	f.tmpCheckDepth = make([]uint32, f.walkEof)
+	f.tmpCheckDone = make([]bool, f.walkEof+1)
 	f.tmpCheckDone[len(f.tmpCheckDone)-1] = true // letztes Feld schon auf "Fertig" setzen
 
 	return

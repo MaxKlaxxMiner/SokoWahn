@@ -12,5 +12,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(test)
+	goals := test.SearchGoalStates()
+
+	fmt.Println(len(goals))
 }
