@@ -188,3 +188,4 @@ FakesAssemblies/
 
 # GoLand
 .idea
+*.exe

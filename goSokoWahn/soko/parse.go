@@ -1,4 +1,4 @@
-package sokofield
+package soko
 
 import (
 	"bytes"
@@ -164,14 +164,14 @@ func Parse(sokoMap string) (f *Field, err error) {
 			doCheck = append(doCheck, np)
 		}
 	}
-	f.walkSize = wpos(len(walkable))
+	f.walkSize = Wpos(len(walkable))
 
 	// --- hin und her Map erstellen ---
-	posToW := make([]wpos, len(rawEmpty))
+	posToW := make([]Wpos, len(rawEmpty))
 	wToPos := make([]int, 0, f.walkSize)
 	for pos := range rawEmpty {
 		if walkable[pos] {
-			posToW[pos] = wpos(len(wToPos))
+			posToW[pos] = Wpos(len(wToPos))
 			wToPos = append(wToPos, pos)
 		} else {
 			posToW[pos] = f.walkSize
@@ -181,10 +181,10 @@ func Parse(sokoMap string) (f *Field, err error) {
 	f.wposToField = wToPos
 
 	// --- walkable-arrays befüllen ---
-	f.walkLeft = make([]wpos, f.walkSize)
-	f.walkRight = make([]wpos, f.walkSize)
-	f.walkUp = make([]wpos, f.walkSize)
-	f.walkDown = make([]wpos, f.walkSize)
+	f.walkLeft = make([]Wpos, f.walkSize)
+	f.walkRight = make([]Wpos, f.walkSize)
+	f.walkUp = make([]Wpos, f.walkSize)
+	f.walkDown = make([]Wpos, f.walkSize)
 	for i := 0; i < int(f.walkSize); i++ {
 		f.walkLeft[i] = f.walkSize
 		f.walkRight[i] = f.walkSize
@@ -214,7 +214,7 @@ func Parse(sokoMap string) (f *Field, err error) {
 
 	// todo: Kisten entfernen, welche unereichbar oder blockiert sind
 
-	f.initBoxes = make([]wpos, 0, f.boxCount)
+	f.initBoxes = make([]Wpos, 0, f.boxCount)
 	for _, pos := range foundBoxes {
 		if posToW[pos] == f.walkSize {
 			return nil, errors.New("unreachable box found")
@@ -222,7 +222,7 @@ func Parse(sokoMap string) (f *Field, err error) {
 		f.initBoxes = append(f.initBoxes, posToW[pos])
 	}
 
-	f.goals = make([]wpos, 0, f.boxCount)
+	f.goals = make([]Wpos, 0, f.boxCount)
 	for _, pos := range foundGoals {
 		if posToW[pos] == f.walkSize {
 			return nil, errors.New("unreachable goal found")
@@ -234,13 +234,13 @@ func Parse(sokoMap string) (f *Field, err error) {
 	for i := range f.wposToBoxes {
 		f.wposToBoxes[i] = f.boxCount
 	}
-	f.boxes = make([]wpos, f.boxCount)
+	f.boxes = make([]Wpos, f.boxCount)
 	for i := range f.boxes {
 		f.boxes[i] = posToW[foundBoxes[i]]
 		f.wposToBoxes[f.boxes[i]] = uint32(i)
 	}
 
-	f.tmpCheckPos = make([]wpos, f.walkSize)
+	f.tmpCheckPos = make([]Wpos, f.walkSize)
 	f.tmpCheckDepth = make([]uint32, f.walkSize)
 	f.tmpCheckDone = make([]bool, f.walkSize+1)
 	f.tmpCheckDone[len(f.tmpCheckDone)-1] = true // letztes Feld schon auf "Fertig" setzen
