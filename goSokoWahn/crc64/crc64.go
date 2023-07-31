@@ -1,6 +1,7 @@
 package crc64
 
 import (
+	"goSokoWahn/tools"
 	"math"
 	"time"
 )
@@ -99,7 +100,7 @@ func (crc Value) UpdateBytes(value []byte) Value {
 }
 
 func (crc Value) UpdateString(value string) Value {
-	return crc.UpdateBytes(UnsafeStringToBytes(value))
+	return crc.UpdateBytes(tools.UnsafeStringToBytes(value))
 }
 
 func (crc Value) UpdatePartialBytes(value []byte) Value {
@@ -111,5 +112,5 @@ func (crc Value) UpdatePartialBytes(value []byte) Value {
 }
 
 func (crc Value) UpdatePartialString(value string) Value {
-	return crc.UpdatePartialBytes(UnsafeStringToBytes(value))
+	return crc.UpdatePartialBytes(tools.UnsafeStringToBytes(value))
 }
