@@ -241,7 +241,7 @@ func Parse(sokoMap string) (f *Field, err error) {
 	}
 
 	f.tmpCheckPos = make([]Wpos, f.walkEof)
-	f.tmpCheckDepth = make([]uint32, f.walkEof)
+	f.tmpCheckDepth = make([]int32, f.walkEof)
 	f.tmpCheckDone = make([]bool, f.walkEof+1)
 	f.tmpCheckDone[len(f.tmpCheckDone)-1] = true // letztes Feld schon auf "Fertig" setzen
 

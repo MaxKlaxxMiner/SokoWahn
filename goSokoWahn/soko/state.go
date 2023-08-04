@@ -60,6 +60,16 @@ func (f *Field) GetState(state *State) {
 	state.UpdateCrc()
 }
 
+func (f *Field) AppendGetState(states []State) []State {
+	if len(states) < cap(states) {
+		states = states[:len(states)+1]
+	} else {
+		states = append(states, State{})
+	}
+	f.GetState(&states[len(states)-1])
+	return states
+}
+
 func (f *Field) MakeStateBuffer(stateCount int) []State {
 	result := make([]State, stateCount)
 	boxBuffer := make([]Wpos, stateCount*int(f.boxCount))

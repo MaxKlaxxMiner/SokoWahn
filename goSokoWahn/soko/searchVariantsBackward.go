@@ -23,7 +23,7 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 
 	// --- Rechts-Vermutung: Kiste wurde das letztes mal nach rechts geschoben ---
 	if f.wposToBoxes[posRight] < f.boxCount && posLeft < f.walkEof && f.wposToBoxes[posLeft] == f.boxCount {
-		f.player = posRight                                                // Spieler rückwärts nach links bewegen
+		f.player = posLeft                                                 // Spieler rückwärts nach links bewegen
 		box := f.wposToBoxes[posRight]                                     // Kisten-Nummer abfragen
 		f.wposToBoxes[posStart], f.wposToBoxes[posRight] = box, f.boxCount // Kiste auf den Platz schieben, wo vorher der Spieler stand
 		f.boxes[box] = posStart                                            // neue Kistenposition merken
@@ -67,7 +67,7 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 }
 
 func (f *Field) searchVariantsBackwardStep(result []State) []State {
-	//checkRaumVon := 0
+	checkRaumVon := 0
 	checkRaumBis := 0
 
 	tools.ClearBools(f.tmpCheckDone[:len(f.tmpCheckDone)-1])
@@ -75,98 +75,75 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 	// erste Spielerposition hinzufügen
 	f.tmpCheckDone[f.player] = true
 	f.tmpCheckPos[checkRaumBis] = f.player
-	f.tmpCheckDepth[checkRaumBis] = uint32(f.moveDepth)
+	f.tmpCheckDepth[checkRaumBis] = f.moveDepth
 	checkRaumBis++
 
 	// alle möglichen Spielerposition berechnen
-	//while(checkRaumVon < checkRaumBis)
-	//{
-	//  f.player = f.tmpCheckPos[checkRaumVon];
-	//  int pTiefe = f.tmpCheckDepth[checkRaumVon] - 1;
-	//
-	//  int p, p2;
-	//
-	//  #region # // --- links ---
-	//  if (!f.tmpCheckDone[p = f.walkLeft[f.player]])
-	//  {
-	//    if (raumZuKisten[p] < kistenAnzahl)
-	//    {
-	//      if ((p2 = f.walkRight[f.player]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
-	//      {
-	//        yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, f.player = f.player, zugTiefe = pTiefe };
-	//      }
-	//    }
-	//    else
-	//    {
-	//      f.tmpCheckDone[p] = true;
-	//      f.tmpCheckPos[checkRaumBis] = p;
-	//      f.tmpCheckDepth[checkRaumBis] = pTiefe;
-	//      checkRaumBis++;
-	//    }
-	//  }
-	//  #endregion
-	//
-	//  #region # // --- rechts ---
-	//  if (!f.tmpCheckDone[p = f.walkRight[f.player]])
-	//  {
-	//    if (raumZuKisten[p] < kistenAnzahl)
-	//    {
-	//      if ((p2 = f.walkLeft[f.player]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
-	//      {
-	//        yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, f.player = f.player, zugTiefe = pTiefe };
-	//      }
-	//    }
-	//    else
-	//    {
-	//      f.tmpCheckDone[p] = true;
-	//      f.tmpCheckPos[checkRaumBis] = p;
-	//      f.tmpCheckDepth[checkRaumBis] = pTiefe;
-	//      checkRaumBis++;
-	//    }
-	//  }
-	//  #endregion
-	//
-	//  #region # // --- oben ---
-	//  if (!f.tmpCheckDone[p = f.walkUp[f.player]])
-	//  {
-	//    if (raumZuKisten[p] < kistenAnzahl)
-	//    {
-	//      if ((p2 = f.walkDown[f.player]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
-	//      {
-	//        yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, f.player = f.player, zugTiefe = pTiefe };
-	//      }
-	//    }
-	//    else
-	//    {
-	//      f.tmpCheckDone[p] = true;
-	//      f.tmpCheckPos[checkRaumBis] = p;
-	//      f.tmpCheckDepth[checkRaumBis] = pTiefe;
-	//      checkRaumBis++;
-	//    }
-	//  }
-	//  #endregion
-	//
-	//  #region # // --- unten ---
-	//  if (!f.tmpCheckDone[p = f.walkDown[f.player]])
-	//  {
-	//    if (raumZuKisten[p] < kistenAnzahl)
-	//    {
-	//      if ((p2 = f.walkUp[f.player]) < raumAnzahl && raumZuKisten[p2] == kistenAnzahl)
-	//      {
-	//        yield return new SokowahnStellung { kistenZuRaum = kistenZuRaum.ToArray(), crc64 = Crc, f.player = f.player, zugTiefe = pTiefe };
-	//      }
-	//    }
-	//    else
-	//    {
-	//      f.tmpCheckDone[p] = true;
-	//      f.tmpCheckPos[checkRaumBis] = p;
-	//      f.tmpCheckDepth[checkRaumBis] = pTiefe;
-	//      checkRaumBis++;
-	//    }
-	//  }
-	//  #endregion
-	//
-	//  checkRaumVon++;
-	//}
+	for checkRaumVon < checkRaumBis {
+		f.player = f.tmpCheckPos[checkRaumVon]
+		pTiefe := f.tmpCheckDepth[checkRaumVon] - 1
+
+		// --- links ---
+		if p := f.walkLeft[f.player]; !f.tmpCheckDone[p] {
+			if f.wposToBoxes[p] < f.boxCount {
+				if p = f.walkRight[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
+					result = f.AppendGetState(result)
+					result[len(result)-1].MoveDepth = pTiefe
+				}
+			} else {
+				f.tmpCheckDone[p] = true
+				f.tmpCheckPos[checkRaumBis] = p
+				f.tmpCheckDepth[checkRaumBis] = pTiefe
+				checkRaumBis++
+			}
+		}
+
+		// --- rechts ---
+		if p := f.walkRight[f.player]; !f.tmpCheckDone[p] {
+			if f.wposToBoxes[p] < f.boxCount {
+				if p = f.walkLeft[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
+					result = f.AppendGetState(result)
+					result[len(result)-1].MoveDepth = pTiefe
+				}
+			} else {
+				f.tmpCheckDone[p] = true
+				f.tmpCheckPos[checkRaumBis] = p
+				f.tmpCheckDepth[checkRaumBis] = pTiefe
+				checkRaumBis++
+			}
+		}
+
+		// --- oben ---
+		if p := f.walkUp[f.player]; !f.tmpCheckDone[p] {
+			if f.wposToBoxes[p] < f.boxCount {
+				if p = f.walkDown[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
+					result = f.AppendGetState(result)
+					result[len(result)-1].MoveDepth = pTiefe
+				}
+			} else {
+				f.tmpCheckDone[p] = true
+				f.tmpCheckPos[checkRaumBis] = p
+				f.tmpCheckDepth[checkRaumBis] = pTiefe
+				checkRaumBis++
+			}
+		}
+
+		// --- unten ---
+		if p := f.walkDown[f.player]; !f.tmpCheckDone[p] {
+			if f.wposToBoxes[p] < f.boxCount {
+				if p = f.walkUp[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
+					result = f.AppendGetState(result)
+					result[len(result)-1].MoveDepth = pTiefe
+				}
+			} else {
+				f.tmpCheckDone[p] = true
+				f.tmpCheckPos[checkRaumBis] = p
+				f.tmpCheckDepth[checkRaumBis] = pTiefe
+				checkRaumBis++
+			}
+		}
+
+		checkRaumVon++
+	}
 	return result
 }

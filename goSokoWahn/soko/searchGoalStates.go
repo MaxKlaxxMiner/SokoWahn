@@ -17,6 +17,7 @@ func (f *Field) SearchGoalStates() (result []State) {
 	for _, box := range tmp.boxes {
 		if pos := tmp.walkLeft[box]; pos < tmp.walkEof && tmp.wposToBoxes[pos] == tmp.boxCount {
 			tmp.player = pos
+			tmp.moveDepth = 60000
 			buf = tmp.SearchVariantsBackward(buf[:0])
 			if len(buf) > 0 {
 				tmpState := State{}

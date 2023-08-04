@@ -24,7 +24,7 @@ type Field struct {
 	moveDepth   int32    // Aktuelle Zugtiefe
 
 	// --- temporäre Buffer für die Suchfunktion ---
-	tmpCheckPos   []Wpos   // Temporäre Positionen zur Prüfung
-	tmpCheckDepth []uint32 // Temporäre Zugtiefen zur Prüfung
-	tmpCheckDone  []bool   // Felder, die bereits geprüft wurden
+	tmpCheckPos   []Wpos  // Temporäre Positionen zur Prüfung
+	tmpCheckDepth []int32 // Temporäre Zugtiefen zur Prüfung
+	tmpCheckDone  []bool  // Felder, die bereits geprüft wurden
 }

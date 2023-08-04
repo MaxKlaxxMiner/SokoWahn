@@ -257,32 +257,32 @@ namespace SokoWahnWin
     /// <returns>fertige Test-Räume</returns>
     public static RoomNetwork CreateTestRooms()
     {
-      var roomNetwork = new RoomNetwork(FieldTest4);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
+      var roomNetwork = new RoomNetwork(Field628);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
 
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[2]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[2]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[2]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[2]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[2]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[2]);
 
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[6]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[13]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[12]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[11]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[26]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[26]);
-      roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[26]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[6]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[13]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[12]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[11]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[17]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[26]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[26]);
+      //roomNetwork.MergeRooms(roomNetwork.rooms[1], roomNetwork.rooms[26]);
 
       return roomNetwork;
     }
