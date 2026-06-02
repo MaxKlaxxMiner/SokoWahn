@@ -257,7 +257,7 @@ namespace SokoWahnWin
     /// <returns>fertige Test-Räume</returns>
     public static RoomNetwork CreateTestRooms()
     {
-      var roomNetwork = new RoomNetwork(Field628);       // leicht lösbares Testlevel (vier Kisten, 83 Moves)
+      var roomNetwork = new RoomNetwork(FieldRunner);
 
       //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
       //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
