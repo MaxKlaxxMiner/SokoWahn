@@ -68,11 +68,23 @@ namespace Sokosolver
       }
       if (textBox4.Text.TryParse(0).ToString() == textBox4.Text.Trim()) textBox4.Text = "http://www.game-sokoban.com/index.php?mode=level&lid=" + textBox4.Text.TryParse(0);
 
-      if (textBox4.Text.StartsWith("http://www.game-sokoban.com/"))
+      if (textBox4.Text.TrimStart().StartsWith("http://www.game-sokoban.com/") || textBox4.Text.TrimStart().StartsWith("https://www.game-sokoban.com/")
+       || textBox4.Text.TrimStart().StartsWith("http://game-sokoban.com/") || textBox4.Text.TrimStart().StartsWith("https://game-sokoban.com/"))
       {
         string lade = Tools.Download(textBox4.Text.Trim()).ToUtf8String();
-        lade = lade.Remove(0, lade.IndexOf("<xml id=\"startLevel\">"));
-        lade = lade.Substring(0, lade.IndexOf("</xml>") + 6);
+        if (lade.Contains("<xml id=\"startLevel\">"))
+        {
+          // altes Seitenformat: <xml id="startLevel">...</xml>
+          lade = lade.Remove(0, lade.IndexOf("<xml id=\"startLevel\">", StringComparison.Ordinal));
+          lade = lade.Substring(0, lade.IndexOf("</xml>", StringComparison.Ordinal) + 6);
+        }
+        else
+        {
+          // neues Seitenformat (ca. seit 2022): <div id="startLevel" class="helper"> <l ...>...</l></div>
+          lade = lade.Remove(0, lade.IndexOf("id=\"startLevel\"", StringComparison.Ordinal));
+          lade = lade.Remove(0, lade.IndexOf("<l ", StringComparison.Ordinal));
+          lade = lade.Substring(0, lade.IndexOf("</l>", StringComparison.Ordinal) + 4);
+        }
         XElement xElement = XElement.Parse(lade);
 
         char[] welt = string.Concat(xElement.Descendants("r").Select(x => string.Concat(x.Value.Split(',').Select(z => new string(z[z.Length - 1], z.Substring(0, z.Length - 1).TryParse(1)))) + "\r\n")).Replace('v', ' ').Replace('w', '#').Replace('f', ' ').Replace('a', '.').ToCharArray();

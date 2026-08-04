@@ -189,3 +189,5 @@ FakesAssemblies/
 # GoLand
 .idea
 *.exe
+/blocker
+/oldstuff/refcli/blocker
