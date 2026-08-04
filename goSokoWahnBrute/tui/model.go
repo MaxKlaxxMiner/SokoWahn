@@ -1,0 +1,167 @@
+package tui
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/charmbracelet/bubbles/textarea"
+	tea "github.com/charmbracelet/bubbletea"
+
+	"goSokoWahnBrute/blocker"
+	"goSokoWahnBrute/maps"
+	"goSokoWahnBrute/soko"
+	"goSokoWahnBrute/solver"
+)
+
+// Anzeige-Modus der Oberfläche
+type uiMode int
+
+const (
+	modeInput    uiMode = iota // Level-Eingabe (Text, Level-Nummer oder URL)
+	modeBlocker                // Blocker-Vorberechnung (Pendant zum negativen Limit der alten GUI)
+	modeSearch                 // bidirektionale Lösungssuche
+	modeSolution               // fertige Lösung durchblättern
+)
+
+// Zeitbudget pro Auto-Tick (wie die alte GUI: ca. 10 Anzeige-Updates pro Sekunde)
+const autoBudget = 100 * time.Millisecond
+
+// Nachricht des Auto-Timers
+type tickMsg time.Time
+
+type Model struct {
+	mode uiMode
+
+	// --- Level-Eingabe ---
+	input    textarea.Model
+	inputErr string
+
+	// --- Suche ---
+	field    *soko.Field
+	blk      *blocker.Blocker
+	slv      *solver.Solver
+	auto     bool  // Auto-Modus läuft
+	bulkSize int   // Stellungen pro Bulk-Schritt
+	ramLimit uint64 // RAM-Notbremse in Bytes (0 = aus)
+	ramStop  bool
+	ticks    int
+	lastTick time.Duration // Rechenzeit des letzten Auto-Ticks
+
+	// --- Lösung ---
+	solution *solver.Solution
+	frame    int
+
+	width  int
+	height int
+	status string
+}
+
+// erstellt das Anfangsmodell (initialLevel wird vorab ins Eingabefeld gelegt)
+func NewModel(initialLevel string, ramLimitGB int) Model {
+	input := textarea.New()
+	input.Placeholder = "Level einfügen (#-Notation), game-sokoban.com-Nummer/URL eingeben\noder leer lassen für das Vanilla-Testlevel ..."
+	input.CharLimit = 0
+	input.SetWidth(76)
+	input.SetHeight(16)
+	input.Focus()
+	if initialLevel != "" {
+		input.SetValue(initialLevel)
+	}
+
+	return Model{
+		mode:     modeInput,
+		input:    input,
+		bulkSize: 10000,
+		ramLimit: uint64(ramLimitGB) << 30,
+		status:   "Level eingeben, dann Strg+S zum Scannen",
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return textarea.Blink
+}
+
+// startet den Auto-Timer neu
+func tickCmd() tea.Cmd {
+	return tea.Tick(10*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
+}
+
+// liest das Level ein und wechselt in den Blocker-Modus
+func (m *Model) scan() {
+	text := strings.TrimSpace(m.input.Value())
+	if text == "" {
+		text = maps.MapVanilla
+		m.input.SetValue(strings.TrimSpace(strings.ReplaceAll(maps.MapVanilla, "\t", "")))
+	}
+
+	// keine Levelnotation -> als Level-Nummer oder game-sokoban.com-URL versuchen
+	if !strings.HasPrefix(text, "#") {
+		webLevel, err := loadWebLevel(text)
+		if err != nil {
+			m.inputErr = err.Error()
+			return
+		}
+		text = webLevel
+		m.input.SetValue(webLevel)
+	}
+
+	field, err := soko.Parse(text)
+	if err != nil {
+		m.inputErr = err.Error()
+		return
+	}
+	m.inputErr = ""
+	m.field = field
+	m.slv = nil
+	m.solution = nil
+	m.auto = false
+	m.ramStop = false
+
+	// Blocker mit Datei-Cache anlegen (Wiederaufnahme über Läufe hinweg)
+	cachePath := ""
+	if err := os.MkdirAll("temp", 0755); err == nil {
+		cachePath = filepath.Join("temp", blocker.CacheName(field))
+	}
+	m.blk = blocker.New(field, cachePath)
+	field.SetBlocker(m.blk)
+
+	// sind bereits alle Stufen im Cache, direkt zur Suche wechseln
+	if stats := m.blk.GetStats(); len(stats.Stages) >= stats.MaxBoxes-1 {
+		m.blk.Abort()
+		m.startSearch()
+		m.status = "Blocker komplett aus dem Cache geladen"
+		return
+	}
+
+	m.mode = modeBlocker
+	m.status = "Blockerscan bereit: s = Ministep, b = Bulk, a = Auto, Enter = beenden und Suche starten"
+}
+
+// wechselt vom Blockerscan in die Lösungssuche
+func (m *Model) startSearch() {
+	m.slv = solver.New(m.field)
+	m.mode = modeSearch
+	m.status = "Suche bereit: s = Einzelschritt, b = Bulk, a = Auto"
+}
+
+// schließt die Suche ab (Lösung anzeigen oder Fehlschlag melden)
+func (m *Model) finishSearch() {
+	m.auto = false
+	stats := m.slv.GetStats()
+	if stats.FoundMoves < 0 {
+		m.status = "Suche abgeschlossen: keine Lösung vorhanden"
+		return
+	}
+
+	solution, err := m.slv.GetSolution()
+	if err != nil {
+		m.status = "Fehler bei der Lösungs-Rekonstruktion: " + err.Error()
+		return
+	}
+	m.solution = solution
+	m.frame = 0
+	m.mode = modeSolution
+	m.status = "Lösung gefunden - mit Pfeiltasten blättern"
+}

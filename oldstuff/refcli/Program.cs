@@ -34,14 +34,16 @@ namespace Sokosolver
       Console.WriteLine(solver.ToString());
 
       // --- optionale Blocker-Vorbereitung (entspricht negativem Limit der alten GUI) ---
+      string letzterBlockerStand = null;
       for (int p = 0; p < prep; p++)
       {
         if (!solver.Next(-batch)) break;
+        letzterBlockerStand = solver.ToString(); // letzten Stand merken (nach Abschluss verschwinden die Blocker-Zeilen)
       }
       if (prep > 0)
       {
         Console.WriteLine("--- Blocker-Stand nach Vorbereitung ---");
-        Console.WriteLine(solver.ToString());
+        Console.WriteLine(letzterBlockerStand ?? solver.ToString());
       }
 
       // --- eigentliche Suche ---

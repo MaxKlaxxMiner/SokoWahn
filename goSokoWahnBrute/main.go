@@ -1,23 +1,50 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
+	"goSokoWahnBrute/blocker"
 	"goSokoWahnBrute/maps"
 	"goSokoWahnBrute/soko"
 	"goSokoWahnBrute/solver"
+	"goSokoWahnBrute/tui"
 )
 
 func main() {
-	levelData := maps.MapVanilla
-	if len(os.Args) >= 2 {
-		fileData, err := os.ReadFile(os.Args[1])
+	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
+	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
+	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
+	flag.Parse()
+
+	// optionales Level aus Datei laden
+	levelData := ""
+	if flag.NArg() >= 1 {
+		fileData, err := os.ReadFile(flag.Arg(0))
 		if err != nil {
 			panic(err)
 		}
 		levelData = string(fileData)
+	}
+
+	if !*cliMode {
+		if err := tui.Run(levelData, *ramLimitGB); err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	runCli(levelData, *useBlocker)
+}
+
+// Kommandozeilen-Modus: Level lösen und Fortschritt als Text ausgeben
+// (deterministische Ausgaben, direkt vergleichbar mit dem C#-Orakel refcli)
+func runCli(levelData string, useBlocker bool) {
+	if levelData == "" {
+		levelData = maps.MapVanilla
 	}
 
 	field, err := soko.Parse(levelData)
@@ -26,6 +53,18 @@ func main() {
 	}
 
 	fmt.Println(field)
+
+	if useBlocker {
+		if err := os.MkdirAll("temp", 0755); err != nil {
+			panic(err)
+		}
+		blk := blocker.New(field, filepath.Join("temp", blocker.CacheName(field)))
+		blockerStart := time.Now()
+		for blk.Next(1000000000) {
+		}
+		fmt.Printf("Blocker fertig nach %s:\n%s\n", time.Since(blockerStart).Round(time.Millisecond), blk)
+		field.SetBlocker(blk)
+	}
 
 	s := solver.New(field)
 	startTime := time.Now()

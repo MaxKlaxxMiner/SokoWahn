@@ -1,0 +1,5 @@
+# Blocker-Cache-Dateien
+temp/
+
+# gebaute Binaries
+*.exe
