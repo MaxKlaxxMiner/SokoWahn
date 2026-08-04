@@ -37,9 +37,15 @@ type Solver struct {
 func New(field *soko.Field) *Solver {
 	base := field.Clone()
 
+	// das Arbeitsfeld filtert auch rückwärts mit dem Blocker (wie die List2-Variante des
+	// Originals): rückwärts erreichbare, aber vorwärts unerreichbare Stellungen entfallen.
+	// Das Zielstellungs-Seeding über base bleibt ungefiltert (wie im Original).
+	work := base.Clone()
+	work.SetBlockerBackward(base.Blocker())
+
 	s := &Solver{
 		base:          base,
-		work:          base.Clone(),
+		work:          work,
 		boxCount:      base.BoxCount(),
 		recordSize:    base.BoxCount() + 1,
 		goals:         base.Goals(),

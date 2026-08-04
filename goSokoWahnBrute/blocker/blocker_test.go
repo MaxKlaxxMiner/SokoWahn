@@ -135,8 +135,8 @@ func TestBlockerCachePartialResume(t *testing.T) {
 	}
 }
 
-// Orakel-Vergleich: die Vanilla-Blocker-Stufen müssen exakt den refcli-Werten entsprechen
-// (C#: [1] 10/79, [2] 58/1772, [3] 132/20758, [4] 533/148615, [5] 1015/695189)
+// Orakel-Vergleich: die Vanilla-Blocker-Stufen müssen exakt den Werten des
+// C#-SokowahnBlockerBx entsprechen (refcli: "vanilla.txt blockerbx 5")
 func TestBlockerVanillaOracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Blocker dauert ca. 1 Sekunde plus Lösungszeit (übersprungen mit -short)")
@@ -149,11 +149,11 @@ func TestBlockerVanillaOracle(t *testing.T) {
 
 	b := buildBlocker(t, field, "")
 	expected := []StageStats{
-		{BoxCount: 1, PatternCount: 10, CheckedStates: 79},
-		{BoxCount: 2, PatternCount: 58, CheckedStates: 1772},
-		{BoxCount: 3, PatternCount: 132, CheckedStates: 20758},
-		{BoxCount: 4, PatternCount: 533, CheckedStates: 148615},
-		{BoxCount: 5, PatternCount: 1015, CheckedStates: 695189},
+		{BoxCount: 1, PatternCount: 17, CheckedStates: 92},
+		{BoxCount: 2, PatternCount: 216, CheckedStates: 2251},
+		{BoxCount: 3, PatternCount: 239, CheckedStates: 26848},
+		{BoxCount: 4, PatternCount: 1024, CheckedStates: 208306},
+		{BoxCount: 5, PatternCount: 2835, CheckedStates: 1056514},
 	}
 
 	stats := b.GetStats()
@@ -166,7 +166,8 @@ func TestBlockerVanillaOracle(t *testing.T) {
 		}
 	}
 
-	// Lösung mit Blocker: weiterhin 230 Züge, aber nur noch 2.064.860 Knoten (Orakel-Wert)
+	// Lösung mit Blocker (vorwärts + rückwärts gefiltert): weiterhin 230 Züge,
+	// nur noch 1.568.540 Knoten (Regressionswert, vergleichbar mit ~1,5 Mio der alten GUI)
 	field.SetBlocker(b)
 	s := solver.New(field)
 	for s.Step(1000000000) {
@@ -174,7 +175,63 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	if moves := s.GetStats().FoundMoves; moves != 230 {
 		t.Errorf("erwartete 230 Züge, erhalten: %d", moves)
 	}
-	if nodes := s.NodeCount(); nodes != 2064860 {
-		t.Errorf("erwartete 2064860 Knoten (Orakel-Wert), erhalten: %d", nodes)
+	if nodes := s.NodeCount(); nodes != 1568540 {
+		t.Errorf("erwartete 1568540 Knoten (Regressionswert), erhalten: %d", nodes)
+	}
+}
+
+// Level 201 von game-sokoban.com (8 Kisten): hier zeigte sich der Unterschied
+// zwischen SokowahnBlocker (plain) und SokowahnBlockerBx zuerst
+const mapLid201 = `
+  ###########
+ ##         ##
+ #  $     $  #
+ # $# #.# #$ #
+ #    #*#    #####
+ #  ###.###  #   #
+ #  .*.@.*.      #
+ #  ###.###  #   #
+ #    #*#    #####
+ # $# #.# #$ #
+ #  $     $  #
+ ##         ##
+  ###########
+`
+
+// Orakel-Vergleich: die ersten drei Blocker-Stufen von Level 201 müssen exakt den
+// Werten des C#-SokowahnBlockerBx entsprechen (refcli: "lid201.txt blockerbx 3")
+func TestBlockerLid201Oracle(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Level-201-Blocker dauert ein paar Sekunden (übersprungen mit -short)")
+	}
+
+	field, err := soko.Parse(mapLid201)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// nur bis Stufe 3 rechnen (die höheren Stufen wären deutlich teurer)
+	b := New(field, "")
+	for b.Next(1000000000) {
+		if len(b.GetStats().Stages) >= 3 {
+			b.Abort()
+			break
+		}
+	}
+
+	expected := []StageStats{
+		{BoxCount: 1, PatternCount: 80, CheckedStates: 214},
+		{BoxCount: 2, PatternCount: 35, CheckedStates: 8019},
+		{BoxCount: 3, PatternCount: 781, CheckedStates: 232082},
+	}
+
+	stats := b.GetStats()
+	if len(stats.Stages) != len(expected) {
+		t.Fatalf("erwartet %d Stufen, erhalten: %d", len(expected), len(stats.Stages))
+	}
+	for i, want := range expected {
+		if stats.Stages[i] != want {
+			t.Errorf("Stufe %d: erwartet %+v, erhalten %+v", i+1, want, stats.Stages[i])
+		}
 	}
 }

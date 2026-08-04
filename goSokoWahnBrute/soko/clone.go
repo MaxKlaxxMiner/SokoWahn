@@ -23,7 +23,8 @@ func (f *Field) Clone() *Field {
 		tmpCheckPos:   make([]Wpos, len(f.tmpCheckPos)),
 		tmpCheckDepth: make([]int32, len(f.tmpCheckDepth)),
 		tmpCheckDone:  make([]bool, len(f.tmpCheckDone)),
-		blocker:       f.blocker,
+		blocker:         f.blocker,
+		blockerBackward: f.blockerBackward,
 	}
 	copy(result.wposToBoxes, f.wposToBoxes)
 	copy(result.boxes, f.boxes)

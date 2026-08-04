@@ -2,6 +2,12 @@ package soko
 
 import "goSokoWahnBrute/tools"
 
+// setzt den optionalen Deadlock-Filter für die Rückwärtssuche (nil = kein Filter);
+// wird nur beim Blocker-Stufenbau benutzt, die normale Lösungssuche filtert rückwärts nicht
+func (f *Field) SetBlockerBackward(blocker BlockerCheck) {
+	f.blockerBackward = blocker
+}
+
 func (f *Field) SearchVariantsBackward(result []State) []State {
 	posStart := f.player
 	posLeft := f.walkLeft[posStart]
@@ -88,8 +94,10 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkLeft[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkRight[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					result = f.AppendGetState(result)
-					result[len(result)-1].MoveDepth = pTiefe
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+						result = f.AppendGetState(result)
+						result[len(result)-1].MoveDepth = pTiefe
+					}
 				}
 			} else {
 				f.tmpCheckDone[p] = true
@@ -103,8 +111,10 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkRight[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkLeft[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					result = f.AppendGetState(result)
-					result[len(result)-1].MoveDepth = pTiefe
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+						result = f.AppendGetState(result)
+						result[len(result)-1].MoveDepth = pTiefe
+					}
 				}
 			} else {
 				f.tmpCheckDone[p] = true
@@ -118,8 +128,10 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkUp[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkDown[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					result = f.AppendGetState(result)
-					result[len(result)-1].MoveDepth = pTiefe
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+						result = f.AppendGetState(result)
+						result[len(result)-1].MoveDepth = pTiefe
+					}
 				}
 			} else {
 				f.tmpCheckDone[p] = true
@@ -133,8 +145,10 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkDown[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkUp[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					result = f.AppendGetState(result)
-					result[len(result)-1].MoveDepth = pTiefe
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+						result = f.AppendGetState(result)
+						result[len(result)-1].MoveDepth = pTiefe
+					}
 				}
 			} else {
 				f.tmpCheckDone[p] = true

@@ -96,8 +96,15 @@ func (b *Blocker) Next(limit int) bool {
 			for i := range b.varBuf {
 				v := &b.varBuf[i]
 				find := b.known.Get(v.Crc)
-				if find == solver.DepthUnknown || find == markerGood {
-					continue // unbekannt (vorwärts nie erreicht) oder bereits als gut markiert
+				if find == markerGood {
+					continue // bereits als gut markiert
+				}
+				if find == solver.DepthUnknown {
+					// rückwärts erreichbar, aber vorwärts nie gesehen -> kann im echten Spiel
+					// nicht vorkommen und wird als Blocker-Kandidat registriert (Bx-Semantik)
+					b.known.Add(v.Crc, markerPending)
+					b.badList.Push(v)
+					continue
 				}
 				b.known.Update(v.Crc, markerGood)
 				b.goodList.Push(v)

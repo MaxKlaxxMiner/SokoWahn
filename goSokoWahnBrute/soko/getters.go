@@ -20,6 +20,11 @@ func (f *Field) WalkCount() int {
 	return int(f.walkEof)
 }
 
+// gibt den gesetzten Deadlock-Filter zurück (nil = keiner)
+func (f *Field) Blocker() BlockerCheck {
+	return f.blocker
+}
+
 // berechnet einen Hash über die Feldgeometrie (für Cache-Dateinamen,
 // gleiche Idee wie im C#-Original: FNV über Breite, Höhe und Feldinhalt)
 func (f *Field) FieldCrc() uint64 {

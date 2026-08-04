@@ -11,12 +11,14 @@ import (
 	"goSokoWahnBrute/maps"
 	"goSokoWahnBrute/soko"
 	"goSokoWahnBrute/solver"
+	"goSokoWahnBrute/tools"
 	"goSokoWahnBrute/tui"
 )
 
 func main() {
 	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
+	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
 	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
 	flag.Parse()
 
@@ -30,6 +32,11 @@ func main() {
 		levelData = string(fileData)
 	}
 
+	if *blockerStages > 0 {
+		runBlockerOnly(levelData, *blockerStages)
+		return
+	}
+
 	if !*cliMode {
 		if err := tui.Run(levelData, *ramLimitGB); err != nil {
 			panic(err)
@@ -38,6 +45,28 @@ func main() {
 	}
 
 	runCli(levelData, *useBlocker)
+}
+
+// berechnet nur die Blocker-Stufen bis einschließlich maxStages und gibt sie aus
+// (ohne Suche und ohne Cache-Datei, für schnelle Orakel-Vergleiche)
+func runBlockerOnly(levelData string, maxStages int) {
+	if levelData == "" {
+		levelData = maps.MapVanilla
+	}
+
+	field, err := soko.Parse(levelData)
+	if err != nil {
+		panic(err)
+	}
+
+	blk := blocker.New(field, "")
+	for blk.Next(1000000000) {
+		if len(blk.GetStats().Stages) >= maxStages {
+			blk.Abort()
+			break
+		}
+	}
+	fmt.Print(blk)
 }
 
 // Kommandozeilen-Modus: Level lösen und Fortschritt als Text ausgeben
@@ -74,12 +103,12 @@ func runCli(levelData string, useBlocker bool) {
 	for s.Step(1000000000) {
 		if depth := s.SearchDepth(); depth != lastDepth {
 			lastDepth = depth
-			fmt.Printf("Tiefe %4d: Knoten=%d Rest=%d\n", depth, s.NodeCount(), s.OpenCount())
+			fmt.Printf("Tiefe %4d: Knoten=%s Rest=%s\n", depth, tools.FormatInt(s.NodeCount()), tools.FormatInt(s.OpenCount()))
 		}
 	}
 
 	stats := s.GetStats()
-	fmt.Printf("\nFertig nach %s: SuchTiefe=%d Knoten=%d\n", time.Since(startTime).Round(time.Millisecond), s.SearchDepth(), s.NodeCount())
+	fmt.Printf("\nFertig nach %s: SuchTiefe=%d Knoten=%s\n", time.Since(startTime).Round(time.Millisecond), s.SearchDepth(), tools.FormatInt(s.NodeCount()))
 
 	if stats.FoundMoves < 0 {
 		fmt.Println("keine Lösung gefunden")

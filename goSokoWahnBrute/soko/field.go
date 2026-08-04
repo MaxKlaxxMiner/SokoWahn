@@ -29,5 +29,6 @@ type Field struct {
 	tmpCheckDone  []bool  // Felder, die bereits geprüft wurden
 
 	// --- optionale Filter ---
-	blocker BlockerCheck // Deadlock-Filter für die Vorwärtssuche, nil = kein Filter
+	blocker         BlockerCheck // Deadlock-Filter für die Vorwärtssuche, nil = kein Filter
+	blockerBackward BlockerCheck // Deadlock-Filter für die Rückwärtssuche (nur beim Blocker-Stufenbau), nil = kein Filter
 }

@@ -125,7 +125,8 @@ func (b *Blocker) initStage() {
 	k := b.searchBoxCount
 	b.recordSize = k + 1
 	b.work = b.base.CloneWithBoxCount(k)
-	b.work.SetBlocker(b) // bereits fertige Stufen filtern schon beim Stufenbau mit
+	b.work.SetBlocker(b)         // bereits fertige Stufen filtern schon beim Stufenbau mit
+	b.work.SetBlockerBackward(b) // auch rückwärts filtern (Bx-Semantik, vermeidet redundante Muster)
 	b.emptyBoxNumber = uint32(k)
 	b.known = solver.NewMapTable()
 	b.checkList = solver.NewDepthList(b.recordSize)

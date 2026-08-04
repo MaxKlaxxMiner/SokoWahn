@@ -3,6 +3,8 @@ package blocker
 import (
 	"fmt"
 	"strings"
+
+	"goSokoWahnBrute/tools"
 )
 
 // Kennzahlen einer fertigen Stufe
@@ -108,13 +110,13 @@ func (b *Blocker) String() string {
 	var sb strings.Builder
 
 	for _, st := range stats.Stages {
-		fmt.Fprintf(&sb, "[%d] - %d Muster - %d geprüft\n", st.BoxCount, st.PatternCount, st.CheckedStates)
+		fmt.Fprintf(&sb, "[%d] - %s Muster - %s geprüft\n", st.BoxCount, tools.FormatInt(st.PatternCount), tools.FormatInt(st.CheckedStates))
 	}
 
 	if !stats.Done {
-		fmt.Fprintf(&sb, "[%d] - %s: %d offen / %d bekannt", stats.CurrentBoxCount, stats.Status, stats.OpenStates, stats.KnownStates)
+		fmt.Fprintf(&sb, "[%d] - %s: %s offen / %s bekannt", stats.CurrentBoxCount, stats.Status, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates))
 		if stats.EstimateNext > 0 {
-			fmt.Fprintf(&sb, " (nächste Stufe ca. %d)", stats.EstimateNext)
+			fmt.Fprintf(&sb, " (nächste Stufe ca. %s)", tools.FormatInt(stats.EstimateNext))
 		}
 		sb.WriteByte('\n')
 	}

@@ -9,8 +9,8 @@ import (
 	"goSokoWahnBrute/soko"
 )
 
-// Version des Cache-Dateiformats
-const cacheVersion = uint32(1)
+// Version des Cache-Dateiformats (2: Muster nach Bx-Semantik, alte plain-Caches werden verworfen)
+const cacheVersion = uint32(2)
 
 // liefert den Standard-Dateinamen der Cache-Datei eines Spielfeldes
 // (gleiche Idee wie im C#-Original: Hash über die Feldgeometrie)

@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"goSokoWahnBrute/tools"
 )
 
 var (
@@ -131,11 +133,11 @@ func (m Model) workLine() string {
 	switch m.mode {
 	case modeBlocker:
 		stats := m.blk.GetStats()
-		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %d | bekannt: %d | Bulk: %d",
-			stats.CurrentBoxCount, stats.MaxBoxes-1, stats.OpenStates, stats.KnownStates, m.bulkSize))
+		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Bulk: %s",
+			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(m.bulkSize)))
 	case modeSearch:
-		return styleHelp.Render(fmt.Sprintf("Knoten: %d | Rest: %d | Tiefe: %d | Bulk: %d",
-			m.slv.NodeCount(), m.slv.OpenCount(), m.slv.SearchDepth(), m.bulkSize))
+		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s | Tiefe: %d | Bulk: %s",
+			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), m.slv.SearchDepth(), tools.FormatInt(m.bulkSize)))
 	}
 	return ""
 }
@@ -161,7 +163,7 @@ func depthColumn(title string, open []int, current int) string {
 		if i == current {
 			marker = "->"
 		}
-		fmt.Fprintf(&sb, "%s[%3d] %d\n", marker, i, open[i])
+		fmt.Fprintf(&sb, "%s[%3d] %s\n", marker, i, tools.FormatInt(open[i]))
 		shown++
 	}
 	if len(open) > from+maxRows {
