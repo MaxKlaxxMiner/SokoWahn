@@ -14,11 +14,12 @@ const defaultChunkSize = 512
 
 // Arbeitskontext eines Workers: eigenes Feld, eigene Buffer - keine geteilten Schreibzugriffe
 type blockerWorker struct {
-	field  *soko.Field   // eigener Feld-Clone (inklusive Blocker-Filter)
-	cur    soko.State    // Buffer für geladene Stellungen
-	varBuf []soko.State  // Buffer für die Variantensuche
-	crcs   []crc64.Value // Crcs der vorgefilterten neuen Stellungen
-	recs   []uint16      // zugehörige Sätze (Spieler + Kisten), flach
+	field    *soko.Field   // eigener Feld-Clone (inklusive Blocker-Filter)
+	cur      soko.State    // Buffer für geladene Stellungen
+	varBuf   []soko.State  // Buffer für die Variantensuche
+	crcs     []crc64.Value // Crcs der vorgefilterten neuen Stellungen (Standard-Modus)
+	recs     []uint16      // Sätze (Spieler + Kisten), flach
+	goodRecs []uint16      // Direct-Write rückwärts: Sätze der zu gut beförderten Stellungen
 }
 
 // legt die Worker-Kontexte für die aktuelle Stufe an
@@ -105,10 +106,88 @@ func (b *Blocker) runWorkers(batch []uint16, forward bool) {
 	wg.Wait()
 }
 
+// Direct-Write: die Worker beanspruchen ihre Funde atomar selbst, es gibt keinen
+// seriellen Merge mehr - anschließend werden nur die Record-Buffer blockweise angehängt
+func (b *Blocker) runWorkersDirect(batch []uint16, forward bool) {
+	records := len(batch) / b.recordSize
+	chunk := int64(b.chunkSize)
+	dt := b.directTable
+
+	var next atomic.Int64
+	var wg sync.WaitGroup
+
+	for w := range b.workers {
+		wg.Add(1)
+		go func(wk *blockerWorker) {
+			defer wg.Done()
+			wk.recs = wk.recs[:0]
+			wk.goodRecs = wk.goodRecs[:0]
+
+			for {
+				start := int(next.Add(chunk) - chunk)
+				if start >= records {
+					return
+				}
+				end := start + int(chunk)
+				if end > records {
+					end = records
+				}
+
+				for r := start; r < end; r++ {
+					wk.loadRecord(batch[r*b.recordSize:(r+1)*b.recordSize], b.searchBoxCount)
+					wk.field.SetState(&wk.cur)
+
+					if forward {
+						wk.varBuf = wk.field.SearchVariantsForward(wk.varBuf[:0])
+						for i := range wk.varBuf {
+							v := &wk.varBuf[i]
+							if dt.ClaimPending(v.Crc) {
+								wk.recs = appendStateRecord(wk.recs, v)
+							}
+						}
+					} else {
+						wk.varBuf = wk.field.SearchVariantsBackward(wk.varBuf[:0])
+						for i := range wk.varBuf {
+							v := &wk.varBuf[i]
+							claimed, promoted := dt.MergeTransition(v.Crc)
+							if claimed {
+								wk.recs = appendStateRecord(wk.recs, v)
+							} else if promoted {
+								wk.goodRecs = appendStateRecord(wk.goodRecs, v)
+							}
+						}
+					}
+				}
+			}
+		}(&b.workers[w])
+	}
+
+	wg.Wait()
+}
+
+// hängt eine Stellung als flachen Satz an den Buffer an
+func appendStateRecord(recs []uint16, v *soko.State) []uint16 {
+	recs = append(recs, uint16(v.Player))
+	for _, box := range v.Boxes {
+		recs = append(recs, uint16(box))
+	}
+	return recs
+}
+
 // paralleler Vorwärts-Batch (StatusSearchVariants): neue Stellungen registrieren
 func (b *Blocker) processForwardBatch(batch []uint16) {
 	if b.workerCount <= 1 || len(batch)/b.recordSize < b.chunkSize {
 		b.processForwardSerial(batch)
+		return
+	}
+
+	if b.directTable != nil {
+		b.runWorkersDirect(batch, true)
+		for w := range b.workers {
+			wk := &b.workers[w]
+			b.collectList.PushRecord(wk.recs) // kompletter Buffer = viele Sätze am Stück
+			b.badList.PushRecord(wk.recs)
+		}
 		return
 	}
 
@@ -133,6 +212,16 @@ func (b *Blocker) processForwardBatch(batch []uint16) {
 func (b *Blocker) processBackwardBatch(batch []uint16) {
 	if b.workerCount <= 1 || len(batch)/b.recordSize < b.chunkSize {
 		b.processBackwardSerial(batch)
+		return
+	}
+
+	if b.directTable != nil {
+		b.runWorkersDirect(batch, false)
+		for w := range b.workers {
+			wk := &b.workers[w]
+			b.badList.PushRecord(wk.recs)
+			b.goodList.PushRecord(wk.goodRecs)
+		}
 		return
 	}
 

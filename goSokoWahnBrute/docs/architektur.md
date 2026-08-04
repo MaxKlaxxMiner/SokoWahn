@@ -44,8 +44,32 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 - `PosTable`-Implementierung ist die `CompactTable`: offene Adressierung mit linearem
   Sondieren, 10 Byte pro Slot (voller 64-Bit-Schlüssel + uint16-Tiefe, verlustfrei),
   crc==0 als Frei-Marker (Sondieren berührt nur das Schlüssel-Array), Verdopplung bei
-  75% Füllstand. Ca. 2x schneller und deutlich sparsamer als die builtin map
-  (`hash_bench_test.go`); die map-Variante bleibt als Vergleichs-Referenz erhalten.
+  75% Füllstand. Die map-Variante bleibt als Vergleichs-Referenz erhalten.
+- Hashtable-Shootout unter **Realbedingungen** (echter Blocker-Workload lid349 bis
+  4-Steiner, 4 Worker, je 2 Läufe, historisches Ergebnis vom 05.08.2026):
+  CompactTable 6,3 s, builtin map 6,8 s, cockroachdb/swiss 6,9 s, brentp/intintmap 6,9 s,
+  dolthub/swiss 7,4 s, tidwall/hashmap 7,8 s, puzpuzpuz/xsync 8,0 s (einzige Concurrent-Map
+  im Limit); alphadose/haxmap und cornelk/hashmap DNF (>12 s, brechen unter Masseninserts ein).
+  Die Verlierer-Adapter (Paket tables) wurden danach entfernt - für neue Kandidaten
+  einfach wieder einen kleinen PosTable-Adapter schreiben und über SetTableFactory bzw.
+  SetDirectTableFactory unter Realbedingungen messen.
+  Anmerkung zu xsync: im Serial-Merge-Design zahlt sie Atomic-Kosten ohne Nutzen -
+  ihr Potenzial zeigt sich erst im Direct-Write-Modus (siehe unten).
+- **Direct-Write-Modus** (Standard, `blocker/direct.go`): die Worker beanspruchen ihre
+  Funde atomar selbst (ClaimPending per first-wins, MergeTransition für die monotonen
+  Marker-Übergänge unbekannt -> pending -> good), der serielle Merge entfällt komplett;
+  danach werden nur noch die fertigen Record-Buffer blockweise an die Listen gehängt.
+  Ergebnis-Sets beweisbar identisch (per Test gegen den Standard-Pfad abgesichert).
+  Zwei Implementierungen: **xsync** (lock-frei, Standard, schnellste) und **ShardDirect**
+  (64 Shards CompactTable mit Mutexen, ca. 9% langsamer, aber ca. 3x speicherschonender -
+  Umschalten per SetDirectTableFactory, nil = alter Serial-Merge-Pfad).
+  Messwerte lid349 bis 4-Steiner (Worker / Serial-Merge / DW-Shard / DW-xsync):
+  4: 6,3 / 5,7 / 5,9 s | 8: 4,5 / 3,7 / 3,8 s | 14: 3,8 / 2,9 / 2,9 s |
+  128: 3,0 / 2,5 / **2,2 s**. Gesamt seit Baseline: 13,8 s -> 2,2 s (Faktor 6+). Die CompactTable gewinnt, weil die
+  Crc64-Schlüssel bereits Hashes sind (Identity-Hashing, kein Re-Hash, keine Metadaten).
+  Wichtige Lehre: synthetische Micro-Benchmarks übertreiben die Unterschiede stark
+  (Hash-Zugriffe sind nur ~20-25% des Workloads) - neue Kandidaten immer als Adapter
+  ins Paket `tables` hängen und unter Realbedingungen messen.
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
   Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
 - Sonderfall `forwardOnly`: Levels ohne Zielstellungen (z.B. 1-Schub-Level) laufen als reine

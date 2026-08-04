@@ -15,26 +15,24 @@ func nextCrc(state *uint64) crc64.Value {
 	return crc64.Value(z ^ (z >> 31))
 }
 
-// gemeinsames Lastprofil: Einfügen + Treffer-Lookups + Fehlschlag-Lookups
-func benchTable(b *testing.B, create func() PosTable) {
-	const entries = 1 << 20 // 1 Mio Einträge
+// Micro-Benchmark der CompactTable: Einfügen + Treffer- + Fehlschlag-Lookups
+func BenchmarkCompactTable(b *testing.B) {
+	const entries = 1 << 20
 
 	for i := 0; i < b.N; i++ {
-		table := create()
+		table := NewCompactTable()
 
 		seed := uint64(12345)
 		for n := 0; n < entries; n++ {
 			table.Add(nextCrc(&seed), uint16(n&30000))
 		}
 
-		// Treffer-Lookups (gleiche Sequenz erneut)
 		seed = 12345
 		var sum uint32
 		for n := 0; n < entries; n++ {
 			sum += uint32(table.Get(nextCrc(&seed)))
 		}
 
-		// Fehlschlag-Lookups (andere Sequenz)
 		seed = 98765
 		for n := 0; n < entries; n++ {
 			sum += uint32(table.Get(nextCrc(&seed)))
@@ -47,12 +45,9 @@ func benchTable(b *testing.B, create func() PosTable) {
 	}
 }
 
-func BenchmarkMapTable(b *testing.B)     { benchTable(b, NewMapTable) }
-func BenchmarkCompactTable(b *testing.B) { benchTable(b, NewCompactTable) }
-
-// Konsistenz: beide Implementierungen müssen sich identisch verhalten
+// Konsistenz: die CompactTable muss sich exakt wie eine Referenz-map verhalten
 func TestCompactTableMatchesMap(t *testing.T) {
-	mapT := NewMapTable()
+	reference := make(map[crc64.Value]uint16)
 	compact := NewCompactTable()
 
 	seed := uint64(42)
@@ -61,22 +56,22 @@ func TestCompactTableMatchesMap(t *testing.T) {
 		crc := nextCrc(&seed)
 		keys = append(keys, crc)
 		depth := uint16(n % 60001)
-		mapT.Add(crc, depth)
+		reference[crc] = depth
 		compact.Add(crc, depth)
 	}
 
 	// Updates auf einem Teil der Schlüssel
 	for n := 0; n < len(keys); n += 7 {
-		mapT.Update(keys[n], uint16(n%777))
+		reference[keys[n]] = uint16(n % 777)
 		compact.Update(keys[n], uint16(n%777))
 	}
 
-	if mapT.Len() != compact.Len() {
-		t.Fatalf("Längen weichen ab: map=%d compact=%d", mapT.Len(), compact.Len())
+	if int64(len(reference)) != compact.Len() {
+		t.Fatalf("Längen weichen ab: map=%d compact=%d", len(reference), compact.Len())
 	}
 	for _, crc := range keys {
-		if m, c := mapT.Get(crc), compact.Get(crc); m != c {
-			t.Fatalf("Wert weicht ab für %x: map=%d compact=%d", uint64(crc), m, c)
+		if compact.Get(crc) != reference[crc] {
+			t.Fatalf("Wert weicht ab für %x: map=%d compact=%d", uint64(crc), reference[crc], compact.Get(crc))
 		}
 	}
 
@@ -84,8 +79,11 @@ func TestCompactTableMatchesMap(t *testing.T) {
 	seed = uint64(4711)
 	for n := 0; n < 10000; n++ {
 		crc := nextCrc(&seed)
-		if m, c := mapT.Get(crc), compact.Get(crc); m != c {
-			t.Fatalf("Fehlschlag-Lookup weicht ab für %x: map=%d compact=%d", uint64(crc), m, c)
+		if _, exists := reference[crc]; exists {
+			continue
+		}
+		if got := compact.Get(crc); got != DepthUnknown {
+			t.Fatalf("Fehlschlag-Lookup liefert %d statt DepthUnknown für %x", got, uint64(crc))
 		}
 	}
 }

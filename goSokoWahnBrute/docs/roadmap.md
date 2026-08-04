@@ -15,8 +15,14 @@ die verankerten Referenzwerte absichern.
   13,8 s -> 3,8 s bei 16 Kernen). Noch offen:
   - **Solver-Suche parallelisieren** (gleiches Muster: Batch-Fan-out + serieller Merge;
     Achtung auf die found/Update-Buchführung im seriellen Teil).
-  - Serieller Merge-Anteil weiter drücken: Crc-geshardete Tabellen (16 Shards wie im
-    C#-Original), dann kann auch der Merge parallel je Shard laufen.
+    Erfahrungswert von Max aus der C#-Version: bei der Bruteforce-Suche war eine
+    Bulk-Größe um 200 deutlich ausgeprägt optimal (beim Blockerscan dagegen 2000+
+    ähnlich gut) -> beim Parallelisieren der Suche unbedingt eigene Chunk/Bulk-Sweeps
+    fahren statt die Blocker-Werte zu übernehmen.
+  - ERLEDIGT: Direct-Write statt seriellem Merge (xsync als Standard, ShardDirect als
+    speicherschonende Alternative; lid349/4-Steiner: 3,0 s -> 2,2 s bei 128 Workern).
+    Offen: dieselbe Direct-Write-Idee auf die Solver-Suche übertragen (dort ist die
+    Tiefen-Buchführung komplexer: Add/Update mit Tiefenvergleich statt monotoner Marker).
   - CollectStart/CollectGoals parallelisieren (Kombinationen unabhängig; lohnt erst
     bei hohen Steiner-Zahlen mit vielen Kombinationen).
 - **Disk-Auslagerung der Tiefenlisten** hinter dem DepthList-Interface (List2-Muster:

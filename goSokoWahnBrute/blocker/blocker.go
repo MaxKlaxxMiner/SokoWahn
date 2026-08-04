@@ -69,6 +69,10 @@ type Blocker struct {
 	workerCount int             // Anzahl der Worker (1 = komplett seriell)
 	chunkSize   int             // Sätze pro Arbeits-Zuteilung an einen Worker
 	workers     []blockerWorker // Worker-Kontexte der laufenden Stufe
+
+	tableFactory  func() solver.PosTable // erzeugt die Stufen-Hashtabelle (für Benchmarks austauschbar)
+	directFactory func() DirectTable     // Direct-Write-Modus: Worker schreiben atomar selbst (nil = seriell mergen)
+	directTable   DirectTable            // aktive Direct-Write-Tabelle der laufenden Stufe (nil = Standard-Modus)
 }
 
 func New(field *soko.Field, cachePath string) *Blocker {
@@ -86,6 +90,8 @@ func New(field *soko.Field, cachePath string) *Blocker {
 		emptyBoxNumber: uint32(base.BoxCount()),
 		workerCount:    runtime.NumCPU() * 8, // deutliche Überbelegung: die Worker warten meist auf den Speicher (siehe docs/architektur.md)
 		chunkSize:      defaultChunkSize,
+		tableFactory:   solver.NewCompactTable,
+		directFactory:  NewXsyncDirect, // Standard: Direct-Write ohne seriellen Merge (schnellste Variante im Realtest)
 	}
 
 	if cachePath != "" {
@@ -110,6 +116,12 @@ func (b *Blocker) SetChunkSize(size int) {
 		size = 1
 	}
 	b.chunkSize = size
+}
+
+// tauscht die Hashtabellen-Implementierung aus (für Benchmarks unter Realbedingungen);
+// wirkt ab der nächsten Stufe
+func (b *Blocker) SetTableFactory(factory func() solver.PosTable) {
+	b.tableFactory = factory
 }
 
 // gibt an, ob die Blocker-Erstellung noch läuft
@@ -154,7 +166,13 @@ func (b *Blocker) initStage() {
 	b.work.SetBlocker(b)         // bereits fertige Stufen filtern schon beim Stufenbau mit
 	b.work.SetBlockerBackward(b) // auch rückwärts filtern (Bx-Semantik, vermeidet redundante Muster)
 	b.emptyBoxNumber = uint32(k)
-	b.known = solver.NewCompactTable()
+	if b.directFactory != nil {
+		b.directTable = b.directFactory()
+		b.known = b.directTable
+	} else {
+		b.directTable = nil
+		b.known = b.tableFactory()
+	}
 	b.checkList = solver.NewDepthList(b.recordSize)
 	b.collectList = solver.NewDepthList(b.recordSize)
 	b.badList = solver.NewDepthList(b.recordSize)
