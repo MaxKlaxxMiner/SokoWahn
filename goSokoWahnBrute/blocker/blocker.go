@@ -58,8 +58,9 @@ type Blocker struct {
 	goodList       *solver.DepthList // gute Stellungen, welche noch rückwärts zu verarbeiten sind
 	combo          []int             // Kombinations-Odometer (Indizes in comboPositions)
 	comboPositions []soko.Wpos       // Positionen für die Kombinationen (Start- oder Zielfelder)
-	tempPatterns   [][]soko.Wpos     // Muster-Sammler während CreatePatterns
-	stageChecked   int64             // geprüfte Stellungen der Stufe (Hash-Stand beim Abschluss)
+	tempPatterns     [][]soko.Wpos // Muster-Sammler während CreatePatterns
+	tempPatternCount int           // bereits eingesammelte Muster (für die Fortschrittsanzeige)
+	stageChecked     int64         // geprüfte Stellungen der Stufe (Hash-Stand beim Abschluss)
 	recordSize     int               // Satzgröße der Listen = searchBoxCount + 1
 
 	varBuf   []soko.State // Buffer für die Variantensuche
@@ -91,7 +92,8 @@ func New(field *soko.Field, cachePath string) *Blocker {
 		workerCount:    runtime.NumCPU() * 8, // deutliche Überbelegung: die Worker warten meist auf den Speicher (siehe docs/architektur.md)
 		chunkSize:      defaultChunkSize,
 		tableFactory:   solver.NewCompactTable,
-		directFactory:  NewXsyncDirect, // Standard: Direct-Write ohne seriellen Merge (schnellste Variante im Realtest)
+		directFactory:  NewShardDirect, // Standard: Direct-Write ohne seriellen Merge, speicherschonende Shard-Variante
+		// (NewXsyncDirect ist ca. 9% schneller, braucht aber ca. 3x mehr RAM - siehe docs/architektur.md)
 	}
 
 	if cachePath != "" {

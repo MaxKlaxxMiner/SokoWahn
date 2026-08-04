@@ -45,6 +45,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "ctrl+s":
 			m.scan()
 			return m, nil
+		case "enter":
+			// Enter übernimmt den Inhalt direkt, wenn er offensichtlich komplett ist
+			// (einzeilig = Nummer/URL, oder mehrzeilig und als Level parsebar);
+			// sonst normale neue Zeile fürs manuelle Tippen
+			if m.scanOnEnter() {
+				return m, nil
+			}
 		case "esc":
 			return m, tea.Quit
 		}
@@ -62,7 +69,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "b": // Bulk-Schritt
-			if !m.blk.Next(m.bulkSize) {
+			if !m.blk.Next(m.bulkBlocker) {
 				m.startSearch()
 			}
 			return m, nil
@@ -79,11 +86,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.startSearch()
 			return m, nil
 		case "+":
-			m.bulkSize *= 10
+			*m.bulkSize() *= 10
 			return m, nil
 		case "-":
-			if m.bulkSize >= 10 {
-				m.bulkSize /= 10
+			if *m.bulkSize() >= 10 {
+				*m.bulkSize() /= 10
 			}
 			return m, nil
 		case "i": // zurück zur Eingabe
@@ -103,7 +110,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "b": // Bulk-Schritt
-			if !m.slv.Step(m.bulkSize) {
+			if !m.slv.Step(m.bulkSearch) {
 				m.finishSearch()
 			}
 			return m, nil
@@ -115,11 +122,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "+":
-			m.bulkSize *= 10
+			*m.bulkSize() *= 10
 			return m, nil
 		case "-":
-			if m.bulkSize >= 10 {
-				m.bulkSize /= 10
+			if *m.bulkSize() >= 10 {
+				*m.bulkSize() /= 10
 			}
 			return m, nil
 		case "i":
@@ -184,7 +191,7 @@ func (m Model) handleTick() (tea.Model, tea.Cmd) {
 	switch m.mode {
 	case modeBlocker:
 		for time.Now().Before(deadline) {
-			if !m.blk.Next(m.bulkSize) {
+			if !m.blk.Next(m.bulkBlocker) {
 				m.startSearch() // Stufe KistenAnzahl-1 fertig -> automatisch die echte Suche starten
 				m.lastTick = time.Since(start)
 				return m, tickCmd() // Auto-Modus läuft in der Suche weiter
@@ -192,7 +199,7 @@ func (m Model) handleTick() (tea.Model, tea.Cmd) {
 		}
 	case modeSearch:
 		for time.Now().Before(deadline) {
-			if !m.slv.Step(m.bulkSize) {
+			if !m.slv.Step(m.bulkSearch) {
 				m.finishSearch()
 				m.lastTick = time.Since(start)
 				return m, nil

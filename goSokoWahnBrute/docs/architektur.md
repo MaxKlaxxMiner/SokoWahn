@@ -60,9 +60,11 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Marker-Übergänge unbekannt -> pending -> good), der serielle Merge entfällt komplett;
   danach werden nur noch die fertigen Record-Buffer blockweise an die Listen gehängt.
   Ergebnis-Sets beweisbar identisch (per Test gegen den Standard-Pfad abgesichert).
-  Zwei Implementierungen: **xsync** (lock-frei, Standard, schnellste) und **ShardDirect**
-  (64 Shards CompactTable mit Mutexen, ca. 9% langsamer, aber ca. 3x speicherschonender -
-  Umschalten per SetDirectTableFactory, nil = alter Serial-Merge-Pfad).
+  Zwei Implementierungen: **ShardDirect** (Standard: 64 Shards CompactTable mit Mutexen,
+  10 Byte/Slot und damit ca. 3x speicherschonender) und **xsync** (lock-frei, ca. 9%
+  schneller, aber deutlich mehr RAM pro Eintrag - Umschalten per SetDirectTableFactory,
+  nil = alter Serial-Merge-Pfad). Speicher schlug ab hohen Steiner-Zahlen spürbar zu
+  Buche, daher ist die sparsame Variante Standard.
   Messwerte lid349 bis 4-Steiner (Worker / Serial-Merge / DW-Shard / DW-xsync):
   4: 6,3 / 5,7 / 5,9 s | 8: 4,5 / 3,7 / 3,8 s | 14: 3,8 / 2,9 / 2,9 s |
   128: 3,0 / 2,5 / **2,2 s**. Gesamt seit Baseline: 13,8 s -> 2,2 s (Faktor 6+). Die CompactTable gewinnt, weil die

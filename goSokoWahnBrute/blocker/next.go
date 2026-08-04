@@ -67,6 +67,7 @@ func (b *Blocker) Next(limit int) bool {
 				// alle erreichbaren guten Stellungen sind markiert -> Muster einsammeln
 				b.stageChecked = b.known.Len()
 				b.tempPatterns = make([][]soko.Wpos, b.walkCount)
+				b.tempPatternCount = 0
 				b.status = StatusCreatePatterns
 				return true
 			}
@@ -84,6 +85,7 @@ func (b *Blocker) Next(limit int) bool {
 			}
 			player := b.curState.Player
 			b.tempPatterns[player] = append(b.tempPatterns[player], b.curState.Boxes...)
+			b.tempPatternCount++
 		}
 
 		if b.badList.Count() == 0 {

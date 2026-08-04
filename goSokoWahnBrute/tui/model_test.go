@@ -75,6 +75,28 @@ func TestModelFlow(t *testing.T) {
 	}
 }
 
+// Enter übernimmt ein gepastetes Level direkt; beim unvollständigen Level bleibt Enter eine neue Zeile
+func TestModelScanOnEnter(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	// komplettes Level + Enter -> Scan in den Blocker-Modus
+	m := NewModel("", 0)
+	m.input.SetValue(testLevel)
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if m.mode != modeBlocker {
+		t.Fatalf("Enter müsste das komplette Level übernehmen (Fehler: %q)", m.inputErr)
+	}
+
+	// unvollständiges Level (Kiste ohne Zielfeld -> Parse-Fehler) + Enter
+	// -> bleibt in der Eingabe (normale neue Zeile)
+	m = NewModel("", 0)
+	m.input.SetValue("#####\n#@$ #")
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if m.mode != modeInput {
+		t.Fatal("Enter darf ein unvollständiges Level nicht übernehmen")
+	}
+}
+
 // Ministep im Blockerscan: ein einzelner Next(1)-Schritt darf den Modus nicht verlassen
 func TestModelBlockerMinistep(t *testing.T) {
 	t.Chdir(t.TempDir())

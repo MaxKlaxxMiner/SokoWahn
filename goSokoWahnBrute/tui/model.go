@@ -39,12 +39,13 @@ type Model struct {
 	inputErr string
 
 	// --- Suche ---
-	field    *soko.Field
-	blk      *blocker.Blocker
-	slv      *solver.Solver
-	auto     bool  // Auto-Modus läuft
-	bulkSize int   // Stellungen pro Bulk-Schritt
-	ramLimit uint64 // RAM-Notbremse in Bytes (0 = aus)
+	field       *soko.Field
+	blk         *blocker.Blocker
+	slv         *solver.Solver
+	auto        bool   // Auto-Modus läuft
+	bulkBlocker int    // Stellungen pro Bulk-Schritt im Blockerscan (groß: füttert alle Worker)
+	bulkSearch  int    // Stellungen pro Bulk-Schritt in der Suche (fein: bessere UI-Granularität)
+	ramLimit    uint64 // RAM-Notbremse in Bytes (0 = aus)
 	ramStop  bool
 	ticks    int
 	lastTick time.Duration // Rechenzeit des letzten Auto-Ticks
@@ -71,12 +72,21 @@ func NewModel(initialLevel string, ramLimitGB int) Model {
 	}
 
 	return Model{
-		mode:     modeInput,
-		input:    input,
-		bulkSize: 10000,
-		ramLimit: uint64(ramLimitGB) << 30,
-		status:   "Level eingeben, dann Strg+S zum Scannen",
+		mode:        modeInput,
+		input:       input,
+		bulkBlocker: 100000, // laut Benchmarks: große Batches halten alle Worker beschäftigt (~50ms pro Next)
+		bulkSearch:  1000,   // Suche ist (noch) seriell, kleiner Wert = feinere Schritte und Anzeige
+		ramLimit:    uint64(ramLimitGB) << 30,
+		status:      "Level eingeben, dann Strg+S zum Scannen",
 	}
+}
+
+// Bulk-Größe des aktuellen Modus (als Zeiger, damit +/- direkt anpassen kann)
+func (m *Model) bulkSize() *int {
+	if m.mode == modeBlocker {
+		return &m.bulkBlocker
+	}
+	return &m.bulkSearch
 }
 
 func (m Model) Init() tea.Cmd {
@@ -86,6 +96,32 @@ func (m Model) Init() tea.Cmd {
 // startet den Auto-Timer neu
 func tickCmd() tea.Cmd {
 	return tea.Tick(10*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
+}
+
+// prüft bei Enter, ob der Eingabe-Inhalt schon komplett ist, und scannt dann direkt
+// (true = Enter wurde verbraucht, false = Enter soll eine normale neue Zeile einfügen)
+func (m *Model) scanOnEnter() bool {
+	text := strings.TrimSpace(m.input.Value())
+	if text == "" {
+		return false
+	}
+
+	// einzeilig: Level-Nummer, URL oder Einzeiler -> immer scannen
+	if !strings.Contains(text, "\n") {
+		m.scan()
+		return true
+	}
+
+	// mehrzeilige Levelnotation: nur übernehmen, wenn sie sauber parst
+	// (während des Tippens fügt Enter sonst weiter normale Zeilen ein)
+	if strings.HasPrefix(text, "#") {
+		if _, err := soko.Parse(text); err == nil {
+			m.scan()
+			return true
+		}
+	}
+
+	return false
 }
 
 // liest das Level ein und wechselt in den Blocker-Modus

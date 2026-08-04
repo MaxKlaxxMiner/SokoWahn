@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"goSokoWahnBrute/blocker"
 	"goSokoWahnBrute/tools"
 )
 
@@ -57,7 +58,7 @@ func (m Model) modeName() string {
 func (m Model) helpLine() string {
 	switch m.mode {
 	case modeInput:
-		return "Strg+S = Scannen | Esc = Beenden (Level-Text, game-sokoban.com-Nummer/URL oder leer für Vanilla)"
+		return "Enter = Übernehmen (bei komplettem Level/Nummer/URL) | Strg+S = Scannen | Esc = Beenden (leer = Vanilla)"
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
@@ -133,11 +134,15 @@ func (m Model) workLine() string {
 	switch m.mode {
 	case modeBlocker:
 		stats := m.blk.GetStats()
+		if stats.Status == blocker.StatusCreatePatterns {
+			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | übrig: %s | Muster: %s | Bulk: %s",
+				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.BadStates), tools.FormatInt(stats.FoundPatterns), tools.FormatInt(*m.bulkSize())))
+		}
 		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Bulk: %s",
-			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(m.bulkSize)))
+			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(*m.bulkSize())))
 	case modeSearch:
 		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s | Tiefe: %d | Bulk: %s",
-			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), m.slv.SearchDepth(), tools.FormatInt(m.bulkSize)))
+			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), m.slv.SearchDepth(), tools.FormatInt(*m.bulkSize())))
 	}
 	return ""
 }
