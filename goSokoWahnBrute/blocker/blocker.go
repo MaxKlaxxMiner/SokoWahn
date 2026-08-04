@@ -1,6 +1,8 @@
 package blocker
 
 import (
+	"runtime"
+
 	"goSokoWahnBrute/soko"
 	"goSokoWahnBrute/solver"
 )
@@ -62,6 +64,11 @@ type Blocker struct {
 
 	varBuf   []soko.State // Buffer für die Variantensuche
 	curState soko.State   // Buffer für geladene Stellungen
+
+	// --- Parallelisierung ---
+	workerCount int             // Anzahl der Worker (1 = komplett seriell)
+	chunkSize   int             // Sätze pro Arbeits-Zuteilung an einen Worker
+	workers     []blockerWorker // Worker-Kontexte der laufenden Stufe
 }
 
 func New(field *soko.Field, cachePath string) *Blocker {
@@ -77,6 +84,8 @@ func New(field *soko.Field, cachePath string) *Blocker {
 		cachePath:      cachePath,
 		status:         StatusInit,
 		emptyBoxNumber: uint32(base.BoxCount()),
+		workerCount:    runtime.NumCPU() * 8, // deutliche Überbelegung: die Worker warten meist auf den Speicher (siehe docs/architektur.md)
+		chunkSize:      defaultChunkSize,
 	}
 
 	if cachePath != "" {
@@ -84,6 +93,23 @@ func New(field *soko.Field, cachePath string) *Blocker {
 	}
 
 	return b
+}
+
+// setzt die Anzahl der Worker (1 = komplett seriell, z.B. für Debugging und Vergleiche);
+// wirkt ab der nächsten Stufe
+func (b *Blocker) SetWorkers(count int) {
+	if count < 1 {
+		count = 1
+	}
+	b.workerCount = count
+}
+
+// setzt die Chunk-Größe der Arbeitsverteilung (Sätze pro Zuteilung an einen Worker)
+func (b *Blocker) SetChunkSize(size int) {
+	if size < 1 {
+		size = 1
+	}
+	b.chunkSize = size
 }
 
 // gibt an, ob die Blocker-Erstellung noch läuft
@@ -128,13 +154,16 @@ func (b *Blocker) initStage() {
 	b.work.SetBlocker(b)         // bereits fertige Stufen filtern schon beim Stufenbau mit
 	b.work.SetBlockerBackward(b) // auch rückwärts filtern (Bx-Semantik, vermeidet redundante Muster)
 	b.emptyBoxNumber = uint32(k)
-	b.known = solver.NewMapTable()
+	b.known = solver.NewCompactTable()
 	b.checkList = solver.NewDepthList(b.recordSize)
 	b.collectList = solver.NewDepthList(b.recordSize)
 	b.badList = solver.NewDepthList(b.recordSize)
 	b.goodList = solver.NewDepthList(b.recordSize)
 	b.varBuf = b.work.MakeStateBuffer(256)[:0]
 	b.curState = soko.State{Boxes: make([]soko.Wpos, k)}
+	if b.workerCount > 1 {
+		b.initWorkers()
+	}
 }
 
 // gibt den Arbeitszustand der laufenden Stufe frei
@@ -149,6 +178,7 @@ func (b *Blocker) releaseStageWork() {
 	b.comboPositions = nil
 	b.tempPatterns = nil
 	b.varBuf = nil
+	b.workers = nil
 }
 
 // lädt einen Suchlisten-Satz in den curState-Buffer

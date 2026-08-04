@@ -23,6 +23,11 @@ func (l *DepthList) Push(state *soko.State) {
 	}
 }
 
+// trägt einen bereits kodierten Satz ein (Spielerposition + Kistenpositionen)
+func (l *DepthList) PushRecord(record []uint16) {
+	l.data = append(l.data, record...)
+}
+
 // entnimmt bis zu maxRecords Sätze und gibt sie als flaches Slice zurück
 // (das Slice bleibt auch gültig, wenn die Liste danach weiter wächst)
 func (l *DepthList) PopBatch(maxRecords int) []uint16 {

@@ -39,8 +39,13 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 - **Natürliche Tiefen**: beide Richtungen zählen 0,1,2,... als uint16; 65535 = unbekannt
   (`DepthUnknown`). Gesamtlösung beim Treffen = vorwärts + rückwärts. Kein 60000er-Offset
   wie im Original - die Zahlen sind trotzdem 1:1 vergleichbar.
-- Je Richtung: Hashtabelle (`PosTable`, aktuell map-basiert) + Suchlisten je Tiefe
+- Je Richtung: Hashtabelle (`PosTable`) + Suchlisten je Tiefe
   (`DepthList`, flache uint16-Sätze: Spieler + Kisten; Tiefe steckt im Listenindex).
+- `PosTable`-Implementierung ist die `CompactTable`: offene Adressierung mit linearem
+  Sondieren, 10 Byte pro Slot (voller 64-Bit-Schlüssel + uint16-Tiefe, verlustfrei),
+  crc==0 als Frei-Marker (Sondieren berührt nur das Schlüssel-Array), Verdopplung bei
+  75% Füllstand. Ca. 2x schneller und deutlich sparsamer als die builtin map
+  (`hash_bench_test.go`); die map-Variante bleibt als Vergleichs-Referenz erhalten.
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
   Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
 - Sonderfall `forwardOnly`: Levels ohne Zielstellungen (z.B. 1-Schub-Level) laufen als reine
@@ -72,6 +77,20 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   1,57 Mio statt 2,06 Mio Knoten).
 - Cache: gzip, versioniert (aktuell v2), benannt per FNV über die Feldgeometrie,
   gespeichert nach jeder fertigen Stufe -> Wiederaufnahme jederzeit.
+- **Parallelisierung**: die beiden teuren Phasen (SearchVariants, MergeGoals) verteilen
+  jeden Batch per Atomic-Zähler in Chunks (Standard 512 Sätze, `SetChunkSize`) auf Worker.
+  Jeder Worker hat einen eigenen Field-Clone und generiert/vorfiltert nur (Lese-Zugriffe
+  auf die Hashtabelle); das Einsortieren läuft danach seriell in fester Worker-Reihenfolge.
+  Die Ergebnis-Sets sind dadurch beweisbar identisch zum seriellen Lauf (Fixpunkt der
+  Vorwärts-Hülle ist unabhängig von der Wellen-Reihenfolge) - abgesichert über die
+  Orakel-Referenzwerte im Benchmark.
+- **Worker-Anzahl**: Standard ist 8x NumCPU (`SetWorkers`). Die Arbeit ist memory-latency-
+  gebunden (Hash-Lookups und Flood-Fills über grosse Arrays), deshalb hilft deutliche
+  Überbelegung: die Goroutinen verstecken gegenseitig ihre DRAM-Wartezeiten
+  (GOMAXPROCS bleibt bei NumCPU OS-Threads). Sweep-Messungen lid349 bis 4-Steiner
+  (Intel Ultra 9 285H, 6P+8E+2LPE): seriell+map 13,8 s -> seriell+CompactTable 12,0 s ->
+  14 Worker 3,8 s (= 16, LP-E-Kerne irrelevant) -> 128 Worker 3,1 s -> Plateau ~3,0 s ab 128.
+  Chunk-Größe: 20 und 20000 sind messbar schlechter, 200-2000 gleichwertig -> 512.
 
 ## Referenzwerte (als Tests verankert)
 

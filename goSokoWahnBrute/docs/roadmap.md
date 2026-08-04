@@ -6,15 +6,19 @@ die verankerten Referenzwerte absichern.
 
 ## Performance-Kern
 
-- **Kompakte Hashtabelle** als `PosTable`-Drop-in: Open Addressing, 8 Byte pro Eintrag
-  (48 Bit Rest-Schlüssel + 16 Bit Tiefe, Bucket aus den unteren Crc-Bits), Kapazität 2^k
-  mit Verdopplung, lineares Sondieren. Mit Benchmarks gegen die map-Variante
-  (die builtin map braucht ca. 3-4x mehr RAM). Das Original brauchte dafür das
-  Dictionary+Index24-Archiv-Hybrid - in Go geht das deutlich einfacher.
-- **Parallelisierung** der Suche: Worker-Pool, ein Field-Clone pro Worker (Clone() ist
-  dafür vorbereitet), Batch-Fan-out über PopBatch -> Varianten sammeln -> seriell
-  einsortieren. Erst danach: parallele Blocker-Erstellung (das Original parallelisierte
-  auch dort). Achtung: Determinismus für Orakel-Vergleiche über eine Seriell-Option erhalten.
+- ERLEDIGT: **Kompakte Hashtabelle** (`CompactTable`, 10 Byte/Slot verlustfrei, crc==0 als
+  Frei-Marker). Offen als weitere Idee: 8-Byte-Variante mit 48-Bit-Rest-Schlüssel -
+  spart nochmal 20%, ist aber verlustbehaftet beim Vergleich (Aliasing-Risiko) und
+  bricht die Bitgenauigkeit zum Orakel -> nur mit Vorsicht.
+- ERLEDIGT: **Parallelisierung der Blocker-Phasen** (SearchVariants + MergeGoals,
+  Worker-Pool mit Atomic-Chunks, seriell-identische Ergebnisse; lid349/4-Steiner:
+  13,8 s -> 3,8 s bei 16 Kernen). Noch offen:
+  - **Solver-Suche parallelisieren** (gleiches Muster: Batch-Fan-out + serieller Merge;
+    Achtung auf die found/Update-Buchführung im seriellen Teil).
+  - Serieller Merge-Anteil weiter drücken: Crc-geshardete Tabellen (16 Shards wie im
+    C#-Original), dann kann auch der Merge parallel je Shard laufen.
+  - CollectStart/CollectGoals parallelisieren (Kombinationen unabhängig; lohnt erst
+    bei hohen Steiner-Zahlen mit vielen Kombinationen).
 - **Disk-Auslagerung der Tiefenlisten** hinter dem DepthList-Interface (List2-Muster:
   32-KiB-Blöcke, nur volle Blöcke auslagern, freigelesene Slots wiederverwenden).
   Nötig erst bei Levels, deren Fronten nicht mehr in den RAM passen (128 GB verfügbar).
@@ -38,7 +42,6 @@ die verankerten Referenzwerte absichern.
   als Heuristik-Quelle (untere/obere Restzug-Schranken je Stellung) -> Basis für eine
   Best-First-Suche mit Zug-Limit. Das Original blieb hier experimentell/unfertig -
   wäre ein eigenes Forschungs-Kapitel.
-- Blocker-Erstellung parallelisieren (Kombinationen sind unabhängig).
 
 ## TUI / Komfort
 

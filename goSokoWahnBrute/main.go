@@ -20,6 +20,7 @@ func main() {
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
 	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
+	workers := flag.Int("workers", 0, "Anzahl der Blocker-Worker (0 = automatisch, 1 = seriell)")
 	flag.Parse()
 
 	// optionales Level aus Datei laden
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	if *blockerStages > 0 {
-		runBlockerOnly(levelData, *blockerStages)
+		runBlockerOnly(levelData, *blockerStages, *workers)
 		return
 	}
 
@@ -44,12 +45,12 @@ func main() {
 		return
 	}
 
-	runCli(levelData, *useBlocker)
+	runCli(levelData, *useBlocker, *workers)
 }
 
 // berechnet nur die Blocker-Stufen bis einschließlich maxStages und gibt sie aus
 // (ohne Suche und ohne Cache-Datei, für schnelle Orakel-Vergleiche)
-func runBlockerOnly(levelData string, maxStages int) {
+func runBlockerOnly(levelData string, maxStages int, workers int) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
 	}
@@ -60,6 +61,9 @@ func runBlockerOnly(levelData string, maxStages int) {
 	}
 
 	blk := blocker.New(field, "")
+	if workers > 0 {
+		blk.SetWorkers(workers)
+	}
 	for blk.Next(1000000000) {
 		if len(blk.GetStats().Stages) >= maxStages {
 			blk.Abort()
@@ -71,7 +75,7 @@ func runBlockerOnly(levelData string, maxStages int) {
 
 // Kommandozeilen-Modus: Level lösen und Fortschritt als Text ausgeben
 // (deterministische Ausgaben, direkt vergleichbar mit dem C#-Orakel refcli)
-func runCli(levelData string, useBlocker bool) {
+func runCli(levelData string, useBlocker bool, workers int) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
 	}
@@ -88,6 +92,9 @@ func runCli(levelData string, useBlocker bool) {
 			panic(err)
 		}
 		blk := blocker.New(field, filepath.Join("temp", blocker.CacheName(field)))
+		if workers > 0 {
+			blk.SetWorkers(workers)
+		}
 		blockerStart := time.Now()
 		for blk.Next(1000000000) {
 		}
