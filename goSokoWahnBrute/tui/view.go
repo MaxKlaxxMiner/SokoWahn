@@ -58,7 +58,7 @@ func (m Model) modeName() string {
 func (m Model) helpLine() string {
 	switch m.mode {
 	case modeInput:
-		return "Enter = Übernehmen (bei komplettem Level/Nummer/URL) | Strg+S = Scannen | Esc = Beenden (leer = Vanilla)"
+		return "Enter = Übernehmen (bei Nummer/URL) | Strg+S = Level scannen | Esc = Beenden (leer = Vanilla)"
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
@@ -98,9 +98,25 @@ func (m Model) viewSearch() string {
 	stats := m.slv.GetStats()
 	var sb strings.Builder
 	if stats.FoundMoves >= 0 {
-		sb.WriteString(styleMark.Render(fmt.Sprintf("Gefunden: %d Züge", stats.FoundMoves)) + "\n\n")
+		// wie das Original: Treffpunkt relativ zur Vorwärtstiefe und die Rest-Beweislücke
+		// (die Suche läuft weiter, bis vorwärts + rückwärts die gefundene Tiefe erreicht)
+		meet := stats.FoundForward - stats.ForwardDepth
+		rest := stats.FoundMoves - stats.ForwardDepth - stats.BackwardDepth
+		sb.WriteString(styleMark.Render(fmt.Sprintf("Gefunden: %d Züge", stats.FoundMoves)) +
+			fmt.Sprintf("  (Treffpunkt: %+d / Rest: %d)\n\n", meet, rest))
 	} else {
-		sb.WriteString(fmt.Sprintf("Tiefe: %d + %d\n\n", stats.ForwardDepth, stats.BackwardDepth))
+		// wie das Original: addierte Zugtiefe, Anzahl der Tiefenlisten und die geschätzte
+		// Endtiefe (gewichtete Median-Tiefe der offenen Sätze beider Richtungen)
+		estimate := medianDepth(stats.ForwardOpen) + medianDepth(stats.BackwardOpen)
+		sb.WriteString(fmt.Sprintf("Tiefe: %d (%d + %d) - Listen: %d - geschätzt: %s\n",
+			stats.ForwardDepth+stats.BackwardDepth, stats.ForwardDepth, stats.BackwardDepth,
+			len(stats.ForwardOpen)+len(stats.BackwardOpen), formatDepth(estimate)))
+		// Hochrechnung des Originals: erreichbare Suchtiefe je Hashtable-Budget
+		if d100M, d1G, d3G, ok := m.slv.EstimateMaxDepths(); ok {
+			sb.WriteString(fmt.Sprintf("max: %s / %s / %s (100M, 1G, 3G)\n",
+				tools.FormatInt(d100M), tools.FormatInt(d1G), tools.FormatInt(d3G)))
+		}
+		sb.WriteByte('\n')
 	}
 
 	forward := depthColumn("vorwärts", stats.ForwardOpen, stats.ForwardDepth)
@@ -119,11 +135,12 @@ func (m Model) viewSolution() string {
 	state := &m.solution.States[m.frame]
 	left := styleField.Render(strings.TrimRight(state.Debug(m.field), "\n"))
 
+	done := m.solution.MoveOffsets[m.frame]
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Lösung: %d Züge, %d Schub-Stellungen\n", len(m.solution.Moves), len(m.solution.States))
-	fmt.Fprintf(&sb, "Stellung %d / %d\n\n", m.frame+1, len(m.solution.States))
-	sb.WriteString("Zugfolge (LURD):\n")
-	sb.WriteString(wrapText(m.solution.Moves, 60))
+	fmt.Fprintf(&sb, "Stellung %d / %d - Zug %d / %d\n\n", m.frame+1, len(m.solution.States), done, len(m.solution.Moves))
+	sb.WriteString("Zugfolge (LURD, ausgeführte Züge markiert):\n")
+	sb.WriteString(wrapMoves(m.solution.Moves, 60, done))
 	right := stylePanel.Render(strings.TrimRight(sb.String(), "\n"))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, left, " ", right)
@@ -138,6 +155,10 @@ func (m Model) workLine() string {
 			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | übrig: %s | Muster: %s | Bulk: %s",
 				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.BadStates), tools.FormatInt(stats.FoundPatterns), tools.FormatInt(*m.bulkSize())))
 		}
+		if stats.Status == blocker.StatusMergeGoals {
+			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Rest: %s | Bulk: %s",
+				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(stats.MergeRest), tools.FormatInt(*m.bulkSize())))
+		}
 		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Bulk: %s",
 			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(*m.bulkSize())))
 	case modeSearch:
@@ -145,6 +166,31 @@ func (m Model) workLine() string {
 			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), m.slv.SearchDepth(), tools.FormatInt(*m.bulkSize())))
 	}
 	return ""
+}
+
+// gewichtete Median-Tiefe der offenen Sätze einer Richtung: die Tiefe, unter der die
+// Hälfte der restlichen Arbeit liegt (Schätzwert des Originals für die Endtiefe)
+func medianDepth(open []int) float64 {
+	var sum int64
+	for _, n := range open {
+		sum += int64(n)
+	}
+	if sum == 0 {
+		return 0
+	}
+	half := sum / 2
+	for i, n := range open {
+		if int64(n) > half {
+			return float64(i) + float64(half)/float64(n)
+		}
+		half -= int64(n)
+	}
+	return float64(len(open))
+}
+
+// formatiert eine Tiefen-Schätzung mit zwei Nachkommastellen (deutsches Komma)
+func formatDepth(v float64) string {
+	return strings.ReplaceAll(fmt.Sprintf("%.2f", v), ".", ",")
 }
 
 // eine Spalte der Tiefenstatistik: eine Zeile je Zugtiefe, aktuelle Tiefe markiert
@@ -180,14 +226,28 @@ func depthColumn(title string, open []int, current int) string {
 	return sb.String()
 }
 
-// bricht einen String hart nach width Zeichen um
-func wrapText(text string, width int) string {
+// bricht die Zugfolge hart nach width Zeichen um und hebt die ersten done Züge farblich hervor
+// (zeigt beim Blättern, wo man sich in der Zugfolge gerade befindet)
+func wrapMoves(text string, width, done int) string {
 	var sb strings.Builder
-	for len(text) > width {
-		sb.WriteString(text[:width])
-		sb.WriteByte('\n')
-		text = text[width:]
+	for pos := 0; pos < len(text); pos += width {
+		if pos > 0 {
+			sb.WriteByte('\n')
+		}
+		end := pos + width
+		if end > len(text) {
+			end = len(text)
+		}
+		line := text[pos:end]
+		switch {
+		case done >= end:
+			sb.WriteString(styleMark.Render(line))
+		case done > pos:
+			sb.WriteString(styleMark.Render(line[:done-pos]))
+			sb.WriteString(line[done-pos:])
+		default:
+			sb.WriteString(line)
+		}
 	}
-	sb.WriteString(text)
 	return sb.String()
 }

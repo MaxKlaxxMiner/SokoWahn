@@ -93,10 +93,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				*m.bulkSize() /= 10
 			}
 			return m, nil
-		case "i": // zurück zur Eingabe
-			m.auto = false
-			m.mode = modeInput
-			return m, textarea.Blink
+		case "i": // neues Level eingeben
+			return m.enterInput()
 		}
 		return m, nil
 
@@ -129,10 +127,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				*m.bulkSize() /= 10
 			}
 			return m, nil
-		case "i":
-			m.auto = false
-			m.mode = modeInput
-			return m, textarea.Blink
+		case "i": // neues Level eingeben
+			return m.enterInput()
 		}
 		return m, nil
 
@@ -157,13 +153,23 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.frame = len(m.solution.States) - 1
 			return m, nil
 		case "i": // neues Level eingeben
-			m.mode = modeInput
-			return m, textarea.Blink
+			return m.enterInput()
 		}
 		return m, nil
 	}
 
 	return m, nil
+}
+
+// wechselt zur Level-Eingabe für ein neues Level (Eingabefeld wird geleert,
+// da scan() dort z.B. bei URL-Eingaben das geladene Level abgelegt hat)
+func (m Model) enterInput() (tea.Model, tea.Cmd) {
+	m.auto = false
+	m.input.SetValue("")
+	m.inputErr = ""
+	m.mode = modeInput
+	m.status = "Level eingeben, dann Strg+S zum Scannen"
+	return m, textarea.Blink
 }
 
 // Auto-Tick: rechnet bis zum Zeitbudget weiter und plant den nächsten Tick

@@ -98,43 +98,39 @@ func tickCmd() tea.Cmd {
 	return tea.Tick(10*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
-// prüft bei Enter, ob der Eingabe-Inhalt schon komplett ist, und scannt dann direkt
-// (true = Enter wurde verbraucht, false = Enter soll eine normale neue Zeile einfügen)
+// prüft bei Enter, ob der Eingabe-Inhalt eine einzeilige Level-Nummer oder URL ist,
+// und scannt dann direkt (true = Enter wurde verbraucht)
 func (m *Model) scanOnEnter() bool {
-	text := strings.TrimSpace(m.input.Value())
-	if text == "" {
+	if !isWebInput(m.input.Value()) {
 		return false
 	}
+	m.scan()
+	return true
+}
 
-	// einzeilig: Level-Nummer, URL oder Einzeiler -> immer scannen
-	if !strings.Contains(text, "\n") {
-		m.scan()
-		return true
-	}
-
-	// mehrzeilige Levelnotation: nur übernehmen, wenn sie sauber parst
-	// (während des Tippens fügt Enter sonst weiter normale Zeilen ein)
-	if strings.HasPrefix(text, "#") {
-		if _, err := soko.Parse(text); err == nil {
-			m.scan()
-			return true
-		}
-	}
-
-	return false
+// erkennt eine einzeilige Level-Nummer oder game-sokoban.com-URL.
+// Levelnotation wird bewusst NIE per Enter übernommen: beim Einfügen eines Levels kommen
+// die Zeilenschaltungen als einzelne Enter-Tastendrücke an - dort muss Enter immer
+// eine normale neue Zeile bleiben (Übernahme dann per Strg+S).
+func isWebInput(text string) bool {
+	text = strings.TrimSpace(text)
+	return text != "" && !strings.Contains(text, "\n") && !strings.HasPrefix(text, "#")
 }
 
 // liest das Level ein und wechselt in den Blocker-Modus
 func (m *Model) scan() {
-	text := strings.TrimSpace(m.input.Value())
-	if text == "" {
+	// Achtung: der Text darf hier NICHT komplett getrimmt werden - das würde nur der ersten
+	// Zeile die Einrückung nehmen und sie gegen den Rest des Levels verschieben
+	// (Parse entfernt selbst Leerzeilen und die gemeinsame Einrückung aller Zeilen)
+	text := m.input.Value()
+	if strings.TrimSpace(text) == "" {
 		text = maps.MapVanilla
 		m.input.SetValue(strings.TrimSpace(strings.ReplaceAll(maps.MapVanilla, "\t", "")))
 	}
 
 	// keine Levelnotation -> als Level-Nummer oder game-sokoban.com-URL versuchen
-	if !strings.HasPrefix(text, "#") {
-		webLevel, err := loadWebLevel(text)
+	if isWebInput(text) {
+		webLevel, err := loadWebLevel(strings.TrimSpace(text))
 		if err != nil {
 			m.inputErr = err.Error()
 			return

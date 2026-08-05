@@ -30,6 +30,8 @@ type Solver struct {
 	dirDepth   int  // Suchtiefe, für welche die Richtungswahl zuletzt getroffen wurde
 	dirForward bool // gecachte Richtungswahl (true = vorwärts)
 
+	hashUsage []int64 // Hash-Gesamtnutzung je Suchtiefe (Datenbasis der Max-Tiefen-Schätzung)
+
 	varBuf   []soko.State // wiederverwendbarer Buffer für die Variantensuche
 	curState soko.State   // Buffer für die aktuell geladene Stellung
 }
@@ -62,18 +64,14 @@ func New(field *soko.Field) *Solver {
 	s.foundState = soko.State{Boxes: make([]soko.Wpos, s.boxCount)}
 
 	// --- Vorwärtssuche initialisieren ---
+	// Achtung: eine bereits gelöste Startstellung ist KEINE 0-Züge-Lösung - das Spiel
+	// prüft den Zielzustand erst nach einem Zug. Solche Levels löst die normale Suche
+	// von selbst korrekt: jede Variante endet mit einem Schub, die kürzeste Lösung
+	// schiebt also eine Kiste heraus und stellt die Zielstellung wieder her.
 	start := soko.State{}
 	base.GetState(&start)
 	s.forwardKnown.Add(start.Crc, 0)
 	s.pushForward(&start)
-
-	// Sonderfall: Startstellung ist bereits gelöst
-	if base.IsSolved() {
-		s.done = true
-		s.foundTotal = 0
-		s.copyFoundState(&start)
-		return s
-	}
 
 	// --- Rückwärtssuche initialisieren ---
 	for _, goalState := range base.SearchGoalStates() {

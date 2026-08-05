@@ -8,8 +8,9 @@ import (
 
 // fertiger Lösungsweg
 type Solution struct {
-	States []soko.State // Stellungsfolge vom Start bis zum Ziel (nur die Schub-Stellungen)
-	Moves  string       // komplette Zugfolge in LURD-Notation (Grossbuchstaben = Schiebeschritte)
+	States      []soko.State // Stellungsfolge vom Start bis zum Ziel (nur die Schub-Stellungen)
+	Moves       string       // komplette Zugfolge in LURD-Notation (Grossbuchstaben = Schiebeschritte)
+	MoveOffsets []int        // je Stellung die Anzahl der bis dahin ausgeführten Züge (Index in Moves)
 }
 
 // rekonstruiert den Lösungsweg über die beiden Hashtabellen
@@ -88,19 +89,21 @@ func (s *Solver) GetSolution() (*Solution, error) {
 
 	// --- LURD-Zugfolge aus den Schub-Stellungen ableiten ---
 	moves := make([]byte, 0, s.foundTotal)
+	offsets := make([]int, 1, len(states)) // Startstellung = 0 ausgeführte Züge
 	for i := 1; i < len(states); i++ {
 		part, err := s.work.Steps(&states[i-1], &states[i])
 		if err != nil {
 			return nil, err
 		}
 		moves = append(moves, part...)
+		offsets = append(offsets, len(moves))
 	}
 
 	if len(moves) != s.foundTotal {
 		return nil, fmt.Errorf("solution length mismatch: %d moves, expected %d", len(moves), s.foundTotal)
 	}
 
-	return &Solution{States: states, Moves: string(moves)}, nil
+	return &Solution{States: states, Moves: string(moves), MoveOffsets: offsets}, nil
 }
 
 // erstellt eine unabhängige Kopie einer Stellung

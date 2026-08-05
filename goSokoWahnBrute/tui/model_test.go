@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"goSokoWahnBrute/soko"
 )
 
 // kleines Mehrkisten-Level (Referenz: 16 Züge optimal)
@@ -75,25 +77,59 @@ func TestModelFlow(t *testing.T) {
 	}
 }
 
-// Enter übernimmt ein gepastetes Level direkt; beim unvollständigen Level bleibt Enter eine neue Zeile
+// Enter scannt nur einzeilige Nummern/URLs direkt; Levelnotation bleibt eine normale
+// neue Zeile (beim Einfügen kommen Zeilenschaltungen als Enter-Tastendrücke an)
 func TestModelScanOnEnter(t *testing.T) {
 	t.Chdir(t.TempDir())
 
-	// komplettes Level + Enter -> Scan in den Blocker-Modus
+	// komplettes Level + Enter -> KEIN Scan, bleibt in der Eingabe (Übernahme per Strg+S)
 	m := NewModel("", 0)
 	m.input.SetValue(testLevel)
 	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if m.mode != modeBlocker {
-		t.Fatalf("Enter müsste das komplette Level übernehmen (Fehler: %q)", m.inputErr)
+	if m.mode != modeInput {
+		t.Fatal("Enter darf Levelnotation nicht übernehmen (zerstört sonst das Einfügen)")
 	}
 
-	// unvollständiges Level (Kiste ohne Zielfeld -> Parse-Fehler) + Enter
-	// -> bleibt in der Eingabe (normale neue Zeile)
+	// erste Zeile eines gerade laufenden Pastes + Enter -> ebenfalls normale neue Zeile
 	m = NewModel("", 0)
-	m.input.SetValue("#####\n#@$ #")
+	m.input.SetValue("#####")
 	m = press(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if m.mode != modeInput {
-		t.Fatal("Enter darf ein unvollständiges Level nicht übernehmen")
+		t.Fatal("Enter darf eine einzelne Levelzeile nicht übernehmen")
+	}
+
+	// Nummer/URL wird dagegen als scan-würdig erkannt (ohne Netz: nur die Erkennung prüfen)
+	for _, web := range []string{"349", "http://www.game-sokoban.com/index.php?mode=level&lid=349"} {
+		if !isWebInput(web) {
+			t.Errorf("Eingabe %q müsste als Nummer/URL erkannt werden", web)
+		}
+	}
+	for _, level := range []string{"", "#####", "#####\n#@$ #", "  ### mit Einrückung"} {
+		if isWebInput(level) {
+			t.Errorf("Eingabe %q darf nicht als Nummer/URL erkannt werden", level)
+		}
+	}
+}
+
+// scan darf den Eingabetext nicht komplett trimmen: das würde nur der ersten Zeile
+// die Einrückung nehmen und sie gegen den Rest des Levels verschieben
+func TestModelScanIndentedFirstLine(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	level := "   ####\n####  #\n#  @$.#\n#######"
+	want, err := soko.Parse(level)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel("", 0)
+	m.input.SetValue(level)
+	m.scan()
+	if m.inputErr != "" {
+		t.Fatalf("Level mit eingerückter erster Zeile parst nicht: %s", m.inputErr)
+	}
+	if m.field.FieldCrc() != want.FieldCrc() {
+		t.Fatal("scan verändert die Feldgeometrie (erste Zeile wurde getrimmt)")
 	}
 }
 

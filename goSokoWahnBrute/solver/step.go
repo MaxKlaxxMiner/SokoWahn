@@ -46,6 +46,7 @@ func (s *Solver) Step(limit int) bool {
 	if s.forwardDepth+s.backwardDepth != s.dirDepth {
 		s.dirDepth = s.forwardDepth + s.backwardDepth
 		s.dirForward = s.forwardKnown.Len() < s.backwardKnown.Len()
+		s.hashUsage = append(s.hashUsage, s.forwardKnown.Len()+s.backwardKnown.Len())
 	}
 
 	if s.dirForward {

@@ -23,6 +23,7 @@ type Stats struct {
 	KnownStates     int64        // Stellungs-Marker der laufenden Stufe
 	OpenStates      int64        // noch abzuarbeitende Stellungen der laufenden Phase
 	BadStates       int64        // gesammelte möglicherweise verbotene Stellungen
+	MergeRest       int64        // Countdown der Verschmelzen-Phase (kann ins Negative laufen)
 	FoundPatterns   int          // bereits eingesammelte Muster (nur während "Muster erstellen")
 	EstimateNext    int64        // geschätzter Aufwand der nächsten Stufe (0 = unbekannt)
 	Done            bool
@@ -66,6 +67,7 @@ func (b *Blocker) GetStats() Stats {
 	if b.badList != nil {
 		stats.BadStates = int64(b.badList.Count())
 	}
+	stats.MergeRest = b.mergeRest
 	stats.FoundPatterns = b.tempPatternCount
 
 	return stats
@@ -116,14 +118,19 @@ func (b *Blocker) String() string {
 	}
 
 	if !stats.Done {
-		if stats.Status == StatusCreatePatterns {
+		switch stats.Status {
+		case StatusCreatePatterns:
 			// in dieser Phase wandern die Böse-Restliste und der Muster-Zähler, nicht offen/bekannt
 			fmt.Fprintf(&sb, "[%d] - %s: %s übrig / %s geprüft - %s Muster gefunden",
 				stats.CurrentBoxCount, stats.Status, tools.FormatInt(stats.BadStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(stats.FoundPatterns))
-		} else {
+		case StatusMergeGoals:
+			// wie das Original: Countdown statt der Schätzung für die nächste Stufe
+			fmt.Fprintf(&sb, "[%d] - %s: %s offen / %s bekannt (Rest: %s)",
+				stats.CurrentBoxCount, stats.Status, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(stats.MergeRest))
+		default:
 			fmt.Fprintf(&sb, "[%d] - %s: %s offen / %s bekannt", stats.CurrentBoxCount, stats.Status, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates))
 		}
-		if stats.EstimateNext > 0 {
+		if stats.EstimateNext > 0 && stats.Status != StatusMergeGoals {
 			fmt.Fprintf(&sb, " (nächste Stufe ca. %s)", tools.FormatInt(stats.EstimateNext))
 		}
 		sb.WriteByte('\n')

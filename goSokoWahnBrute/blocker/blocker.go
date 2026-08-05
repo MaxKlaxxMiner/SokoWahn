@@ -60,6 +60,7 @@ type Blocker struct {
 	comboPositions []soko.Wpos       // Positionen für die Kombinationen (Start- oder Zielfelder)
 	tempPatterns     [][]soko.Wpos // Muster-Sammler während CreatePatterns
 	tempPatternCount int           // bereits eingesammelte Muster (für die Fortschrittsanzeige)
+	mergeRest        int64         // Countdown der Verschmelzen-Phase (wie verschmelzenRest im Original, nur Anzeige)
 	stageChecked     int64         // geprüfte Stellungen der Stufe (Hash-Stand beim Abschluss)
 	recordSize     int               // Satzgröße der Listen = searchBoxCount + 1
 

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -43,5 +44,53 @@ func TestParseWebLevelOldFormat(t *testing.T) {
 	}
 	if _, err := soko.Parse(level); err != nil {
 		t.Fatalf("geparstes Level ist ungültig: %v", err)
+	}
+}
+
+// Level 37988 startet bereits gelöst (alle 70 Kisten stehen auf Zielfeldern):
+// das ist KEINE 0-Züge-Lösung - das Spiel prüft den Zielzustand erst nach einem Zug,
+// die Suche muss also normal anlaufen (Kiste herausschieben und wiederherstellen).
+// Die Original-Seite liegt als Testdatei bei, damit auch der Loader real geprüft wird.
+func TestWebLevelSolvedStart(t *testing.T) {
+	page, err := os.ReadFile("testdata/lid37988.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	level, err := parseWebLevel(string(page))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field, err := soko.Parse(level)
+	if err != nil {
+		t.Fatalf("geparstes Level ist ungültig: %v\n%s", err, level)
+	}
+	if field.BoxCount() != 70 {
+		t.Errorf("erwartet 70 Kisten, erhalten: %d", field.BoxCount())
+	}
+	if !field.IsSolved() {
+		t.Fatal("Level 37988 müsste bereits gelöst starten")
+	}
+
+	t.Chdir(t.TempDir()) // Blocker-Cache nicht im Repo ablegen
+	m := NewModel("", 0)
+	m.input.SetValue(level)
+	m.scan()
+	if m.inputErr != "" {
+		t.Fatalf("scan meldet einen Fehler: %s", m.inputErr)
+	}
+	m.blk.Abort()
+	m.startSearch()
+
+	// die Suche darf nicht sofort mit einer 0-Züge-Lösung enden; ein paar Schritte
+	// rechnen (komplett lösen wäre für einen Test zu teuer - 70 Kisten)
+	if !m.slv.Step(1000) {
+		t.Fatal("Suche endet sofort - gelöster Start wurde fälschlich als Lösung gewertet")
+	}
+	for i := 0; i < 5; i++ {
+		m.slv.Step(1000)
+	}
+	if found := m.slv.GetStats().FoundMoves; found == 0 {
+		t.Fatal("0-Züge-Lösung gemeldet - das Spiel verlangt mindestens einen Zug")
 	}
 }

@@ -90,6 +90,23 @@ func TestSolveSmall(t *testing.T) {
 `, 16)
 }
 
+// Level startet bereits gelöst: das zählt NICHT als 0-Züge-Lösung (das Spiel prüft
+// den Zielzustand erst nach einem Zug) - die kürzeste Lösung schiebt die Kiste
+// heraus und wieder auf das Ziel zurück (uuRdrruL = 8 Züge)
+func TestSolveSolvedStart(t *testing.T) {
+	_, solution := solveLevel(t, `
+######
+#    #
+# *  #
+#    #
+#@   #
+######
+`, 8)
+	if len(solution.Moves) == 0 {
+		t.Fatal("gelöster Start darf keine 0-Züge-Lösung liefern")
+	}
+}
+
 // unlösbares Level: Kiste klemmt in der Ecke
 func TestSolveUnsolvable(t *testing.T) {
 	field, err := soko.Parse(`

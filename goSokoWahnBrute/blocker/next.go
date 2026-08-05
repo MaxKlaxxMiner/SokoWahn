@@ -51,6 +51,7 @@ func (b *Blocker) Next(limit int) bool {
 			b.checkList, b.collectList = b.collectList, solver.NewDepthList(b.recordSize)
 			if b.checkList.Count() == 0 {
 				b.status = StatusMergeGoals // keine neuen Stellungen mehr -> alles Erreichbare ist erfasst
+				b.mergeRest = int64(b.badList.Count())
 				return true
 			}
 		}
@@ -73,7 +74,9 @@ func (b *Blocker) Next(limit int) bool {
 			}
 		}
 
-		b.processBackwardBatch(b.checkList.PopBatch(limit))
+		batch := b.checkList.PopBatch(limit)
+		b.mergeRest -= int64(len(batch) / b.recordSize)
+		b.processBackwardBatch(batch)
 		return true
 
 	case StatusCreatePatterns:

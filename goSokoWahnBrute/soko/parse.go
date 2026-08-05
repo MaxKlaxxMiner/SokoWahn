@@ -36,6 +36,9 @@ func parseFilterLines(sokoMap string) (lines [][]byte, maxlen int) {
 	for len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
 		lines = lines[:len(lines)-1]
 	}
+	if len(lines) == 0 {
+		return // komplett leere Eingabe -> Parse meldet "no sokoban field found"
+	}
 
 	// --- Leerzeichen am Anfang der Zeilen entfernen (nur identische Leerzeichen und Tabs) ---
 	for {
