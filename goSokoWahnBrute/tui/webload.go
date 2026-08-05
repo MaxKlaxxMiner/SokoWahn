@@ -273,6 +273,27 @@ func parseWebLevel(page string) (string, *WebLevelInfo, error) {
 		return "", nil, err
 	}
 
+	// Raster mit einem Void-Ring umschließen: damit bekommen auch begehbare Felder
+	// DIREKT an der Rasterkante (halb offene Levels wie 353) unten eine echte Wand,
+	// statt sich nur auf die implizite Begrenzung unseres Parsers zu verlassen -
+	// der Leveltext ist dann auch für andere Programme und fürs Auge korrekt
+	ringed := make([][]byte, 0, len(grid)+2)
+	voidRow := make([]byte, width+2)
+	for i := range voidRow {
+		voidRow[i] = 'v'
+	}
+	ringed = append(ringed, voidRow)
+	for _, line := range grid {
+		row := make([]byte, 0, width+2)
+		row = append(row, 'v')
+		row = append(row, line...)
+		row = append(row, 'v')
+		ringed = append(ringed, row)
+	}
+	ringed = append(ringed, append([]byte(nil), voidRow...))
+	grid = ringed
+	width += 2
+
 	// Void-Zellen auflösen: im Spiel sind sie nicht betretbar. Bei halb offenen Levels
 	// grenzt Void direkt an begehbare Felder - solche Zellen werden zu Wänden, sonst
 	// könnte der Solver außen herumlaufen oder Kisten ins Nichts schieben. Der Rest

@@ -1,0 +1,21 @@
+         ####
+         #  #
+      ####$ ####
+      #        #
+      # ##.### #
+      # ###### ####
+      #  +$ ## #   #
+  ######### #. $   #
+  #   ##.## ## #   #
+### #       ## ####
+# $   # $##### #
+# ###.#  #   $.#
+#   ######    ##
+#   $.     ####
+############
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=353
+catalog: aenigma
+name: soko 09
+number: 9/50
+bestmoves: 93
