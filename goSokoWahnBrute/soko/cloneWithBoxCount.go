@@ -9,6 +9,9 @@ func (f *Field) CloneWithBoxCount(count int) *Field {
 	for i := range result.wposToBoxes {
 		result.wposToBoxes[i] = uint32(count)
 	}
+	for i := range result.boxBits {
+		result.boxBits[i] = 0
+	}
 
 	result.boxes = result.boxes[:count]
 	result.boxCount = uint32(count)

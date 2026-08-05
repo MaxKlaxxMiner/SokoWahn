@@ -98,6 +98,7 @@ func (b *Blocker) Next(limit int) bool {
 				patterns:      b.tempPatterns,
 				checkedStates: b.stageChecked,
 			})
+			b.rebuildCheckIndex()
 			b.releaseStageWork()
 			if b.cachePath != "" {
 				b.saveCache() // Fehler ignorieren: Cache ist nur eine Beschleunigung

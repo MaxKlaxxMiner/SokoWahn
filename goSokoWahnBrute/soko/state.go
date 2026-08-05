@@ -33,12 +33,14 @@ func (f *Field) SetBoxes(boxes []Wpos) {
 	// alte Kisten entfernen
 	for _, wpos := range f.boxes {
 		f.wposToBoxes[wpos] = f.boxCount
+		f.boxBitClear(wpos)
 	}
 
 	// neue Kisten setzen
 	for i, box := range boxes {
 		f.boxes[i] = box
 		f.wposToBoxes[box] = uint32(i)
+		f.boxBitSet(box)
 	}
 }
 

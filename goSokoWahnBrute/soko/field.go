@@ -21,6 +21,7 @@ type Field struct {
 	player      Wpos     // Aktuelle Spielerposition, Index zu begehbaren Feldern
 	wposToBoxes []uint32 // Index von begehbaren Feldern zu Kisten, boxCount wenn keine Kiste auf dem Feld
 	boxes       []Wpos   // Positionen der Kisten, jeweils Index zu begehbaren Feldern oder walkEof, wenn Kiste nicht gesetzt
+	boxBits     []uint64 // Kisten-Belegung als Bitmaske über die begehbaren Felder (walkEof+1 Bits, inkl. Sentinel-Bit)
 	moveDepth   int32    // Aktuelle Zugtiefe
 
 	// --- temporäre Buffer für die Suchfunktion ---
@@ -30,5 +31,11 @@ type Field struct {
 
 	// --- optionale Filter ---
 	blocker         BlockerCheck // Deadlock-Filter für die Vorwärtssuche, nil = kein Filter
-	blockerBackward BlockerCheck // Deadlock-Filter für die Rückwärtssuche (nur beim Blocker-Stufenbau), nil = kein Filter
+	blockerBackward BlockerCheck // Deadlock-Filter für die Rückwärtssuche (Blocker-Stufenbau und Solver-Rückwärtssuche), nil = kein Filter
 }
+
+// setzt das Belegungs-Bit einer Kistenposition
+func (f *Field) boxBitSet(p Wpos) { f.boxBits[p>>6] |= 1 << (p & 63) }
+
+// löscht das Belegungs-Bit einer Kistenposition
+func (f *Field) boxBitClear(p Wpos) { f.boxBits[p>>6] &^= 1 << (p & 63) }

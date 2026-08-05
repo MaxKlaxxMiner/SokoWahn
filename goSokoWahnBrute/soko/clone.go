@@ -19,6 +19,7 @@ func (f *Field) Clone() *Field {
 		player:        f.player,
 		wposToBoxes:   make([]uint32, len(f.wposToBoxes)),
 		boxes:         make([]Wpos, len(f.boxes)),
+		boxBits:       make([]uint64, len(f.boxBits)),
 		moveDepth:     f.moveDepth,
 		tmpCheckPos:   make([]Wpos, len(f.tmpCheckPos)),
 		tmpCheckDepth: make([]int32, len(f.tmpCheckDepth)),
@@ -28,6 +29,7 @@ func (f *Field) Clone() *Field {
 	}
 	copy(result.wposToBoxes, f.wposToBoxes)
 	copy(result.boxes, f.boxes)
+	copy(result.boxBits, f.boxBits)
 	result.tmpCheckDone[len(result.tmpCheckDone)-1] = true
 	return &result
 }

@@ -3,9 +3,10 @@ package soko
 import "goSokoWahnBrute/tools"
 
 // Interface fuer den Deadlock-Filter (Blocker): erlaubt das Verwerfen von Stellungen
-// direkt im Zuggenerator, bevor sie kopiert und gehasht werden
+// direkt im Zuggenerator, bevor sie kopiert und gehasht werden.
+// boxBits ist die Kisten-Belegung als Bitmaske ueber die begehbaren Felder.
 type BlockerCheck interface {
-	CheckAllowed(player Wpos, wposToBoxes []uint32) bool
+	CheckAllowed(player Wpos, boxBits []uint64) bool
 }
 
 // setzt den optionalen Deadlock-Filter fuer die Vorwaertssuche (nil = kein Filter)
@@ -108,11 +109,15 @@ func (f *Field) pushVariantHorizontal(result []State, p, p2 Wpos, box uint32, pD
 	f.moveDepth = pDepth                                    // Zugtiefe des Schubs
 	f.wposToBoxes[p2], f.wposToBoxes[p] = box, f.boxCount   // Kiste auf das Zielfeld schieben
 	f.boxes[box] = p2                                       // neue Kistenposition merken
-	if f.blocker == nil || f.blocker.CheckAllowed(f.player, f.wposToBoxes) {
+	f.boxBitClear(p)
+	f.boxBitSet(p2)
+	if f.blocker == nil || f.blocker.CheckAllowed(f.player, f.boxBits) {
 		result = f.AppendGetState(result)                   // Stellung einsammeln
 	}
 	f.wposToBoxes[p], f.wposToBoxes[p2] = box, f.boxCount   // Kiste wieder zurueck schieben
 	f.boxes[box] = p                                        // alte Kistenposition wiederherstellen
+	f.boxBitClear(p2)
+	f.boxBitSet(p)
 	return result
 }
 
@@ -123,17 +128,21 @@ func (f *Field) pushVariantVertical(result []State, p, p2 Wpos, box uint32, pDep
 	f.moveDepth = pDepth                                    // Zugtiefe des Schubs
 	f.wposToBoxes[p2], f.wposToBoxes[p] = box, f.boxCount   // Kiste auf das Zielfeld schieben
 	f.boxes[box] = p2                                       // neue Kistenposition merken
+	f.boxBitClear(p)
+	f.boxBitSet(p2)
 	if up {
 		f.sortBoxesUp(box)                                  // Kisten sortieren (Index ist kleiner geworden)
 	} else {
 		f.sortBoxesDown(box)                                // Kisten sortieren (Index ist groesser geworden)
 	}
-	if f.blocker == nil || f.blocker.CheckAllowed(f.player, f.wposToBoxes) {
+	if f.blocker == nil || f.blocker.CheckAllowed(f.player, f.boxBits) {
 		result = f.AppendGetState(result)                   // Stellung einsammeln
 	}
 	box = f.wposToBoxes[p2]                                 // Kisten-Nummer erneut abfragen (kann sich durch Sortierung geaendert haben)
 	f.wposToBoxes[p], f.wposToBoxes[p2] = box, f.boxCount   // Kiste wieder zurueck schieben
 	f.boxes[box] = p                                        // alte Kistenposition wiederherstellen
+	f.boxBitClear(p2)
+	f.boxBitSet(p)
 	if up {
 		f.sortBoxesDown(box)                                // Sortierung rueckgaengig machen
 	} else {

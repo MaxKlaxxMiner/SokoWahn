@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,9 +47,9 @@ type Model struct {
 	bulkBlocker int    // Stellungen pro Bulk-Schritt im Blockerscan (groß: füttert alle Worker)
 	bulkSearch  int    // Stellungen pro Bulk-Schritt in der Suche (fein: bessere UI-Granularität)
 	ramLimit    uint64 // RAM-Notbremse in Bytes (0 = aus)
-	ramStop  bool
-	ticks    int
-	lastTick time.Duration // Rechenzeit des letzten Auto-Ticks
+	ramStop     bool
+	ticks       int
+	lastTick    time.Duration // Rechenzeit des letzten Auto-Ticks
 
 	// --- Lösung ---
 	solution *solver.Solution
@@ -129,13 +130,15 @@ func (m *Model) scan() {
 	}
 
 	// keine Levelnotation -> als Level-Nummer oder game-sokoban.com-URL versuchen
+	var webInfo *WebLevelInfo
 	if isWebInput(text) {
-		webLevel, err := loadWebLevel(strings.TrimSpace(text))
+		webLevel, info, err := loadWebLevel(strings.TrimSpace(text))
 		if err != nil {
 			m.inputErr = err.Error()
 			return
 		}
 		text = webLevel
+		webInfo = info
 		m.input.SetValue(webLevel)
 	}
 
@@ -163,12 +166,28 @@ func (m *Model) scan() {
 	if stats := m.blk.GetStats(); len(stats.Stages) >= stats.MaxBoxes-1 {
 		m.blk.Abort()
 		m.startSearch()
-		m.status = "Blocker komplett aus dem Cache geladen"
+		m.status = webInfoLine(webInfo) + "Blocker komplett aus dem Cache geladen"
 		return
 	}
 
 	m.mode = modeBlocker
-	m.status = "Blockerscan bereit: s = Ministep, b = Bulk, a = Auto, Enter = beenden und Suche starten"
+	m.status = webInfoLine(webInfo) + "Blockerscan bereit: s = Ministep, b = Bulk, a = Auto, Enter = beenden und Suche starten"
+}
+
+// baut die Statuszeilen-Info eines Web-Levels ("" wenn kein Web-Level geladen wurde)
+func webInfoLine(info *WebLevelInfo) string {
+	if info == nil {
+		return ""
+	}
+	source := "geladen"
+	if info.Cached {
+		source = "aus dem Level-Cache"
+	}
+	line := fmt.Sprintf("Level %s %s: %s - %s (%s)", info.ID, source, info.Catalog, info.Name, info.Number)
+	if info.BestMoves > 0 {
+		line += fmt.Sprintf(" | Bestmoves: %d", info.BestMoves)
+	}
+	return line + " | "
 }
 
 // wechselt vom Blockerscan in die Lösungssuche

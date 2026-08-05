@@ -95,9 +95,21 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
    Rückwärtssuche filtert selbst mit den Blockern (vermeidet redundante Muster).
 5. **CreatePatterns**: alles was noch 12345 ist -> Deadlock-Muster, abgelegt pro Spielerposition.
 
-- `CheckAllowed(player, wposToBoxes)`: Muster trifft zu, wenn ALLE Muster-Felder Kisten tragen
-  (Subset-Match). `emptyBoxNumber` = Leer-Marker des abfragenden Feldes (Stufenbau: k,
-  Hauptsuche: KistenAnzahl) - das Pendant zu kistenNummerLeer/Abbruch() im Original.
+- `CheckAllowed(player, boxBits)`: Muster trifft zu, wenn ALLE Muster-Felder Kisten tragen
+  (Subset-Match). Zwei Beschleunigungen gegenüber dem naiven Feld-für-Feld-Vergleich:
+  1. **Bitmasken**: das Field pflegt die Kistenbelegung als Bitmaske über die begehbaren
+     Felder (`boxBits`, 2 Bit-Operationen pro Schub/Undo); jedes Muster liegt ebenfalls als
+     Maske vor, der Match ist ein branchloser Subset-Test (`pattern &^ state == 0` je Wort).
+  2. **Anker-Index**: je Spielerposition sind die Muster aller Stufen nach ihrem Ankerfeld
+     (kleinstes Muster-Feld) gebucketet; geprüft werden nur Buckets, deren Ankerfeld
+     tatsächlich eine Kiste trägt - alle anderen Muster können nicht zutreffen.
+  Messung unter Realbedingungen (lid46084, 5-Steiner-Cache mit 190.708 Mustern, Suche bis
+  Tiefe 266, als Speedcheck-Test verankert): naiv 7,8 s -> nur Bitmasken 2,8 s ->
+  Bitmasken + Anker-Index **1,0 s** (Faktor 7,7; Knotenzahl bitgenau gleich). Der
+  Stufenbau selbst (lid349, wenige Muster) bleibt unverändert bei 2,44 s.
+  Der frühere `emptyBoxNumber`-Mechanismus (kistenNummerLeer-Pendant) entfällt: die
+  Bitmaske kennt nur "Kiste ja/nein" und ist damit unabhängig von der Kistenanzahl
+  des abfragenden Feldes.
 - Der Solver filtert vorwärts UND rückwärts mit den Blockern (rückwärts wie
   `GetVariantenRückwärtsTeilRun2` der List2-Variante; bringt z.B. bei Vanilla
   1,57 Mio statt 2,06 Mio Knoten).

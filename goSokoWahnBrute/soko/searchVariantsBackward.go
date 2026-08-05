@@ -3,7 +3,7 @@ package soko
 import "goSokoWahnBrute/tools"
 
 // setzt den optionalen Deadlock-Filter für die Rückwärtssuche (nil = kein Filter);
-// wird nur beim Blocker-Stufenbau benutzt, die normale Lösungssuche filtert rückwärts nicht
+// genutzt vom Blocker-Stufenbau (Bx) und der Rückwärtssuche des Solvers (List2-Verhalten)
 func (f *Field) SetBlockerBackward(blocker BlockerCheck) {
 	f.blockerBackward = blocker
 }
@@ -21,9 +21,13 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		box := f.wposToBoxes[posLeft]                                     // Kisten-Nummer abfragen
 		f.wposToBoxes[posStart], f.wposToBoxes[posLeft] = box, f.boxCount // Kiste auf den Platz schieben, wo vorher der Spieler stand
 		f.boxes[box] = posStart                                           // neue Kistenposition merken
+		f.boxBitClear(posLeft)
+		f.boxBitSet(posStart)
 		result = f.searchVariantsBackwardStep(result)                     // alle zugehörige Varianten hinzufügen
 		f.wposToBoxes[posLeft], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posLeft                                            // neue Kistenposition merken
+		f.boxBitClear(posStart)
+		f.boxBitSet(posLeft)
 		f.player = posStart                                               // Spieler zurück setzen
 	}
 
@@ -33,9 +37,13 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		box := f.wposToBoxes[posRight]                                     // Kisten-Nummer abfragen
 		f.wposToBoxes[posStart], f.wposToBoxes[posRight] = box, f.boxCount // Kiste auf den Platz schieben, wo vorher der Spieler stand
 		f.boxes[box] = posStart                                            // neue Kistenposition merken
+		f.boxBitClear(posRight)
+		f.boxBitSet(posStart)
 		result = f.searchVariantsBackwardStep(result)                      // alle zugehörige Varianten hinzufügen
 		f.wposToBoxes[posRight], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posRight                                            // neue Kistenposition merken
+		f.boxBitClear(posStart)
+		f.boxBitSet(posRight)
 		f.player = posStart                                                // Spieler zurück setzen
 	}
 
@@ -45,11 +53,15 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		box := f.wposToBoxes[posUp]                                     // Kisten-Nummer abfragen
 		f.wposToBoxes[posStart], f.wposToBoxes[posUp] = box, f.boxCount // Kiste auf den Platz schieben, wo vorher der Spieler stand
 		f.boxes[box] = posStart                                         // neue Kistenposition merken
+		f.boxBitClear(posUp)
+		f.boxBitSet(posStart)
 		f.sortBoxesDown(box)                                            // Kisten sortieren (Index ist größer geworden)
 		result = f.searchVariantsBackwardStep(result)                   // alle zugehörige Varianten hinzufügen
 		box = f.wposToBoxes[posStart]                                   // Kisten-Nummer erneut abfragen
 		f.wposToBoxes[posUp], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posUp                                            // neue Kistenposition merken
+		f.boxBitClear(posStart)
+		f.boxBitSet(posUp)
 		f.sortBoxesUp(box)                                              // Sortierung rückgängig machen (Index ist kleiner geworden)
 		f.player = posStart                                             // Spieler zurück setzen
 	}
@@ -60,11 +72,15 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		box := f.wposToBoxes[posDown]                                     // Kisten-Nummer abfragen
 		f.wposToBoxes[posStart], f.wposToBoxes[posDown] = box, f.boxCount // Kiste auf den Platz schieben, wo vorher der Spieler stand
 		f.boxes[box] = posStart                                           // neue Kistenposition merken
+		f.boxBitClear(posDown)
+		f.boxBitSet(posStart)
 		f.sortBoxesUp(box)                                                // Kisten sortieren (Index ist kleiner geworden)
 		result = f.searchVariantsBackwardStep(result)                     // alle zugehörige Varianten hinzufügen
 		box = f.wposToBoxes[posStart]                                     // Kisten-Nummer erneut abfragen
 		f.wposToBoxes[posDown], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posDown                                            // neue Kistenposition merken
+		f.boxBitClear(posStart)
+		f.boxBitSet(posDown)
 		f.sortBoxesDown(box)                                              // Sortierung rückgängig machen (Index ist größer geworden)
 		f.player = posStart                                               // Spieler zurück setzen
 	}
@@ -94,7 +110,7 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkLeft[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkRight[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.boxBits) {
 						result = f.AppendGetState(result)
 						result[len(result)-1].MoveDepth = pTiefe
 					}
@@ -111,7 +127,7 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkRight[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkLeft[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.boxBits) {
 						result = f.AppendGetState(result)
 						result[len(result)-1].MoveDepth = pTiefe
 					}
@@ -128,7 +144,7 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkUp[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkDown[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.boxBits) {
 						result = f.AppendGetState(result)
 						result[len(result)-1].MoveDepth = pTiefe
 					}
@@ -145,7 +161,7 @@ func (f *Field) searchVariantsBackwardStep(result []State) []State {
 		if p := f.walkDown[f.player]; !f.tmpCheckDone[p] {
 			if f.wposToBoxes[p] < f.boxCount {
 				if p = f.walkUp[f.player]; p < f.walkEof && f.wposToBoxes[p] == f.boxCount {
-					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.wposToBoxes) {
+					if f.blockerBackward == nil || f.blockerBackward.CheckAllowed(f.player, f.boxBits) {
 						result = f.AppendGetState(result)
 						result[len(result)-1].MoveDepth = pTiefe
 					}

@@ -63,6 +63,19 @@ func parseFilterLines(sokoMap string) (lines [][]byte, maxlen int) {
 	return
 }
 
+// NormalizeLevel entfernt Leerzeilen, Zeilenend-Leerzeichen und die gemeinsame
+// Einrückung aller Zeilen - dieselbe Filterung, die auch Parse anwendet
+// (z.B. für kompakte Level-Cache-Dateien)
+func NormalizeLevel(sokoMap string) string {
+	lines, _ := parseFilterLines(sokoMap)
+	var sb strings.Builder
+	for _, line := range lines {
+		sb.Write(line)
+		sb.WriteByte('\n')
+	}
+	return sb.String()
+}
+
 func Parse(sokoMap string) (f *Field, err error) {
 	f = &Field{}
 
@@ -238,9 +251,11 @@ func Parse(sokoMap string) (f *Field, err error) {
 		f.wposToBoxes[i] = f.boxCount
 	}
 	f.boxes = make([]Wpos, f.boxCount)
+	f.boxBits = make([]uint64, (int(f.walkEof)+64)/64) // walkEof+1 Bits (inkl. Sentinel)
 	for i := range f.boxes {
 		f.boxes[i] = posToW[foundBoxes[i]]
 		f.wposToBoxes[f.boxes[i]] = uint32(i)
+		f.boxBitSet(f.boxes[i])
 	}
 
 	f.tmpCheckPos = make([]Wpos, f.walkEof)
