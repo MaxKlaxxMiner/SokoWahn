@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ABHT 02 :: level  36</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="description" content="online SOKOBAN logic game">
+<meta name="keywords" content="sokoban, sokoban online game, sokoban online, sokoban solution, online game, logic game, sokoban game">
+
+<link rel="stylesheet" type="text/css" href="http://resources.game-sokoban.com/css5/gameboard_2022_v2.css">
+
+<style>
+.helper {
+	display:none;
+}
+</style>
+<script type="text/javascript">
+var anonimous = true, curndt = 0, curndtnm = "anonimous", lang_to_use = 0;</script>
+</head>
+<body class="bg10">
+<img src="http://resources.game-sokoban.com/images5/stone1b.gif" id="img-wall-1" alt="" class="helper">
+<img src="http://resources.game-sokoban.com/images5/stone2.gif" id="img-aim-1" alt="" class="helper">
+<img src="http://resources.game-sokoban.com/images5/mover12.gif" id="mover1" alt="" class="helper">
+<main id="wrapper">
+<div class="grid-area_left">
+	<h1><a href="/index.php" title="home">SOKOBAN</a></h1>
+	<h2 class="left-header2">Level Data</h2><div class="data-panel">published:<span id="level_date"></span></div><div class="data-panel panel_status" id="level_status" style="display:none;">status:<span id="status_value"></span></div><div id="best_solutions_block" class="data-panel data-panel_header">Best results</div><div class="comments" id="comments"><a href="index.php?mode=comments&amp;lid=37988">View comments <div></div></a></div></div>
+
+<nav class="grid-area_top-nav" >
+<ul class="main-menu_list" >
+	
+	<li><a href="/index.php" >Home</a></li>	
+	<li><a href="/index.php?mode=about" >About</a></li>
+	<li><a href="/index.php?mode=catalog" >Catalog</a></li>	
+	<li><a href="/index.php?mode=champions" >Champions</a></li>	
+	<li><a href="/index.php?mode=about_countries" >Countries</a></li>	
+	<li><a href="/index.php?mode=favorites" >Favorites</a></li>		
+	<li><a href="/index.php?mode=guestbook" >Guestbook</a></li>	
+	<li><a href="/index.php?mode=workshop" >Workshop</a></li>	
+	<li class="new-collections-link"><a href="/index.php?mode=newcollections" >New</a></li>
+	<li><a href="/index.php?mode=help" >Help</a></li>
+</ul>
+<div class="b-header_user-greeting  b-unknown" style="margin: 0 12px 0 auto;"><form class="main-menu_form" id="login_link" action="/index.php?mode=login" method="POST"><input type="hidden" name="return_page" value="mode=level&amp;lid=37988"><span style="padding-left:12px;cursor: pointer;"   onclick="this.parentNode.submit()">login</span></form><form   class="main-menu_form"  style=" margin:0 0 0 7px;padding: 0 0 0 7px; border-left: 1px solid #777;" id="logout_link" action="/index.php?mode=join" method="POST"><input type="hidden" name="return_page" value="mode=level&amp;lid=37988"><span onclick="this.parentNode.submit()" style="cursor: pointer;">join</span></form></div><a href="index.php?mode=sitemap" class="b-header_sitemap" title="sitemap"><svg viewBox="-400 -400 2500 2500"><path d="M2020 1525q28 -20 28 -53v-1408q0 -20 -11 -36t-29 -23l-640 -256q-24 -11 -48 0l-616 246l-616 -246q-10 -5 -24 -5q-19 0 -36 11q-28 20 -28 53v1408q0 20 11 36t29 23l640 256q24 11 48 0l616 -246l616 246q32 13 60 -6zM736 1390v-1270l576 -230v1270zM128 1173 v-1270l544 217v1270zM1920 107v1270l-544 -217v-1270z"></path></svg></a>
+</nav>		
+<div id="board-holder" class="grid-area_main-content"> 
+	<span id="result1" class="level-complete-message"></span> 
+	<div class="navigation-bar">
+		<div class="bar-breadcrumb"> 
+			<div class="breadcrumb-names">
+				<span id="col_name" class="names-collection"><a></a></span> :: <span id="level_name" class="names-level"></span>
+			</div>
+			<div class="breadcrumb-position">
+				<span id="level_number"></span>/<span id="levels_total"></span>
+			</div>
+		</div>
+		<div class="bar-history">
+
+			<div  class="history-controls"><img id="backAnimationButton" width="14" height="15" title="backward animation (K)" src="http://resources.game-sokoban.com/img/history/backward2i.gif" alt="backward"><img id="backButton" width="9" height="17" title="undo move (Z)" alt="back" src="http://resources.game-sokoban.com/img/history/backward1i.gif"><img id="stopAnimationButton" width="13" height="15" title="stop animation (P)" alt="stop" src="http://resources.game-sokoban.com/img/history/stop1i.gif" ><img id="forwardButton" width="9" height="17" title="redo move (Y)" alt="forward" src="http://resources.game-sokoban.com/img/history/forward1i.gif"><img id="forwardAnimationButton" width="14" height="15" title="forward animation (L)" alt="forward" src="http://resources.game-sokoban.com/img/history/forward2i.gif"></div>
+
+			<div id="inform2" class="history-position" ></div>
+		</div>
+	</div>
+	
+	<div id="history_viewer" class="level-history level-control" title="moves"><svg viewBox="0 0 512 512" ><path d="M8 256c0 136.966 111.033 248 248 248s248-111.034 248-248S392.966 8 256 8 8 119.033 8 256zm248 184V72c101.705 0 184 82.311 184 184 0 101.705-82.311 184-184 184z"/></svg></div>
+
+	<div id="history_screen" class="history-area">
+
+		<div id="history_window" class="history-area_window">
+						
+			<div id="history_win_controls" class="history-area_win-controls">
+						
+				<div id="history_level_name" class="win-controls_level-name"></div>
+				<div id="history_counter" class="win-controls_counter" ></div>
+						
+				<img src="http://resources.game-sokoban.com/images5/minimize1.png" id="minimize-small" title="compact view" alt="" class="win-controls_compact">	
+				<img src="http://resources.game-sokoban.com/images5/close3.png" id="hide-history-small" title="hide" alt="" class="win-controls_hide">	
+
+				<input type="range" id="history_slider" class="history-slider" > 
+						
+			</div>	
+			<div id="history_content" class="history-area_content" ></div>
+
+			<div class="history-area_snapshots" id="history_snapshots">
+				<div class="snapshots_save" id="save_snapshot_link">
+				<svg class="fa-save" 
+   viewBox="0 0 512 512"><path d="M512 144v288c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V144c0-26.5 21.5-48 48-48h88l12.3-32.9c7-18.7 24.9-31.1 44.9-31.1h125.5c20 0 37.9 12.4 44.9 31.1L376 96h88c26.5 0 48 21.5 48 48zM376 288c0-66.2-53.8-120-120-120s-120 53.8-120 120 53.8 120 120 120 120-53.8 120-120zm-32 0c0 48.5-39.5 88-88 88s-88-39.5-88-88 39.5-88 88-88 88 39.5 88 88z"/></svg> Save Snapshot
+				</div>
+							
+				<div class="snapshots_load">  
+				<span id="load_snapshot_link" class="snapshots_load_link" ><span class="fa fa-load">
+				<svg  viewBox="0 0 512 512"><path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm-32-316v116h-67c-10.7 0-16 12.9-8.5 20.5l99 99c4.7 4.7 12.3 4.7 17 0l99-99c7.6-7.6 2.2-20.5-8.5-20.5h-67V140c0-6.6-5.4-12-12-12h-40c-6.6 0-12 5.4-12 12z"/></svg>
+				</span>	Load Snapshot
+				</span>
+				<div id="saved_snapshot_details" class="snapshots_load_details"></div>
+				</div>
+
+			</div>
+			
+			<input id="hide-history" type="button" class="history-area_hide" value="Hide" >
+		</div>
+
+	</div>
+	<div id="board-star" class="level-status level-control" title="status"><svg viewBox="0 -10 511.98645 511" id="star_completed">
+		<linearGradient id="Gradient1" x1="0" y1="0" x2="1" y2="1">
+		<stop style="stop-color:#aaa;" offset="0%"/>
+		<stop style="stop-color:#555;" offset="100%"/>
+		</linearGradient>
+		<linearGradient id="Gradient2" x1="0" y1="0" x2="1" y2="1">
+		<stop style="stop-color: #aa0;" offset="0%"/>
+		<stop style="stop-color: #775;" offset="65%"/>
+		<stop style="stop-color: #555;" offset="100%"/>
+		</linearGradient>
+		<path d="m499.574219 188.503906c-3.199219-9.921875-11.988281-16.9375-22.398438-17.898437l-141.355469-12.84375-55.894531-130.835938c-4.117187-9.578125-13.503906-15.765625-23.933593-15.765625-10.433594 0-19.820313 6.207032-23.9375 15.808594l-55.890626 130.816406-141.378906 12.839844c-10.386718.941406-19.175781 7.957031-22.378906 17.878906-3.21875 9.921875-.234375 20.777344 7.617188 27.648438l106.859374 93.695312-31.511718 138.773438c-2.300782 10.199218 1.664062 20.734375 10.136718 26.878906 4.519532 3.328125 9.875 4.992188 15.230469 4.992188 4.628907 0 9.238281-1.234376 13.355469-3.710938l121.898438-72.894531 121.875 72.875c8.917968 5.351562 20.160156 4.882812 28.609374-1.238281 8.46875-6.144532 12.4375-16.683594 10.132813-26.882813l-31.507813-138.769531 106.859376-93.699219c7.847656-6.867187 10.835937-17.726563 7.613281-27.667969zm0 0"/></svg>
+		<span id="load_sltn" class="level-status_solution-link" onclick="doAction('load_user_solution')" title="Click to load your best solution for this level">load your solution</span>
+	</div>
+
+	<div id="board-heart" class="level-favorite level-control" title="favorite">
+	<svg onclick="add_to_favorites()" id="favorite_heart" viewBox="0 0 24 24">
+	<path d="m11.466 22.776c.141.144.333.224.534.224s.393-.08.534-.224l9.594-9.721c4.001-4.053 1.158-11.055-4.532-11.055-3.417 0-4.985 2.511-5.596 2.98-.614-.471-2.172-2.98-5.596-2.98-5.672 0-8.55 6.984-4.531 11.055z" /></svg>
+	</div>
+
+	<div id="inform-link1" class="level-details level-control" title="details">
+	<svg viewBox="0 0 512 512" onclick="show_level_info()" id="level_info_sign">
+	<path d="m256 0c-141.164062 0-256 114.835938-256 256s114.835938 256 256 256 256-114.835938 256-256-114.835938-256-256-256zm0 0" fill="#777"></path><path d="m277.332031 384c0 11.78125-9.550781 21.332031-21.332031 21.332031s-21.332031-9.550781-21.332031-21.332031 9.550781-21.332031 21.332031-21.332031 21.332031 9.550781 21.332031 21.332031zm0 0" fill="#eceff1"></path><path d="m289.769531 269.695312c-7.550781 3.476563-12.4375 11.09375-12.4375 19.394532v9.578125c0 11.773437-9.535156 21.332031-21.332031 21.332031s-21.332031-9.558594-21.332031-21.332031v-9.578125c0-24.898438 14.632812-47.722656 37.226562-58.15625 21.738281-10.003906 37.4375-36.566406 37.4375-49.601563 0-29.394531-23.914062-53.332031-53.332031-53.332031s-53.332031 23.9375-53.332031 53.332031c0 11.777344-9.539063 21.335938-21.335938 21.335938s-21.332031-9.558594-21.332031-21.335938c0-52.925781 43.070312-96 96-96s96 43.074219 96 96c0 28.824219-25.003906 71.191407-62.230469 88.363281zm0 0" fill="#fafafa"></path></svg>
+	</div>	
+
+	<div id="tb1" class="level-stage" ><canvas id="c1f"></canvas><canvas id="c2t"></canvas><canvas id="c3w"></canvas><canvas id="c4b"></canvas><canvas id="c5m"></canvas><canvas id="c6c"></canvas><canvas id="c7n"></canvas></div>
+
+</div>
+
+<div class="grid-area_right-nav">	
+	<div id="header" class="change-level-header"></div>
+	<img src="http://resources.game-sokoban.com/images5/button10.png" id="button_next" alt="next">
+	<img src="http://resources.game-sokoban.com/images5/button20.png" id="button_previous" alt="previous">
+	<img src="http://resources.game-sokoban.com/images5/button30.png" id="button_restart" alt="restart">
+	<img src="http://resources.game-sokoban.com/images5/button40.png" id="button_solution" style="display:none;" alt="solution">
+		
+	<div id="board-copyright" class="level-copyright" ></div>
+			
+	<div class="b-timespan" id="timespan_control" title=""></div>
+		
+</div>
+</main>
+
+<div id="browser_alert" class="helper"></div>
+
+<div id="startLevel" class="helper"> 
+	<l id="37988" number="36" total_levels="99" name="level  36" cid="354" cname="ABHT 02" solution=""  author="Archanfel" best="ncrn8,537,2187,233,138!Attila,688,2194,103,174!georgiev,801,1937,32,178!" best_page="0" creation_date="1545465622" tmark="9f92526052580edf37edbc30d5894081" status="0" comments="0" sol_arch=""><r>14v,5w,6v</r><r>10v,5w,3f,2w,5v</r><r>9v,2w,5f,w,2f,2w,4v</r><r>5v,5w,3f,w,3f,w,2f,w,4v</r><r>4v,2w,2f,w,f,5a,2f,2w,f,2w,3v</r><r>2v,3w,3f,2a,f,w,f,w,f,2a,w,3f,w,3v</r><r>2v,w,3f,w,a,w,f,a,3f,a,2f,a,f,w,f,w,3v</r><r>2v,w,f,w,f,a,f,w,f,a,3f,a,f,w,f,a,2f,2w,2v</r><r>2v,w,f,w,f,a,3f,w,a,f,a,w,f,w,f,a,3f,w,2v</r><r>2v,w,2f,2a,2f,w,f,a,f,a,2f,w,f,2a,w,f,w,2v</r><r>2v,w,f,w,a,f,a,w,2f,w,a,w,f,w,f,a,f,a,2f,w,2v</r><r>2v,w,2f,a,2f,a,2f,w,f,w,2f,a,2f,a,w,f,w,2v</r><r>2v,w,f,w,a,f,w,a,3f,a,3f,a,w,f,a,2f,w,2v</r><r>2v,w,2f,a,3f,a,w,a,w,a,w,a,3f,a,w,f,w,2v</r><r>2v,2w,f,w,a,2f,a,f,a,f,a,f,a,f,w,a,3f,w,2v</r><r>3v,w,2f,a,f,w,f,a,3f,a,3f,a,3f,w,2v</r><r>3v,w,f,w,f,a,2f,a,f,w,f,a,w,f,a,f,w,2f,w,2v</r><r>3v,w,2f,w,f,2a,w,4f,2a,2w,2f,2w,2v</r><r>3v,2w,f,w,3f,5a,w,4f,2w,3v</r><r>4v,w,2f,2w,4f,w,3f,4w,4v</r><r>4v,2w,2f,w,4f,w,f,3w,7v</r><r>5v,2w,2f,4w,2f,w,9v</r><r>6v,2w,6f,2w,9v</r><r>7v,8w,10v</r><r>25v</r><am>110,111,112,113,114,133,134,140,141,157,160,164,167,181,185,189,193,206,211,213,218,230,231,236,238,243,244,255,257,262,267,269,280,283,291,294,305,308,312,316,319,330,334,336,338,340,344,356,359,361,363,365,368,381,385,389,393,407,410,414,417,433,434,440,441,460,461,462,463,464</am><b>110,111,112,113,114,133,134,140,141,157,160,164,167,181,185,189,193,206,211,213,218,230,231,236,238,243,244,255,257,262,267,269,280,283,291,294,305,308,312,316,319,330,334,336,338,340,344,356,359,361,363,365,368,381,385,389,393,407,410,414,417,433,434,440,441,460,461,462,463,464</b><mv>287</mv></l></div>
+<audio id="sound3"></audio>
+<audio id="sound4"></audio>
+<audio id="sound5"></audio>
+<script src="/js5/egame_mz_2022_v3.2.min.js" type="text/javascript"></script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-PKT9QPLP8T"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-PKT9QPLP8T');
+</script>
+</body>
+</html>

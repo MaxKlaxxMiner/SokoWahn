@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"goSokoWahnBrute/soko"
+	"goSokoWahnBrute/solver"
 )
 
 // WICHTIG: Die Tests in dieser Datei arbeiten ausschließlich offline (eingebettetes
@@ -201,5 +202,38 @@ func TestWebLevelLive(t *testing.T) {
 	}
 	if !info2.Cached || level2 != level {
 		t.Error("zweiter Aufruf müsste identisch aus dem Level-Cache kommen")
+	}
+}
+
+// halb offenes Level 353: begehbare Felder reichen bis an die Rasterkante (keine
+// umschließende Wand). Die Rasterkante wirkt im Parser als Wand, Void-Zellen neben
+// begehbaren Feldern werden beim Laden zu Wänden - das Level muss damit exakt den
+// Bestwert der Seite erreichen (93 Züge; die alte C#-Version fand hier keine Lösung).
+func TestWebLevelHalfOpen(t *testing.T) {
+	page, err := os.ReadFile("testdata/lid353.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	level, info, err := parseWebLevel(string(page))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.BestMoves != 93 {
+		t.Errorf("erwartet 93 Bestmoves, erhalten: %d", info.BestMoves)
+	}
+
+	field, err := soko.Parse(level)
+	if err != nil {
+		t.Fatalf("geparstes Level ist ungültig: %v\n%s", err, level)
+	}
+	if field.BoxCount() != 7 {
+		t.Errorf("erwartet 7 Kisten, erhalten: %d", field.BoxCount())
+	}
+
+	s := solver.New(field)
+	for s.Step(1000000000) {
+	}
+	if got := s.GetStats().FoundMoves; got != 93 {
+		t.Errorf("erwartet 93 Züge (Bestwert der Seite), erhalten: %d", got)
 	}
 }

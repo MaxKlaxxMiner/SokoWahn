@@ -183,7 +183,9 @@ func parseWebLevel(page string) (string, *WebLevelInfo, error) {
 		return "", nil, err
 	}
 
-	// Zeilen aus der Lauflängen-Kodierung dekodieren (12v = 12x 'v'; v/f = frei, w = Wand, a = Ziel)
+	// Zeilen aus der Lauflängen-Kodierung dekodieren (12v = 12x 'v')
+	// v = Void (außerhalb des Spielfelds, nicht betretbar), f = frei, w = Wand, a = Ziel;
+	// Void bleibt zunächst als Marker stehen und wird nach dem Setzen der Kisten aufgelöst
 	grid := make([][]byte, 0, len(level.Rows))
 	width := 0
 	for _, row := range level.Rows {
@@ -203,7 +205,9 @@ func parseWebLevel(page string) (string, *WebLevelInfo, error) {
 			}
 			var c byte
 			switch letter {
-			case 'v', 'f':
+			case 'v':
+				c = 'v'
+			case 'f':
 				c = ' '
 			case 'w':
 				c = '#'
@@ -224,9 +228,9 @@ func parseWebLevel(page string) (string, *WebLevelInfo, error) {
 	if width == 0 || len(grid) == 0 {
 		return "", nil, errors.New("leeres Level")
 	}
-	for i := range grid { // kurze Zeilen auffüllen
+	for i := range grid { // kurze Zeilen auffüllen (Auffüllung = Void, wie die v-Zellen)
 		for len(grid[i]) < width {
-			grid[i] = append(grid[i], ' ')
+			grid[i] = append(grid[i], 'v')
 		}
 	}
 
@@ -267,6 +271,37 @@ func parseWebLevel(page string) (string, *WebLevelInfo, error) {
 	}
 	if err := setCell(playerIndex, false); err != nil {
 		return "", nil, err
+	}
+
+	// Void-Zellen auflösen: im Spiel sind sie nicht betretbar. Bei halb offenen Levels
+	// grenzt Void direkt an begehbare Felder - solche Zellen werden zu Wänden, sonst
+	// könnte der Solver außen herumlaufen oder Kisten ins Nichts schieben. Der Rest
+	// bleibt Deko-Leerraum. (Zwei Phasen, damit die Entscheidung nur vom Original-
+	// Raster abhängt und nicht von bereits aufgelösten Nachbarn.)
+	isReachable := func(x, y int) bool {
+		if x < 0 || y < 0 || x >= width || y >= len(grid) {
+			return false
+		}
+		c := grid[y][x]
+		return c != '#' && c != 'v'
+	}
+	walls := make([][2]int, 0)
+	for y := range grid {
+		for x, c := range grid[y] {
+			if c == 'v' && (isReachable(x-1, y) || isReachable(x+1, y) || isReachable(x, y-1) || isReachable(x, y+1)) {
+				walls = append(walls, [2]int{x, y})
+			}
+		}
+	}
+	for y := range grid { // restliche Voids werden Deko-Leerraum
+		for x, c := range grid[y] {
+			if c == 'v' {
+				grid[y][x] = ' '
+			}
+		}
+	}
+	for _, w := range walls {
+		grid[w[1]][w[0]] = '#'
 	}
 
 	var sb strings.Builder
