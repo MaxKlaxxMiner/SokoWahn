@@ -1,0 +1,15 @@
+######         ####
+#    ########  #  #
+# *** $ $ $ #  #  #
+# .#.#$     #  #$ #
+# +*.#      ####  #
+# #$. $##$### $   #
+# .*.   $         #
+# ...########  ####
+######      ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29630
+catalog: A.K.K. Informatika
+name: level 15
+number: 15/32
+bestmoves: 251

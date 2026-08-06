@@ -1,0 +1,18 @@
+########
+#@    .##
+#    #. #
+# $$ #. #
+#    #.$#
+###$##$ #####
+# .     $   #
+#..# $ $$   #
+#..#### ### #
+# .    $    #
+#  ##########
+####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29632
+catalog: A.K.K. Informatika
+name: level 17
+number: 17/32
+bestmoves: 304

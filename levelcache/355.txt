@@ -1,0 +1,19 @@
+     #####
+     #   #
+     #   #
+#### #   #
+#  ####$#####
+#           #
+# .## # ##. #
+#           #
+#####$####  #
+   #   # ####
+   # @ #
+   #   #
+   #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=355
+catalog: aenigma
+name: soko 11
+number: 11/50
+bestmoves: 60

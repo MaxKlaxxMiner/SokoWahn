@@ -1,0 +1,17 @@
+ #####
+ #.  #
+ # $@#
+ #. ##
+### #########
+# $ $ $ $   #
+#      $    #
+# ####### ###
+#.   $   ..#
+######## ..#
+       #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29623
+catalog: A.K.K. Informatika
+name: level 08
+number: 8/32
+bestmoves: 198

@@ -1,0 +1,17 @@
+ ##############
+ #            #
+ #  $ $ $ $ $ #
+ # # $ #####$ #
+ # #$  #..#...#
+ #   $ #..#.*.#
+## #####..#..##
+#         ##..#
+# $ $ $@$  $$ #
+###########   #
+          #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29622
+catalog: A.K.K. Informatika
+name: level 07
+number: 7/32
+bestmoves: 640

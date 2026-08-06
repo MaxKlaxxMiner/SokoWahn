@@ -1,0 +1,16 @@
+###################
+#                 #
+# # ##$##$##$## # #
+#     $  @  $     #
+# # ##$##$##$## # #
+#     .## ##.     #
+##### . . . . #####
+    # .## ##. #
+    #         #
+    ###########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=5015
+catalog: aenigma
+name: soko 44
+number: 44/50
+bestmoves: 116

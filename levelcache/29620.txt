@@ -1,0 +1,13 @@
+#########
+#   #@  #
+# # #  $##
+#   $    #
+## $ # # #
+#...##   #
+##########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29620
+catalog: A.K.K. Informatika
+name: level 05
+number: 5/32
+bestmoves: 51

@@ -1,0 +1,14 @@
+########
+#  #   #
+#   $  #
+#  #$$ #
+## #   #
+#.. $# #
+#..   @#
+########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29617
+catalog: A.K.K. Informatika
+name: level 02
+number: 2/32
+bestmoves: 70

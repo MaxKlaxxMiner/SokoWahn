@@ -1,0 +1,23 @@
+    #########
+    #       #
+    #       #
+    # $$$$$ #
+    ##     ##
+#######   #######
+#  . #     # .  #
+#  .   # #   .  #
+#  .    @    .  #
+#  .   # #   .  #
+#  . #     # .  #
+#######   #######
+    ##     ##
+    # $$$$$ #
+    #       #
+    #       #
+     #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=371
+catalog: aenigma
+name: soko 31
+number: 31/50
+bestmoves: 312

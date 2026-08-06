@@ -1,0 +1,20 @@
+           ####
+           #  #
+           #  #
+           #  #
+#######   ##$$##   #######
+#     #####.  .#####     #
+#         $ +. $         #
+#         $ .. $         #
+#     #####.  .#####     #
+#######   ##$$##   #######
+           #  #
+           #  #
+           #  #
+           ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=5004
+catalog: aenigma
+name: soko 14
+number: 14/50
+bestmoves: 59
