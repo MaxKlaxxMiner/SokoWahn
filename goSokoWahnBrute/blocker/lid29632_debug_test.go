@@ -50,17 +50,7 @@ func TestLid29632SolutionAgainstBlocker(t *testing.T) {
 		t.Skip("Stufenbau bis 4-Steiner dauert einige Sekunden (übersprungen mit -short)")
 	}
 
-	solutionPath := filepath.Join("..", "..", "solution-29632.txt")
-	solutionData, err := os.ReadFile(solutionPath)
-	if err != nil {
-		t.Skipf("Lösungsdatei nicht gefunden (%v) - Test übersprungen", err)
-	}
-	moves := strings.TrimSpace(string(solutionData))
-
-	field, err := soko.Parse(lid29632Level)
-	if err != nil {
-		t.Fatalf("Level lässt sich nicht parsen: %v", err)
-	}
+	moves, field := loadLid29632(t)
 
 	// Blocker-Stufen 1 bis lid29632Stages frisch berechnen (ohne Cache)
 	blk := New(field, "")
@@ -70,6 +60,55 @@ func TestLid29632SolutionAgainstBlocker(t *testing.T) {
 			break
 		}
 	}
+	logLid29632Stages(t, blk)
+	replayLid29632Solution(t, blk, field, moves)
+}
+
+// Zusatz-Check gegen den echten Blocker-Cache im Repo-temp (beliebig viele Stufen):
+// prüft, ob die bekannte optimale 304er-Lösung mit dem aktuell gebauten Cache-Stand
+// durchkommt - damit lässt sich das Ergebnis eines laufenden Suchlaufs vorhersagen.
+// Überspringt sich, wenn kein lesbarer v3-Cache vorliegt.
+func TestLid29632SolutionAgainstTempCache(t *testing.T) {
+	moves, field := loadLid29632(t)
+
+	// Cache-Datei kopieren (die TUI könnte parallel schreiben)
+	cacheSrc := filepath.Join("..", "..", "temp", CacheName(field))
+	cacheData, err := os.ReadFile(cacheSrc)
+	if err != nil {
+		t.Skipf("Blocker-Cache nicht gefunden (%v) - Test übersprungen", err)
+	}
+	cachePath := filepath.Join(t.TempDir(), CacheName(field))
+	if err := os.WriteFile(cachePath, cacheData, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	blk := New(field, cachePath)
+	if len(blk.stages) == 0 {
+		t.Skipf("Cache %s nicht lesbar (alte Version oder unvollständig geschrieben) - Test übersprungen", cacheSrc)
+	}
+	blk.Abort()
+	logLid29632Stages(t, blk)
+	replayLid29632Solution(t, blk, field, moves)
+}
+
+// lädt Lösungsdatei und Spielfeld für die lid29632-Tests (skippt ohne Lösungsdatei)
+func loadLid29632(t *testing.T) (moves string, field *soko.Field) {
+	t.Helper()
+	solutionPath := filepath.Join("..", "..", "solution-29632.txt")
+	solutionData, err := os.ReadFile(solutionPath)
+	if err != nil {
+		t.Skipf("Lösungsdatei nicht gefunden (%v) - Test übersprungen", err)
+	}
+	field, err = soko.Parse(lid29632Level)
+	if err != nil {
+		t.Fatalf("Level lässt sich nicht parsen: %v", err)
+	}
+	return strings.TrimSpace(string(solutionData)), field
+}
+
+// gibt die Stufen-Übersicht eines Blockers aus
+func logLid29632Stages(t *testing.T, blk *Blocker) {
+	t.Helper()
 	totalPatterns := 0
 	for _, st := range blk.stages {
 		count := 0
@@ -80,6 +119,11 @@ func TestLid29632SolutionAgainstBlocker(t *testing.T) {
 		t.Logf("Stufe %d: %d Muster (geprüft: %d)", st.boxCount, count, st.checkedStates)
 	}
 	t.Logf("gesamt: %d Stufen, %d Muster", len(blk.stages), totalPatterns)
+}
+
+// spielt die 304er-Lösung ab und prüft jede Nach-Schub-Stellung gegen den Blocker
+func replayLid29632Solution(t *testing.T, blk *Blocker, field *soko.Field, moves string) {
+	t.Helper()
 
 	// --- eigenes Raster aufbauen und Wpos-Zuordnung des Parsers nachbilden ---
 	lines := strings.Split(strings.TrimRight(soko.NormalizeLevel(lid29632Level), "\n"), "\n")
