@@ -31,6 +31,15 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   markiert, damit jede Richtung ihren eigenen Schub probiert.
 - Optionale Filter am Feld: `SetBlocker` (vorwärts) und `SetBlockerBackward` (rückwärts,
   nur Blocker-Stufenbau und Solver-Rückwärtssuche).
+- **Freeze-Filter beim Parsen** (`freeze.go`, JSoko-Verhalten, immer aktiv): eingefrorene
+  Kisten auf Zielfeldern werden durch Wände ersetzt, Kiste und Ziel entfallen ersatzlos
+  (kaskadierend bis zum Fixpunkt, erkennt auch gegenseitig blockierte 2x2-Blöcke;
+  Kisten abseits der Ziele zählen konservativ nie als Blockade). Das C#-Orakel wendet
+  denselben Filter an (FreezeGoalBoxesToWalls in refcli/Program.cs) - Diff-Vergleiche
+  bleiben auch bei betroffenen Levels byte-gleich (verifiziert per refcli-Diff auf einem
+  Level mit einfrierender *-Spalte; Transformation als Tests in soko/freeze_test.go verankert).
+  Die verankerten Referenz-Levels (Vanilla, small, lid201, SolvedStart) enthalten nur
+  bewegliche *-Kisten und sind unverändert. Gleicher Filter auch in goSokoWahnRooms.
 
 ## Solver (bidirektionale Suche)
 
@@ -96,7 +105,35 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 5. **CreatePatterns**: alles was noch 12345 ist -> Deadlock-Muster, abgelegt pro Spielerposition.
 
 - `CheckAllowed(player, boxBits)`: Muster trifft zu, wenn ALLE Muster-Felder Kisten tragen
-  (Subset-Match). Zwei Beschleunigungen gegenüber dem naiven Feld-für-Feld-Vergleich:
+  (Subset-Match). **Bedingte Kill-Regel** (seit 08/2026, Cache-Version 3): ein zutreffendes
+  Muster allein blockt noch nicht - verworfen wird erst, wenn JEDER Schub-Pose-Kandidat
+  (jede Kiste neben dem Spieler, die als "zuletzt geschobene" infrage kommt:
+  Kiste auf Nachbarfeld, Gegenfeld frei) von einem zutreffenden Muster abgedeckt ist.
+  Hintergrund: Die Bx-Hinterland-Muster ("rückwärts erreichbar, vorwärts nie gesehen")
+  beweisen nur, dass die Stellung nicht durch den Schub einer MUSTER-Kiste entstanden
+  sein kann - steht der Spieler nach dem Schub einer fremden Kiste in der Muster-Pose,
+  ist die Stellung trotzdem legal. Die unbedingte Anwendung (so auch im C#-Original
+  SokowahnBlockerBx) verwarf so bei Level 29632 eine Stellung der optimalen
+  304-Züge-Lösung, der Solver fand nur 306 (Regressionstest:
+  blocker/lid29632_debug_test.go, braucht solution-29632.txt im Repo-Root).
+  Der Fix wurde ins C# zurückportiert (SokowahnBlockerBx.CheckErlaubt, Cache-Version
+  107 -> 108, alte Caches werden ignoriert statt Exception) - gen4-plain (SokowahnBlocker),
+  SokowahnBlockerB und gen5 (SokowahnBlockerB2) hatten den Bug nie: sie registrieren
+  kein Ziel-Hinterland (B2s Blocker sind per Konstruktion echte Teilspiel-Deadlocks).
+  Beweisskizze der bedingten Regel: jedes Muster ist entweder (a) in der Start-Hülle
+  des k-Spiels und dann per vollständiger Rückwärtswelle beweisbar tot (Kill immer
+  korrekt) oder (b) nicht in der Start-Hülle, dann ist jede Entstehung als
+  Nach-Schub-Stellung einer Muster-Kiste widerlegt (Projektions-Argument: die
+  k-Projektion jeder legalen Partie landet nach dem Schub einer Teilmengen-Kiste in
+  der k-Start-Hülle). Sind alle Kandidaten abgedeckt, ist jede mögliche Entstehung
+  widerlegt oder tot. Kosten: Vanilla-Suche nur ca. 1,7% mehr Knoten (s.u.).
+  Die Blocker-Stufenwerte ändern sich durch die bedingte Regel (der Stufenbau
+  filtert sich selbst damit: größere Hüllen, längere Rückwärtswellen, teils deutlich
+  mehr Hinterland-Muster, z.B. lid201 Stufe 2: 2288 statt 35; nur Stufe 1 bleibt gleich) -
+  dank Rückport bleiben sie **bitgenau vergleichbar mit dem gefixten C#-refcli**
+  (verifiziert: vanilla blockerbx 5 und lid201 blockerbx 3 exakt gleich).
+  Alte v2-Caches werden verworfen und neu gerechnet.
+  Zwei Beschleunigungen gegenüber dem naiven Feld-für-Feld-Vergleich:
   1. **Bitmasken**: das Field pflegt die Kistenbelegung als Bitmaske über die begehbaren
      Felder (`boxBits`, 2 Bit-Operationen pro Schub/Undo); jedes Muster liegt ebenfalls als
      Maske vor, der Match ist ein branchloser Subset-Test (`pattern &^ state == 0` je Wort).
@@ -112,7 +149,7 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   des abfragenden Feldes.
 - Der Solver filtert vorwärts UND rückwärts mit den Blockern (rückwärts wie
   `GetVariantenRückwärtsTeilRun2` der List2-Variante; bringt z.B. bei Vanilla
-  1,57 Mio statt 2,06 Mio Knoten).
+  1,60 Mio statt 2,06 Mio Knoten).
 - Cache: gzip, versioniert (aktuell v2), benannt per FNV über die Feldgeometrie,
   gespeichert nach jeder fertigen Stufe -> Wiederaufnahme jederzeit.
 - **Parallelisierung**: die beiden teuren Phasen (SearchVariants, MergeGoals) verteilen
@@ -136,9 +173,15 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 |---|---|---|
 | Vanilla (lid214) | optimale Züge | 230 |
 | Vanilla ohne Blocker | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
-| Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 216/2.251, 239/26.848, 1.024/208.306, 2.835/1.056.514 |
-| Vanilla mit Blockern | Knoten am Ende | 1.568.540 (Regressionswert) |
-| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 35/8.019, 781/232.082 |
+| Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 |
+| Vanilla mit Blockern | Knoten am Ende | 1.595.042 (Regressionswert) |
+| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 |
 | small.txt | optimale Züge | 16 |
+| Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
 
-Alle Blocker-Stufenwerte sind bitgenau gleich `SokowahnBlockerBx` (refcli-Modus `blockerbx`).
+Die Suche ohne Blocker bleibt bitgenau vergleichbar mit dem C#-Orakel. Die
+Blocker-Stufenwerte gelten seit der bedingten Kill-Regel (Bx-Hinterland-Fix) und
+sind bitgenau gleich dem **gefixten** C#-refcli (`blockerbx`, Cache-Version 108);
+die alten Werte der unbedingten Bx-Semantik zum Vergleich: 216/2.251, 239/26.848,
+1.024/208.306, 2.835/1.056.514 bzw. lid201 35/8.019, 781/232.082, Vanilla-Suche
+1.568.540 Knoten.

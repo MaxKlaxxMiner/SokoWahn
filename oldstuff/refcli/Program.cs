@@ -3,6 +3,7 @@
 // (kompiliert mit -define:parallelDeaktivieren, siehe build.sh)
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -23,7 +24,7 @@ namespace Sokosolver
         return 1;
       }
 
-      string level = File.ReadAllText(args[0]);
+      string level = FreezeGoalBoxesToWalls(File.ReadAllText(args[0]));
 
       // Blocker-Vergleichsmodus: nur die Blocker-Stufen bis maxK berechnen und ausgeben
       if (args.Length >= 3 && (args[1] == "blocker" || args[1] == "blockerbx"))
@@ -116,5 +117,85 @@ namespace Sokosolver
       if (File.Exists(datei)) File.Delete(datei);
       return 0;
     }
+
+    #region # // --- FreezeGoalBoxesToWalls: eingefrorene Kisten auf Zielen durch Waende ersetzen ---
+    /// <summary>
+    /// ersetzt eingefrorene Kisten auf Zielfeldern durch Waende (JSoko-Verhalten,
+    /// gleiche Logik wie freeze.go in den Go-Ports): eine Kiste, die nie mehr bewegt
+    /// werden kann und ihr Ziel bereits bedient, ist von einer Wand nicht zu
+    /// unterscheiden - Kiste und Ziel entfallen ersatzlos. Erkennung per klassischer
+    /// Freeze-Analyse (Waende, rekursiv auch gegenseitig blockierte Zielfeld-Kisten
+    /// wie 2x2-Bloecke), kaskadierend bis zum Fixpunkt. Kisten abseits der Ziele
+    /// zaehlen konservativ nie als Blockade, Felder ausserhalb des Rasters nicht als Wand.
+    /// </summary>
+    private static string FreezeGoalBoxesToWalls(string level)
+    {
+      var lines = level.Replace("\r", "").Split('\n');
+      int width = lines.Max(zeile => zeile.Length);
+      int height = lines.Length;
+      if (width == 0) return level;
+      var raw = lines.Select(zeile => zeile.PadRight(width).ToCharArray()).ToArray();
+
+      bool geaendert = true;
+      while (geaendert) // Fixpunkt: neue Waende koennen weitere Kisten einfrieren
+      {
+        geaendert = false;
+        for (int y = 0; y < height; y++)
+        {
+          for (int x = 0; x < width; x++)
+          {
+            if (raw[y][x] != '*') continue;
+            if (FrozenBox(raw, width, height, x, y, new HashSet<int>()))
+            {
+              raw[y][x] = '#';
+              geaendert = true;
+            }
+          }
+        }
+      }
+
+      return string.Join("\n", raw.Select(zeile => new string(zeile)));
+    }
+
+    /// <summary>
+    /// prueft, ob die Zielfeld-Kiste auf (x,y) eingefroren ist; treatAsWall enthaelt
+    /// die im aktuellen Pruefpfad besuchten Kisten (Positionen als x + y*width)
+    /// </summary>
+    private static bool FrozenBox(char[][] raw, int width, int height, int x, int y, HashSet<int> treatAsWall)
+    {
+      treatAsWall.Add(x + y * width);
+      return FrozenAxis(raw, width, height, x, y, 1, 0, treatAsWall)
+          && FrozenAxis(raw, width, height, x, y, 0, 1, treatAsWall);
+    }
+
+    /// <summary>
+    /// prueft, ob die Kiste auf (x,y) entlang einer Achse blockiert ist
+    /// </summary>
+    private static bool FrozenAxis(char[][] raw, int width, int height, int x, int y, int dx, int dy, HashSet<int> treatAsWall)
+    {
+      if (WallLike(raw, width, height, x - dx, y - dy, treatAsWall)
+       || WallLike(raw, width, height, x + dx, y + dy, treatAsWall)) return true;
+
+      // Nachbar-Kiste auf Ziel, die ihrerseits eingefroren ist?
+      // (Set pro Zweig kopieren, damit gescheiterte Pruefpfade nicht als Wand nachwirken)
+      for (int seite = -1; seite <= 1; seite += 2)
+      {
+        int nx = x + dx * seite, ny = y + dy * seite;
+        if (nx < 0 || nx >= width || ny < 0 || ny >= height || raw[ny][nx] != '*') continue;
+        if (FrozenBox(raw, width, height, nx, ny, new HashSet<int>(treatAsWall))) return true;
+      }
+      return false;
+    }
+
+    /// <summary>
+    /// gibt an, ob das Feld fuer die Freeze-Analyse als Wand zaehlt
+    /// (ausserhalb des Rasters: konservativ keine Wand)
+    /// </summary>
+    private static bool WallLike(char[][] raw, int width, int height, int x, int y, HashSet<int> treatAsWall)
+    {
+      if (x < 0 || x >= width || y < 0 || y >= height) return false;
+      return raw[y][x] == '#' || treatAsWall.Contains(x + y * width);
+    }
+    #endregion
   }
 }

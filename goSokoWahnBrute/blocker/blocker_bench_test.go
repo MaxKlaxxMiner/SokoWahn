@@ -8,7 +8,9 @@ import (
 )
 
 // Referenz-Workload für Blocker-Performance: Level 349 von game-sokoban.com bis 4-Steiner
-// (Referenzwerte: [1] 36/196, [2] 24/8.910, [3] 150/248.306, [4] 346/4.528.779)
+// (Referenzwerte seit der bedingten Kill-Regel: [1] 36/196, [2] 956/9.842,
+// [3] 1.312/249.470, [4] 6.128/4.534.669; alte Bx-Werte: 24/8.910, 150/248.306,
+// 346/4.528.779 - der Rechenaufwand ist fast gleich, nur die Musterzahl wuchs)
 const mapLid349 = `
        #####
       ##   ##
@@ -47,7 +49,7 @@ func benchmarkLid349(b *testing.B, workers int) {
 
 		// Referenzwerte absichern, damit der Benchmark nie ein anderes Ergebnis misst
 		stats := blk.GetStats()
-		if len(stats.Stages) != 4 || stats.Stages[3].PatternCount != 346 || stats.Stages[3].CheckedStates != 4528779 {
+		if len(stats.Stages) != 4 || stats.Stages[3].PatternCount != 6128 || stats.Stages[3].CheckedStates != 4534669 {
 			b.Fatalf("unerwartete Stufenwerte: %+v", stats.Stages)
 		}
 	}
@@ -79,7 +81,7 @@ func benchmarkLid349Serial(b *testing.B, workers int) {
 		}
 
 		stats := blk.GetStats()
-		if len(stats.Stages) != 4 || stats.Stages[3].PatternCount != 346 || stats.Stages[3].CheckedStates != 4528779 {
+		if len(stats.Stages) != 4 || stats.Stages[3].PatternCount != 6128 || stats.Stages[3].CheckedStates != 4534669 {
 			b.Fatalf("unerwartete Stufenwerte: %+v", stats.Stages)
 		}
 	}
@@ -110,7 +112,7 @@ func benchmarkLid349Direct(b *testing.B, factory func() DirectTable, workers int
 		}
 
 		stats := blk.GetStats()
-		if len(stats.Stages) != 4 || stats.Stages[3].PatternCount != 346 || stats.Stages[3].CheckedStates != 4528779 {
+		if len(stats.Stages) != 4 || stats.Stages[3].PatternCount != 6128 || stats.Stages[3].CheckedStates != 4534669 {
 			b.Fatalf("unerwartete Stufenwerte: %+v", stats.Stages)
 		}
 	}

@@ -135,8 +135,11 @@ func TestBlockerCachePartialResume(t *testing.T) {
 	}
 }
 
-// Orakel-Vergleich: die Vanilla-Blocker-Stufen müssen exakt den Werten des
-// C#-SokowahnBlockerBx entsprechen (refcli: "vanilla.txt blockerbx 5")
+// Orakel-Vergleich: die Vanilla-Blocker-Stufen müssen exakt den Werten des GEFIXTEN
+// C#-SokowahnBlockerBx entsprechen (refcli: "vanilla.txt blockerbx 5", Cache-Version 108;
+// der Bx-Hinterland-Fix wurde in beide Richtungen verifiziert, siehe CheckAllowed und
+// docs/architektur.md). Die alte unbedingte Bx-Semantik lieferte: 17/92, 216/2251,
+// 239/26848, 1024/208306, 2835/1056514 - nur Stufe 1 ist unverändert.
 func TestBlockerVanillaOracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Blocker dauert ca. 1 Sekunde plus Lösungszeit (übersprungen mit -short)")
@@ -150,10 +153,10 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	b := buildBlocker(t, field, "")
 	expected := []StageStats{
 		{BoxCount: 1, PatternCount: 17, CheckedStates: 92},
-		{BoxCount: 2, PatternCount: 216, CheckedStates: 2251},
-		{BoxCount: 3, PatternCount: 239, CheckedStates: 26848},
-		{BoxCount: 4, PatternCount: 1024, CheckedStates: 208306},
-		{BoxCount: 5, PatternCount: 2835, CheckedStates: 1056514},
+		{BoxCount: 2, PatternCount: 218, CheckedStates: 2257},
+		{BoxCount: 3, PatternCount: 496, CheckedStates: 27219},
+		{BoxCount: 4, PatternCount: 1173, CheckedStates: 210093},
+		{BoxCount: 5, PatternCount: 2652, CheckedStates: 1071408},
 	}
 
 	stats := b.GetStats()
@@ -167,7 +170,8 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	}
 
 	// Lösung mit Blocker (vorwärts + rückwärts gefiltert): weiterhin 230 Züge,
-	// nur noch 1.568.540 Knoten (Regressionswert, vergleichbar mit ~1,5 Mio der alten GUI)
+	// 1.595.042 Knoten (Regressionswert; die alte unbedingte Regel kam auf 1.568.540,
+	// die bedingte Kill-Regel kostet also nur ca. 1,7% Pruning-Leistung)
 	field.SetBlocker(b)
 	s := solver.New(field)
 	for s.Step(1000000000) {
@@ -175,8 +179,8 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	if moves := s.GetStats().FoundMoves; moves != 230 {
 		t.Errorf("erwartete 230 Züge, erhalten: %d", moves)
 	}
-	if nodes := s.NodeCount(); nodes != 1568540 {
-		t.Errorf("erwartete 1568540 Knoten (Regressionswert), erhalten: %d", nodes)
+	if nodes := s.NodeCount(); nodes != 1595042 {
+		t.Errorf("erwartete 1595042 Knoten (Regressionswert), erhalten: %d", nodes)
 	}
 }
 
@@ -199,7 +203,10 @@ const mapLid201 = `
 `
 
 // Orakel-Vergleich: die ersten drei Blocker-Stufen von Level 201 müssen exakt den
-// Werten des C#-SokowahnBlockerBx entsprechen (refcli: "lid201.txt blockerbx 3")
+// Werten des GEFIXTEN C#-SokowahnBlockerBx entsprechen (refcli: "lid201.txt blockerbx 3").
+// Die alte unbedingte Bx-Semantik lieferte 80/214, 35/8019, 781/232082 - vor allem
+// Stufe 2 registriert jetzt deutlich mehr Hinterland-Muster, weil die Rückwärtswellen
+// nicht mehr von der fehlerhaften unbedingten Regel beschnitten werden.
 func TestBlockerLid201Oracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Level-201-Blocker dauert ein paar Sekunden (übersprungen mit -short)")
@@ -221,8 +228,8 @@ func TestBlockerLid201Oracle(t *testing.T) {
 
 	expected := []StageStats{
 		{BoxCount: 1, PatternCount: 80, CheckedStates: 214},
-		{BoxCount: 2, PatternCount: 35, CheckedStates: 8019},
-		{BoxCount: 3, PatternCount: 781, CheckedStates: 232082},
+		{BoxCount: 2, PatternCount: 2288, CheckedStates: 10272},
+		{BoxCount: 3, PatternCount: 1819, CheckedStates: 233120},
 	}
 
 	stats := b.GetStats()

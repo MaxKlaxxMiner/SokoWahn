@@ -98,6 +98,9 @@ func Parse(sokoMap string) (f *Field, err error) {
 	}
 	f.fieldData = raw
 
+	// --- eingefrorene Kisten auf Zielfeldern durch Wände ersetzen (siehe freeze.go) ---
+	freezeGoalBoxesToWalls(raw, f.width, f.height)
+
 	// --- leere Version von raw erstellen ---
 	rawEmpty := make([]byte, len(raw))
 	foundPlayer := -1

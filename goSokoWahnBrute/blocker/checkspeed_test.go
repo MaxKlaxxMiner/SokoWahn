@@ -13,6 +13,9 @@ import (
 // 5-Steiner-Blocker (190.708 Muster) aus dem Cache im Hauptordner. Gemessen wird
 // die Hauptsuche bis Suchtiefe 266; die Knotenzahl dient als Determinismus-Anker.
 // Wird uebersprungen, wenn Level oder Cache fehlen (der Cache liegt nur auf Max' Maschine).
+// Achtung: der Anker (232.619 Knoten) stammt vom v2-Cache mit unbedingter Kill-Regel;
+// nach dem Neuberechnen des Caches (v3, bedingte Regel) muss er neu geeicht werden -
+// bis dahin skippt der Test mangels lesbarem Cache.
 func TestSpeedCheckAllowedLid46084(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Speedcheck nur im Langlauf (-short gesetzt)")

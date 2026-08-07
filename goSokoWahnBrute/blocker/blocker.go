@@ -155,6 +155,17 @@ func (b *Blocker) Abort() {
 // boxBits ist die Kisten-Bitmaske des abfragenden Feldes (Field.boxBits).
 // Über den Anker-Index werden nur Muster geprüft, deren Ankerfeld eine Kiste trägt;
 // der Mustervergleich selbst ist ein Bitmasken-Subset-Test.
+//
+// Bedingte Kill-Regel (Fix des Bx-Hinterland-Bugs, siehe docs/architektur.md):
+// Ein zutreffendes Muster allein reicht NICHT - die Stellung wird erst verworfen,
+// wenn JEDER Schub-Pose-Kandidat (jede Kiste, die als "zuletzt geschobene" infrage
+// kommt) von einem zutreffenden Muster abgedeckt ist. Hintergrund: Muster aus dem
+// Ziel-Hinterland ("rückwärts erreichbar, vorwärts nie gesehen") beweisen nur, dass
+// die Stellung nicht durch den Schub einer MUSTER-Kiste entstanden sein kann. Steht
+// der Spieler nach dem Schub einer fremden Kiste zufällig in der Muster-Pose, ist
+// die Stellung trotzdem legal (so verlor Level 29632 seine optimale 304er-Lösung).
+// Erst wenn alle Kandidaten abgedeckt sind, ist jede mögliche Entstehung der
+// Stellung entweder widerlegt oder ein bewiesener Deadlock.
 // (Implementierung von soko.BlockerCheck, wird von den Zuggeneratoren aufgerufen)
 func (b *Blocker) CheckAllowed(player soko.Wpos, boxBits []uint64) bool {
 	if b.checkIndex == nil {
@@ -167,6 +178,12 @@ func (b *Blocker) CheckAllowed(player soko.Wpos, boxBits []uint64) bool {
 	}
 	words := b.maskWords
 	anchors := idx.anchors
+
+	// Schub-Pose-Kandidaten erst beim ersten Muster-Treffer ermitteln
+	// (der mit Abstand häufigste Fall ist "kein Muster trifft zu")
+	var candidates [4]soko.Wpos
+	candCount := 0
+	covered, allCovered := 0, 0
 
 	for w := range boxBits {
 		bitsWord := boxBits[w]
@@ -182,8 +199,25 @@ func (b *Blocker) CheckAllowed(player soko.Wpos, boxBits []uint64) bool {
 						break
 					}
 				}
-				if match {
-					return false // alle Muster-Felder tragen Kisten -> verbotene Stellung
+				if !match {
+					continue
+				}
+
+				if allCovered == 0 { // erster Treffer -> Kandidaten aufbauen
+					candidates, candCount = b.base.PushPoseCandidates(player, boxBits)
+					if candCount == 0 {
+						return true // keine Schub-Pose -> Muster nicht anwendbar (praktisch nur bei künstlichen Abfragen)
+					}
+					allCovered = 1<<candCount - 1
+				}
+				for c := 0; c < candCount; c++ {
+					pos := candidates[c]
+					if masks[m+int(pos>>6)]&(1<<(pos&63)) != 0 {
+						covered |= 1 << c // dieses Muster deckt den Kandidaten ab
+					}
+				}
+				if covered == allCovered {
+					return false // jede mögliche zuletzt geschobene Kiste ist abgedeckt -> verbotene Stellung
 				}
 			}
 		}

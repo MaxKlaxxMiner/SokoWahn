@@ -141,6 +141,49 @@ namespace Sokosolver.SokowahnTools
       }
 
       /// <summary>
+      /// prüft wie Check(), sammelt aber zusätzlich ein, welche der Schub-Pose-Kandidaten
+      /// von zutreffenden Blockern abgedeckt werden (Teil der bedingten Kill-Regel, siehe CheckErlaubt)
+      /// </summary>
+      /// <param name="raumKisten">Raumfeld mit den jeweils gesetzten Kisten</param>
+      /// <param name="kandidaten">Schub-Pose-Kandidaten (Kistenpositionen im Raum)</param>
+      /// <param name="kandidatenAnzahl">Anzahl der Kandidaten</param>
+      /// <param name="abgedeckt">Bitmaske der bereits abgedeckten Kandidaten</param>
+      /// <param name="alleMaske">Bitmaske, bei der alle Kandidaten abgedeckt sind (früher Ausstieg)</param>
+      /// <returns>neue Bitmaske der abgedeckten Kandidaten</returns>
+      public int CheckKandidaten(int[] raumKisten, int[] kandidaten, int kandidatenAnzahl, int abgedeckt, int alleMaske)
+      {
+        int pBis = blockerAnzahl * blockerGröße;
+        for (int p = 0; p < pBis; )
+        {
+          int pStart = p;
+          for (int i = 0; i < kistenAnzahl; i++)
+          {
+            if (raumKisten[blockerData[p]] >= kistenNummerLeer) // bei nicht passender Kiste zum nächsten Blocker springen
+            {
+              p += blockerData[p + 1]; // Jumper vewenden
+              goto nichtgefunden;
+            }
+            p += 2;
+          }
+
+          // Blocker trifft zu -> von ihm abgedeckte Kandidaten einsammeln
+          for (int k = 0; k < kandidatenAnzahl; k++)
+          {
+            if ((abgedeckt & (1 << k)) != 0) continue;
+            for (int i = 0; i < kistenAnzahl * 2; i += 2)
+            {
+              if (blockerData[pStart + i] == kandidaten[k]) { abgedeckt |= 1 << k; break; }
+            }
+          }
+          if (abgedeckt == alleMaske) return abgedeckt;
+
+        nichtgefunden: ;
+        }
+
+        return abgedeckt;
+      }
+
+      /// <summary>
       /// sortiert einen Blocker-Bereich
       /// </summary>
       /// <param name="pos">Startposition im Blocker-Array</param>
@@ -442,8 +485,7 @@ namespace Sokosolver.SokowahnTools
       this.blockerDatei = blockerDatei;
       if (File.Exists(blockerDatei))
       {
-        LadeAlleBlocker();
-        blockerGeladen = true;
+        blockerGeladen = LadeAlleBlocker();
       }
     }
 
@@ -813,7 +855,7 @@ namespace Sokosolver.SokowahnTools
     {
       var schreib = new BinaryWriter(new GZipStream(new FileStream(blockerDatei, FileMode.Create, FileAccess.Write), CompressionLevel.Optimal));
 
-      schreib.Write(107); // Version
+      schreib.Write(108); // Version (108: Stufenbau mit bedingter Kill-Regel, siehe CheckErlaubt)
 
       schreib.Write(bekannteBlocker.Length / raumAnzahl + 1);
       schreib.Write(raumAnzahl);
@@ -835,12 +877,17 @@ namespace Sokosolver.SokowahnTools
     /// <summary>
     /// lädt alle bekannten Blocker aus einer GZip-Datei
     /// </summary>
-    void LadeAlleBlocker()
+    /// <returns>true, wenn die Blocker geladen wurden (false = alte Version, Datei wird ignoriert und neu gerechnet)</returns>
+    bool LadeAlleBlocker()
     {
       var lese = new BinaryReader(new GZipStream(new FileStream(blockerDatei, FileMode.Open, FileAccess.Read), CompressionMode.Decompress));
 
       int version = lese.ReadInt32();
-      if (version != 107) throw new Exception("falsche Version Blocker-Datei: (" + version + ") " + blockerDatei);
+      if (version != 108) // alte Versionen (z.B. 107: unbedingte Kill-Regel) wurden unter fehlerhafter Semantik gebaut -> verwerfen
+      {
+        lese.Close();
+        return false;
+      }
 
       suchKistenAnzahl = lese.ReadInt32() - 1;
       raumAnzahl = lese.ReadInt32();
@@ -861,6 +908,7 @@ namespace Sokosolver.SokowahnTools
       }
 
       lese.Close();
+      return true;
     }
 
     /// <summary>
@@ -1071,15 +1119,55 @@ namespace Sokosolver.SokowahnTools
     }
 
     /// <summary>
-    /// prüft, ob eine bestimmte Stellung erlaubt ist
+    /// prüft, ob eine bestimmte Stellung erlaubt ist.
+    ///
+    /// Bedingte Kill-Regel (Fix des Hinterland-Bugs, 08/2026, gleicher Fix wie im Go-Port
+    /// goSokoWahnBrute, Herleitung in dessen docs/architektur.md): Blocker aus dem
+    /// Ziel-Hinterland ("rückwärts erreichbar, vorwärts nie gesehen") beweisen nur, dass die
+    /// Stellung nicht durch den Schub einer BLOCKER-Kiste entstanden sein kann. Steht der
+    /// Spieler nach dem Schub einer fremden Kiste zufällig in der Blocker-Pose, ist die
+    /// Stellung trotzdem legal - so verlor Level 29632 seine optimale 304-Züge-Lösung
+    /// (Solver fand nur 306). Verboten ist eine Stellung deshalb erst, wenn JEDER
+    /// Schub-Pose-Kandidat (jede Kiste, welche als "zuletzt geschobene" infrage kommt:
+    /// Kiste neben dem Spieler, gegenüberliegendes Feld begehbar und frei) von einem
+    /// zutreffenden Blocker abgedeckt ist - dann ist jede mögliche Entstehung der Stellung
+    /// entweder widerlegt oder ein bewiesener Deadlock.
     /// </summary>
     /// <param name="spielerRaumPos">Spielerposition</param>
     /// <param name="raumZuKiste">zu prüfende Kistenpositionen direkt im Raum</param>
     /// <returns>true, wenn die Stellung erlaubt ist oder false, wenn anhand der Blocker eine verbotene Stellung erkannt wurde</returns>
     public bool CheckErlaubt(int spielerRaumPos, int[] raumZuKiste)
     {
-      for (int p = spielerRaumPos; p < bekannteBlocker.Length; p += raumAnzahl) if (bekannteBlocker[p].Check(raumZuKiste)) return false;
+      // schneller Pfad: trifft überhaupt ein Blocker zu? (der häufigste Fall ist "nein")
+      for (int p = spielerRaumPos; p < bekannteBlocker.Length; p += raumAnzahl) if (bekannteBlocker[p].Check(raumZuKiste)) goto trefferGefunden;
       return true; // keine verbotene Stellung gefunden
+
+    trefferGefunden:
+      // Schub-Pose-Kandidaten ermitteln (leer-Marker ist auf allen Blocker-Feldern synchron gesetzt)
+      int kistenNummerLeer = bekannteBlocker[spielerRaumPos].kistenNummerLeer;
+      var kandidaten = new int[4];
+      int kandidatenAnzahl = 0;
+
+      int kiste = basisRaum.raumLinks[spielerRaumPos], gegen = basisRaum.raumRechts[spielerRaumPos];
+      if (kiste < raumAnzahl && raumZuKiste[kiste] < kistenNummerLeer && gegen < raumAnzahl && raumZuKiste[gegen] >= kistenNummerLeer) kandidaten[kandidatenAnzahl++] = kiste; // Kiste wurde zuletzt nach links geschoben
+      kiste = basisRaum.raumRechts[spielerRaumPos]; gegen = basisRaum.raumLinks[spielerRaumPos];
+      if (kiste < raumAnzahl && raumZuKiste[kiste] < kistenNummerLeer && gegen < raumAnzahl && raumZuKiste[gegen] >= kistenNummerLeer) kandidaten[kandidatenAnzahl++] = kiste; // Kiste wurde zuletzt nach rechts geschoben
+      kiste = basisRaum.raumOben[spielerRaumPos]; gegen = basisRaum.raumUnten[spielerRaumPos];
+      if (kiste < raumAnzahl && raumZuKiste[kiste] < kistenNummerLeer && gegen < raumAnzahl && raumZuKiste[gegen] >= kistenNummerLeer) kandidaten[kandidatenAnzahl++] = kiste; // Kiste wurde zuletzt nach oben geschoben
+      kiste = basisRaum.raumUnten[spielerRaumPos]; gegen = basisRaum.raumOben[spielerRaumPos];
+      if (kiste < raumAnzahl && raumZuKiste[kiste] < kistenNummerLeer && gegen < raumAnzahl && raumZuKiste[gegen] >= kistenNummerLeer) kandidaten[kandidatenAnzahl++] = kiste; // Kiste wurde zuletzt nach unten geschoben
+
+      if (kandidatenAnzahl == 0) return true; // keine Schub-Pose -> Blocker nicht anwendbar (kommt praktisch nicht vor)
+
+      // verboten nur, wenn jeder Kandidat von einem zutreffenden Blocker abgedeckt ist
+      int alleMaske = (1 << kandidatenAnzahl) - 1;
+      int abgedeckt = 0;
+      for (int p = spielerRaumPos; p < bekannteBlocker.Length; p += raumAnzahl)
+      {
+        abgedeckt = bekannteBlocker[p].CheckKandidaten(raumZuKiste, kandidaten, kandidatenAnzahl, abgedeckt, alleMaske);
+        if (abgedeckt == alleMaske) return false; // jede mögliche zuletzt geschobene Kiste ist abgedeckt -> verbotene Stellung
+      }
+      return true;
     }
 
     /// <summary>

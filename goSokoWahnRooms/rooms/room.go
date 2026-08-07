@@ -233,7 +233,9 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 			}
 
 			// durchlaufen (Zustand 1: leer; nur wenn der Zustand existiert -
-			// bei '*' in einer Ecke kann der Spieler nie über das Feld laufen)
+			// bei '*' in einer Ecke kann der Spieler nie über das Feld laufen;
+			// durch die Freeze-Ersetzung beim Parsen tritt der Fall normal
+			// nicht mehr auf, der Guard bleibt als Absicherung)
 			if r.States.Count() > 1 {
 				for oIdx := range r.Outgoing {
 					if oIdx == ipIdx {

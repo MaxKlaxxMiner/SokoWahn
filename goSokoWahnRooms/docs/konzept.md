@@ -154,6 +154,11 @@ Auslagerung erst, wenn es real drückt.
   wird übernommen - er filtert schon beim Init Zustände, Varianten und setzt
   `BlockedBox`. Umsetzung über `soko` (Feld-Klon mit einer Kiste, Rückwärtsscan
   von den Zielen wie SokoBoxScanner).
+- **Freeze-Ersetzung beim Parsen** (neu, JSoko-Verhalten, immer aktiv):
+  eingefrorene Kisten auf Zielfeldern werden durch Wände ersetzt, Kiste und Ziel
+  entfallen. Erkennung per klassischer Freeze-Analyse (Wände, rekursiv auch
+  gegenseitig blockierte Zielfeld-Kisten wie 2x2-Blöcke), kaskadierend bis zum
+  Fixpunkt. Kisten abseits der Ziele zählen konservativ nie als Blockade.
 
 ## 6. Debug-GUI (Browser)
 
