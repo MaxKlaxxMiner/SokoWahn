@@ -1,0 +1,15 @@
+##################
+#                #
+# $#$   **#   . *#
+#   $ #   *#.#* .#
+#  # $@# #    #.*#
+# $   # *  *#*  .#
+# #$#   *#*     .#
+#                #
+##################
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=38018
+catalog: ABHT 02
+name: level  66
+number: 66/99
+bestmoves: 441

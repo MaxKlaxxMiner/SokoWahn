@@ -1,0 +1,20 @@
+    ######
+   ##....##
+  ##.    .##
+ ##.  $$$$.##
+##.$ $     .##
+#. $ $$$$$  .#
+#. $ $..$ $ .#
+#. $ $+.$ $ .#
+#.  $$$$$ $ .#
+##.     $ $.##
+ ##.$$$$  .##
+  ##.    .##
+   ##....##
+    ######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=38005
+catalog: ABHT 02
+name: level  53
+number: 53/99
+bestmoves: 149

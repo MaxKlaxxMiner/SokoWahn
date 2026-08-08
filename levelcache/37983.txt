@@ -1,0 +1,19 @@
+   #####   #####
+  ##   #####   ##
+ ##    # @ #    ##
+##  $ $  #       ##
+#   #$# # # # #   #
+#  # $ $ # ....#  #
+# $ $ $  $..#...  #
+#  # $ $ # ....#  #
+#   # # # # # #   #
+##  $ $  #        #
+ ##     ###  ###  #
+  #  #### #### ####
+  ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37983
+catalog: ABHT 02
+name: level  31
+number: 31/99
+bestmoves: 406

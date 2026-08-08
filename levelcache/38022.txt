@@ -1,0 +1,20 @@
+    ####
+    #  ###
+    #  . #
+    #  $ #
+    ## ###
+ ####  ##
+ #  # * ##
+##.$#  * ##
+#     * * #######
+# @ #  * * * #  #
+######  * *  #$.##
+      #  * *     #
+       #     #   #
+        ##########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=38022
+catalog: ABHT 02
+name: level  70
+number: 70/99
+bestmoves: 182
