@@ -1,27 +1,41 @@
 // goSokoWahnRooms - Rooms-Framework (Nachbau des C#-Raum-/Portal-Konzepts).
-// Konzept siehe docs/konzept.md. Aktueller Stand: M1 (Netzwerk-Init).
-// Die Web-Debug-GUI folgt mit M2.
+// Konzept siehe docs/konzept.md. Aktueller Stand: M2 Schritt 1 (Server + JSON-API).
 //
-// Aufruf: goSokoWahnRooms.exe [level.txt | level-nummer | game-sokoban.com-URL]
-// (ohne Argument: eingebautes Vanilla-Level; Web-Levels landen im geteilten
+// Aufruf: goSokoWahnRooms.exe [flags] [level.txt | level-nummer | game-sokoban.com-URL]
+// (ohne Level-Argument: eingebautes Vanilla-Level; Web-Levels landen im geteilten
 // levelcache/-Ordner, derselbe wie bei goSokoWahnBrute)
+//
+// Standard ist der Debug-GUI-Modus: Webserver starten und Browser öffnen.
+// Mit -cli gibt es nur die Kennzahlen auf der Konsole (Verhalten von M1).
 package main
 
 import (
+	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
 
 	"goSokoWahnRooms/maps"
 	"goSokoWahnRooms/rooms"
 	"goSokoWahnRooms/soko"
+	"goSokoWahnRooms/web"
 	"goSokoWahnRooms/weblevel"
 )
 
+const defaultAddr = "127.0.0.1:8642"
+
 func main() {
-	sokoMap := maps.MapVanilla
+	cli := flag.Bool("cli", false, "nur Kennzahlen ausgeben, kein Webserver")
+	addr := flag.String("addr", defaultAddr, "Adresse des Debug-GUI-Servers")
+	noBrowser := flag.Bool("nobrowser", false, "Browser nicht automatisch öffnen")
+	flag.Parse()
+
+	sokoMap, title := maps.MapVanilla, "Vanilla"
 	var webInfo *weblevel.Info
-	if len(os.Args) > 1 {
-		arg := os.Args[1]
+	if arg := flag.Arg(0); arg != "" {
 		if weblevel.IsWebInput(arg) {
 			level, info, err := weblevel.Load(arg)
 			if err != nil {
@@ -29,13 +43,14 @@ func main() {
 				os.Exit(1)
 			}
 			sokoMap, webInfo = level, info
+			title = fmt.Sprintf("Level %s: %s - %s (%s)", info.ID, info.Catalog, info.Name, info.Number)
 		} else {
 			data, err := os.ReadFile(arg)
 			if err != nil {
 				fmt.Println("read error:", err)
 				os.Exit(1)
 			}
-			sokoMap = string(data)
+			sokoMap, title = string(data), arg
 		}
 	}
 
@@ -73,4 +88,43 @@ func main() {
 	fmt.Println("states:  ", states)
 	fmt.Println("variants:", variants)
 	fmt.Println("effort:  ", network.EffortString())
+
+	if *cli {
+		return
+	}
+
+	// Wunsch-Adresse belegt (z.B. zweite Instanz)? Dann freien Port nehmen
+	listener, err := net.Listen("tcp", *addr)
+	if err != nil && *addr == defaultAddr {
+		listener, err = net.Listen("tcp", "127.0.0.1:0")
+	}
+	if err != nil {
+		fmt.Println("listen error:", err)
+		os.Exit(1)
+	}
+
+	url := "http://" + listener.Addr().String()
+	fmt.Println()
+	fmt.Println("debug-gui:", url)
+	if !*noBrowser {
+		openBrowser(url)
+	}
+	if err := http.Serve(listener, web.New(network, title)); err != nil {
+		fmt.Println("server error:", err)
+		os.Exit(1)
+	}
+}
+
+// öffnet die URL im Standard-Browser (Fehler egal - die URL steht auf der Konsole)
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	_ = cmd.Start()
 }

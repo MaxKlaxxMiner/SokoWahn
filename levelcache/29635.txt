@@ -1,0 +1,18 @@
+  #########
+  #.......########
+  #.......   #   ##
+#######   #$ # $$ #
+# $      $   #    #
+# $##  # ### # $$##
+#   $$ #...# #   #
+#    $ #...#$# $$#
+# $$$  #.*.  $   #
+#  $@$ ##$#$ #   #
+######      ######
+     ########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29635
+catalog: A.K.K. Informatika
+name: level 20
+number: 20/32
+bestmoves: 808

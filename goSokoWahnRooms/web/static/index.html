@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>goSokoWahnRooms</title>
+<style>
+  body { font-family: Consolas, monospace; background: #1b1b1b; color: #ddd; margin: 2em; }
+  h1 { font-size: 1.3em; color: #8fc7ff; }
+  pre { background: #242424; padding: 1em; display: inline-block; border: 1px solid #444; }
+  table { border-collapse: collapse; margin-top: 1em; }
+  td { padding: 2px 10px; border: 1px solid #444; }
+  a { color: #8fc7ff; }
+  .hint { color: #888; margin-top: 2em; }
+</style>
+</head>
+<body>
+<h1>goSokoWahnRooms - Debug</h1>
+<div id="title"></div>
+<pre id="field">lade...</pre>
+<table id="summary"></table>
+<p class="hint">
+  Platzhalter-Seite (M2 Schritt 1) - das richtige Frontend folgt.
+  API: <a href="/api/summary">summary</a> ·
+  <a href="/api/field">field</a> ·
+  <a href="/api/map">map</a> ·
+  <a href="/api/rooms">rooms</a> ·
+  <a href="/api/rooms/0">rooms/0</a> ·
+  <a href="/api/rooms/0/states">states</a> ·
+  <a href="/api/rooms/0/variants">variants</a>
+</p>
+<script>
+async function load() {
+  const summary = await (await fetch('/api/summary')).json();
+  const field = await (await fetch('/api/field')).json();
+
+  document.getElementById('title').textContent = summary.title;
+
+  // Grundriss + Kisten/Spieler aus den Wpos-Listen zusammensetzen
+  const grid = field.rows.map(row => row.padEnd(field.width).split(''));
+  const put = (wpos, boxChar, goalChar) => {
+    const cell = field.walk[wpos];
+    grid[cell.y][cell.x] = cell.goal ? goalChar : boxChar;
+  };
+  for (const box of field.boxes) put(box, '$', '*');
+  put(field.player, '@', '+');
+  document.getElementById('field').textContent = grid.map(r => r.join('')).join('\n');
+
+  const rows = [
+    ['Räume', summary.roomCount],
+    ['Zustände', summary.stateCount],
+    ['Varianten', summary.variantCount],
+    ['Kisten', summary.boxCount],
+    ['begehbare Felder', summary.walkCount],
+    ['Effort', summary.effort],
+  ];
+  document.getElementById('summary').innerHTML =
+    rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+}
+load().catch(e => document.getElementById('field').textContent = 'Fehler: ' + e);
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+     #############
+######   ....#   ##
+#    # $ *...# $  #
+#  $ ## #....# $# #
+#  $  # #...*# $ @#
+# $$$ # #### #..###
+#  #  #$ $ #  ..#
+# $#$ # $  .*## ##
+#  # $# # $** #  #
+# $#     $     $ #
+#     #  ######  #
+##########    ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=29638
+catalog: A.K.K. Informatika
+name: level 23
+number: 23/32
+bestmoves: 1053
