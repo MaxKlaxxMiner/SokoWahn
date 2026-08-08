@@ -1,0 +1,20 @@
+    #######
+    #   #@##
+    #   $  #
+    #$$#$  ##
+#####   $   #
+#...#  ## $ #
+#...# $$    #
+#...  $     #
+#...  #  $$##
+## # $#    #
+ # #      ##
+ # # ######
+ #   #
+ #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37962
+catalog: ABHT 02
+name: level  10
+number: 10/99
+bestmoves: 272

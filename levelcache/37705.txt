@@ -1,0 +1,18 @@
+##############
+#    #   #   #
+# $$ $ $ $ $$###
+#  #   #   # #.##
+# $## ######....##
+#    $   @$..#...#
+# $ $ $$#$#*....##
+#####$$   #.....#
+   #  # ##  #####
+   #  $ # $ #
+   #  #     #
+   ##########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37705
+catalog: ABHT 01
+name: level  43 - A Bit Harder Than SokoMan 3 45
+number: 43/100
+bestmoves: 691

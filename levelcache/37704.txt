@@ -1,0 +1,21 @@
+   #######
+  ## ....#####
+  #  ......  #
+  #  ...#*.# #
+#####......  #
+#  #######$######
+#     #  $  $   #
+# $$#$  $ $@$   #
+##      $ $### ##
+ #### $#$ $    #
+   #   #  # ####
+   #  ##$$$$ #
+   # $$   #  #
+   #  #      #
+   ###########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37704
+catalog: ABHT 01
+name: level  42 - A Bit Harder Than SokoMan 3 42
+number: 42/100
+bestmoves: 779

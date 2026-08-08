@@ -1,0 +1,21 @@
+############
+#  #  #    #
+# $#  # $$ ####
+#     #  $ # @#
+#  # $## $    #
+## ## ###.###.#
+##$#   ....# .#
+#  # $$#.. #$.#
+# $$ $ #...# .#
+#  # $ ....#$.#
+## #### #### .#
+ #      $     #
+ #  ### $$$$###
+ #### #     #
+      #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37727
+catalog: ABHT 01
+name: level  65 - A Bit Harder Than SokoMan 4 44
+number: 65/100
+bestmoves: 733

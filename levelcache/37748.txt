@@ -1,0 +1,21 @@
+      ###
+     ##.##
+   ### $ ###
+   #       #
+ ####  *  ####
+ #  #*****#  #
+##   * * *   ##
+#.$ ** @ ** $.#
+##   * * *   ##
+ #  #*****#  #
+ ####  *  ####
+   #       #
+   ### $ ###
+     ##.##
+      ###
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37748
+catalog: ABHT 01
+name: level  86 - Snowflake
+number: 86/100
+bestmoves: 132

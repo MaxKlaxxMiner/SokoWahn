@@ -1,0 +1,20 @@
+  ##############
+###   ##   ....#
+# $        ....#
+# ###########.###
+#         #.... #
+# ##$$#$# #.... #
+#  $ $ $ @# ## ##
+# $$  $ $       #
+# $  $##  #    ##
+## #   $$ ######
+#  # # #  #
+# $$   ####
+#  #####
+####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37701
+catalog: ABHT 01
+name: level  39 - A Bit Harder Than SokoMan 3 38
+number: 39/100
+bestmoves: 799

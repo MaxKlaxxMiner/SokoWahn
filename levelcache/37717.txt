@@ -1,0 +1,21 @@
+        #####
+      ###  @####
+     ##   $  $ #
+   ###   #$##  #
+   ## $# #  #$ #
+   #..$   $    #
+####.* ####$$$ ####
+#..#..##     $ #  #
+#.....# $ #     $ #
+#.....#  $######$ #
+##..###  $        #
+ #### #    # $ ####
+      # $#### $ #
+      #  #  #   #
+      ####  #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37717
+catalog: ABHT 01
+name: level  55 - A Bit Harder Than SokoMan 4 18
+number: 55/100
+bestmoves: 1031

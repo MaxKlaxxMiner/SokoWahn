@@ -1,0 +1,20 @@
+           ####
+           #  #
+           #  #
+           #  #
+#######   ##$$##   #######
+#     #####....#####     #
+#  $  $   $.+..$   $  $  #
+#  $  $   $....$   $  $  #
+#     #####....#####     #
+#######   ##$$##   #######
+           #  #
+           #  #
+           #  #
+           ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37960
+catalog: ABHT 02
+name: level  08
+number: 8/99
+bestmoves: 214

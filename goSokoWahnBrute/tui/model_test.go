@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -108,6 +109,44 @@ func TestModelScanOnEnter(t *testing.T) {
 		if isWebInput(level) {
 			t.Errorf("Eingabe %q darf nicht als Nummer/URL erkannt werden", level)
 		}
+	}
+}
+
+// Einfügen eines Levels mit Windows-Zeilenenden (CRLF) darf keine doppelten Zeilen erzeugen.
+// Geprüft wird der Weg, den Max nutzt: Strg+V liest die Zwischenablage.
+func TestModelPasteCRLF(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	level := "#######\n#.@ # #\n#$* $ #\n#   $ #\n# ..  #\n#  *  #\n#######"
+	clip := strings.ReplaceAll(level, "\n", "\r\n")
+	orig := readClipboard
+	readClipboard = func() (string, error) { return clip, nil }
+	defer func() { readClipboard = orig }()
+
+	m := NewModel("", 0)
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyCtrlV})
+
+	if got := m.input.Value(); got != level {
+		t.Fatalf("eingefügtes CRLF-Level landet verändert im Eingabefeld:\n%q", got)
+	}
+
+	// zweiter Weg: bracketed paste (Terminals, die den Text als eine Tastennachricht liefern)
+	m2 := NewModel("", 0)
+	m2 = press(t, m2, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(clip), Paste: true})
+	if got := m2.input.Value(); got != level {
+		t.Fatalf("bracketed paste mit CRLF landet verändert im Eingabefeld:\n%q", got)
+	}
+
+	m.scan()
+	if m.inputErr != "" {
+		t.Fatalf("eingefügtes CRLF-Level parst nicht: %s", m.inputErr)
+	}
+	want, err := soko.Parse(level)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.field.FieldCrc() != want.FieldCrc() {
+		t.Fatal("eingefügtes CRLF-Level ergibt eine andere Feldgeometrie")
 	}
 }
 

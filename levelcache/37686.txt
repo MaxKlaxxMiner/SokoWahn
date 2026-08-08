@@ -1,0 +1,22 @@
+####     ######
+#  #######    #
+#  $       #$ #
+#   $ $ $$  $ #
+##$###   #  $##
+# $  ## $# $ #
+#    ##  #   #
+#   ########$#
+##$###@$   $ #
+#   #  ##    #
+#  $  ##  # ####
+#  #  ##.##  $ #
+####......   # #
+   #......#  $ #
+   #......#    #
+   #############
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37686
+catalog: ABHT 01
+name: level  24 - A Bit Harder Than SokoMan 2 44
+number: 24/100
+bestmoves: 1304

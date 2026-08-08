@@ -1,0 +1,22 @@
+  ####   #####
+  #  #####   #
+  #  $     $ #
+  #  #   ##$##
+  ## ###### #
+   # #.. #  #
+   # #....$ #
+   # #...#  #
+   # #...#$ #
+   # #...# $#
+   # ##.##$ #
+####$ #@$   ###
+#   $ # $ $ $ #
+# #$$ # ## #$ #
+#             #
+###############
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37692
+catalog: ABHT 01
+name: level  30 - A Bit Harder Than SokoMan 3 26
+number: 30/100
+bestmoves: 722

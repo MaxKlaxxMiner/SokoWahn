@@ -1,0 +1,22 @@
+ ####
+ #  ##########
+ #           #
+ #...#.....  #
+ #....#...#  #
+ #          ##
+ ###  # # ###
+ ###### #  ##
+##      ##  ####
+#  $$$ $  # #  #
+# ## ### ##$$  #
+#  # # $ $   # #
+# $    $ #   # #
+#    $   $ $$$@#
+####  #####    #
+   ####   ######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37685
+catalog: ABHT 01
+name: level  23 - A Bit Harder Than SokoMan 2 28
+number: 23/100
+bestmoves: 768

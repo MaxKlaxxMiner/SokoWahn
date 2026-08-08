@@ -1,0 +1,23 @@
+ ####
+ # @###
+ #  $ #
+ # $$ #
+ # $  #
+ #  # #
+ #$## #  #######
+##  # ####  ...#
+#    $ $ #  ...#
+#  $$  $    ...#
+###  #   #  ...#
+ #  $#####  ...#
+ #  $    #######
+ #  $ #$ #
+ #  #  $ #
+ ####    #
+    ######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37709
+catalog: ABHT 01
+name: level  47 - A Bit Harder Than SokoMan 4 1
+number: 47/100
+bestmoves: 533

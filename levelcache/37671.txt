@@ -1,0 +1,21 @@
+###########
+#......   #########
+#......   #  ##   #
+#..### $    $     #
+#....$ $ #  ###   #
+#...#$#####    #  #
+###    #   #$  #$ #
+  #  $$ $ $  $##  #
+  #  $   #$#$ ##$ #
+  ###$## #    ##  #
+   #  $ $ ## ######
+   #    $  $  #
+   ##   # #   #
+    #####@#####
+        ###
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37671
+catalog: ABHT 01
+name: level  09 - A Bit Harder Than Original 37
+number: 9/100
+bestmoves: 924

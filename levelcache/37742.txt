@@ -1,0 +1,17 @@
+      ####
+#######  #
+# $ $ $ $#
+#  ..... #
+##$.$$$.$#
+ # .#+#. #
+ #$.$$$.$##
+ # .....  #
+ #$ $ $   #
+ #  #######
+ ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37742
+catalog: ABHT 01
+name: level  80 - Shuriken
+number: 80/100
+bestmoves: 335

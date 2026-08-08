@@ -1,0 +1,22 @@
+ ######## #######
+ #      # #    ##
+ # $$ $ # # $ ###
+ #  $$$ # # $ ###
+ ##  $  # #   ..#
+####  ##### ## ##
+#*.*.*...*# ##  #
+#.*.*.*.*.# ##$ #
+###### @  # ##  #
+     ###$ # #####
+     ###  # #
+     #   ## ##
+     #  $    #
+     #   #   #
+     #####   #
+         #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37733
+catalog: ABHT 01
+name: level  71 - A Bit Harder Than Roland 1
+number: 71/100
+bestmoves: 402

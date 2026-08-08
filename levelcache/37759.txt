@@ -1,0 +1,21 @@
+   ####
+   #  #
+  ##  #
+  ##  #########
+  # $ $       #
+  # $$  #     #
+###  #      #######
+#  #  $ #####     #
+#     # #   $ $ $ #
+#   # $ #  $$ $ $ #
+# $     #      $$ #
+##$#$# ########@#$#
+# *.*.*...........#
+# ......###########
+#########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37759
+catalog: ABHT 01
+name: level  97 - A Bit Harder Than Jean Pierre Kent 35
+number: 97/100
+bestmoves: 1335

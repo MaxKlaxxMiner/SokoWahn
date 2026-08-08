@@ -1,0 +1,19 @@
+   #########
+   #       #
+   #  $ #$ #
+#### ### $$#
+#...*.# $  ##
+#.....    $ #
+#.....## ## #
+###$#$# @   #
+ # $ $ $ ####
+ # # # $$#
+ #    $  #
+ ###     #
+   #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37721
+catalog: ABHT 01
+name: level  59 - A Bit Harder Than SokoMan 4 29
+number: 59/100
+bestmoves: 368

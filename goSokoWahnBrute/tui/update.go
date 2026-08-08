@@ -3,8 +3,10 @@ package tui
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -32,6 +34,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	msg.Runes = []rune(normalizeNewlines(string(msg.Runes)))
 	key := msg.String()
 
 	// global: Strg+C beendet immer
@@ -44,6 +47,17 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "ctrl+s":
 			m.scan()
+			return m, nil
+		case "ctrl+v":
+			// Einfügen bewusst selbst erledigen: das Textfeld würde die Zwischenablage
+			// zwar auch lesen, dabei aber aus '\r' UND '\n' je eine neue Zeile machen
+			// (siehe normalizeNewlines) - Windows-Levels bekämen so lauter Leerzeilen
+			text, err := readClipboard()
+			if err != nil {
+				m.inputErr = "Zwischenablage nicht lesbar: " + err.Error()
+				return m, nil
+			}
+			m.input.InsertString(normalizeNewlines(text))
 			return m, nil
 		case "enter":
 			// Enter übernimmt den Inhalt direkt, wenn er offensichtlich komplett ist
@@ -159,6 +173,21 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// liest die Zwischenablage (als Variable, damit Tests sie ersetzen können)
+var readClipboard = clipboard.ReadAll
+
+// vereinheitlicht Zeilenenden auf '\n' (Windows CRLF und alte Mac-CR).
+// Hintergrund: der Sanitizer des Textfeldes (bubbles/runeutil) behandelt '\r' und '\n'
+// unabhängig voneinander und macht aus BEIDEN je eine neue Zeile - ein CRLF-Level
+// bekäme also nach jeder Zeile eine zusätzliche Leerzeile. Einzeln getippte
+// Zeilenschaltungen sind nicht betroffen (die kommen als Enter-Taste ohne Runen an).
+func normalizeNewlines(text string) string {
+	if !strings.ContainsRune(text, '\r') {
+		return text
+	}
+	return strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
 }
 
 // wechselt zur Level-Eingabe für ein neues Level (Eingabefeld wird geleert,

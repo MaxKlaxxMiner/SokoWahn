@@ -1,0 +1,21 @@
+      #####
+      #   #
+     ##   #
+    ##  $ #
+   ##  $#$#
+####  $...######
+#    $.***.    #
+#   $#.*@*.#$  #
+#     .***.$   #
+#######...$  ###
+      #$#$  ##
+      # $  ##
+      #   ##
+      #   #
+      #####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37966
+catalog: ABHT 02
+name: level  14
+number: 14/99
+bestmoves: 138

@@ -1,0 +1,19 @@
+#####        #####
+#   # ########   #
+#  $###...# $    #
+#   $ #...# ### ##
+##    #...# $   #
+ #$##$#...# $## #
+ #    #...      #
+ #$$$  ...# $$$$#
+ # # ##...# #  @#
+## #  ##### ## $##
+#  $  $ $ #  $$$ #
+#     #          #
+##################
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37682
+catalog: ABHT 01
+name: level  20 - A Bit Harder Than SokoMan 2 17
+number: 20/100
+bestmoves: 630

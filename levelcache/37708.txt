@@ -1,0 +1,22 @@
+        ##########
+       ##   #    #
+      ##....$ #$ #
+     ##..*.#     #
+ #####..*.##  ####
+ #  #..*.#       #
+ # $#.*.#   #  # #
+ #  ##+###       #
+## $ $ $ #  #    #
+#  # $ $ # ###  ##
+#   $ $$ #  $    #
+#  #$# $ #       #
+##   $ # ####    #
+ ####  $ #  ######
+    #    #
+    ######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=37708
+catalog: ABHT 01
+name: level  46 - A Bit Harder Than SokoMan 3 50
+number: 46/100
+bestmoves: 1605
