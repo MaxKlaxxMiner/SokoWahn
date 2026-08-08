@@ -3,60 +3,40 @@
 <head>
 <meta charset="utf-8">
 <title>goSokoWahnRooms</title>
-<style>
-  body { font-family: Consolas, monospace; background: #1b1b1b; color: #ddd; margin: 2em; }
-  h1 { font-size: 1.3em; color: #8fc7ff; }
-  pre { background: #242424; padding: 1em; display: inline-block; border: 1px solid #444; }
-  table { border-collapse: collapse; margin-top: 1em; }
-  td { padding: 2px 10px; border: 1px solid #444; }
-  a { color: #8fc7ff; }
-  .hint { color: #888; margin-top: 2em; }
-</style>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/app.css">
 </head>
 <body>
-<h1>goSokoWahnRooms - Debug</h1>
-<div id="title"></div>
-<pre id="field">lade...</pre>
-<table id="summary"></table>
-<p class="hint">
-  Platzhalter-Seite (M2 Schritt 1) - das richtige Frontend folgt.
-  API: <a href="/api/summary">summary</a> ·
-  <a href="/api/field">field</a> ·
-  <a href="/api/map">map</a> ·
-  <a href="/api/rooms">rooms</a> ·
-  <a href="/api/rooms/0">rooms/0</a> ·
-  <a href="/api/rooms/0/states">states</a> ·
-  <a href="/api/rooms/0/variants">variants</a>
-</p>
-<script>
-async function load() {
-  const summary = await (await fetch('/api/summary')).json();
-  const field = await (await fetch('/api/field')).json();
-
-  document.getElementById('title').textContent = summary.title;
-
-  // Grundriss + Kisten/Spieler aus den Wpos-Listen zusammensetzen
-  const grid = field.rows.map(row => row.padEnd(field.width).split(''));
-  const put = (wpos, boxChar, goalChar) => {
-    const cell = field.walk[wpos];
-    grid[cell.y][cell.x] = cell.goal ? goalChar : boxChar;
-  };
-  for (const box of field.boxes) put(box, '$', '*');
-  put(field.player, '@', '+');
-  document.getElementById('field').textContent = grid.map(r => r.join('')).join('\n');
-
-  const rows = [
-    ['Räume', summary.roomCount],
-    ['Zustände', summary.stateCount],
-    ['Varianten', summary.variantCount],
-    ['Kisten', summary.boxCount],
-    ['begehbare Felder', summary.walkCount],
-    ['Effort', summary.effort],
-  ];
-  document.getElementById('summary').innerHTML =
-    rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
-}
-load().catch(e => document.getElementById('field').textContent = 'Fehler: ' + e);
-</script>
+<header>
+  <h1>goSokoWahnRooms</h1>
+  <span id="title" class="dim">lade…</span>
+  <span id="stats"></span>
+</header>
+<main>
+  <section id="roomsCol">
+    <div id="roomsList"></div>
+  </section>
+  <section id="midCol">
+    <div id="statesHead" class="listHead">-- States --</div>
+    <div id="statesList"></div>
+    <div class="listHead">-- Variants --</div>
+    <div id="variantsList"></div>
+  </section>
+  <section id="fieldCol">
+    <div id="canvasWrap">
+      <canvas id="field"></canvas>
+    </div>
+    <div id="info">Effort: …</div>
+  </section>
+  <aside id="buttonsCol">
+    <button disabled title="folgt mit M3">Merge Rooms</button>
+    <button disabled title="folgt mit M4">Optimize</button>
+    <button disabled title="folgt später">Filter</button>
+    <button disabled title="folgt mit M3">Validate</button>
+    <button disabled title="folgt später">Solver...</button>
+  </aside>
+</main>
+<div id="error" hidden></div>
+<script src="/app.js"></script>
 </body>
 </html>
