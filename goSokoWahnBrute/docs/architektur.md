@@ -116,9 +116,20 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Tiefen-Batches nur Tiefen > Listentiefe schreiben und Tabellen-Tiefen nur sinken.
   Der forwardOnly-Sonderfall (Mini-Levels ohne Zielstellungen) bleibt komplett seriell.
   Benchmark lid4208 (8 Kisten, 132 Züge, 1,55M Knoten, Blocker 7 Stufen aus dem Cache,
-  12 Kerne, 09.08.2026): Worker 1/2/4/8/12/24/48/96 -> 16,9 / 10,0 / 6,2 / 4,7 / 4,4 /
-  4,2 / **3,8** / 3,8 s (Faktor 4,4; Überbelegung *4 kaschiert die Speicherlatenz wie
-  beim Blocker, daher Default NumCPU*4). Die Bulk-Größe ist bei 48 Workern praktisch
+  6 Kerne / 12 Threads mit SMT, 09.08.2026): Worker 1/2/4/8/12/24/48/96 -> 16,9 / 10,0 /
+  6,2 / 4,7 / 4,4 / 4,2 / **3,8** / 3,8 s (Faktor 4,4; daher Default NumCPU*4).
+  Warum Überbelegung hilft: bei den STATISCHEN Bereichen ist es vor allem Lastausgleich -
+  viele kleine Häppchen glätten ungleich teure Bereiche, am wg.Wait warten sonst alle
+  auf den langsamsten (Cache-Misses und Page Faults sind für den Go-Scheduler unsichtbar,
+  der schaltet nur bei Runtime-sichtbarem Warten um: Locks, Channels, Syscalls).
+  Achtung beim Vergleichen: der Blocker-Bestwert NumCPU*8 wurde auf einem ANDEREN
+  Rechner gemessen (Ultra 9, 16 Kerne ohne SMT, davon 2 langsame Effizienz-Kerne,
+  die unter Rechenlast kaum ausgelastet werden) - dort greift SMT als Erklärung
+  gar nicht, dafür hat der Blocker echte Mutex-Waits auf den ShardDirect-Shards,
+  die der Scheduler mit Ersatz-Goroutinen überbrücken kann. Heterogene Kerne
+  verstärken zudem das Lastausgleichs-Argument: bei statischen Bereichen ohne
+  Überbelegung würde der Bereich eines Effizienz-Kerns zum Nachzügler, auf den
+  am wg.Wait alle warten. Die Bulk-Größe ist bei 48 Workern praktisch
   egal (1.000 bis 1e9: alle ~3,9-4,0 s; der alte C#-Erfahrungswert "Bulk ~200 optimal"
   gilt für das Fan-out-Design nicht mehr - kleine Batches kosten dort nur Overhead).
   Alle Sweep-Läufe byte-gleich über sämtliche 132 Tiefenzeilen (Knoten, Rest, Lösung).
