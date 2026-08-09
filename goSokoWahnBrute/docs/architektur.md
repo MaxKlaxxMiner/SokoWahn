@@ -211,7 +211,7 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   Vorwärts-Hülle ist unabhängig von der Wellen-Reihenfolge) - abgesichert über die
   Orakel-Referenzwerte im Benchmark.
 - **Worker-Anzahl**: Standard ist 8x NumCPU (`SetWorkers`). Die Arbeit ist memory-latency-
-  gebunden (Hash-Lookups und Flood-Fills über grosse Arrays), deshalb hilft deutliche
+  gebunden (Hash-Lookups und Flood-Fills über große Arrays), deshalb hilft deutliche
   Überbelegung: die Goroutinen verstecken gegenseitig ihre DRAM-Wartezeiten
   (GOMAXPROCS bleibt bei NumCPU OS-Threads). Sweep-Messungen lid349 bis 4-Steiner
   (Intel Ultra 9 285H, 6P+8E+2LPE): seriell+map 13,8 s -> seriell+CompactTable 12,0 s ->

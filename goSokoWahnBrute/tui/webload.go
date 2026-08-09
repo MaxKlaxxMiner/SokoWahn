@@ -345,7 +345,7 @@ func parseWebLevel(page string) (string, *WebLevelInfo, error) {
 	return levelText, info, nil
 }
 
-// zieht aus der Rekordliste der Seite (Format "spieler,zuege,...!spieler,zuege,...!...")
+// zieht aus der Rekordliste der Seite (Format "spieler,züge,...!spieler,züge,...!...")
 // den Rekord mit den wenigsten Zügen (0 = keine verwertbaren Einträge)
 func bestMovesFromList(best string) int {
 	bestMoves := 0

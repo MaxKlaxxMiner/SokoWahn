@@ -1,5 +1,5 @@
-// Mini-Werkzeug: wandelt eine .resx-Datei in eine binaere .resources-Datei um
-// (Ersatz fuer resgen.exe, das ohne Windows-SDK nicht vorhanden ist)
+// Mini-Werkzeug: wandelt eine .resx-Datei in eine binäre .resources-Datei um
+// (Ersatz für resgen.exe, das ohne Windows-SDK nicht vorhanden ist)
 
 using System.Resources;
 

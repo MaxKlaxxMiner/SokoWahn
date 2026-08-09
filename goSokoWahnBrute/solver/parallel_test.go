@@ -31,7 +31,7 @@ func runTrace(t *testing.T, level string, workers, stepLimit int) string {
 	}
 
 	stats := s.GetStats()
-	fmt.Fprintf(&sb, "Zuege=%d\n", stats.FoundMoves)
+	fmt.Fprintf(&sb, "Züge=%d\n", stats.FoundMoves)
 	if stats.FoundMoves >= 0 {
 		solution, err := s.GetSolution()
 		if err != nil {
@@ -60,7 +60,7 @@ func TestSolveParallelDeterminism(t *testing.T) {
 	defer func() { parallelMinRecords = oldMin }()
 
 	reference := runTrace(t, level, 1, 1000000000) // seriell, ganze Tiefen pro Schritt
-	if !strings.Contains(reference, "Zuege=16") {
+	if !strings.Contains(reference, "Züge=16") {
 		t.Fatalf("serielle Referenz löst das Level nicht wie erwartet:\n%s", reference)
 	}
 

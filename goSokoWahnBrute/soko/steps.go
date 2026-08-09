@@ -4,7 +4,7 @@ import "errors"
 
 // ermittelt die Zugfolge in LURD-Notation zwischen zwei aufeinander folgenden
 // Schub-Stellungen (b muss durch genau einen Kistenschub aus a hervorgehen);
-// Kleinbuchstaben = Laufschritte, Grossbuchstaben = Schiebeschritte
+// Kleinbuchstaben = Laufschritte, Großbuchstaben = Schiebeschritte
 // Hinweis: der Feldzustand wird für die Berechnung verändert und nicht wiederhergestellt
 func (f *Field) Steps(a, b *State) (string, error) {
 	// die geschobene Kiste ermitteln: bei b steht der Spieler auf dem alten Kistenfeld

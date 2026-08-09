@@ -1,5 +1,5 @@
-// Konsolen-Frontend fuer den alten C#-Solver (4th generation)
-// Dient als Referenz-Orakel fuer den Go-Nachbau: deterministische Ausgaben
+// Konsolen-Frontend für den alten C#-Solver (4th generation)
+// Dient als Referenz-Orakel für den Go-Nachbau: deterministische Ausgaben
 // (kompiliert mit -define:parallelDeaktivieren, siehe build.sh)
 
 using System;
@@ -15,10 +15,15 @@ namespace Sokosolver
   {
     private static int Main(string[] args)
     {
+      // Ausgabe als UTF-8 statt OEM-Codepage (CP850): die Prosa-Ausgaben enthalten
+      // Umlaute, und die Diff-Vergleiche mit dem Go-Port erwarten UTF-8-Bytes
+      // (die byte-diffbaren Tiefen-Zeilen sind pures ASCII und bleiben unberührt)
+      Console.OutputEncoding = System.Text.Encoding.UTF8;
+
       if (args.Length < 1)
       {
-        Console.WriteLine("Aufruf: refcli <levelDatei> [batchGroesse] [prepBatches] [-v]");
-        Console.WriteLine("  batchGroesse: Stellungen pro Next()-Aufruf (Standard: 1000000000 = ganze Tiefenstufe)");
+        Console.WriteLine("Aufruf: refcli <levelDatei> [batchGröße] [prepBatches] [-v]");
+        Console.WriteLine("  batchGröße: Stellungen pro Next()-Aufruf (Standard: 1000000000 = ganze Tiefenstufe)");
         Console.WriteLine("  prepBatches:  Anzahl Blocker-Vorbereitungs-Batches (Standard: 0 = Blocker sofort abbrechen)");
         Console.WriteLine("  -v:           nach jedem Batch die komplette Tiefenstatistik ausgeben");
         return 1;
@@ -37,7 +42,7 @@ namespace Sokosolver
       bool verbose = args.Contains("-v");
 
       // Hinweis: der Solver legt temp\blocker_x<hex>.gz im Arbeitsverzeichnis an -
-      // fuer reproduzierbare Laeufe ohne Blocker vorher den temp-Ordner leeren
+      // für reproduzierbare Läufe ohne Blocker vorher den temp-Ordner leeren
       var solver = new SokoWahn_4th(level);
 
       Console.WriteLine(solver.ToString());
@@ -79,14 +84,14 @@ namespace Sokosolver
       Console.WriteLine("Fertig nach " + batches + " Batches: SuchTiefe=" + solver.SuchTiefe + " Knoten=" + solver.KnotenAnzahl.ToString("#,##0"));
 
       var weg = solver.GetLösungsweg().ToArray();
-      Console.WriteLine("Loesungsweg-Stellungen: " + weg.Length + " (Zuege: " + (weg.Length - 1) + ")");
+      Console.WriteLine("Lösungsweg-Stellungen: " + weg.Length + " (Züge: " + (weg.Length - 1) + ")");
       Console.WriteLine(SokowahnStaticTools.LösungswegZuSteps(weg));
 
       return 0;
     }
 
     /// <summary>
-    /// berechnet nur die Blocker-Stufen bis einschliesslich maxK und gibt sie aus (ohne Cache-Datei)
+    /// berechnet nur die Blocker-Stufen bis einschließlich maxK und gibt sie aus (ohne Cache-Datei)
     /// </summary>
     /// <param name="variante">"blocker" = SokowahnBlocker (4th plain), "blockerbx" = SokowahnBlockerBx (4th List2)</param>
     private static int BlockerOnly(string level, int maxK, string variante)
@@ -118,15 +123,15 @@ namespace Sokosolver
       return 0;
     }
 
-    #region # // --- FreezeGoalBoxesToWalls: eingefrorene Kisten auf Zielen durch Waende ersetzen ---
+    #region # // --- FreezeGoalBoxesToWalls: eingefrorene Kisten auf Zielen durch Wände ersetzen ---
     /// <summary>
-    /// ersetzt eingefrorene Kisten auf Zielfeldern durch Waende (JSoko-Verhalten,
+    /// ersetzt eingefrorene Kisten auf Zielfeldern durch Wände (JSoko-Verhalten,
     /// gleiche Logik wie freeze.go in den Go-Ports): eine Kiste, die nie mehr bewegt
     /// werden kann und ihr Ziel bereits bedient, ist von einer Wand nicht zu
     /// unterscheiden - Kiste und Ziel entfallen ersatzlos. Erkennung per klassischer
-    /// Freeze-Analyse (Waende, rekursiv auch gegenseitig blockierte Zielfeld-Kisten
-    /// wie 2x2-Bloecke), kaskadierend bis zum Fixpunkt. Kisten abseits der Ziele
-    /// zaehlen konservativ nie als Blockade, Felder ausserhalb des Rasters nicht als Wand.
+    /// Freeze-Analyse (Wände, rekursiv auch gegenseitig blockierte Zielfeld-Kisten
+    /// wie 2x2-Blöcke), kaskadierend bis zum Fixpunkt. Kisten abseits der Ziele
+    /// zählen konservativ nie als Blockade, Felder außerhalb des Rasters nicht als Wand.
     /// </summary>
     private static string FreezeGoalBoxesToWalls(string level)
     {
@@ -136,10 +141,10 @@ namespace Sokosolver
       if (width == 0) return level;
       var raw = lines.Select(zeile => zeile.PadRight(width).ToCharArray()).ToArray();
 
-      bool geaendert = true;
-      while (geaendert) // Fixpunkt: neue Waende koennen weitere Kisten einfrieren
+      bool geändert = true;
+      while (geändert) // Fixpunkt: neue Wände können weitere Kisten einfrieren
       {
-        geaendert = false;
+        geändert = false;
         for (int y = 0; y < height; y++)
         {
           for (int x = 0; x < width; x++)
@@ -148,7 +153,7 @@ namespace Sokosolver
             if (FrozenBox(raw, width, height, x, y, new HashSet<int>()))
             {
               raw[y][x] = '#';
-              geaendert = true;
+              geändert = true;
             }
           }
         }
@@ -158,8 +163,8 @@ namespace Sokosolver
     }
 
     /// <summary>
-    /// prueft, ob die Zielfeld-Kiste auf (x,y) eingefroren ist; treatAsWall enthaelt
-    /// die im aktuellen Pruefpfad besuchten Kisten (Positionen als x + y*width)
+    /// prüft, ob die Zielfeld-Kiste auf (x,y) eingefroren ist; treatAsWall enthält
+    /// die im aktuellen Prüfpfad besuchten Kisten (Positionen als x + y*width)
     /// </summary>
     private static bool FrozenBox(char[][] raw, int width, int height, int x, int y, HashSet<int> treatAsWall)
     {
@@ -169,7 +174,7 @@ namespace Sokosolver
     }
 
     /// <summary>
-    /// prueft, ob die Kiste auf (x,y) entlang einer Achse blockiert ist
+    /// prüft, ob die Kiste auf (x,y) entlang einer Achse blockiert ist
     /// </summary>
     private static bool FrozenAxis(char[][] raw, int width, int height, int x, int y, int dx, int dy, HashSet<int> treatAsWall)
     {
@@ -177,7 +182,7 @@ namespace Sokosolver
        || WallLike(raw, width, height, x + dx, y + dy, treatAsWall)) return true;
 
       // Nachbar-Kiste auf Ziel, die ihrerseits eingefroren ist?
-      // (Set pro Zweig kopieren, damit gescheiterte Pruefpfade nicht als Wand nachwirken)
+      // (Set pro Zweig kopieren, damit gescheiterte Prüfpfade nicht als Wand nachwirken)
       for (int seite = -1; seite <= 1; seite += 2)
       {
         int nx = x + dx * seite, ny = y + dy * seite;
@@ -188,8 +193,8 @@ namespace Sokosolver
     }
 
     /// <summary>
-    /// gibt an, ob das Feld fuer die Freeze-Analyse als Wand zaehlt
-    /// (ausserhalb des Rasters: konservativ keine Wand)
+    /// gibt an, ob das Feld für die Freeze-Analyse als Wand zählt
+    /// (außerhalb des Rasters: konservativ keine Wand)
     /// </summary>
     private static bool WallLike(char[][] raw, int width, int height, int x, int y, HashSet<int> treatAsWall)
     {
