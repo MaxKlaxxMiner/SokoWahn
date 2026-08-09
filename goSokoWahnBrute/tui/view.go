@@ -163,10 +163,16 @@ func (m Model) workLine() string {
 		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s%s | Bulk: %s",
 			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), disk, tools.FormatInt(*m.bulkSize())))
 	case modeSearch:
-		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s%s | Tiefe: %d | Worker: %d | Bulk: %s",
-			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), m.slv.SearchDepth(), m.slv.Workers(), tools.FormatInt(*m.bulkSize())))
+		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s%s | RAM: %s MB | Tiefe: %d | Worker: %d | Bulk: %s",
+			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), formatMB(m.slv.RamBytes()), m.slv.SearchDepth(), m.slv.Workers(), tools.FormatInt(*m.bulkSize())))
 	}
 	return ""
+}
+
+// formatiert Bytes als Megabytes mit zwei Nachkommastellen (z.B. "1.234,56")
+func formatMB(bytes int64) string {
+	hundredths := bytes * 100 >> 20
+	return fmt.Sprintf("%s,%02d", tools.FormatInt(hundredths/100), hundredths%100)
 }
 
 // Anhang der Statuszeile mit den auf die Festplatte ausgelagerten Suchlisten-Bytes

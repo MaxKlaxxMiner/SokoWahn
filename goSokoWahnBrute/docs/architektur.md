@@ -51,7 +51,8 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 - Je Richtung: Hashtabelle (`PosTable`) + Suchlisten je Tiefe
   (`DepthList`, flache uint16-Sätze: Spieler + Kisten; Tiefe steckt im Listenindex).
 - **Disk-Auslagerung der Suchlisten** (Muster von SokowahnLinearList2): wächst eine Liste
-  über `solver.SpillBufferBytes` (64 MB), wandert der Schreibpuffer blockweise in eine
+  über `solver.SpillBufferBytes` (16 MB wie das C#-Original; 64 MB summierten sich bei
+  hunderten aktiven Listen auf zweistellige GB RAM), wandert der Schreibpuffer blockweise in eine
   Temp-Datei (`sokolist_*.tmp`, Zufallsname via os.CreateTemp - mehrere Prozesse
   stören sich nicht); gelesen wird sequenziell über einen gleich großen Lesepuffer.
   Ordner-Wahl beim Programmstart: `C:\temp\sokowahn` falls vorhanden (bewusst von Hand

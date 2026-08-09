@@ -85,6 +85,10 @@ func (t *CompactTable) Len() int64 {
 	return t.count
 }
 
+func (t *CompactTable) Bytes() int64 {
+	return int64(len(t.crcs))*8 + int64(len(t.depths))*2
+}
+
 // verdoppelt die Kapazität und sortiert alle Einträge neu ein
 func (t *CompactTable) grow() {
 	oldCrcs, oldDepths := t.crcs, t.depths

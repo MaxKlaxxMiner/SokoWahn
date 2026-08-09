@@ -53,6 +53,10 @@ func (t *xsyncDirect) Add(crc crc64.Value, depth uint16)    { t.m.Store(uint64(c
 func (t *xsyncDirect) Update(crc crc64.Value, depth uint16) { t.m.Store(uint64(crc), depth) }
 func (t *xsyncDirect) Len() int64                           { return int64(t.m.Size()) }
 
+// grobe Schätzung: xsync.Map legt die Einträge in 64-Byte-Buckets zu je 3 Paaren ab
+// und wächst deutlich großzügiger als die CompactTable (exakter Wert nicht abfragbar)
+func (t *xsyncDirect) Bytes() int64 { return int64(t.m.Size()) * 32 }
+
 func (t *xsyncDirect) ClaimPending(crc crc64.Value) bool {
 	_, loaded := t.m.LoadOrStore(uint64(crc), markerPending)
 	return !loaded
@@ -126,6 +130,16 @@ func (t *shardDirect) Len() int64 {
 	for i := range t.shards {
 		t.shards[i].mu.Lock()
 		sum += t.shards[i].t.Len()
+		t.shards[i].mu.Unlock()
+	}
+	return sum
+}
+
+func (t *shardDirect) Bytes() int64 {
+	var sum int64
+	for i := range t.shards {
+		t.shards[i].mu.Lock()
+		sum += t.shards[i].t.Bytes()
 		t.shards[i].mu.Unlock()
 	}
 	return sum

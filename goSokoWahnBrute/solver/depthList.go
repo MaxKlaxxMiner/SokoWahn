@@ -18,9 +18,11 @@ var (
 	SpillDir = ""
 
 	// ab dieser Größe in Bytes lagert eine Liste ihre Sätze auf die Festplatte aus;
-	// gleichzeitig die Puffer-/Blockgröße der einzelnen Schreib- und Lesezugriffe
-	// (das C#-Original nutzte 16 MB: list2Multi 512 * 32-KByte-Blöcke)
-	SpillBufferBytes = 64 << 20
+	// gleichzeitig die Puffer-/Blockgröße der einzelnen Schreib- und Lesezugriffe.
+	// 16 MB wie das C#-Original (list2Multi 512 * 32-KByte-Blöcke): bei Laufzug-Levels
+	// halten hunderte aktive Listen je einen Puffer - 64 MB summierten sich dort auf
+	// zweistellige GB RAM, bevor überhaupt gespillt wurde
+	SpillBufferBytes = 16 << 20
 )
 
 // Namensmuster der Auslagerungsdateien: den Zufallsteil (*) vergibt os.CreateTemp
@@ -271,6 +273,12 @@ func (l *DepthList) Count() int {
 // fertig in die Auslagerungsdatei geschriebene Bytes (0 = Liste liegt komplett im RAM)
 func (l *DepthList) SpillBytes() int64 {
 	return l.writeOff
+}
+
+// aktuell im RAM reservierte Puffer-Bytes der Liste (Schreibpuffer, laufender
+// Schreibvorgang, Leseblock und Vorauslese-Block)
+func (l *DepthList) RamBytes() int64 {
+	return int64(cap(l.data)+cap(l.pending)+cap(l.readBuf)+cap(l.prefetch)) * 2
 }
 
 // gibt den Speicher frei und löscht eine eventuelle Auslagerungsdatei

@@ -60,6 +60,19 @@ func (s *Solver) SpillBytes() int64 {
 	return sum
 }
 
+// im RAM reservierte Bytes der Suche: die beiden Hashtabellen plus die Puffer
+// aller Suchlisten (Gegenstück zu SpillBytes für die Anzeige)
+func (s *Solver) RamBytes() int64 {
+	sum := s.forwardKnown.Bytes() + s.backwardKnown.Bytes()
+	for _, list := range s.forwardLists {
+		sum += list.RamBytes()
+	}
+	for _, list := range s.backwardLists {
+		sum += list.RamBytes()
+	}
+	return sum
+}
+
 // Gesamtzahl der bisher verarbeiteten Sätze aus den Suchlisten (läuft anders als
 // NodeCount auch in der Beweis-Endphase weiter, wenn kaum noch Neues dazukommt)
 func (s *Solver) ProcessedCount() int64 {

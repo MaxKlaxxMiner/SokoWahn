@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 
 	"goSokoWahnBrute/blocker"
@@ -16,6 +17,12 @@ import (
 )
 
 func main() {
+	// GC-Headroom drosseln: der Heap besteht fast nur aus wenigen Riesen-Slices
+	// (Hashtabellen, Suchlisten-Puffer) mit kaum Pointern - der Default (100 = Ziel
+	// 2x Live-Heap) verdoppelt sonst nur nutzlos den RAM-Verbrauch, 5% Reserve
+	// reichen für das Kleinzeug locker
+	debug.SetGCPercent(5)
+
 	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
