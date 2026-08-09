@@ -63,16 +63,28 @@ func (s *Solver) searchForward(limit int) bool {
 	}
 
 	list := s.forwardLists[s.forwardDepth]
-	batch := list.PopBatch(limit)
-	s.processed += int64(len(batch) / s.recordSize)
 
-	// große Batches parallel verarbeiten (bitgenau identisch, siehe parallel.go);
-	// der forwardOnly-Sonderfall (Mini-Levels) bleibt komplett seriell
-	if !s.forwardOnly && s.useParallel(len(batch)) {
-		s.runSearchWorkers(batch, s.forwardDepth, true)
-		s.mergeForward()
-	} else {
-		s.searchForwardSerial(batch)
+	// ausgelagerte Listen liefern pro PopBatch höchstens einen Lesepuffer-Block
+	// (und Datei- vor RAM-Teil), deshalb bis zum Limit weiterlesen; die Batch-Grenzen
+	// ändern das Suchverhalten nicht (abgesichert durch die Spill-Determinismus-Tests)
+	for remaining := limit; ; {
+		batch := list.PopBatch(remaining)
+		records := len(batch) / s.recordSize
+		s.processed += int64(records)
+
+		// große Batches parallel verarbeiten (bitgenau identisch, siehe parallel.go);
+		// der forwardOnly-Sonderfall (Mini-Levels) bleibt komplett seriell
+		if !s.forwardOnly && s.useParallel(len(batch)) {
+			s.runSearchWorkers(batch, s.forwardDepth, true)
+			s.mergeForward()
+		} else {
+			s.searchForwardSerial(batch)
+		}
+
+		remaining -= records
+		if records == 0 || remaining <= 0 {
+			break
+		}
 	}
 
 	if list.Count() == 0 {
@@ -149,15 +161,26 @@ func (s *Solver) searchBackward(limit int) bool {
 	}
 
 	list := s.backwardLists[s.backwardDepth]
-	batch := list.PopBatch(limit)
-	s.processed += int64(len(batch) / s.recordSize)
 
-	// große Batches parallel verarbeiten (bitgenau identisch, siehe parallel.go)
-	if s.useParallel(len(batch)) {
-		s.runSearchWorkers(batch, s.backwardDepth, false)
-		s.mergeBackward()
-	} else {
-		s.searchBackwardSerial(batch)
+	// wie searchForward: bis zum Limit weiterlesen (PopBatch liefert bei ausgelagerten
+	// Listen höchstens einen Lesepuffer-Block pro Aufruf)
+	for remaining := limit; ; {
+		batch := list.PopBatch(remaining)
+		records := len(batch) / s.recordSize
+		s.processed += int64(records)
+
+		// große Batches parallel verarbeiten (bitgenau identisch, siehe parallel.go)
+		if s.useParallel(len(batch)) {
+			s.runSearchWorkers(batch, s.backwardDepth, false)
+			s.mergeBackward()
+		} else {
+			s.searchBackwardSerial(batch)
+		}
+
+		remaining -= records
+		if records == 0 || remaining <= 0 {
+			break
+		}
 	}
 
 	if list.Count() == 0 {
