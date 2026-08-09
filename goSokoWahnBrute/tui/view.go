@@ -62,7 +62,7 @@ func (m Model) helpLine() string {
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
-		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | i = Eingabe | q = Beenden"
+		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
 	case modeSolution:
 		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | i = neues Level | q = Beenden"
 	}
@@ -124,7 +124,7 @@ func (m Model) viewSearch() string {
 	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, forward, "   ", backward))
 
 	if m.auto {
-		sb.WriteString("\n" + styleMark.Render("Auto läuft ...") + fmt.Sprintf("  (Tick: %d ms)", m.lastTick.Milliseconds()))
+		sb.WriteString("\n" + styleMark.Render("Auto läuft ...") + fmt.Sprintf("  (%s Stellungen/s)", tools.FormatInt(m.statesPerSec)))
 	}
 	right := stylePanel.Render(strings.TrimRight(sb.String(), "\n"))
 
@@ -163,8 +163,8 @@ func (m Model) workLine() string {
 		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s%s | Bulk: %s",
 			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), disk, tools.FormatInt(*m.bulkSize())))
 	case modeSearch:
-		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s%s | Tiefe: %d | Bulk: %s",
-			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), m.slv.SearchDepth(), tools.FormatInt(*m.bulkSize())))
+		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s%s | Tiefe: %d | Worker: %d | Bulk: %s",
+			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), m.slv.SearchDepth(), m.slv.Workers(), tools.FormatInt(*m.bulkSize())))
 	}
 	return ""
 }

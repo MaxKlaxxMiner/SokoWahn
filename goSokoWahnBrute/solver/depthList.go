@@ -28,9 +28,10 @@ var (
 // kommen (das Original nutzte den TickCount - bei parallelen Starts nicht eindeutig)
 const spillPattern = "sokolist_*.tmp"
 
-// löscht liegengebliebene Auslagerungsdateien abgestürzter Läufe (älter als maxAge).
-// Dateien laufender Prozesse sind geöffnet und lassen sich unter Windows ohnehin
-// nicht löschen - Fehler werden deshalb bewusst ignoriert.
+// löscht liegengebliebene Auslagerungsdateien abgestürzter Läufe (älter als maxAge;
+// der Aufruf beim Programmstart nutzt eine Woche - mehr als genug Reserve, denn
+// länger als ein paar Stunden läuft keine Suche: die Hashtabellen füllen selbst
+// 128 GB RAM in 3-4 Stunden). Fehler werden bewusst ignoriert.
 func CleanupSpillFiles(dir string, maxAge time.Duration) {
 	matches, _ := filepath.Glob(filepath.Join(dir, spillPattern))
 	for _, path := range matches {
@@ -46,12 +47,18 @@ func CleanupSpillFiles(dir string, maxAge time.Duration) {
 //
 // Wächst die Liste über SpillBufferBytes hinaus, wandert der volle Schreibpuffer
 // blockweise in eine Temp-Datei (Muster von SokowahnLinearList2 aus dem Original).
-// Schreiben und Lesen laufen dabei im Hintergrund (Doppel-Pufferung): die Suche
-// füllt sofort den nächsten Puffer weiter bzw. arbeitet den aktuellen Leseblock ab,
-// während die Platte den vorigen wegschreibt oder den nächsten voraus liest.
-// Gewartet wird nur, wenn die Platte nicht hinterherkommt. Die Sätze kommen in
-// exakt derselben FIFO-Reihenfolge wieder heraus wie in der reinen RAM-Variante,
-// das Suchverhalten bleibt also bitgenau identisch. Release löscht die Datei wieder.
+// Schreiben und Vorauslesen laufen im Hintergrund: die Suche füllt sofort einen
+// frischen Puffer weiter bzw. arbeitet den aktuellen Leseblock ab, während die
+// Platte den vorigen wegschreibt oder den nächsten voraus liest. Gewartet wird nur,
+// wenn die Platte nicht hinterherkommt. Die Sätze kommen in exakt derselben
+// FIFO-Reihenfolge wieder heraus wie in der reinen RAM-Variante, das Suchverhalten
+// bleibt also bitgenau identisch. Release löscht die Datei wieder.
+//
+// Datei-Handles werden pro Blockzugriff geöffnet und sofort wieder geschlossen
+// (nur der Name bleibt gemerkt): es können hunderte Listen gleichzeitig aktiv sein
+// (die Laufzug-Tiefen verteilen Pushes über viele Ziel-Tiefen), und auf Ordnern mit
+// NTFS-Komprimierung arbeitet die Komprimierung erst nach dem Schließen richtig
+// (Erfahrungswert aus der C#-Version, deren Handles ebenfalls bewusst zugingen).
 //
 // Alle Methoden gehören auf EINE Goroutine (wie bisher) - nebenläufig sind nur die
 // intern gestarteten IO-Goroutinen, synchronisiert über die beiden WaitGroups.
@@ -62,9 +69,9 @@ type DepthList struct {
 	dataRead int      // Leseposition im Schreibpuffer in Sätzen
 	noSpill  bool     // true nach einem Auslagerungs-Fehler: Liste bleibt im RAM
 
-	file     *os.File // Auslagerungsdatei (nil = bisher nichts ausgelagert)
-	writeOff int64    // fertig geschriebene Bytes in der Datei
-	readOff  int64    // bis hierhin gelesen bzw. fürs Vorauslesen reserviert (Bytes)
+	fileName string // Auslagerungsdatei ("" = bisher nichts ausgelagert)
+	writeOff int64  // fertig geschriebene Bytes in der Datei
+	readOff  int64  // bis hierhin gelesen bzw. fürs Vorauslesen reserviert (Bytes)
 
 	readBuf []uint16 // aktueller Leseblock
 	readLen int      // gültige Sätze im Leseblock
@@ -74,7 +81,6 @@ type DepthList struct {
 	writeWG  sync.WaitGroup
 	pending  []uint16 // Puffer des laufenden Schreibvorgangs (nil = keiner)
 	writeErr error    // Ergebnis des Schreibvorgangs (gültig nach writeWG.Wait)
-	spare    []uint16 // ausgedienter Schreibpuffer zur Wiederverwendung
 
 	// --- Hintergrund-Vorauslesen (höchstens ein Vorgang) ---
 	readWG          sync.WaitGroup
@@ -102,9 +108,11 @@ func (l *DepthList) PushRecord(record []uint16) {
 	l.spillIfFull()
 }
 
-// reicht den vollen Schreibpuffer an eine Hintergrund-Goroutine weiter und füllt sofort
-// den Tausch-Puffer weiter (die Datei wird erst beim ersten Überlauf angelegt); bei
-// Fehlern bleibt die Liste einfach komplett im RAM.
+// reicht den vollen Schreibpuffer an eine Hintergrund-Goroutine weiter und beginnt
+// einen frischen Puffer (die Datei wird erst beim ersten Überlauf angelegt); bei
+// Fehlern bleibt die Liste einfach komplett im RAM. Bewusst KEIN Puffer-Recycling:
+// hunderte gleichzeitig aktive Listen würden sonst je einen vollen Tausch-Puffer
+// dauerhaft festhalten - der Zuwachs ab nil ist dagegen billig.
 // Der dataRead-Schutz: wird bereits aus dem Schreibpuffer gelesen, darf er nicht mehr
 // ausgelagert werden (die FIFO-Buchführung säße sonst schief) - im Solver/Blocker sind
 // Push- und Lesephase einer Liste aber ohnehin strikt getrennt.
@@ -112,25 +120,26 @@ func (l *DepthList) spillIfFull() {
 	if l.noSpill || SpillDir == "" || l.dataRead > 0 || len(l.data)*2 < SpillBufferBytes {
 		return
 	}
-	if l.file == nil {
+	if l.fileName == "" {
 		file, err := os.CreateTemp(SpillDir, spillPattern)
 		if err != nil {
 			l.noSpill = true
 			return
 		}
-		l.file = file
+		l.fileName = file.Name()
+		file.Close() // Handle sofort wieder zu, geöffnet wird pro Blockzugriff
 	}
-	l.finishWrite() // vorigen Schreibvorgang verbuchen (dank Doppel-Puffer meist längst fertig)
+	l.finishWrite() // vorigen Schreibvorgang verbuchen (meist längst fertig)
 	if l.noSpill {
 		return
 	}
 
-	l.pending, l.data, l.spare = l.data, l.spare[:0], nil
+	l.pending, l.data = l.data, nil
 	buf, off := l.pending, l.writeOff
 	l.writeWG.Add(1)
 	go func() {
 		defer l.writeWG.Done()
-		_, l.writeErr = l.file.WriteAt(u16Bytes(buf), off)
+		l.writeErr = writeSpillBlock(l.fileName, buf, off)
 	}()
 }
 
@@ -150,7 +159,6 @@ func (l *DepthList) finishWrite() {
 		return
 	}
 	l.writeOff += int64(len(l.pending) * 2)
-	l.spare = l.pending[:0] // Puffer für den nächsten Tausch wiederverwenden
 	l.pending = nil
 }
 
@@ -188,7 +196,7 @@ func (l *DepthList) fillReadBuf() {
 	if l.prefetchRecords > 0 {
 		l.readWG.Wait()
 		if l.readErr != nil {
-			panic(fmt.Sprintf("DepthList: Lesefehler in Auslagerungsdatei %q: %v", l.file.Name(), l.readErr))
+			panic(fmt.Sprintf("DepthList: Lesefehler in Auslagerungsdatei %q: %v", l.fileName, l.readErr))
 		}
 		l.readBuf, l.prefetch = l.prefetch, l.readBuf
 		l.readLen, l.readPos = l.prefetchRecords, 0
@@ -210,8 +218,8 @@ func (l *DepthList) fillReadBuf() {
 		l.readBuf = make([]uint16, values)
 	}
 	l.readBuf = l.readBuf[:values]
-	if _, err := l.file.ReadAt(u16Bytes(l.readBuf), l.readOff); err != nil {
-		panic(fmt.Sprintf("DepthList: Lesefehler in Auslagerungsdatei %q: %v", l.file.Name(), err))
+	if err := readSpillBlock(l.fileName, l.readBuf, l.readOff); err != nil {
+		panic(fmt.Sprintf("DepthList: Lesefehler in Auslagerungsdatei %q: %v", l.fileName, err))
 	}
 	l.readOff += int64(values * 2)
 	l.readLen, l.readPos = records, 0
@@ -237,7 +245,7 @@ func (l *DepthList) startPrefetch() {
 	l.readWG.Add(1)
 	go func() {
 		defer l.readWG.Done()
-		_, l.readErr = l.file.ReadAt(u16Bytes(buf), off)
+		l.readErr = readSpillBlock(l.fileName, buf, off)
 	}()
 }
 
@@ -277,18 +285,38 @@ func (l *DepthList) Release() {
 		l.readWG.Wait()
 		l.prefetchRecords, l.readErr = 0, nil
 	}
-	l.data, l.spare, l.prefetch = nil, nil, nil
+	l.data, l.prefetch = nil, nil
 	l.dataRead = 0
 	l.noSpill = false
 	l.readBuf = nil
 	l.readLen, l.readPos = 0, 0
 	l.writeOff, l.readOff = 0, 0
-	if l.file != nil {
-		name := l.file.Name()
-		l.file.Close()
-		os.Remove(name)
-		l.file = nil
+	if l.fileName != "" {
+		os.Remove(l.fileName)
+		l.fileName = ""
 	}
+}
+
+// schreibt einen Block in die Auslagerungsdatei (Handle nur für diesen Zugriff offen)
+func writeSpillBlock(name string, buf []uint16, off int64) error {
+	file, err := os.OpenFile(name, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteAt(u16Bytes(buf), off)
+	return err
+}
+
+// liest einen Block aus der Auslagerungsdatei (Handle nur für diesen Zugriff offen)
+func readSpillBlock(name string, buf []uint16, off int64) error {
+	file, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.ReadAt(u16Bytes(buf), off)
+	return err
 }
 
 // interpretiert das uint16-Slice als Byte-Slice (native Byte-Reihenfolge - unkritisch,

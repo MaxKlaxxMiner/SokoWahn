@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -24,6 +25,45 @@ func press(t *testing.T, m Model, key tea.KeyMsg) Model {
 	t.Helper()
 	updated, _ := m.handleKey(key)
 	return updated.(Model)
+}
+
+// Worker-Stufenfolge: verdoppelnd bis zur Kernzahl, darüber Kernzahl-Vielfache bis *8
+func TestWorkerSteps(t *testing.T) {
+	if got, want := workerStepsFor(12), []int{1, 2, 4, 8, 12, 24, 48, 96}; !slices.Equal(got, want) {
+		t.Errorf("workerStepsFor(12) = %v, erwartet %v", got, want)
+	}
+	if got, want := workerStepsFor(16), []int{1, 2, 4, 8, 16, 32, 64, 128}; !slices.Equal(got, want) {
+		t.Errorf("workerStepsFor(16) = %v, erwartet %v", got, want)
+	}
+	if got, want := workerStepsFor(6), []int{1, 2, 4, 6, 12, 24, 48}; !slices.Equal(got, want) {
+		t.Errorf("workerStepsFor(6) = %v, erwartet %v", got, want)
+	}
+}
+
+// Worker-Umschaltung per * und /: eine Stufe hoch bzw. runter, an den Enden bleibt es stehen
+func TestChangeWorkers(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	m := NewModel("", 0)
+	m.input.SetValue(testLevel)
+	m.scan()
+	m.blk.Abort()
+	m.startSearch()
+
+	// unabhängig von der Kernzahl: von 1 geht es immer auf 2 hoch und zurück auf 1
+	m.slv.SetWorkers(1)
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("*")})
+	if got := m.slv.Workers(); got != 2 {
+		t.Errorf("nach * werden 2 Worker erwartet, erhalten: %d", got)
+	}
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	if got := m.slv.Workers(); got != 1 {
+		t.Errorf("nach / wird 1 Worker erwartet, erhalten: %d", got)
+	}
+	m = press(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("/")})
+	if got := m.slv.Workers(); got != 1 {
+		t.Errorf("unter 1 Worker darf es nicht gehen, erhalten: %d", got)
+	}
 }
 
 // kompletter Ablauf ohne Terminal: Scan -> Blockerscan -> Suche -> Lösung

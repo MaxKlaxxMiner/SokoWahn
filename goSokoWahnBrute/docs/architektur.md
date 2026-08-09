@@ -52,8 +52,15 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   (`DepthList`, flache uint16-Sätze: Spieler + Kisten; Tiefe steckt im Listenindex).
 - **Disk-Auslagerung der Suchlisten** (Muster von SokowahnLinearList2): wächst eine Liste
   über `solver.SpillBufferBytes` (64 MB), wandert der Schreibpuffer blockweise in eine
-  Temp-Datei (`temp/sokolist_*.tmp`, Zufallsname via os.CreateTemp - mehrere Prozesse
+  Temp-Datei (`sokolist_*.tmp`, Zufallsname via os.CreateTemp - mehrere Prozesse
   stören sich nicht); gelesen wird sequenziell über einen gleich großen Lesepuffer.
+  Ordner-Wahl beim Programmstart: `C:\temp\sokowahn` falls vorhanden (bewusst von Hand
+  anzulegen, z.B. auf einer anderen Platte), sonst `temp/` im Arbeitsverzeichnis.
+  Datei-Handles werden pro Blockzugriff geöffnet und sofort wieder geschlossen: es
+  können hunderte Listen gleichzeitig aktiv sein (Laufzug-Tiefen verteilen Pushes über
+  viele Ziel-Tiefen), und NTFS-Komprimierung arbeitet erst nach dem Schließen richtig
+  (Erfahrungswert aus der C#-Version). Aus demselben Grund gibt es kein Puffer-
+  Recycling - jede aktive Liste hält höchstens einen Schreibpuffer.
   Schreiben und Vorauslesen laufen als Hintergrund-Goroutinen mit Doppel-Pufferung
   (je Liste höchstens ein Schreib- und ein Lesevorgang gleichzeitig) - die Suche
   arbeitet währenddessen weiter und wartet nur, wenn die Platte nicht hinterherkommt.
@@ -61,8 +68,9 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   RAM-Variante (Tests: TestSolveSpillDeterminism, TestSolveVanillaSpillOracle). Auch die
   vier Blocker-Stufenlisten lagern so aus. `Release`/`Solver.Close`/`Blocker.Abort`
   löschen die Dateien; beim Programmstart räumt `CleanupSpillFiles` Reste abgestürzter
-  Läufe weg (älter als 24 h). Ohne gesetztes `solver.SpillDir` (z.B. in Tests) bleibt
-  alles im RAM.
+  Läufe weg (älter als eine Woche - üppige Reserve, denn länger als ein paar Stunden
+  läuft keine Suche, die Hashtabellen füllen 128 GB RAM in 3-4 Stunden). Ohne
+  gesetztes `solver.SpillDir` (z.B. in Tests) bleibt alles im RAM.
 - `PosTable`-Implementierung ist die `CompactTable`: offene Adressierung mit linearem
   Sondieren, 10 Byte pro Slot (voller 64-Bit-Schlüssel + uint16-Tiefe, verlustfrei),
   crc==0 als Frei-Marker (Sondieren berührt nur das Schlüssel-Array), Verdopplung bei
@@ -96,6 +104,24 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   ins Paket `tables` hängen und unter Realbedingungen messen.
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
   Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
+- **Parallele Suche** (`parallel.go`, Default NumCPU*4 Worker, `SetWorkers(1)` = seriell):
+  Batches ab `parallelMinRecords` Sätzen werden in statische, zusammenhängende Bereiche
+  geteilt; die Worker generieren Varianten und filtern gegen die (während der Generierung
+  eingefrorene) Hashtabelle vor, der serielle Merge läuft in Bereichs-Reihenfolge = exakter
+  FIFO-Reihenfolge mit der Originallogik -> bitgenau identisch zur seriellen Suche, egal
+  wie viele Worker (Tests: TestSolveParallelDeterminism, Vanilla-Orakel läuft im Default
+  parallel). Wichtig fürs Verständnis: die dynamischen Chunks des Blockers wären hier
+  falsch, weil foundTotal-Pruning und Tiefen-Updates reihenfolge-abhängig sind; und der
+  eingefrorene Vorfilter ist äquivalent zum Live-Zugriff, weil Add/Update innerhalb eines
+  Tiefen-Batches nur Tiefen > Listentiefe schreiben und Tabellen-Tiefen nur sinken.
+  Der forwardOnly-Sonderfall (Mini-Levels ohne Zielstellungen) bleibt komplett seriell.
+  Benchmark lid4208 (8 Kisten, 132 Züge, 1,55M Knoten, Blocker 7 Stufen aus dem Cache,
+  12 Kerne, 09.08.2026): Worker 1/2/4/8/12/24/48/96 -> 16,9 / 10,0 / 6,2 / 4,7 / 4,4 /
+  4,2 / **3,8** / 3,8 s (Faktor 4,4; Überbelegung *4 kaschiert die Speicherlatenz wie
+  beim Blocker, daher Default NumCPU*4). Die Bulk-Größe ist bei 48 Workern praktisch
+  egal (1.000 bis 1e9: alle ~3,9-4,0 s; der alte C#-Erfahrungswert "Bulk ~200 optimal"
+  gilt für das Fan-out-Design nicht mehr - kleine Batches kosten dort nur Overhead).
+  Alle Sweep-Läufe byte-gleich über sämtliche 132 Tiefenzeilen (Knoten, Rest, Lösung).
 - Sonderfall `forwardOnly`: Levels ohne Zielstellungen (z.B. 1-Schub-Level) laufen als reine
   Vorwärtssuche mit direkter Gelöst-Prüfung - das konnte das C#-Original nicht.
 - Lösungs-Rekonstruktion über beide Tabellen (Vorgänger/Nachfolger mit exakt passender Tiefe),

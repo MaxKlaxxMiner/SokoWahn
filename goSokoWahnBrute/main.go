@@ -20,15 +20,24 @@ func main() {
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
 	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
-	workers := flag.Int("workers", 0, "Anzahl der Blocker-Worker (0 = automatisch, 1 = seriell)")
+	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
 	flag.Parse()
 
 	// Auslagerung großer Suchlisten auf die Festplatte aktivieren und dabei
-	// liegengebliebene Dateien abgestürzter Läufe aufräumen (älter als 24 Stunden;
-	// parallele Prozesse stören sich dank der Zufallsnamen nicht)
-	if err := os.MkdirAll("temp", 0755); err == nil {
-		solver.CleanupSpillFiles("temp", 24*time.Hour)
-		solver.SpillDir = "temp"
+	// liegengebliebene Dateien abgestürzter Läufe aufräumen (älter als eine Woche;
+	// parallele Prozesse stören sich dank der Zufallsnamen nicht).
+	// Existiert C:\temp\sokowahn (von Max angelegt, z.B. auf einer anderen Platte),
+	// hat dieser Ordner Vorrang - sonst wie gehabt temp/ im Arbeitsverzeichnis.
+	spillDir := `C:\temp\sokowahn`
+	if info, err := os.Stat(spillDir); err != nil || !info.IsDir() {
+		spillDir = "temp"
+		if err := os.MkdirAll(spillDir, 0755); err != nil {
+			spillDir = "" // kein Auslagerungs-Ordner verfügbar -> alles bleibt im RAM
+		}
+	}
+	if spillDir != "" {
+		solver.CleanupSpillFiles(spillDir, 7*24*time.Hour)
+		solver.SpillDir = spillDir
 	}
 
 	// optionales Level aus Datei laden
@@ -112,6 +121,9 @@ func runCli(levelData string, useBlocker bool, workers int) {
 
 	s := solver.New(field)
 	defer s.Close() // Auslagerungsdateien der Suchlisten löschen
+	if workers > 0 {
+		s.SetWorkers(workers)
+	}
 	startTime := time.Now()
 	lastDepth := -1
 

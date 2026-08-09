@@ -141,6 +141,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				*m.bulkSize() /= 10
 			}
 			return m, nil
+		case "*": // Such-Worker eine Stufe hoch
+			m.changeWorkers(true)
+			return m, nil
+		case "/": // Such-Worker eine Stufe runter
+			m.changeWorkers(false)
+			return m, nil
 		case "i": // neues Level eingeben
 			return m.enterInput()
 		}
@@ -233,12 +239,20 @@ func (m Model) handleTick() (tea.Model, tea.Cmd) {
 			}
 		}
 	case modeSearch:
+		startProcessed := m.slv.ProcessedCount()
 		for time.Now().Before(deadline) {
 			if !m.slv.Step(m.bulkSearch) {
 				m.finishSearch()
 				m.lastTick = time.Since(start)
 				return m, nil
 			}
+		}
+		// Suchdurchsatz messen und exponentiell glätten (ruhige Anzeige beim Worker-Tuning);
+		// gezählt werden verarbeitete Sätze, nicht neue Knoten - die Anzeige bleibt damit
+		// auch in der Beweis-Endphase aussagekräftig, wenn kaum noch Neues dazukommt
+		if elapsed := time.Since(start).Seconds(); elapsed > 0 {
+			rate := float64(m.slv.ProcessedCount()-startProcessed) / elapsed
+			m.statesPerSec = (m.statesPerSec*7 + int64(rate)*3) / 10
 		}
 	default:
 		m.auto = false

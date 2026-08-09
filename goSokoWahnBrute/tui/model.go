@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -50,6 +51,7 @@ type Model struct {
 	ramStop     bool
 	ticks       int
 	lastTick    time.Duration // Rechenzeit des letzten Auto-Ticks
+	statesPerSec int64        // geglätteter Suchdurchsatz im Auto-Modus (verarbeitete Stellungen pro Sekunde)
 
 	// --- Lösung ---
 	solution *solver.Solution
@@ -191,6 +193,44 @@ func webInfoLine(info *WebLevelInfo) string {
 	return line + " | "
 }
 
+// Stufenfolge der Such-Worker-Anzahl: von 1 verdoppelnd bis zur Kernzahl,
+// darüber Vielfache der Kernzahl bis *8 (z.B. bei 12 Kernen: 1,2,4,8,12,24,48,96)
+func workerStepsFor(cpu int) []int {
+	var steps []int
+	for v := 1; v < cpu; v *= 2 {
+		steps = append(steps, v)
+	}
+	for mul := 1; mul <= 8; mul *= 2 {
+		steps = append(steps, cpu*mul)
+	}
+	return steps
+}
+
+// schaltet die Such-Worker eine Stufe hoch oder runter (Tasten * und /)
+func (m *Model) changeWorkers(up bool) {
+	if m.slv == nil {
+		return
+	}
+	steps := workerStepsFor(runtime.NumCPU())
+	cur := m.slv.Workers()
+	if up {
+		for _, v := range steps {
+			if v > cur {
+				m.slv.SetWorkers(v)
+				break
+			}
+		}
+	} else {
+		for i := len(steps) - 1; i >= 0; i-- {
+			if steps[i] < cur {
+				m.slv.SetWorkers(steps[i])
+				break
+			}
+		}
+	}
+	m.status = fmt.Sprintf("Such-Worker: %d", m.slv.Workers())
+}
+
 // gibt Solver und Blocker samt ihrer Auslagerungsdateien frei
 // (beim Levelwechsel und beim Beenden der Oberfläche)
 func (m Model) closeWork() {
@@ -206,6 +246,7 @@ func (m Model) closeWork() {
 func (m *Model) startSearch() {
 	m.slv = solver.New(m.field)
 	m.mode = modeSearch
+	m.statesPerSec = 0
 	m.status = "Suche bereit: s = Einzelschritt, b = Bulk, a = Auto"
 }
 

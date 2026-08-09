@@ -1,6 +1,10 @@
 package solver
 
-import "goSokoWahnBrute/soko"
+import (
+	"runtime"
+
+	"goSokoWahnBrute/soko"
+)
 
 // bidirektionaler Brute-Force-Solver: Vorwärtssuche von der Startstellung und
 // Rückwärtssuche von den Zielstellungen laufen aufeinander zu, bis sich beide
@@ -31,9 +35,14 @@ type Solver struct {
 	dirForward bool // gecachte Richtungswahl (true = vorwärts)
 
 	hashUsage []int64 // Hash-Gesamtnutzung je Suchtiefe (Datenbasis der Max-Tiefen-Schätzung)
+	processed int64   // insgesamt verarbeitete Sätze (Datenbasis der Stellungen/s-Anzeige)
 
 	varBuf   []soko.State // wiederverwendbarer Buffer für die Variantensuche
 	curState soko.State   // Buffer für die aktuell geladene Stellung
+
+	// --- Parallelisierung (siehe parallel.go) ---
+	workerCount int            // Anzahl der Such-Worker (1 = komplett seriell)
+	workers     []searchWorker // Worker-Kontexte (lazy beim ersten parallelen Batch)
 }
 
 func New(field *soko.Field) *Solver {
@@ -57,6 +66,7 @@ func New(field *soko.Field) *Solver {
 		backwardDepth: 0,
 		foundTotal:    -1,
 		dirDepth:      -1,
+		workerCount:   runtime.NumCPU() * 4, // Überbelegung kaschiert die Speicherlatenz (Benchmark-Sweep lid4208, siehe docs/architektur.md)
 	}
 
 	s.varBuf = base.MakeStateBuffer(256)[:0]

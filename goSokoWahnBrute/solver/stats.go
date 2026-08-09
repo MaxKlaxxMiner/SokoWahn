@@ -60,6 +60,12 @@ func (s *Solver) SpillBytes() int64 {
 	return sum
 }
 
+// Gesamtzahl der bisher verarbeiteten Sätze aus den Suchlisten (läuft anders als
+// NodeCount auch in der Beweis-Endphase weiter, wenn kaum noch Neues dazukommt)
+func (s *Solver) ProcessedCount() int64 {
+	return s.processed
+}
+
 // Gesamtzahl der bekannten Stellungen (Pendant zu KnotenAnzahl im Original)
 func (s *Solver) NodeCount() int64 {
 	return s.forwardKnown.Len() + s.backwardKnown.Len()

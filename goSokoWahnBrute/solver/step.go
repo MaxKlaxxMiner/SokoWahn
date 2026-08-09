@@ -64,7 +64,27 @@ func (s *Solver) searchForward(limit int) bool {
 
 	list := s.forwardLists[s.forwardDepth]
 	batch := list.PopBatch(limit)
+	s.processed += int64(len(batch) / s.recordSize)
 
+	// große Batches parallel verarbeiten (bitgenau identisch, siehe parallel.go);
+	// der forwardOnly-Sonderfall (Mini-Levels) bleibt komplett seriell
+	if !s.forwardOnly && s.useParallel(len(batch)) {
+		s.runSearchWorkers(batch, s.forwardDepth, true)
+		s.mergeForward()
+	} else {
+		s.searchForwardSerial(batch)
+	}
+
+	if list.Count() == 0 {
+		list.Release()
+		s.forwardDepth++
+	}
+
+	return true
+}
+
+// serieller Kern der Vorwärtssuche (Referenz-Verhalten, von den Workern gespiegelt)
+func (s *Solver) searchForwardSerial(batch []uint16) {
 	for off := 0; off < len(batch); off += s.recordSize {
 		s.loadRecord(batch[off:off+s.recordSize], int32(s.forwardDepth))
 		if s.forwardKnown.Get(s.curState.Crc) < uint16(s.forwardDepth) {
@@ -119,13 +139,6 @@ func (s *Solver) searchForward(limit int) bool {
 			}
 		}
 	}
-
-	if list.Count() == 0 {
-		list.Release()
-		s.forwardDepth++
-	}
-
-	return true
 }
 
 // Rückwärtssuche beginnend bei den Zielstellungen
@@ -137,7 +150,26 @@ func (s *Solver) searchBackward(limit int) bool {
 
 	list := s.backwardLists[s.backwardDepth]
 	batch := list.PopBatch(limit)
+	s.processed += int64(len(batch) / s.recordSize)
 
+	// große Batches parallel verarbeiten (bitgenau identisch, siehe parallel.go)
+	if s.useParallel(len(batch)) {
+		s.runSearchWorkers(batch, s.backwardDepth, false)
+		s.mergeBackward()
+	} else {
+		s.searchBackwardSerial(batch)
+	}
+
+	if list.Count() == 0 {
+		list.Release()
+		s.backwardDepth++
+	}
+
+	return true
+}
+
+// serieller Kern der Rückwärtssuche (Referenz-Verhalten, von den Workern gespiegelt)
+func (s *Solver) searchBackwardSerial(batch []uint16) {
 	for off := 0; off < len(batch); off += s.recordSize {
 		s.loadRecord(batch[off:off+s.recordSize], int32(s.backwardDepth))
 		s.work.SetState(&s.curState)
@@ -178,13 +210,6 @@ func (s *Solver) searchBackward(limit int) bool {
 			}
 		}
 	}
-
-	if list.Count() == 0 {
-		list.Release()
-		s.backwardDepth++
-	}
-
-	return true
 }
 
 // prüft, ob alle Kisten der Stellung auf den Zielfeldern stehen
