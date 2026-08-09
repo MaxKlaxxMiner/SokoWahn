@@ -48,6 +48,18 @@ func (s *Solver) OpenCount() int64 {
 	return sum
 }
 
+// auf die Festplatte ausgelagerte Bytes aller Suchlisten (0 = alles im RAM)
+func (s *Solver) SpillBytes() int64 {
+	var sum int64
+	for _, list := range s.forwardLists {
+		sum += list.SpillBytes()
+	}
+	for _, list := range s.backwardLists {
+		sum += list.SpillBytes()
+	}
+	return sum
+}
+
 // Gesamtzahl der bekannten Stellungen (Pendant zu KnotenAnzahl im Original)
 func (s *Solver) NodeCount() int64 {
 	return s.forwardKnown.Len() + s.backwardKnown.Len()

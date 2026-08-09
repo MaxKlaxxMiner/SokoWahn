@@ -149,6 +149,7 @@ func (m *Model) scan() {
 	}
 	m.inputErr = ""
 	m.field = field
+	m.closeWork() // alten Arbeitsstand samt Auslagerungsdateien freigeben
 	m.slv = nil
 	m.solution = nil
 	m.auto = false
@@ -188,6 +189,17 @@ func webInfoLine(info *WebLevelInfo) string {
 		line += fmt.Sprintf(" | Bestmoves: %d", info.BestMoves)
 	}
 	return line + " | "
+}
+
+// gibt Solver und Blocker samt ihrer Auslagerungsdateien frei
+// (beim Levelwechsel und beim Beenden der Oberfläche)
+func (m Model) closeWork() {
+	if m.slv != nil {
+		m.slv.Close()
+	}
+	if m.blk != nil {
+		m.blk.Abort() // gibt auch den Arbeitszustand der laufenden Stufe frei
+	}
 }
 
 // wechselt vom Blockerscan in die Lösungssuche

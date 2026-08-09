@@ -23,6 +23,14 @@ func main() {
 	workers := flag.Int("workers", 0, "Anzahl der Blocker-Worker (0 = automatisch, 1 = seriell)")
 	flag.Parse()
 
+	// Auslagerung großer Suchlisten auf die Festplatte aktivieren und dabei
+	// liegengebliebene Dateien abgestürzter Läufe aufräumen (älter als 24 Stunden;
+	// parallele Prozesse stören sich dank der Zufallsnamen nicht)
+	if err := os.MkdirAll("temp", 0755); err == nil {
+		solver.CleanupSpillFiles("temp", 24*time.Hour)
+		solver.SpillDir = "temp"
+	}
+
 	// optionales Level aus Datei laden
 	levelData := ""
 	if flag.NArg() >= 1 {
@@ -103,6 +111,7 @@ func runCli(levelData string, useBlocker bool, workers int) {
 	}
 
 	s := solver.New(field)
+	defer s.Close() // Auslagerungsdateien der Suchlisten löschen
 	startTime := time.Now()
 	lastDepth := -1
 

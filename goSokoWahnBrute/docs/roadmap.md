@@ -25,9 +25,11 @@ die verankerten Referenzwerte absichern.
     Tiefen-Buchführung komplexer: Add/Update mit Tiefenvergleich statt monotoner Marker).
   - CollectStart/CollectGoals parallelisieren (Kombinationen unabhängig; lohnt erst
     bei hohen Steiner-Zahlen mit vielen Kombinationen).
-- **Disk-Auslagerung der Tiefenlisten** hinter dem DepthList-Interface (List2-Muster:
-  32-KiB-Blöcke, nur volle Blöcke auslagern, freigelesene Slots wiederverwenden).
-  Nötig erst bei Levels, deren Fronten nicht mehr in den RAM passen (128 GB verfügbar).
+- ERLEDIGT: **Disk-Auslagerung der Tiefenlisten** in der DepthList selbst (List2-Muster,
+  vereinfacht: 64-MB-Puffer als Blockgröße, sequenzielle Temp-Datei statt Slot-Recycling -
+  die Listen werden strikt erst geschrieben und dann gelesen, Wiederverwendung lohnt nicht).
+  Zufalls-Dateinamen (os.CreateTemp) für parallele Prozesse, 24h-Aufräumen beim Start,
+  bitgenau identisches Suchverhalten (Tests: TestSolveSpillDeterminism + Vanilla-Orakel).
 - **Byte-Modus-Äquivalent**: uint8-Sätze wenn walkEof < 255 (halber Listen-Speicher).
   Eventuell generisch über den Satztyp statt zwei Codepfade.
 

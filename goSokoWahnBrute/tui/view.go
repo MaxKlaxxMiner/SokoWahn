@@ -151,21 +151,31 @@ func (m Model) workLine() string {
 	switch m.mode {
 	case modeBlocker:
 		stats := m.blk.GetStats()
+		disk := diskInfo(m.blk.SpillBytes())
 		if stats.Status == blocker.StatusCreatePatterns {
-			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | übrig: %s | Muster: %s | Bulk: %s",
-				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.BadStates), tools.FormatInt(stats.FoundPatterns), tools.FormatInt(*m.bulkSize())))
+			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | übrig: %s | Muster: %s%s | Bulk: %s",
+				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.BadStates), tools.FormatInt(stats.FoundPatterns), disk, tools.FormatInt(*m.bulkSize())))
 		}
 		if stats.Status == blocker.StatusMergeGoals {
-			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Rest: %s | Bulk: %s",
-				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(stats.MergeRest), tools.FormatInt(*m.bulkSize())))
+			return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Rest: %s%s | Bulk: %s",
+				stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(stats.MergeRest), disk, tools.FormatInt(*m.bulkSize())))
 		}
-		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s | Bulk: %s",
-			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), tools.FormatInt(*m.bulkSize())))
+		return styleHelp.Render(fmt.Sprintf("Stufe %d/%d | offen: %s | bekannt: %s%s | Bulk: %s",
+			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), disk, tools.FormatInt(*m.bulkSize())))
 	case modeSearch:
-		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s | Tiefe: %d | Bulk: %s",
-			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), m.slv.SearchDepth(), tools.FormatInt(*m.bulkSize())))
+		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s%s | Tiefe: %d | Bulk: %s",
+			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), m.slv.SearchDepth(), tools.FormatInt(*m.bulkSize())))
 	}
 	return ""
+}
+
+// Anhang der Statuszeile mit den auf die Festplatte ausgelagerten Suchlisten-Bytes
+// ("" solange alles im RAM liegt)
+func diskInfo(bytes int64) string {
+	if bytes <= 0 {
+		return ""
+	}
+	return " | Disk: " + tools.FormatInt(bytes>>20) + " MB"
 }
 
 // gewichtete Median-Tiefe der offenen Sätze einer Richtung: die Tiefe, unter der die

@@ -50,6 +50,19 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   wie im Original - die Zahlen sind trotzdem 1:1 vergleichbar.
 - Je Richtung: Hashtabelle (`PosTable`) + Suchlisten je Tiefe
   (`DepthList`, flache uint16-Sätze: Spieler + Kisten; Tiefe steckt im Listenindex).
+- **Disk-Auslagerung der Suchlisten** (Muster von SokowahnLinearList2): wächst eine Liste
+  über `solver.SpillBufferBytes` (64 MB), wandert der Schreibpuffer blockweise in eine
+  Temp-Datei (`temp/sokolist_*.tmp`, Zufallsname via os.CreateTemp - mehrere Prozesse
+  stören sich nicht); gelesen wird sequenziell über einen gleich großen Lesepuffer.
+  Schreiben und Vorauslesen laufen als Hintergrund-Goroutinen mit Doppel-Pufferung
+  (je Liste höchstens ein Schreib- und ein Lesevorgang gleichzeitig) - die Suche
+  arbeitet währenddessen weiter und wartet nur, wenn die Platte nicht hinterherkommt.
+  Die FIFO-Reihenfolge bleibt exakt erhalten -> Suchverhalten bitgenau wie die reine
+  RAM-Variante (Tests: TestSolveSpillDeterminism, TestSolveVanillaSpillOracle). Auch die
+  vier Blocker-Stufenlisten lagern so aus. `Release`/`Solver.Close`/`Blocker.Abort`
+  löschen die Dateien; beim Programmstart räumt `CleanupSpillFiles` Reste abgestürzter
+  Läufe weg (älter als 24 h). Ohne gesetztes `solver.SpillDir` (z.B. in Tests) bleibt
+  alles im RAM.
 - `PosTable`-Implementierung ist die `CompactTable`: offene Adressierung mit linearem
   Sondieren, 10 Byte pro Slot (voller 64-Bit-Schlüssel + uint16-Tiefe, verlustfrei),
   crc==0 als Frei-Marker (Sondieren berührt nur das Schlüssel-Array), Verdopplung bei

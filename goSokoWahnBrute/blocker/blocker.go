@@ -310,6 +310,11 @@ func (b *Blocker) initStage() {
 func (b *Blocker) releaseStageWork() {
 	b.work = nil
 	b.known = nil
+	for _, list := range b.stageLists() {
+		if list != nil {
+			list.Release() // löscht auch eine eventuelle Auslagerungsdatei
+		}
+	}
 	b.checkList = nil
 	b.collectList = nil
 	b.badList = nil
@@ -319,6 +324,22 @@ func (b *Blocker) releaseStageWork() {
 	b.tempPatterns = nil
 	b.varBuf = nil
 	b.workers = nil
+}
+
+// die vier Suchlisten der laufenden Stufe (Einträge können nil sein)
+func (b *Blocker) stageLists() [4]*solver.DepthList {
+	return [4]*solver.DepthList{b.checkList, b.collectList, b.badList, b.goodList}
+}
+
+// auf die Festplatte ausgelagerte Bytes der Stufen-Suchlisten (0 = alles im RAM)
+func (b *Blocker) SpillBytes() int64 {
+	var sum int64
+	for _, list := range b.stageLists() {
+		if list != nil {
+			sum += list.SpillBytes()
+		}
+	}
+	return sum
 }
 
 // lädt einen Suchlisten-Satz in den curState-Buffer

@@ -87,6 +87,18 @@ func New(field *soko.Field) *Solver {
 	return s
 }
 
+// gibt alle Suchlisten samt eventueller Auslagerungsdateien frei; die Hashtabellen
+// bleiben erhalten, GetStats und GetSolution funktionieren also weiterhin.
+// Nach dem Abschluss oder beim Verwerfen der Suche aufrufen - nicht mittendrin.
+func (s *Solver) Close() {
+	for _, list := range s.forwardLists {
+		list.Release()
+	}
+	for _, list := range s.backwardLists {
+		list.Release()
+	}
+}
+
 // trägt eine Stellung in die Vorwärts-Suchliste ihrer Zugtiefe ein
 func (s *Solver) pushForward(v *soko.State) {
 	depth := int(v.MoveDepth)
