@@ -48,7 +48,7 @@ func (b *Blocker) Next(limit int) bool {
 		if b.checkList.Count() == 0 {
 			// abgearbeitete Liste gegen den Sammler tauschen
 			b.checkList.Release()
-			b.checkList, b.collectList = b.collectList, solver.NewDepthList(b.recordSize)
+			b.checkList, b.collectList = b.collectList, solver.NewDepthList(b.recordSize, b.walkCount)
 			if b.checkList.Count() == 0 {
 				b.status = StatusMergeGoals // keine neuen Stellungen mehr -> alles Erreichbare ist erfasst
 				b.mergeRest = int64(b.badList.Count())
@@ -63,7 +63,7 @@ func (b *Blocker) Next(limit int) bool {
 		if b.checkList.Count() == 0 {
 			// abgearbeitete Liste gegen die frisch markierten guten Stellungen tauschen
 			b.checkList.Release()
-			b.checkList, b.goodList = b.goodList, solver.NewDepthList(b.recordSize)
+			b.checkList, b.goodList = b.goodList, solver.NewDepthList(b.recordSize, b.walkCount)
 			if b.checkList.Count() == 0 {
 				// alle erreichbaren guten Stellungen sind markiert -> Muster einsammeln
 				b.stageChecked = b.known.Len()

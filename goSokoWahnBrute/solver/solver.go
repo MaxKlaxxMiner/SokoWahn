@@ -113,7 +113,7 @@ func (s *Solver) Close() {
 func (s *Solver) pushForward(v *soko.State) {
 	depth := int(v.MoveDepth)
 	for depth >= len(s.forwardLists) {
-		s.forwardLists = append(s.forwardLists, NewDepthList(s.recordSize))
+		s.forwardLists = append(s.forwardLists, NewDepthList(s.recordSize, s.base.WalkCount()))
 	}
 	s.forwardLists[depth].Push(v)
 }
@@ -122,7 +122,7 @@ func (s *Solver) pushForward(v *soko.State) {
 func (s *Solver) pushBackward(v *soko.State) {
 	depth := int(v.MoveDepth)
 	for depth >= len(s.backwardLists) {
-		s.backwardLists = append(s.backwardLists, NewDepthList(s.recordSize))
+		s.backwardLists = append(s.backwardLists, NewDepthList(s.recordSize, s.base.WalkCount()))
 	}
 	s.backwardLists[depth].Push(v)
 }

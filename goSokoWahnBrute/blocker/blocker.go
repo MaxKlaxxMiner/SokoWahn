@@ -295,10 +295,10 @@ func (b *Blocker) initStage() {
 		b.directTable = nil
 		b.known = b.tableFactory()
 	}
-	b.checkList = solver.NewDepthList(b.recordSize)
-	b.collectList = solver.NewDepthList(b.recordSize)
-	b.badList = solver.NewDepthList(b.recordSize)
-	b.goodList = solver.NewDepthList(b.recordSize)
+	b.checkList = solver.NewDepthList(b.recordSize, b.walkCount)
+	b.collectList = solver.NewDepthList(b.recordSize, b.walkCount)
+	b.badList = solver.NewDepthList(b.recordSize, b.walkCount)
+	b.goodList = solver.NewDepthList(b.recordSize, b.walkCount)
 	b.varBuf = b.work.MakeStateBuffer(256)[:0]
 	b.curState = soko.State{Boxes: make([]soko.Wpos, k)}
 	if b.workerCount > 1 {

@@ -225,7 +225,7 @@ func (s *Solver) mergeBackward() {
 // trägt einen kodierten Satz in die Vorwärts-Suchliste seiner Zugtiefe ein
 func (s *Solver) pushForwardRecord(depth int, record []uint16) {
 	for depth >= len(s.forwardLists) {
-		s.forwardLists = append(s.forwardLists, NewDepthList(s.recordSize))
+		s.forwardLists = append(s.forwardLists, NewDepthList(s.recordSize, s.base.WalkCount()))
 	}
 	s.forwardLists[depth].PushRecord(record)
 }
@@ -233,7 +233,7 @@ func (s *Solver) pushForwardRecord(depth int, record []uint16) {
 // trägt einen kodierten Satz in die Rückwärts-Suchliste seiner Zugtiefe ein
 func (s *Solver) pushBackwardRecord(depth int, record []uint16) {
 	for depth >= len(s.backwardLists) {
-		s.backwardLists = append(s.backwardLists, NewDepthList(s.recordSize))
+		s.backwardLists = append(s.backwardLists, NewDepthList(s.recordSize, s.base.WalkCount()))
 	}
 	s.backwardLists[depth].PushRecord(record)
 }

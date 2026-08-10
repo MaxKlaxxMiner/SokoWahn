@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -23,6 +24,15 @@ var (
 	// halten hunderte aktive Listen je einen Puffer - 64 MB summierten sich dort auf
 	// zweistellige GB RAM, bevor überhaupt gespillt wurde
 	SpillBufferBytes = 16 << 20
+
+	// erst ab diesem Heap-Verbrauch des Prozesses (runtime.MemStats.Alloc, dieselbe
+	// Messgröße wie die RAM-Notbremse der TUI) beginnen Listen auszulagern - solange
+	// reichlich RAM frei ist, bleibt alles im RAM und die Platte wird geschont.
+	// Die Entscheidung fällt je Liste einmalig beim ersten Erreichen der Puffergröße
+	// und gilt dauerhaft: unterhalb der Schwelle entschiedene Listen bleiben auch dann
+	// im RAM, wenn der Verbrauch später steigt - erst danach volllaufende (also frische)
+	// Listen nehmen den Auslagerungs-Standard. 0 = immer sofort auslagern (Tests)
+	SpillRamThresholdBytes = uint64(32) << 30
 )
 
 // Namensmuster der Auslagerungsdateien: den Zufallsteil (*) vergibt os.CreateTemp
@@ -47,8 +57,13 @@ func CleanupSpillFiles(dir string, maxAge time.Duration) {
 // Satz = Spielerposition + Kistenpositionen, jeweils als uint16
 // (die Zugtiefe selbst steckt im Listenindex des Solvers, nicht im Satz)
 //
-// Wächst die Liste über SpillBufferBytes hinaus, wandert der volle Schreibpuffer
-// blockweise in eine Temp-Datei (Muster von SokowahnLinearList2 aus dem Original).
+// Wächst die Liste über SpillBufferBytes hinaus UND liegt der Heap-Verbrauch des
+// Prozesses über SpillRamThresholdBytes, wandert der volle Schreibpuffer blockweise
+// in eine Temp-Datei (Muster von SokowahnLinearList2 aus dem Original); unterhalb der
+// Schwelle bleibt die Liste dauerhaft im RAM (Details bei SpillRamThresholdBytes).
+// Auf der Platte belegt jeder Wert bei Feldern mit höchstens 256 begehbaren Positionen
+// nur ein Byte statt der vollen uint16 (halbiert Dateigröße und IO-Volumen; die
+// RAM-Puffer bleiben uint16, es ändert sich nur das Disk-Format).
 // Schreiben und Vorauslesen laufen im Hintergrund: die Suche füllt sofort einen
 // frischen Puffer weiter bzw. arbeitet den aktuellen Leseblock ab, während die
 // Platte den vorigen wegschreibt oder den nächsten voraus liest. Gewartet wird nur,
@@ -65,11 +80,12 @@ func CleanupSpillFiles(dir string, maxAge time.Duration) {
 // Alle Methoden gehören auf EINE Goroutine (wie bisher) - nebenläufig sind nur die
 // intern gestarteten IO-Goroutinen, synchronisiert über die beiden WaitGroups.
 type DepthList struct {
-	recordSize int // Satzgröße in uint16-Werten = Kistenanzahl + 1
+	recordSize int   // Satzgröße in uint16-Werten = Kistenanzahl + 1
+	valueBytes int64 // Bytes je Wert in der Auslagerungsdatei (1 bei <= 256 Positionen, sonst 2)
 
 	data     []uint16 // RAM-Schreibpuffer (ohne Auslagerung: die komplette Liste)
 	dataRead int      // Leseposition im Schreibpuffer in Sätzen
-	noSpill  bool     // true nach einem Auslagerungs-Fehler: Liste bleibt im RAM
+	noSpill  bool     // true: Liste bleibt dauerhaft im RAM (RAM-Schwelle beim ersten Überlauf noch nicht erreicht oder Auslagerungs-Fehler)
 
 	fileName string // Auslagerungsdatei ("" = bisher nichts ausgelagert)
 	writeOff int64  // fertig geschriebene Bytes in der Datei
@@ -91,8 +107,15 @@ type DepthList struct {
 	readErr         error    // Ergebnis des Vorauslesens (gültig nach readWG.Wait)
 }
 
-func NewDepthList(recordSize int) *DepthList {
-	return &DepthList{recordSize: recordSize}
+// posCount = Anzahl der möglichen Positionswerte (WalkCount des Feldes): bei bis zu
+// 256 begehbaren Feldern passt jeder Wert in ein Byte und die Auslagerungsdateien
+// halbieren sich (reines Disk-Format, die RAM-Puffer bleiben uint16)
+func NewDepthList(recordSize, posCount int) *DepthList {
+	valueBytes := int64(2)
+	if posCount <= 256 {
+		valueBytes = 1
+	}
+	return &DepthList{recordSize: recordSize, valueBytes: valueBytes}
 }
 
 // trägt eine Stellung ein
@@ -123,6 +146,13 @@ func (l *DepthList) spillIfFull() {
 		return
 	}
 	if l.fileName == "" {
+		// einmalige Entscheidung beim ersten Überlauf: solange der Prozess unter der
+		// RAM-Schwelle liegt, bleibt diese Liste dauerhaft im RAM und schont die Platte -
+		// erst Listen, deren Puffer bei vollem RAM überläuft, lagern wirklich aus
+		if SpillRamThresholdBytes > 0 && processHeapBytes() < SpillRamThresholdBytes {
+			l.noSpill = true
+			return
+		}
 		file, err := os.CreateTemp(SpillDir, spillPattern)
 		if err != nil {
 			l.noSpill = true
@@ -141,8 +171,16 @@ func (l *DepthList) spillIfFull() {
 	l.writeWG.Add(1)
 	go func() {
 		defer l.writeWG.Done()
-		l.writeErr = writeSpillBlock(l.fileName, buf, off)
+		l.writeErr = writeSpillBlock(l.fileName, buf, off, l.valueBytes)
 	}()
+}
+
+// aktueller Heap-Verbrauch des Prozesses; wird nur beim ersten Puffer-Überlauf einer
+// Liste abgefragt, denn ReadMemStats ist nicht kostenlos (kurzer Stop-the-World)
+func processHeapBytes() uint64 {
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+	return mem.Alloc
 }
 
 // wartet auf den laufenden Hintergrund-Schreibvorgang und verbucht ihn
@@ -160,7 +198,7 @@ func (l *DepthList) finishWrite() {
 		l.pending = nil
 		return
 	}
-	l.writeOff += int64(len(l.pending) * 2)
+	l.writeOff += int64(len(l.pending)) * l.valueBytes
 	l.pending = nil
 }
 
@@ -220,10 +258,10 @@ func (l *DepthList) fillReadBuf() {
 		l.readBuf = make([]uint16, values)
 	}
 	l.readBuf = l.readBuf[:values]
-	if err := readSpillBlock(l.fileName, l.readBuf, l.readOff); err != nil {
+	if err := readSpillBlock(l.fileName, l.readBuf, l.readOff, l.valueBytes); err != nil {
 		panic(fmt.Sprintf("DepthList: Lesefehler in Auslagerungsdatei %q: %v", l.fileName, err))
 	}
-	l.readOff += int64(values * 2)
+	l.readOff += int64(values) * l.valueBytes
 	l.readLen, l.readPos = records, 0
 	l.startPrefetch()
 }
@@ -243,11 +281,11 @@ func (l *DepthList) startPrefetch() {
 	l.prefetchRecords = records
 
 	buf, off := l.prefetch, l.readOff
-	l.readOff += int64(values * 2) // Bereich gilt ab jetzt als gelesen (reserviert)
+	l.readOff += int64(values) * l.valueBytes // Bereich gilt ab jetzt als gelesen (reserviert)
 	l.readWG.Add(1)
 	go func() {
 		defer l.readWG.Done()
-		l.readErr = readSpillBlock(l.fileName, buf, off)
+		l.readErr = readSpillBlock(l.fileName, buf, off, l.valueBytes)
 	}()
 }
 
@@ -257,7 +295,7 @@ func (l *DepthList) nextChunkRecords() int {
 	if records < 1 {
 		records = 1
 	}
-	if rest := int((l.writeOff - l.readOff) / 2 / int64(l.recordSize)); records > rest {
+	if rest := int((l.writeOff - l.readOff) / l.valueBytes / int64(l.recordSize)); records > rest {
 		records = rest
 	}
 	return records
@@ -265,7 +303,7 @@ func (l *DepthList) nextChunkRecords() int {
 
 // Anzahl der noch nicht entnommenen Sätze
 func (l *DepthList) Count() int {
-	onDisk := int((l.writeOff-l.readOff)/2/int64(l.recordSize)) + l.prefetchRecords
+	onDisk := int((l.writeOff-l.readOff)/l.valueBytes/int64(l.recordSize)) + l.prefetchRecords
 	return onDisk + l.readLen - l.readPos +
 		len(l.pending)/l.recordSize + len(l.data)/l.recordSize - l.dataRead
 }
@@ -305,24 +343,47 @@ func (l *DepthList) Release() {
 	}
 }
 
-// schreibt einen Block in die Auslagerungsdatei (Handle nur für diesen Zugriff offen)
-func writeSpillBlock(name string, buf []uint16, off int64) error {
+// schreibt einen Block in die Auslagerungsdatei (Handle nur für diesen Zugriff offen);
+// bei valueBytes == 1 wandert nur das Low-Byte jedes Werts auf die Platte. Der temporäre
+// Packpuffer wird bewusst je Zugriff frisch angelegt (kein Recycling, siehe spillIfFull)
+// und lässt den Original-Puffer unangetastet - der Fehler-Rückzug in finishWrite hängt
+// die Sätze sonst korrumpiert zurück an den RAM-Puffer
+func writeSpillBlock(name string, buf []uint16, off int64, valueBytes int64) error {
 	file, err := os.OpenFile(name, os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	_, err = file.WriteAt(u16Bytes(buf), off)
+	data := u16Bytes(buf)
+	if valueBytes == 1 {
+		packed := make([]byte, len(buf))
+		for i, v := range buf {
+			packed[i] = byte(v)
+		}
+		data = packed
+	}
+	_, err = file.WriteAt(data, off)
 	return err
 }
 
-// liest einen Block aus der Auslagerungsdatei (Handle nur für diesen Zugriff offen)
-func readSpillBlock(name string, buf []uint16, off int64) error {
+// liest einen Block aus der Auslagerungsdatei (Handle nur für diesen Zugriff offen);
+// bei valueBytes == 1 werden die gepackten Bytes wieder auf uint16 aufgeweitet
+func readSpillBlock(name string, buf []uint16, off int64, valueBytes int64) error {
 	file, err := os.Open(name)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	if valueBytes == 1 {
+		packed := make([]byte, len(buf))
+		if _, err = file.ReadAt(packed, off); err != nil {
+			return err
+		}
+		for i, b := range packed {
+			buf[i] = uint16(b)
+		}
+		return nil
+	}
 	_, err = file.ReadAt(u16Bytes(buf), off)
 	return err
 }

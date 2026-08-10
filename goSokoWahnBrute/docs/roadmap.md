@@ -53,7 +53,14 @@ die verankerten Referenzwerte absichern.
   Zufalls-Dateinamen (os.CreateTemp) für parallele Prozesse, Aufräumen beim Start
   (Dateien älter als eine Woche), Handles nur pro Blockzugriff offen (NTFS-Komprimierung),
   bitgenau identisches Suchverhalten (Tests: TestSolveSpillDeterminism + Vanilla-Orakel).
-- **Byte-Modus-Äquivalent**: uint8-Sätze wenn walkEof < 255 (halber Listen-Speicher).
+  - ERLEDIGT: **RAM-Schwelle vor dem Auslagern** (SpillRamThresholdBytes, Standard 16 GB):
+    unterhalb bleiben die Listen komplett im RAM und schonen die Platte; die Entscheidung
+    fällt je Liste einmalig beim ersten Puffer-Überlauf, erst danach volllaufende Listen
+    nehmen den 16-MB+Disk-Standard (Test: TestDepthListRamThreshold).
+  - ERLEDIGT: **Byte-Packung des Disk-Formats** bei WalkCount <= 256: 1 Byte je Wert
+    statt uint16, halbes IO-Volumen (Test: TestDepthListSpillBytePacked).
+- **Byte-Modus-Äquivalent im RAM**: uint8-Sätze wenn walkEof < 255 (halber Listen-Speicher;
+  das Disk-Format packt bereits auf Bytes, siehe oben).
   Eventuell generisch über den Satztyp statt zwei Codepfade.
 
 ## Solver-Feinheiten aus der List2-Variante (noch nicht portiert)
