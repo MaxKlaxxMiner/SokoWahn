@@ -7,9 +7,25 @@ die verankerten Referenzwerte absichern.
 ## Performance-Kern
 
 - ERLEDIGT: **Kompakte Hashtabelle** (`CompactTable`, 10 Byte/Slot verlustfrei, crc==0 als
-  Frei-Marker). Offen als weitere Idee: 8-Byte-Variante mit 48-Bit-Rest-Schlüssel -
-  spart nochmal 20%, ist aber verlustbehaftet beim Vergleich (Aliasing-Risiko) und
-  bricht die Bitgenauigkeit zum Orakel -> nur mit Vorsicht.
+  Frei-Marker).
+- ERLEDIGT: **SegmentTable** (8 Byte/Slot und trotzdem verlustfrei - die Top-16-Bits
+  stecken implizit im Segment-Index, die Tiefe invertiert in den freien 16 Bit, Slot 0 =
+  frei; Sondieren strikt im Segment, Grow parallel je Segment). Per solver.TableFactory
+  schaltbar, bitgenau (Vanilla-Orakel-Test). Messung Level 38044: ~20% weniger
+  Tabellen-RAM, ~10% langsamer -> Wahl je nach RAM-Druck.
+- **ArchiveTable ("SlowMemIndex24")**: zweistufig wie SokowahnHash_Index24Multi im
+  Original, aber sparsamer. Dichtes sortiertes Archiv mit 7 Byte/Eintrag zu 100%
+  gefüllt (24-Bit-Präfix implizit im Index: 2^24 uint32-Offsets = 64 MB, trägt bis
+  4,29 Mrd Einträge) + frische SegmentTable für Neuzugänge, Migration ab konfigurierbarem
+  Budget (z.B. FastTierMaxBytes). Migration fast geschenkt: SegmentTable liefert die
+  Top-16-Vorsortierung gratis, Zähl- und Platzierungspass, dann Quicksort je 24-Bit-Fach
+  (winzig, parallel); Merge mit Bestandsarchiv linear, in Chunks nach Top-8-Bits
+  (Peak = Archiv + 1/256 statt 2x), optional über Platte. Updates in-place (Tiefe ändert
+  die Sortierung nicht), Add nur ins frische Tier -> KV-Semantik bleibt, bitgenau.
+  Get im Archiv per Interpolationssuche statt Binärsuche (Keys sind FNV-uniform:
+  2-3 Probes statt 6-7 - im C# war die Archiv-Phase ein Performancefresser, das ist
+  der Haupthebel dagegen). Erwartung 1,3-Mrd-Level: ~9,2 GB statt 17,2 (Segment) bzw.
+  21,5 (Compact); Suchtempo im Archiv-Stadium messen (Schätzung +20-50%).
 - ERLEDIGT: **Parallelisierung der Blocker-Phasen** (SearchVariants + MergeGoals,
   Worker-Pool mit Atomic-Chunks, seriell-identische Ergebnisse; lid349/4-Steiner:
   13,8 s -> 3,8 s bei 16 Kernen). Noch offen:
@@ -32,7 +48,7 @@ die verankerten Referenzwerte absichern.
   - CollectStart/CollectGoals parallelisieren (Kombinationen unabhängig; lohnt erst
     bei hohen Steiner-Zahlen mit vielen Kombinationen).
 - ERLEDIGT: **Disk-Auslagerung der Tiefenlisten** in der DepthList selbst (List2-Muster,
-  vereinfacht: 64-MB-Puffer als Blockgröße, sequenzielle Temp-Datei statt Slot-Recycling -
+  vereinfacht: 16-MB-Puffer als Blockgröße, sequenzielle Temp-Datei statt Slot-Recycling -
   die Listen werden strikt erst geschrieben und dann gelesen, Wiederverwendung lohnt nicht).
   Zufalls-Dateinamen (os.CreateTemp) für parallele Prozesse, Aufräumen beim Start
   (Dateien älter als eine Woche), Handles nur pro Blockzugriff offen (NTFS-Komprimierung),
