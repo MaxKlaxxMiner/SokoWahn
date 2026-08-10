@@ -17,7 +17,10 @@ func setupSpill(t *testing.T, bufferBytes int) string {
 	oldDir, oldSize, oldThreshold := SpillDir, SpillBufferBytes, SpillRamThresholdBytes
 	dir := t.TempDir()
 	SpillDir, SpillBufferBytes, SpillRamThresholdBytes = dir, bufferBytes, 0
-	t.Cleanup(func() { SpillDir, SpillBufferBytes, SpillRamThresholdBytes = oldDir, oldSize, oldThreshold })
+	t.Cleanup(func() {
+		SpillDir, SpillBufferBytes, SpillRamThresholdBytes = oldDir, oldSize, oldThreshold
+		SetSpillRamUsage(0)
+	})
 	return dir
 }
 
@@ -148,17 +151,19 @@ func TestDepthListSpillBytePacked(t *testing.T) {
 	list.Release()
 }
 
-// RAM-Schwelle: solange der Heap-Verbrauch darunter liegt, bleiben Listen im RAM;
-// steigt der Verbrauch über die Schwelle, lagert auch eine bereits groß gewachsene
-// Liste beim nächsten Wachstums-Check ihren kompletten Puffer aus - die
-// FIFO-Reihenfolge bleibt über den RAM->Spill-Übergang hinweg exakt erhalten
+// RAM-Schwelle: solange der gemeldete RAM-Verbrauch darunter liegt, bleiben Listen im
+// RAM; steigt er über die Schwelle, lagert auch eine bereits groß gewachsene Liste beim
+// nächsten Wachstums-Check ihren kompletten Puffer aus und zieht ihn sofort vom
+// gemeldeten Verbrauch ab - weitere Listen bleiben dadurch im RAM (kein
+// Auslagerungs-Gewitter); die FIFO-Reihenfolge bleibt über den RAM->Spill-Übergang
+// hinweg exakt erhalten
 func TestDepthListRamThreshold(t *testing.T) {
 	const recordSize = 2
-	const records = 1000
+	const records = 1000     // je Runde 4000 Puffer-Bytes
 	dir := setupSpill(t, 64) // 64 Bytes = 32 Werte -> Schwellen-Check alle 16 Sätze
 
-	// Schwelle unerreichbar hoch: kein Spill trotz vielfach überschrittener Puffergröße
-	SpillRamThresholdBytes = ^uint64(0)
+	SpillRamThresholdBytes = 4096
+	SetSpillRamUsage(0) // gemeldeter Verbrauch unter der Schwelle: alles bleibt im RAM
 	list := NewDepthList(recordSize, 65536)
 	pushed := 0
 	push := func(n int) {
@@ -172,12 +177,41 @@ func TestDepthListRamThreshold(t *testing.T) {
 		t.Fatal("unterhalb der RAM-Schwelle darf nichts ausgelagert werden")
 	}
 
-	// Schwelle jetzt praktisch immer überschritten: die gewachsene Liste muss beim
-	// nächsten Wachstums-Check ihren kompletten angesammelten Puffer auslagern
-	SpillRamThresholdBytes = 1
-	push(records)
-	if list.SpillBytes() == 0 || countSpillFiles(t, dir) != 1 {
+	// gemeldeter Verbrauch überschreitet die Schwelle: die gewachsene Liste muss beim
+	// nächsten Wachstums-Check ihren kompletten angesammelten Puffer auslagern ...
+	SetSpillRamUsage(6000)
+	for i := 0; countSpillFiles(t, dir) == 0 && i < 100; i++ {
+		push(1)
+	}
+	if countSpillFiles(t, dir) != 1 {
 		t.Fatal("nach Überschreiten der RAM-Schwelle muss die Liste auslagern")
+	}
+
+	// ... der übergebene Puffer zählt ab sofort weder im Anzeige-Wert RamBytes noch im
+	// gemeldeten Verbrauch mit - auch solange der Schreibvorgang noch nicht verbucht
+	// ist (SpillBytes noch 0); sonst würde die nächste Meldung den Abzug aufheben und
+	// beim Schwellen-Übertritt lagerten viele Listen gleichzeitig aus
+	if rb := list.RamBytes(); rb != 0 {
+		t.Fatalf("übergebener Puffer steckt noch im RamBytes-Anzeigewert: %d Bytes", rb)
+	}
+	if usage := spillRamUsage.Load(); usage >= SpillRamThresholdBytes {
+		t.Fatalf("ausgelagerte Puffer wurden nicht vom Verbrauch abgezogen: %d", usage)
+	}
+
+	// die Liste wächst weiter: Folgeblöcke wandern ohne erneute Prüfung zur Platte
+	// und werden dabei verbucht
+	push(records)
+	if list.SpillBytes() == 0 {
+		t.Fatal("die weiter wachsende Liste muss ihre Blöcke verbuchen")
+	}
+
+	// eine zweite Liste sieht rechnerisch wieder freien RAM und bleibt komplett im RAM
+	second := NewDepthList(recordSize, 65536)
+	for i := 0; i < records; i++ {
+		second.PushRecord([]uint16{uint16(i), uint16(i + 1)})
+	}
+	if second.SpillBytes() != 0 || countSpillFiles(t, dir) != 1 {
+		t.Fatal("nach dem Abzug muss eine weitere Liste im RAM bleiben")
 	}
 
 	// alle Sätze kommen in exakter FIFO-Reihenfolge zurück (RAM-Phase + Spill-Phase)
@@ -195,6 +229,7 @@ func TestDepthListRamThreshold(t *testing.T) {
 		t.Fatalf("es kamen %d Sätze zurück, erwartet %d", next, pushed)
 	}
 	list.Release()
+	second.Release()
 	if countSpillFiles(t, dir) != 0 {
 		t.Fatal("Release hat die Auslagerungsdatei nicht gelöscht")
 	}

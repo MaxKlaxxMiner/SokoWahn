@@ -9,6 +9,9 @@ func (s *Solver) Step(limit int) bool {
 		return false
 	}
 
+	// den berechneten RAM-Verbrauch für die Auslagerungs-Entscheidung aktuell halten
+	SetSpillRamUsage(s.RamBytes())
+
 	// Sonderfall ohne Zielstellungen: reine Vorwärtssuche mit direkter Gelöst-Prüfung
 	if s.forwardOnly {
 		if (s.foundTotal >= 0 && s.forwardDepth >= s.foundTotal) || s.forwardDepth == len(s.forwardLists) {

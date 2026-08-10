@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -25,16 +25,31 @@ var (
 	// zweistellige GB RAM, bevor überhaupt gespillt wurde
 	SpillBufferBytes = 16 << 20
 
-	// erst ab diesem Heap-Verbrauch des Prozesses (runtime.MemStats.Alloc, dieselbe
-	// Messgröße wie die RAM-Notbremse der TUI) beginnen Listen auszulagern - solange
-	// reichlich RAM frei ist, bleibt alles im RAM und die Platte wird geschont.
-	// Geprüft wird beim ersten Erreichen der Puffergröße und danach nach jeweils
-	// SpillBufferBytes weiterem Zuwachs (ReadMemStats ist nicht kostenlos): auch eine
-	// früh angelegte Liste, die erst später auf Gigabytes anwächst, bekommt den
-	// Speicherdruck so noch mit und lagert dann ihren kompletten Puffer aus.
+	// erst ab diesem berechneten RAM-Verbrauch der Suche (siehe spillRamUsage) beginnen
+	// Listen auszulagern - solange reichlich RAM frei ist, bleibt alles im RAM und die
+	// Platte wird geschont. Geprüft wird beim ersten Erreichen der Puffergröße und
+	// danach nach jeweils SpillBufferBytes weiterem Zuwachs: auch eine früh angelegte
+	// Liste, die erst später auf Gigabytes anwächst, bekommt den Speicherdruck so noch
+	// mit und lagert dann ihren kompletten Puffer aus.
 	// 0 = immer sofort auslagern (Tests)
-	SpillRamThresholdBytes = uint64(32) << 30
+	SpillRamThresholdBytes = int64(44) << 30
 )
+
+// aktueller berechneter RAM-Verbrauch der Suche in Bytes - die Vergleichsbasis der
+// RAM-Schwelle. Solver und Blocker aktualisieren den Wert bei jedem Arbeitsschritt mit
+// ihrem Anzeige-Wert (Hashtabellen + Listen-Puffer, siehe RamBytes) - bewusst nicht
+// runtime.ReadMemStats: der echte Heap hängt am GC-Zeitpunkt und wäre teurer zu messen.
+// Beim Auslagern zieht jede Liste ihren Puffer sofort selbst ab: der Verbrauch sinkt
+// damit unmittelbar unter die Schwelle zurück und es lagern nicht schlagartig alle
+// Listen gleichzeitig aus. Der Abzug bleibt auch über die nächsten Meldungen bestehen,
+// denn RamBytes zählt übergebene Puffer nicht mehr mit.
+var spillRamUsage atomic.Int64
+
+// meldet den aktuellen berechneten RAM-Verbrauch (rufen Solver und Blocker mit ihrem
+// Anzeige-Wert auf)
+func SetSpillRamUsage(bytes int64) {
+	spillRamUsage.Store(bytes)
+}
 
 // Namensmuster der Auslagerungsdateien: den Zufallsteil (*) vergibt os.CreateTemp
 // kollisionssicher, damit sich mehrere Prozesse im selben Ordner nicht in die Quere
@@ -149,9 +164,9 @@ func (l *DepthList) spillIfFull() {
 		return
 	}
 	if l.fileName == "" {
-		// RAM-Schwelle: solange der Prozess genug freien RAM hat, wächst die Liste im
+		// RAM-Schwelle: solange die Suche genug freien RAM hat, wächst die Liste im
 		// RAM weiter und schont die Platte; nach jeweils SpillBufferBytes Zuwachs wird
-		// neu gemessen. Steigt der Verbrauch später über die Schwelle, wandert der
+		// neu geprüft. Steigt der Verbrauch später über die Schwelle, wandert der
 		// komplette angesammelte Puffer auf die Platte (FIFO bleibt gewahrt: die Datei
 		// enthält stets die älteren Sätze). Einmal ausgelagerte Listen prüfen nicht mehr
 		// und bleiben beim Auslagerungs-Standard.
@@ -159,7 +174,7 @@ func (l *DepthList) spillIfFull() {
 			if len(l.data) < l.checkAt {
 				return // Schwelle vor kurzem geprüft: erst weiter im RAM wachsen lassen
 			}
-			if processHeapBytes() < SpillRamThresholdBytes {
+			if spillRamUsage.Load() < SpillRamThresholdBytes {
 				l.checkAt = len(l.data) + SpillBufferBytes/2
 				return
 			}
@@ -179,19 +194,19 @@ func (l *DepthList) spillIfFull() {
 
 	l.pending, l.data = l.data, nil
 	buf, off := l.pending, l.writeOff
+
+	// der Puffer gilt ab jetzt als ausgelagert und wird sofort vom gemeldeten
+	// RAM-Verbrauch abgezogen: so lagern beim Überschreiten der Schwelle nicht
+	// schlagartig alle Listen aus, sondern nur so viele, bis der Verbrauch rechnerisch
+	// wieder unter der Schwelle liegt (RamBytes zählt ihn ab jetzt ebenfalls nicht
+	// mehr mit, der Abzug bleibt also auch über die nächsten Meldungen bestehen)
+	spillRamUsage.Add(-int64(len(buf)) * 2)
+
 	l.writeWG.Add(1)
 	go func() {
 		defer l.writeWG.Done()
 		l.writeErr = writeSpillBlock(l.fileName, buf, off, l.valueBytes)
 	}()
-}
-
-// aktueller Heap-Verbrauch des Prozesses; wird nur beim ersten Puffer-Überlauf einer
-// Liste abgefragt, denn ReadMemStats ist nicht kostenlos (kurzer Stop-the-World)
-func processHeapBytes() uint64 {
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-	return mem.Alloc
 }
 
 // wartet auf den laufenden Hintergrund-Schreibvorgang und verbucht ihn
@@ -324,10 +339,14 @@ func (l *DepthList) SpillBytes() int64 {
 	return l.writeOff
 }
 
-// aktuell im RAM reservierte Puffer-Bytes der Liste (Schreibpuffer, laufender
-// Schreibvorgang, Leseblock und Vorauslese-Block)
+// aktuell im RAM reservierte Puffer-Bytes der Liste (Schreibpuffer, Leseblock und
+// Vorauslese-Block). Ein an die Platte übergebener Schreibvorgang (pending) zählt
+// bewusst nicht mit: er gilt seit der Übergabe als ausgelagert, wurde da bereits vom
+// gemeldeten RAM-Verbrauch abgezogen und ist in Kürze ohnehin frei - zählte er hier
+// mit, würde die nächste Meldung den Abzug aufheben und beim Schwellen-Übertritt
+// lagerten viele Listen gleichzeitig aus
 func (l *DepthList) RamBytes() int64 {
-	return int64(cap(l.data)+cap(l.pending)+cap(l.readBuf)+cap(l.prefetch)) * 2
+	return int64(cap(l.data)+cap(l.readBuf)+cap(l.prefetch)) * 2
 }
 
 // gibt den Speicher frei und löscht eine eventuelle Auslagerungsdatei

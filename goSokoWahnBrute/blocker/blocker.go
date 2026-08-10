@@ -342,6 +342,21 @@ func (b *Blocker) SpillBytes() int64 {
 	return sum
 }
 
+// im RAM reservierte Bytes der laufenden Stufe: Stellungs-Tabelle plus die Puffer
+// der Stufen-Suchlisten (Gegenstück zu Solver.RamBytes)
+func (b *Blocker) RamBytes() int64 {
+	var sum int64
+	if b.known != nil {
+		sum = b.known.Bytes()
+	}
+	for _, list := range b.stageLists() {
+		if list != nil {
+			sum += list.RamBytes()
+		}
+	}
+	return sum
+}
+
 // lädt einen Suchlisten-Satz in den curState-Buffer
 func (b *Blocker) loadRecord(record []uint16) {
 	b.curState.Player = soko.Wpos(record[0])

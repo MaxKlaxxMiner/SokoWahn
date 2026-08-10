@@ -13,6 +13,9 @@ func (b *Blocker) Next(limit int) bool {
 		return false
 	}
 
+	// den berechneten RAM-Verbrauch für die Auslagerungs-Entscheidung aktuell halten
+	solver.SetSpillRamUsage(b.RamBytes())
+
 	switch b.status {
 	case StatusInit:
 		if b.searchBoxCount+1 >= b.maxBoxes {

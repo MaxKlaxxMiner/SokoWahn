@@ -59,6 +59,9 @@ die verankerten Referenzwerte absichern.
     lagert auch eine schon gewachsene Liste ihren kompletten Puffer aus
     (Test: TestDepthListRamThreshold). Die erste Fassung entschied einmalig je Liste -
     zu statisch: einzelne Zugtiefen wuchsen nach ihrer Entscheidung noch um mehrere GB.
+    Vergleichsbasis ist der berechnete Verbrauch der Anzeige (SetSpillRamUsage aus
+    Step/Next, kein ReadMemStats); ausgelagerte Puffer werden sofort abgezogen, damit
+    beim Schwellen-Übertritt nicht alle Listen gleichzeitig auslagern.
   - ERLEDIGT: **Byte-Packung des Disk-Formats** bei WalkCount <= 256: 1 Byte je Wert
     statt uint16, halbes IO-Volumen (Test: TestDepthListSpillBytePacked).
 - **Byte-Modus-Äquivalent im RAM**: uint8-Sätze wenn walkEof < 255 (halber Listen-Speicher;
