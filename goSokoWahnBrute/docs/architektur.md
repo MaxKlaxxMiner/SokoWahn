@@ -57,11 +57,13 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   stören sich nicht); gelesen wird sequenziell über einen gleich großen Lesepuffer.
   Ausgelagert wird aber erst bei echtem Speicherdruck: liegt der Heap-Verbrauch des
   Prozesses (runtime.MemStats.Alloc, dieselbe Messgröße wie die RAM-Notbremse der TUI)
-  beim ersten Erreichen der Puffergröße noch unter `solver.SpillRamThresholdBytes`
-  (Standard 16 GB), bleibt die Liste dauerhaft komplett im RAM und schont die Platte -
-  erst danach volllaufende (frische) Listen nehmen den Auslagerungs-Standard. Die
-  Entscheidung fällt je Liste genau einmal (ReadMemStats ist nicht kostenlos) und
-  mischt nie beide Modi innerhalb einer Liste, die FIFO-Reihenfolge bleibt unberührt.
+  unter `solver.SpillRamThresholdBytes`, wächst die Liste komplett im RAM weiter und
+  schont die Platte. Geprüft wird beim ersten Erreichen der Puffergröße und danach
+  nach jeweils SpillBufferBytes weiterem Zuwachs (ReadMemStats ist nicht kostenlos) -
+  steigt der Verbrauch später über die Schwelle, lagert also auch eine bereits auf
+  Gigabytes gewachsene Liste ihren kompletten Puffer aus (die Datei enthält stets die
+  älteren Sätze, die FIFO-Reihenfolge bleibt unberührt). Einmal ausgelagerte Listen
+  prüfen nicht mehr und bleiben beim Auslagerungs-Standard.
   Auf der Platte belegt jeder Positionswert bei Feldern mit höchstens 256 begehbaren
   Positionen (`WalkCount`) nur 1 Byte statt der vollen uint16 - halbiert Dateigröße und
   IO-Volumen, die RAM-Puffer bleiben uint16 (gepackt/entpackt wird nur in

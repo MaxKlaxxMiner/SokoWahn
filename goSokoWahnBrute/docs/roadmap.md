@@ -53,10 +53,12 @@ die verankerten Referenzwerte absichern.
   Zufalls-Dateinamen (os.CreateTemp) für parallele Prozesse, Aufräumen beim Start
   (Dateien älter als eine Woche), Handles nur pro Blockzugriff offen (NTFS-Komprimierung),
   bitgenau identisches Suchverhalten (Tests: TestSolveSpillDeterminism + Vanilla-Orakel).
-  - ERLEDIGT: **RAM-Schwelle vor dem Auslagern** (SpillRamThresholdBytes, Standard 16 GB):
-    unterhalb bleiben die Listen komplett im RAM und schonen die Platte; die Entscheidung
-    fällt je Liste einmalig beim ersten Puffer-Überlauf, erst danach volllaufende Listen
-    nehmen den 16-MB+Disk-Standard (Test: TestDepthListRamThreshold).
+  - ERLEDIGT: **RAM-Schwelle vor dem Auslagern** (SpillRamThresholdBytes): unterhalb
+    bleiben die Listen komplett im RAM und schonen die Platte; geprüft wird je Liste beim
+    ersten Puffer-Überlauf und nach jeweils 16 MB weiterem Zuwachs - bei Speicherdruck
+    lagert auch eine schon gewachsene Liste ihren kompletten Puffer aus
+    (Test: TestDepthListRamThreshold). Die erste Fassung entschied einmalig je Liste -
+    zu statisch: einzelne Zugtiefen wuchsen nach ihrer Entscheidung noch um mehrere GB.
   - ERLEDIGT: **Byte-Packung des Disk-Formats** bei WalkCount <= 256: 1 Byte je Wert
     statt uint16, halbes IO-Volumen (Test: TestDepthListSpillBytePacked).
 - **Byte-Modus-Äquivalent im RAM**: uint8-Sätze wenn walkEof < 255 (halber Listen-Speicher;

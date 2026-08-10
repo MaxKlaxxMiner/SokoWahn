@@ -1,0 +1,19 @@
+   ####
+####  ###
+#   $   #
+# * * * #
+# * * * #
+# * * * #
+# * * * #
+# * * * #
+# * * * #
+# * * * #
+# ***** #
+#   +   #
+#########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=43061
+catalog: ABHT 03
+name: level  11
+number: 11/60
+bestmoves: 333

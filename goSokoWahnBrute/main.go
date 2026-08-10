@@ -34,7 +34,7 @@ func main() {
 	// liegengebliebene Dateien abgestürzter Läufe aufräumen (älter als eine Woche;
 	// parallele Prozesse stören sich dank der Zufallsnamen nicht). Ausgelagert wird
 	// erst bei echtem Speicherdruck: unterhalb von solver.SpillRamThresholdBytes
-	// (16 GB Heap) bleiben die Listen komplett im RAM und schonen die Platte.
+	// bleiben die Listen komplett im RAM und schonen die Platte.
 	// Existiert C:\temp\sokowahn (von Max angelegt, z.B. auf einer anderen Platte),
 	// hat dieser Ordner Vorrang - sonst wie gehabt temp/ im Arbeitsverzeichnis.
 	spillDir := `C:\temp\sokowahn`

@@ -148,41 +148,56 @@ func TestDepthListSpillBytePacked(t *testing.T) {
 	list.Release()
 }
 
-// RAM-Schwelle: solange der Heap-Verbrauch darunter liegt, bleiben Listen dauerhaft
-// im RAM - auch wenn die Schwelle später überschritten wird; erst danach volllaufende
-// (frische) Listen lagern aus
+// RAM-Schwelle: solange der Heap-Verbrauch darunter liegt, bleiben Listen im RAM;
+// steigt der Verbrauch über die Schwelle, lagert auch eine bereits groß gewachsene
+// Liste beim nächsten Wachstums-Check ihren kompletten Puffer aus - die
+// FIFO-Reihenfolge bleibt über den RAM->Spill-Übergang hinweg exakt erhalten
 func TestDepthListRamThreshold(t *testing.T) {
 	const recordSize = 2
-	dir := setupSpill(t, 64)
+	const records = 1000
+	dir := setupSpill(t, 64) // 64 Bytes = 32 Werte -> Schwellen-Check alle 16 Sätze
 
 	// Schwelle unerreichbar hoch: kein Spill trotz vielfach überschrittener Puffergröße
 	SpillRamThresholdBytes = ^uint64(0)
-	ram := NewDepthList(recordSize, 65536)
-	push := func(list *DepthList) {
-		for i := 0; i < 1000; i++ {
-			list.PushRecord([]uint16{uint16(i), uint16(i + 1)})
+	list := NewDepthList(recordSize, 65536)
+	pushed := 0
+	push := func(n int) {
+		for i := 0; i < n; i++ {
+			list.PushRecord([]uint16{uint16(pushed), uint16(pushed + 1)})
+			pushed++
 		}
 	}
-	push(ram)
-	if ram.SpillBytes() != 0 || countSpillFiles(t, dir) != 0 {
+	push(records)
+	if list.SpillBytes() != 0 || countSpillFiles(t, dir) != 0 {
 		t.Fatal("unterhalb der RAM-Schwelle darf nichts ausgelagert werden")
 	}
 
-	// Schwelle jetzt praktisch immer überschritten: die alte Liste bleibt trotzdem im RAM ...
+	// Schwelle jetzt praktisch immer überschritten: die gewachsene Liste muss beim
+	// nächsten Wachstums-Check ihren kompletten angesammelten Puffer auslagern
 	SpillRamThresholdBytes = 1
-	push(ram)
-	if ram.SpillBytes() != 0 || countSpillFiles(t, dir) != 0 {
-		t.Fatal("eine einmal im RAM entschiedene Liste muss im RAM bleiben")
+	push(records)
+	if list.SpillBytes() == 0 || countSpillFiles(t, dir) != 1 {
+		t.Fatal("nach Überschreiten der RAM-Schwelle muss die Liste auslagern")
 	}
 
-	// ... aber eine frische Liste lagert aus
-	fresh := NewDepthList(recordSize, 65536)
-	push(fresh)
-	if fresh.SpillBytes() == 0 {
-		t.Fatal("oberhalb der RAM-Schwelle muss eine neue Liste auslagern")
+	// alle Sätze kommen in exakter FIFO-Reihenfolge zurück (RAM-Phase + Spill-Phase)
+	next := 0
+	for list.Count() > 0 {
+		batch := list.PopBatch(7)
+		for off := 0; off < len(batch); off += recordSize {
+			if batch[off] != uint16(next) || batch[off+1] != uint16(next+1) {
+				t.Fatalf("Satz %d: erwartet [%d %d], erhalten %v", next, next, next+1, batch[off:off+recordSize])
+			}
+			next++
+		}
 	}
-	ram.Release()
-	fresh.Release()
+	if next != pushed {
+		t.Fatalf("es kamen %d Sätze zurück, erwartet %d", next, pushed)
+	}
+	list.Release()
+	if countSpillFiles(t, dir) != 0 {
+		t.Fatal("Release hat die Auslagerungsdatei nicht gelöscht")
+	}
 }
 
 // Aufräumen beim Programmstart: nur alte Auslagerungsdateien (über maxAge) werden

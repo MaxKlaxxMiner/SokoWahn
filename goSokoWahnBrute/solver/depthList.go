@@ -28,10 +28,11 @@ var (
 	// erst ab diesem Heap-Verbrauch des Prozesses (runtime.MemStats.Alloc, dieselbe
 	// Messgröße wie die RAM-Notbremse der TUI) beginnen Listen auszulagern - solange
 	// reichlich RAM frei ist, bleibt alles im RAM und die Platte wird geschont.
-	// Die Entscheidung fällt je Liste einmalig beim ersten Erreichen der Puffergröße
-	// und gilt dauerhaft: unterhalb der Schwelle entschiedene Listen bleiben auch dann
-	// im RAM, wenn der Verbrauch später steigt - erst danach volllaufende (also frische)
-	// Listen nehmen den Auslagerungs-Standard. 0 = immer sofort auslagern (Tests)
+	// Geprüft wird beim ersten Erreichen der Puffergröße und danach nach jeweils
+	// SpillBufferBytes weiterem Zuwachs (ReadMemStats ist nicht kostenlos): auch eine
+	// früh angelegte Liste, die erst später auf Gigabytes anwächst, bekommt den
+	// Speicherdruck so noch mit und lagert dann ihren kompletten Puffer aus.
+	// 0 = immer sofort auslagern (Tests)
 	SpillRamThresholdBytes = uint64(32) << 30
 )
 
@@ -60,7 +61,8 @@ func CleanupSpillFiles(dir string, maxAge time.Duration) {
 // Wächst die Liste über SpillBufferBytes hinaus UND liegt der Heap-Verbrauch des
 // Prozesses über SpillRamThresholdBytes, wandert der volle Schreibpuffer blockweise
 // in eine Temp-Datei (Muster von SokowahnLinearList2 aus dem Original); unterhalb der
-// Schwelle bleibt die Liste dauerhaft im RAM (Details bei SpillRamThresholdBytes).
+// Schwelle wächst die Liste im RAM weiter und prüft nach jeweils SpillBufferBytes
+// Zuwachs erneut (Details bei SpillRamThresholdBytes).
 // Auf der Platte belegt jeder Wert bei Feldern mit höchstens 256 begehbaren Positionen
 // nur ein Byte statt der vollen uint16 (halbiert Dateigröße und IO-Volumen; die
 // RAM-Puffer bleiben uint16, es ändert sich nur das Disk-Format).
@@ -85,7 +87,8 @@ type DepthList struct {
 
 	data     []uint16 // RAM-Schreibpuffer (ohne Auslagerung: die komplette Liste)
 	dataRead int      // Leseposition im Schreibpuffer in Sätzen
-	noSpill  bool     // true: Liste bleibt dauerhaft im RAM (RAM-Schwelle beim ersten Überlauf noch nicht erreicht oder Auslagerungs-Fehler)
+	checkAt  int      // Pufferlänge (uint16-Werte), ab der die RAM-Schwelle erneut geprüft wird
+	noSpill  bool     // true nach einem Auslagerungs-Fehler: Liste bleibt im RAM
 
 	fileName string // Auslagerungsdatei ("" = bisher nichts ausgelagert)
 	writeOff int64  // fertig geschriebene Bytes in der Datei
@@ -146,12 +149,20 @@ func (l *DepthList) spillIfFull() {
 		return
 	}
 	if l.fileName == "" {
-		// einmalige Entscheidung beim ersten Überlauf: solange der Prozess unter der
-		// RAM-Schwelle liegt, bleibt diese Liste dauerhaft im RAM und schont die Platte -
-		// erst Listen, deren Puffer bei vollem RAM überläuft, lagern wirklich aus
-		if SpillRamThresholdBytes > 0 && processHeapBytes() < SpillRamThresholdBytes {
-			l.noSpill = true
-			return
+		// RAM-Schwelle: solange der Prozess genug freien RAM hat, wächst die Liste im
+		// RAM weiter und schont die Platte; nach jeweils SpillBufferBytes Zuwachs wird
+		// neu gemessen. Steigt der Verbrauch später über die Schwelle, wandert der
+		// komplette angesammelte Puffer auf die Platte (FIFO bleibt gewahrt: die Datei
+		// enthält stets die älteren Sätze). Einmal ausgelagerte Listen prüfen nicht mehr
+		// und bleiben beim Auslagerungs-Standard.
+		if SpillRamThresholdBytes > 0 {
+			if len(l.data) < l.checkAt {
+				return // Schwelle vor kurzem geprüft: erst weiter im RAM wachsen lassen
+			}
+			if processHeapBytes() < SpillRamThresholdBytes {
+				l.checkAt = len(l.data) + SpillBufferBytes/2
+				return
+			}
 		}
 		file, err := os.CreateTemp(SpillDir, spillPattern)
 		if err != nil {
@@ -333,6 +344,7 @@ func (l *DepthList) Release() {
 	}
 	l.data, l.prefetch = nil, nil
 	l.dataRead = 0
+	l.checkAt = 0
 	l.noSpill = false
 	l.readBuf = nil
 	l.readLen, l.readPos = 0, 0
