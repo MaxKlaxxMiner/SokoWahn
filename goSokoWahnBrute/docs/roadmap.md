@@ -76,6 +76,67 @@ die verankerten Referenzwerte absichern.
   Schüben bevorzugen (CountPushes + OrderBy in der Rekonstruktion).
 - Refresh/RAM-Rückgabe zur Laufzeit (Listen-Puffer verkleinern).
 
+## Regel-Filter (Live-Deadlock-Erkennung)
+
+Recherche-Basis: Festival 3.1, JSoko 2.28 und YASC 1.689 in den `*_src`-Ordnern eine
+Ebene über dem Repo (Analyse vom 11.08.2026). Grundsätze: nur beweisbare Deadlocks
+(keine Dominanz-Prunings, Zugoptimalität bleibt), Knoten- statt Zeitbudgets
+(Determinismus), nur die Vorwärtssuche filtern.
+
+- ERLEDIGT: **Stufe 1 - Freeze + Diagonale** (soko/rules.go): Frozen-Boxes-Fixpunkt
+  nach Festival-Vorbild plus Closed-Diagonal-Port aus JSoko, mit toten Feldern per
+  Pull-BFS, Statistik-Zählern und Debug-Vergleichsmodus gegen den Blocker
+  (-rulescompare). Vanilla: Faktor 3 weniger Knoten ohne Blocker; Details und
+  Referenzwerte in docs/architektur.md.
+- **Stufe 2 - Erreichbarkeit/Matching** (JSoko BipartiteMatchings, Festival
+  check_matching_deadlock): kann jede Kiste (mit eingefrorenen Ziel-Kisten als
+  Wänden) noch irgendein Ziel erreichen, und geht die Kisten-Ziel-Zuordnung auf?
+  Teuer (Flood-Fills je Knoten) -> Cache über den Freeze-Bitvektor wie JSoko
+  (Board.java:3231). Vorstufe: nur der billige Teil "Kiste erreicht kein Ziel mehr".
+- **Stufe 3 - Corral-Mini-Suche mit Cache** (Festival corral_deadlock.cpp): bei
+  zerschnittenem Spielfeld je abgeschlossenem Bereich eine knoten-budgetierte
+  Mini-Suche; vorher Kisten außerhalb der Zone löschen und ferne eingefrorene
+  Kisten kanonisieren (Cache-Trefferquote!). Ergebnis-Cache 16 Byte/Eintrag ohne
+  Aging, adaptives Budget für häufig gefragte unentschiedene Stellungen
+  (Zweierpotenz-Regel). Mächtigste Stufe, erkennt beliebige regionale Deadlocks.
+- Kür: **YASC-Kapazitäts-Sets** (Dead_.pas CalculateDeadlockSets): vorberechnete
+  Feldmengen mit Kapazität = Ziele - Kisten, Live-Update ist reines Zählen (O(1)
+  je Schub) - würde Teile von Stufe 1/2 nochmal deutlich billiger machen.
+- ERLEDIGT: **Pull-Freeze für die Rückwärtssuche** (CheckPull in soko/rules.go):
+  Spiegelbild der Stufe 1 - Pull-Mobilität statt Push-Mobilität, Startfelder statt
+  Zielfelder, pull-tote Felder per Pull-BFS von den Startfeldern; O(1)-Vorabcheck
+  plus Fixpunkt, einmal je Pull-Hypothese vor dem Pose-Flood. Vanilla nur Regeln:
+  2,88 -> 1,83 Mio Knoten, fast Blocker-Niveau ohne jede Vorberechnung.
+  (Ein direkter Totfeld-Check vorwärts wurde probiert und bewusst wieder entfernt:
+  exakt 1-Steiner-Wissen, und Blocker 1-2 ist Betriebsvoraussetzung - der
+  Freeze-Fixpunkt fängt die Fälle über die Beidseitig-tot-Achsenregel ohnehin,
+  Vanilla-Knotenzahl mit/ohne identisch. Regeln ergänzen den Blocker, doppeln
+  ihn nicht.)
+- Offen: Regel-Treffer auch im Blocker-Vergleich je Stufe aufschlüsseln.
+- Praxis-Messungen von Max (12.08.2026, Suche bis Tiefe ~100 bzw. ~62, Hash-Einträge):
+  - Level 25291 (kompakt vollgestopft, Ziel ~472 Züge): Regeln zusätzlich zum
+    4-Blocker -2,6% Hash, zum 5-Blocker nur noch -0,1% - dichte kleine Cluster
+    deckt der Blocker selbst ab. Der 5-Blocker brauchte beim Rechnen aber 102 Mio
+    Hashtable-Einträge für 9.362 neue Muster (alle Stufen davor zusammen: 6.064).
+  - Level 47484 (extremes Karo-Schachbrett, Ziel ~446 Züge): Regeln glänzen -
+    3-Blocker 285,6 -> 108,0 Mio Hash (-62%!), 4-Blocker 144,1 -> 102,8 Mio.
+    NUR Regeln (116,4 Mio) schlagen den nackten 4-Blocker (144,1 Mio), dessen
+    Stufenbau 264 Mio Hash-Einträge kostete und teils länger lief als die Suche
+    selbst. Bei gleichem Hash-Budget (~285 Mio) kam die Suche mit Regeln bis
+    Tiefe 66 statt 62.
+  - Level 43070 (sehr groß, endlos viele Kisten, Ziel ~1.864 Züge): der 3-Blocker
+    war mit 141 Mio Hash beim Rechnen gerade noch machbar, der 4-Blocker hätte
+    über 20.000 Mio gebraucht - hier sind die Regeln die einzige Ausbaustufe:
+    3-Blocker 253,8 -> 128,7 Mio Hash (-49%), bei gleichem Budget (~254 Mio)
+    Tiefe 45 statt 43. Genau das Speicherdruck-Szenario, für das die Regeln
+    gebaut wurden.
+  - Pull-Freeze (12.08.2026): bei gleicher Suchtiefe 25% Hashtable gespart, ohne
+    messbare Verlangsamung - die meisten Treffer liefert der Pull-Totfeld-Check
+    (feuert vor dem Pose-Flood und spart den samt aller Pose-Stellungen gleich mit).
+  - Folgerung/Idee: bei aktiven Regeln lohnt ein früherer Blocker-Stopp (Kosten
+    des nächsten Stufenbaus gegen erwartete Ersparnis abwägen, ggf. Heuristik
+    über Muster-Zuwachs vs. Hash-Kosten der Stufe).
+
 ## Blocker-Ausbau
 
 - Abfrage-Optimierung wie SokowahnBlockerB: Muster rekursiv nach der häufigsten Kiste

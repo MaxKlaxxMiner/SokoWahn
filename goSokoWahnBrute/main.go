@@ -25,6 +25,8 @@ func main() {
 
 	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
+	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1: Freeze + Diagonale); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
+	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
 	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
@@ -71,7 +73,7 @@ func main() {
 		return
 	}
 
-	runCli(levelData, *useBlocker, *workers)
+	runCli(levelData, *useBlocker, *useRules || *rulesCompare, *rulesCompare, *workers)
 }
 
 // berechnet nur die Blocker-Stufen bis einschließlich maxStages und gibt sie aus
@@ -100,8 +102,9 @@ func runBlockerOnly(levelData string, maxStages int, workers int) {
 }
 
 // Kommandozeilen-Modus: Level lösen und Fortschritt als Text ausgeben
-// (deterministische Ausgaben, direkt vergleichbar mit dem C#-Orakel refcli)
-func runCli(levelData string, useBlocker bool, workers int) {
+// (deterministische Ausgaben, direkt vergleichbar mit dem C#-Orakel refcli -
+// sofern die optionalen Regel-Filter aus bleiben)
+func runCli(levelData string, useBlocker, useRules, rulesCompare bool, workers int) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
 	}
@@ -112,6 +115,12 @@ func runCli(levelData string, useBlocker bool, workers int) {
 	}
 
 	fmt.Println(field)
+
+	if useRules {
+		rules := soko.NewRules(field)
+		rules.CompareBlocker = rulesCompare
+		field.SetRules(rules)
+	}
 
 	if useBlocker {
 		if err := os.MkdirAll("temp", 0755); err != nil {
@@ -146,6 +155,17 @@ func runCli(levelData string, useBlocker bool, workers int) {
 
 	stats := s.GetStats()
 	fmt.Printf("\nFertig nach %s: SuchTiefe=%d Knoten=%s\n", time.Since(startTime).Round(time.Millisecond), s.SearchDepth(), tools.FormatInt(s.NodeCount()))
+
+	if rules := field.Rules(); rules != nil {
+		rst := rules.Stats()
+		fmt.Printf("Regeln vorwärts: Freeze=%s Diagonale=%s | rückwärts: Totfeld=%s PullFreeze=%s\n",
+			tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills),
+			tools.FormatInt(rst.PullDeadKills), tools.FormatInt(rst.PullFreezeKills))
+		if rules.CompareBlocker {
+			fmt.Printf("Vergleich: nurBlocker=%s nurRegeln=%s beide=%s\n",
+				tools.FormatInt(rst.CmpBlockerOnly), tools.FormatInt(rst.CmpRulesOnly), tools.FormatInt(rst.CmpBoth))
+		}
+	}
 
 	if stats.FoundMoves < 0 {
 		fmt.Println("keine Lösung gefunden")

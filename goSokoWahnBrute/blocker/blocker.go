@@ -91,6 +91,7 @@ type Blocker struct {
 
 func New(field *soko.Field, cachePath string) *Blocker {
 	base := field.Clone()
+	base.SetRules(nil) // der Stufenbau bleibt regel-frei: die Stufenwerte müssen bitgenau zum C#-Orakel (refcli blockerbx) bleiben
 	start := soko.State{}
 	base.GetState(&start)
 

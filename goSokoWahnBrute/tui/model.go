@@ -151,6 +151,11 @@ func (m *Model) scan() {
 	}
 	m.inputErr = ""
 	m.field = field
+	// Regel-Filter (Stufe 1: Freeze + Diagonale) vorbereiten - Default an,
+	// reaktiviert sich also mit jedem neuen Level; Umschalten per Taste 5 in der Suche.
+	// Der Blocker-Stufenbau bleibt davon unberührt (blocker.New räumt die Regeln
+	// auf seinen internen Feldern ab, die Stufenwerte bleiben orakel-vergleichbar).
+	field.SetRules(soko.NewRules(field))
 	m.closeWork() // alten Arbeitsstand samt Auslagerungsdateien freigeben
 	m.slv = nil
 	m.solution = nil

@@ -27,6 +27,9 @@ func (f *Field) Clone() *Field {
 		blocker:         f.blocker,
 		blockerBackward: f.blockerBackward,
 	}
+	if f.rules != nil {
+		result.rules = f.rules.Clone() // eigener Scratch-Puffer je Field-Instanz (Worker-Klone)
+	}
 	copy(result.wposToBoxes, f.wposToBoxes)
 	copy(result.boxes, f.boxes)
 	copy(result.boxBits, f.boxBits)

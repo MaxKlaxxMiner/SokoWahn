@@ -23,7 +23,9 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		f.boxes[box] = posStart                                           // neue Kistenposition merken
 		f.boxBitClear(posLeft)
 		f.boxBitSet(posStart)
-		result = f.searchVariantsBackwardStep(result)                     // alle zugehörige Varianten hinzufügen
+		if f.rules == nil || f.rules.CheckPull(posStart, f.boxBits) {     // Pull-Regeln: vorwärts unerreichbare Konfiguration? (spart auch den Pose-Flood)
+			result = f.searchVariantsBackwardStep(result)                 // alle zugehörige Varianten hinzufügen
+		}
 		f.wposToBoxes[posLeft], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posLeft                                            // neue Kistenposition merken
 		f.boxBitClear(posStart)
@@ -39,7 +41,9 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		f.boxes[box] = posStart                                            // neue Kistenposition merken
 		f.boxBitClear(posRight)
 		f.boxBitSet(posStart)
-		result = f.searchVariantsBackwardStep(result)                      // alle zugehörige Varianten hinzufügen
+		if f.rules == nil || f.rules.CheckPull(posStart, f.boxBits) {
+			result = f.searchVariantsBackwardStep(result)                  // alle zugehörige Varianten hinzufügen
+		}
 		f.wposToBoxes[posRight], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posRight                                            // neue Kistenposition merken
 		f.boxBitClear(posStart)
@@ -56,7 +60,9 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		f.boxBitClear(posUp)
 		f.boxBitSet(posStart)
 		f.sortBoxesDown(box)                                            // Kisten sortieren (Index ist größer geworden)
-		result = f.searchVariantsBackwardStep(result)                   // alle zugehörige Varianten hinzufügen
+		if f.rules == nil || f.rules.CheckPull(posStart, f.boxBits) {
+			result = f.searchVariantsBackwardStep(result)               // alle zugehörige Varianten hinzufügen
+		}
 		box = f.wposToBoxes[posStart]                                   // Kisten-Nummer erneut abfragen
 		f.wposToBoxes[posUp], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posUp                                            // neue Kistenposition merken
@@ -75,7 +81,9 @@ func (f *Field) SearchVariantsBackward(result []State) []State {
 		f.boxBitClear(posDown)
 		f.boxBitSet(posStart)
 		f.sortBoxesUp(box)                                                // Kisten sortieren (Index ist kleiner geworden)
-		result = f.searchVariantsBackwardStep(result)                     // alle zugehörige Varianten hinzufügen
+		if f.rules == nil || f.rules.CheckPull(posStart, f.boxBits) {
+			result = f.searchVariantsBackwardStep(result)                 // alle zugehörige Varianten hinzufügen
+		}
 		box = f.wposToBoxes[posStart]                                     // Kisten-Nummer erneut abfragen
 		f.wposToBoxes[posDown], f.wposToBoxes[posStart] = box, f.boxCount // Kiste wieder auf das alte Feld schieben
 		f.boxes[box] = posDown                                            // neue Kistenposition merken

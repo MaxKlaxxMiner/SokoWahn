@@ -32,6 +32,7 @@ type Field struct {
 	// --- optionale Filter ---
 	blocker         BlockerCheck // Deadlock-Filter für die Vorwärtssuche, nil = kein Filter
 	blockerBackward BlockerCheck // Deadlock-Filter für die Rückwärtssuche (Blocker-Stufenbau und Solver-Rückwärtssuche), nil = kein Filter
+	rules           *Rules       // regelbasierter Live-Deadlock-Filter (nur Vorwärtssuche), nil = kein Filter
 }
 
 // setzt das Belegungs-Bit einer Kistenposition

@@ -246,6 +246,64 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   14 Worker 3,8 s (= 16, LP-E-Kerne irrelevant) -> 128 Worker 3,1 s -> Plateau ~3,0 s ab 128.
   Chunk-Größe: 20 und 20000 sind messbar schlechter, 200-2000 gleichwertig -> 512.
 
+## Regel-Filter (Stufe 1: Freeze + Diagonale)
+
+Regelbasierter Live-Deadlock-Filter (`soko/rules.go`, `soko/rulesDiagonal.go`), ergänzt die
+Blocker orthogonal: der k-Steiner-Blocker deckt kleine Kistenzahlen erschöpfend ab, die
+Regeln erkennen strukturelle Deadlocks mit beliebig vielen Kisten. Vorbilder aus den
+Open-Source-Sammlungen (ein Ordner über dem Repo): Festival (Frozen-Boxes-Fixpunkt),
+JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
+
+- **Freeze-Check** (Festival-Stil): alle naiv schiebbaren Kisten iterativ von einer
+  Arbeits-Bitmaske nehmen (schiebbar = eine Achse beidseitig frei und nicht beidseitig
+  tot); der Rest ist gegenseitig dauerhaft blockiert - steht davon eine Kiste abseits
+  der Ziele, ist die Stellung bewiesen unlösbar. Early-Exit über die geschobene Kiste
+  ist verlustfrei: ein Cluster friert immer durch den Schub einer Kiste ein, die selbst
+  mit einfriert (Start-Cluster behandelt der Parse-Filter freeze.go).
+  Tote Felder werden per Pull-BFS von den Zielen vorberechnet (entspricht inhaltlich
+  den 1-Steiner-Blockern, aber blocker-unabhängig).
+- **Diagonal-Check** (JSoko-Port): geschlossene Diagonalketten aus Kisten/Wänden;
+  "Ziele-und-Wände-Sequenzen" entlang der Kette retten die Stellung (Kisten können
+  nach innen auf Ziele geschoben werden). Scan in absoluten Koordinaten, konservativ
+  am Feldrand (unbegehbar ohne Wand = kein Deadlock-Anspruch).
+- **Bewusst KEIN direkter Totfeld-Check vorwärts**: das wäre exakt das 1-Steiner-Wissen,
+  und die Blocker-Stufen 1-2 sind Betriebsvoraussetzung (Millisekunden, egal wie groß
+  das Level) - die Regeln sollen ergänzen, nicht doppeln. Die Totfeld-Maske dient nur
+  als Fixpunkt-Verschärfung; auf Vanilla fängt der Fixpunkt darüber nachweislich
+  exakt dieselben Stellungen (Knotenzahl identisch mit/ohne direkten Check).
+- **Pull-Freeze für die Rückwärtssuche** (CheckPull): die Rückwärtssuche stirbt nicht
+  an unlösbaren, sondern an vorwärts UNERREICHBAREN Stellungen (wäre die Konfiguration
+  erreichbar, gäbe es rückwärts abgespielt eine Pull-Folge zur Startkonfiguration).
+  Spiegelwelt: Pull-Mobilität (zwei freie Felder in einer Richtung) statt
+  Push-Mobilität, Startfelder statt Zielfelder als erlaubte Endplätze, pull-tote
+  Felder per Pull-BFS von den Startfeldern. O(1)-Vorabcheck (gezogene Kiste auf
+  pull-totem Feld) plus Fixpunkt. Die Prüfung ist spielerunabhängig und läuft einmal
+  je Pull-Hypothese VOR dem Pose-Flood (spart den Flood gleich mit); das
+  Zielstellungs-Seeding bleibt ungefiltert (SearchGoalStates klont ohne Regeln).
+  Die Vorwärts-Regeln selbst könnten rückwärts nie feuern: rückwärts erreichte
+  Stellungen sind per Konstruktion vorwärts lösbar.
+- **Nur beweisbare Deadlocks**: keine Dominanz-Prunings (Zugoptimalität bleibt).
+  Vorwärts filtert CheckPush in pushVariantHorizontal/Vertical hinter dem
+  Blocker-Check, rückwärts CheckPull in SearchVariantsBackward.
+- **Der Blocker-Stufenbau bleibt regel-frei** (blocker.New räumt die Regeln auf seinen
+  internen Feldern ab) - die Stufenwerte bleiben bitgenau vergleichbar mit refcli.
+- **Threading**: die Vorberechnung (tote Felder, Ziel-Maske, Geometrie) wird geteilt,
+  jeder Field-Clone bekommt per Rules.Clone einen eigenen Scratch-Puffer.
+  Statistik-Zähler liegen atomar im geteilten Teil (alle Worker zählen gemeinsam).
+- **Bedienung**: TUI Default an, reaktiviert sich bei jedem neuen Level; Tasten 4/5
+  schalten Blocker/Regeln in der Suche um (wirkt wie SetWorkers ab dem nächsten Batch).
+  CLI: `-rules` (opt-in, sonst bleibt die Ausgabe orakel-vergleichbar) und
+  `-rulescompare` (Debug: beide Filter unabhängig auswerten, Überlappung ausgeben).
+- **Messwerte Vanilla**: Regeln allein 1.825.644 statt 8.710.434 Knoten (Faktor 4,8,
+  ~1 s statt ~10 s) - fast auf dem Niveau des vollen 5-Steiner-Blockers (1.595.042),
+  aber ohne Vorberechnung. Treffer: Freeze 1,10 Mio, Diagonale 71k, rückwärts
+  Totfeld 118k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
+  die Regeln auf Vanilla vorwärts nichts Zusätzliches (bei 6 Kisten subsumiert der
+  Blocker die kleinen Cluster). Der Mehrwert liegt bei großen Levels (Cluster über
+  der Steiner-Grenze, lange Diagonalen) und als Blocker-Ersatz bei Speicherdruck -
+  Praxis-Messungen von Max dazu in docs/roadmap.md (Level 47484: -62% Hash beim
+  3-Blocker; Level 43070: 4-Blocker unbezahlbar, Regeln -49% Hash).
+
 ## Referenzwerte (als Tests verankert)
 
 | Level | Messung | Wert |
@@ -257,6 +315,7 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 | Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 |
 | small.txt | optimale Züge | 16 |
 | Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
+| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.825.644 / Freeze 1.104.786, Diag 71.007, PullTot 118.087, PullFreeze 783 (Regressionswerte) |
 
 Die Suche ohne Blocker bleibt bitgenau vergleichbar mit dem C#-Orakel. Die
 Blocker-Stufenwerte gelten seit der bedingten Kill-Regel (Bx-Hinterland-Fix) und

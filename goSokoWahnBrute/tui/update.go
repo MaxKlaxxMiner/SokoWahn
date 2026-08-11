@@ -157,6 +157,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.slv.SetDirMode(solver.DirAuto)
 			m.status = "Richtung: automatisch (kleinere Hashtabelle zuerst)"
 			return m, nil
+		case "4": // Blocker-Filter an/aus (Default: an, reaktiviert sich bei neuem Level)
+			on := !m.slv.BlockerEnabled()
+			m.slv.SetBlockerEnabled(on)
+			m.status = "Blocker-Filter: " + onOff(on)
+			return m, nil
+		case "5": // Regel-Filter an/aus (Freeze + Diagonale)
+			on := !m.slv.RulesEnabled()
+			m.slv.SetRulesEnabled(on)
+			m.status = "Regel-Filter (Freeze+Diagonale): " + onOff(on)
+			return m, nil
 		case "*": // Such-Worker eine Stufe hoch
 			m.changeWorkers(true)
 			return m, nil
@@ -204,6 +214,14 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// formatiert einen Schalter-Zustand für die Statuszeile
+func onOff(on bool) string {
+	if on {
+		return "an"
+	}
+	return "aus"
 }
 
 // liest bzw. schreibt die Zwischenablage (als Variablen, damit Tests sie ersetzen können)

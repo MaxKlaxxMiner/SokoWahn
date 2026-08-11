@@ -14,6 +14,37 @@ func (f *Field) SetBlocker(blocker BlockerCheck) {
 	f.blocker = blocker
 }
 
+// setzt den optionalen regelbasierten Live-Deadlock-Filter (nil = kein Filter).
+// Vorwärts filtert CheckPush (unlösbare Stellungen), rückwärts CheckPull
+// (vorwärts unerreichbare Konfigurationen - die Vorwärts-Regeln selbst könnten
+// rückwärts nie feuern, denn rückwärts erreichte Stellungen sind per
+// Konstruktion vorwärts lösbar).
+func (f *Field) SetRules(rules *Rules) {
+	f.rules = rules
+}
+
+// gibt den gesetzten Regel-Filter zurück (nil = keiner)
+func (f *Field) Rules() *Rules {
+	return f.rules
+}
+
+// prüft Blocker und Regel-Filter für die gerade ausgeführte Schub-Stellung
+// (p2 = neue Position der geschobenen Kiste). Im Normalmodus laufen die Regeln
+// nur hinter dem Blocker; im Debug-Vergleichsmodus werden beide Filter
+// unabhängig ausgewertet und die Überlappung gezählt.
+func (f *Field) pushAllowed(p2 Wpos) bool {
+	blockerOK := f.blocker == nil || f.blocker.CheckAllowed(f.player, f.boxBits)
+	if f.rules == nil {
+		return blockerOK
+	}
+	if f.rules.CompareBlocker {
+		rulesOK := f.rules.CheckPush(f.player, p2, f.boxBits)
+		f.rules.countCompare(blockerOK, rulesOK)
+		return blockerOK && rulesOK
+	}
+	return blockerOK && f.rules.CheckPush(f.player, p2, f.boxBits)
+}
+
 // sucht alle Stellungen, welche durch einen einzelnen Kistenschub erreichbar sind
 // (Spieler flutet alle erreichbaren Felder, an jeder Kiste wird der Schub geprüft)
 func (f *Field) SearchVariantsForward(result []State) []State {
@@ -111,7 +142,7 @@ func (f *Field) pushVariantHorizontal(result []State, p, p2 Wpos, box uint32, pD
 	f.boxes[box] = p2                                       // neue Kistenposition merken
 	f.boxBitClear(p)
 	f.boxBitSet(p2)
-	if f.blocker == nil || f.blocker.CheckAllowed(f.player, f.boxBits) {
+	if f.pushAllowed(p2) {
 		result = f.AppendGetState(result)                   // Stellung einsammeln
 	}
 	f.wposToBoxes[p], f.wposToBoxes[p2] = box, f.boxCount   // Kiste wieder zurück schieben
@@ -135,7 +166,7 @@ func (f *Field) pushVariantVertical(result []State, p, p2 Wpos, box uint32, pDep
 	} else {
 		f.sortBoxesDown(box)                                // Kisten sortieren (Index ist größer geworden)
 	}
-	if f.blocker == nil || f.blocker.CheckAllowed(f.player, f.boxBits) {
+	if f.pushAllowed(p2) {
 		result = f.AppendGetState(result)                   // Stellung einsammeln
 	}
 	box = f.wposToBoxes[p2]                                 // Kisten-Nummer erneut abfragen (kann sich durch Sortierung geändert haben)
