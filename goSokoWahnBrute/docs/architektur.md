@@ -125,6 +125,14 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   ins Paket `tables` hängen und unter Realbedingungen messen.
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
   Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
+  Manuell übersteuerbar per `SetDirMode` (TUI-Tasten 1 = nur vorwärts, 2 = nur rückwärts,
+  3 = automatisch); wirkt nur auf die normale Suchphase, die Endphase nach gefundener
+  Lösung bleibt vorgegeben. Achtung bei DirBackward: die Vorwärts-Tiefe 0 (nur die
+  Startstellung) wird immer zuerst abgearbeitet - alle gespeicherten Stellungen sind
+  Schub-Stellungen, die rohe Startstellung ist für Rückwärts-Varianten per Crc nie
+  erreichbar; ohne die Tiefe-1-Nachfolger in forwardKnown würde eine reine Rückwärtssuche
+  ihren kompletten Raum erschöpfen und lösbare Levels fälschlich als unlösbar melden
+  (Test: TestSolveDirMode).
 - **Parallele Suche** (`parallel.go`, Default NumCPU*4 Worker, `SetWorkers(1)` = seriell):
   Batches ab `parallelMinRecords` Sätzen werden in statische, zusammenhängende Bereiche
   geteilt; die Worker generieren Varianten und filtern gegen die (während der Generierung

@@ -107,6 +107,65 @@ func TestSolveSolvedStart(t *testing.T) {
 	}
 }
 
+// manuelle Richtungsvorgabe: die erzwungene Seite muss allein suchen (die andere Front
+// bleibt bei ihren Startstellungen) und trotzdem die optimale Lösung finden;
+// erst nach gefundener Lösung darf die vorgegebene Endphase beide Seiten nutzen
+func TestSolveDirMode(t *testing.T) {
+	level := `
+#######
+#.@ # #
+#$* $ #
+#   $ #
+# ..  #
+#  *  #
+#######
+`
+	for _, tc := range []struct {
+		name string
+		mode DirMode
+	}{
+		{"forward", DirForward},
+		{"backward", DirBackward},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			field, err := soko.Parse(level)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			s := New(field)
+			s.SetDirMode(tc.mode)
+			frozenOpen := s.GetStats().BackwardOpen[0]
+
+			for s.Step(1000) {
+				stats := s.GetStats()
+				if stats.FoundMoves >= 0 {
+					continue // Endphase: der Rest der Beweisführung ist vorgegeben
+				}
+				if tc.mode == DirForward && (stats.BackwardDepth != 0 || stats.BackwardOpen[0] != frozenOpen) {
+					t.Fatal("Rückwärtssuche lief trotz DirForward an")
+				}
+				// DirBackward arbeitet die Vorwärts-Tiefe 0 (nur die Startstellung) zuerst ab
+				// (siehe Step) - danach darf die Vorwärtsfront nicht weiterlaufen
+				if tc.mode == DirBackward && stats.ForwardDepth > 1 {
+					t.Fatal("Vorwärtssuche lief trotz DirBackward über Tiefe 1 hinaus")
+				}
+			}
+
+			if stats := s.GetStats(); stats.FoundMoves != 16 {
+				t.Fatalf("erwartete Lösungslänge 16, erhalten: %d", stats.FoundMoves)
+			}
+			solution, err := s.GetSolution()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(solution.Moves) != 16 {
+				t.Fatalf("erwartete 16 Züge, erhalten: %d (%s)", len(solution.Moves), solution.Moves)
+			}
+		})
+	}
+}
+
 // unlösbares Level: Kiste klemmt in der Ecke
 func TestSolveUnsolvable(t *testing.T) {
 	field, err := soko.Parse(`

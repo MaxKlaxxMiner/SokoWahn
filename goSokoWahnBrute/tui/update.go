@@ -9,6 +9,8 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
+
+	"goSokoWahnBrute/solver"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -107,6 +109,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				*m.bulkSize() /= 10
 			}
 			return m, nil
+		case "c": // Spielfeld (Level-Notation) in die Zwischenablage kopieren
+			return m.copyField()
 		case "i": // neues Level eingeben
 			return m.enterInput()
 		}
@@ -141,12 +145,26 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				*m.bulkSize() /= 10
 			}
 			return m, nil
+		case "1": // Richtung erzwingen: nur vorwärts suchen
+			m.slv.SetDirMode(solver.DirForward)
+			m.status = "Richtung: nur vorwärts (3 = wieder automatisch)"
+			return m, nil
+		case "2": // Richtung erzwingen: nur rückwärts suchen
+			m.slv.SetDirMode(solver.DirBackward)
+			m.status = "Richtung: nur rückwärts (3 = wieder automatisch)"
+			return m, nil
+		case "3": // Richtungswahl wieder der Automatik überlassen
+			m.slv.SetDirMode(solver.DirAuto)
+			m.status = "Richtung: automatisch (kleinere Hashtabelle zuerst)"
+			return m, nil
 		case "*": // Such-Worker eine Stufe hoch
 			m.changeWorkers(true)
 			return m, nil
 		case "/": // Such-Worker eine Stufe runter
 			m.changeWorkers(false)
 			return m, nil
+		case "c": // Spielfeld (Level-Notation) in die Zwischenablage kopieren
+			return m.copyField()
 		case "i": // neues Level eingeben
 			return m.enterInput()
 		}
@@ -172,6 +190,13 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "end":
 			m.frame = len(m.solution.States) - 1
 			return m, nil
+		case "c": // Zugfolge (LURD) in die Zwischenablage kopieren
+			if err := writeClipboard(m.solution.Moves); err != nil {
+				m.status = "Zwischenablage nicht beschreibbar: " + err.Error()
+				return m, nil
+			}
+			m.status = fmt.Sprintf("Zugfolge kopiert (%d Züge)", len(m.solution.Moves))
+			return m, nil
 		case "i": // neues Level eingeben
 			return m.enterInput()
 		}
@@ -181,8 +206,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// liest die Zwischenablage (als Variable, damit Tests sie ersetzen können)
+// liest bzw. schreibt die Zwischenablage (als Variablen, damit Tests sie ersetzen können)
 var readClipboard = clipboard.ReadAll
+var writeClipboard = clipboard.WriteAll
 
 // vereinheitlicht Zeilenenden auf '\n' (Windows CRLF und alte Mac-CR).
 // Hintergrund: der Sanitizer des Textfeldes (bubbles/runeutil) behandelt '\r' und '\n'
@@ -194,6 +220,17 @@ func normalizeNewlines(text string) string {
 		return text
 	}
 	return strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
+}
+
+// kopiert das Spielfeld (Level-Notation) in die Zwischenablage
+// (Taste c im Blocker- und Such-Modus, bewusst ohne Eintrag in der Hilfezeile)
+func (m Model) copyField() (tea.Model, tea.Cmd) {
+	if err := writeClipboard(m.field.String()); err != nil {
+		m.status = "Zwischenablage nicht beschreibbar: " + err.Error()
+		return m, nil
+	}
+	m.status = "Spielfeld kopiert"
+	return m, nil
 }
 
 // wechselt zur Level-Eingabe für ein neues Level (Eingabefeld wird geleert,

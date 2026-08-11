@@ -1,0 +1,18 @@
+  #####
+ ##...######
+## * ... $ #
+#  .$.#$#  ####
+# $...# $$    #
+# $####   # $ #
+# $...#@#$$$$ #
+##$##...  # $ #
+## ##.#$#$  $ #
+# $...$ # $####
+#   #      #
+############
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=47497
+catalog: ABHT 04
+name: level 48
+number: 48/50
+bestmoves: 545

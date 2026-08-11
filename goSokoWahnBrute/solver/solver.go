@@ -6,6 +6,15 @@ import (
 	"goSokoWahnBrute/soko"
 )
 
+// manuelle Richtungsvorgabe der Suche (Tasten 1/2/3 im TUI)
+type DirMode int
+
+const (
+	DirAuto     DirMode = iota // Richtung automatisch anhand der Hashtabellen-Größen wählen
+	DirForward                 // nur vorwärts suchen
+	DirBackward                // nur rückwärts suchen
+)
+
 // bidirektionaler Brute-Force-Solver: Vorwärtssuche von der Startstellung und
 // Rückwärtssuche von den Zielstellungen laufen aufeinander zu, bis sich beide
 // Suchfronten in einer gemeinsamen Stellung treffen (Nachbau von SokoWahn_4th)
@@ -31,8 +40,9 @@ type Solver struct {
 	forwardOnly bool // Sonderfall: keine Zielstellungen vorhanden (sehr kurze Level) -> reine Vorwärtssuche
 	done        bool // gibt an, ob die Suche abgeschlossen ist
 
-	dirDepth   int  // Suchtiefe, für welche die Richtungswahl zuletzt getroffen wurde
-	dirForward bool // gecachte Richtungswahl (true = vorwärts)
+	dirDepth   int     // Suchtiefe, für welche die Richtungswahl zuletzt getroffen wurde
+	dirForward bool    // gecachte Richtungswahl (true = vorwärts)
+	dirMode    DirMode // manuelle Richtungsvorgabe (übersteuert dirForward, Default: DirAuto)
 
 	hashUsage []int64 // Hash-Gesamtnutzung je Suchtiefe (Datenbasis der Max-Tiefen-Schätzung)
 	processed int64   // insgesamt verarbeitete Sätze (Datenbasis der Stellungen/s-Anzeige)
@@ -95,6 +105,19 @@ func New(field *soko.Field) *Solver {
 	s.forwardOnly = s.backwardKnown.Len() == 0
 
 	return s
+}
+
+// setzt die manuelle Richtungsvorgabe der Suche (DirAuto = automatische Wahl je Suchtiefe).
+// Wirkt nur auf die normale Suchphase: nach gefundener Lösung ist der Rest der
+// Beweisführung vorgegeben und der forwardOnly-Sonderfall kennt ohnehin nur eine Richtung.
+// Bei DirBackward wird die Vorwärts-Tiefe 0 trotzdem zuerst abgearbeitet (siehe Step).
+func (s *Solver) SetDirMode(mode DirMode) {
+	s.dirMode = mode
+}
+
+// aktuelle manuelle Richtungsvorgabe
+func (s *Solver) DirMode() DirMode {
+	return s.dirMode
 }
 
 // gibt alle Suchlisten samt eventueller Auslagerungsdateien frei; die Hashtabellen

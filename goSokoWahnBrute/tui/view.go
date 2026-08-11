@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"goSokoWahnBrute/blocker"
+	"goSokoWahnBrute/solver"
 	"goSokoWahnBrute/tools"
 )
 
@@ -62,9 +63,9 @@ func (m Model) helpLine() string {
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
-		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
+		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
 	case modeSolution:
-		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | i = neues Level | q = Beenden"
+		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | c = Zugfolge kopieren | i = neues Level | q = Beenden"
 	}
 	return ""
 }
@@ -119,8 +120,16 @@ func (m Model) viewSearch() string {
 		sb.WriteByte('\n')
 	}
 
-	forward := depthColumn("vorwärts", stats.ForwardOpen, stats.ForwardDepth)
-	backward := depthColumn("rückwärts", stats.BackwardOpen, stats.BackwardDepth)
+	// manuell erzwungene Suchrichtung (Tasten 1/2) in der Spaltenüberschrift markieren
+	forwardTitle, backwardTitle := "vorwärts", "rückwärts"
+	switch m.slv.DirMode() {
+	case solver.DirForward:
+		forwardTitle = styleMark.Render("vorwärts [fix]")
+	case solver.DirBackward:
+		backwardTitle = styleMark.Render("rückwärts [fix]")
+	}
+	forward := depthColumn(forwardTitle, stats.ForwardOpen, stats.ForwardDepth)
+	backward := depthColumn(backwardTitle, stats.BackwardOpen, stats.BackwardDepth)
 	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, forward, "   ", backward))
 
 	if m.auto {

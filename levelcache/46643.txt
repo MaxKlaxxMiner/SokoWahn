@@ -1,0 +1,19 @@
+ ####
+ # .#########
+ #$         #
+ # *******  #
+ # #     # ##
+ # # *** # #
+ # $ *@* $ #
+ # # *** # #
+## #     # #
+#. ******* #
+#          #
+#########. #
+        ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=46643
+catalog: AC 2021/22
+name: Level 31
+number: 31/38
+bestmoves: 532

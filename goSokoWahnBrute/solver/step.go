@@ -52,6 +52,23 @@ func (s *Solver) Step(limit int) bool {
 		s.hashUsage = append(s.hashUsage, s.forwardKnown.Len()+s.backwardKnown.Len())
 	}
 
+	// manuelle Richtungsvorgabe (Tasten 1/2/3 im TUI) übersteuert die automatische Wahl;
+	// die Entscheidung oben läuft trotzdem mit (hashUsage-Statistik bleibt vollständig
+	// und beim Zurückschalten auf DirAuto greift sofort wieder die gecachte Wahl)
+	switch s.dirMode {
+	case DirForward:
+		return s.searchForward(limit)
+	case DirBackward:
+		// die Vorwärts-Tiefe 0 (nur die Startstellung) muss abgearbeitet sein, bevor rein
+		// rückwärts gesucht werden darf: alle gespeicherten Stellungen sind Schub-Stellungen,
+		// die rohe Startstellung kann von Rückwärts-Varianten also nie getroffen werden -
+		// erst ihre Tiefe-1-Nachfolger machen Verbindung und Unlösbarkeits-Beweis möglich
+		if s.forwardDepth == 0 {
+			return s.searchForward(limit)
+		}
+		return s.searchBackward(limit)
+	}
+
 	if s.dirForward {
 		return s.searchForward(limit)
 	}
