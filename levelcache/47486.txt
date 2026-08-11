@@ -1,0 +1,21 @@
+      #######
+#######.....#
+#   $ ......#
+#   $ #.....#
+## $#$#$....#
+ # $  # .####
+ # # $ #  #
+ ##   $   #
+ # $$$ $$ #
+##   $ #  #
+#  $$ $ $ #
+#@ # $##  #
+####  $ $ #
+   #      #
+   ########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=47486
+catalog: ABHT 04
+name: level 37
+number: 37/50
+bestmoves: 473

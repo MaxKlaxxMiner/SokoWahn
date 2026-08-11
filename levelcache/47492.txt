@@ -1,0 +1,19 @@
+  #########
+  #  #    #
+###    ## ##
+#   $ $ #  #
+# $ $ # ## ##
+# $$#$# .. .#
+#  $@  ##...#
+## $#   #...#
+ # $ $$$#.#.#
+ # $    #...#
+ ###$$ $...##
+   #       #
+   #########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=47492
+catalog: ABHT 04
+name: level 43
+number: 43/50
+bestmoves: 799
