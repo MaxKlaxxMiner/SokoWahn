@@ -120,6 +120,7 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare bool, workers i
 		rules := soko.NewRules(field)
 		rules.CompareBlocker = rulesCompare
 		field.SetRules(rules)
+		field.SetRulesBackward(rules)
 	}
 
 	if useBlocker {

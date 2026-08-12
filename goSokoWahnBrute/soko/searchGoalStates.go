@@ -4,7 +4,8 @@ package soko
 // Spieler steht auf einem freien Nachbarfeld, von dem aus ein Rückwärtszug möglich ist
 func (f *Field) SearchGoalStates() (result []State) {
 	tmp := f.Clone()
-	tmp.SetRules(nil) // das Zielstellungs-Seeding bleibt ungefiltert (wie im Original) - die Rückwärtszug-Sonde unten darf keine Pull-Regeln anwenden
+	tmp.SetRules(nil)         // das Zielstellungs-Seeding bleibt ungefiltert (wie im Original) -
+	tmp.SetRulesBackward(nil) // die Rückwärtszug-Sonde unten darf keine Pull-Regeln anwenden
 
 	// alle Kisten auf die Zielfelder setzen
 	tmp.SetBoxes(tmp.goals)

@@ -89,9 +89,31 @@ type Blocker struct {
 	directTable   DirectTable            // aktive Direct-Write-Tabelle der laufenden Stufe (nil = Standard-Modus)
 }
 
+// ab dieser Kistenzahl filtern die VORWÄRTS-Phasen des Stufenbaus mit den
+// Stufe-1-Regeln (Hybrid, Messungen von Max 08/2026): die kleinen Stufen bauen
+// ungefiltert - ihre Hüllen sind winzig, die vollen Muster kosten kaum Platz,
+// filtern aber billiger als die Regeln (Anker-Bitmasken-Test schlägt den
+// Freeze-Fixpunkt pro Schub) - und bleiben nebenbei bitgenau vergleichbar mit
+// dem C#-Orakel (refcli blockerbx). Erst ab dieser Stufe wachsen Hüllen und
+// Mustermengen so stark, dass sich der Regel-Filter im Bau lohnt.
+var RulesMinBoxCount = 4
+
+// erstellt einen Blocker. Ab Stufe RulesMinBoxCount filtert der Stufenbau seine
+// Vorwärts-Phasen (CollectStart/CollectGoals-Varianten, SearchVariants) mit den
+// Stufe-1-Regeln: die Vorwärts-Hülle verliert ihr totes Gewebe (schnellerer Bau,
+// weniger RAM) und es entstehen weniger Muster - genau die, welche die
+// Live-Regeln der Suche ohnehin fangen (Freeze/Diagonale sind monoton unter
+// Kisten-Hinzufügen: ein toter k-Cluster wird in jeder Oberstellung bei seiner
+// Entstehung live erkannt). Fehlende Muster kosten nie Korrektheit, nur
+// Filterleistung. Die Rückwärtswelle (MergeGoals) bleibt bewusst ungefiltert -
+// ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
+// Die Stufenwerte ab RulesMinBoxCount sind damit NICHT mehr bitgenau
+// vergleichbar mit dem C#-Orakel - Referenz sind die in den Tests verankerten
+// Go-Werte; die kleinen Stufen bleiben orakel-gleich.
 func New(field *soko.Field, cachePath string) *Blocker {
 	base := field.Clone()
-	base.SetRules(nil) // der Stufenbau bleibt regel-frei: die Stufenwerte müssen bitgenau zum C#-Orakel (refcli blockerbx) bleiben
+	base.SetRules(soko.NewRules(base)) // frische Instanz: eigene Statistik, unabhängig von den Such-Regeln des Aufrufers
+	base.SetRulesBackward(nil)         // die Rückwärtswelle bleibt immer regel-frei
 	start := soko.State{}
 	base.GetState(&start)
 
@@ -289,6 +311,9 @@ func (b *Blocker) initStage() {
 	b.work = b.base.CloneWithBoxCount(k)
 	b.work.SetBlocker(b)         // bereits fertige Stufen filtern schon beim Stufenbau mit
 	b.work.SetBlockerBackward(b) // auch rückwärts filtern (Bx-Semantik, vermeidet redundante Muster)
+	if k < RulesMinBoxCount {
+		b.work.SetRules(nil) // kleine Stufen ungefiltert bauen (Hybrid, siehe RulesMinBoxCount)
+	}
 	if b.directFactory != nil {
 		b.directTable = b.directFactory()
 		b.known = b.directTable

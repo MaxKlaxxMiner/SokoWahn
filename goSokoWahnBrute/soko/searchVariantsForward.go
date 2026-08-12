@@ -14,16 +14,14 @@ func (f *Field) SetBlocker(blocker BlockerCheck) {
 	f.blocker = blocker
 }
 
-// setzt den optionalen regelbasierten Live-Deadlock-Filter (nil = kein Filter).
-// Vorwärts filtert CheckPush (unlösbare Stellungen), rückwärts CheckPull
-// (vorwärts unerreichbare Konfigurationen - die Vorwärts-Regeln selbst könnten
-// rückwärts nie feuern, denn rückwärts erreichte Stellungen sind per
-// Konstruktion vorwärts lösbar).
+// setzt den optionalen regelbasierten Live-Deadlock-Filter der Vorwärtssuche
+// (CheckPush verwirft beweisbar unlösbare Stellungen, nil = kein Filter).
+// Für die Rückwärtssuche gibt es den getrennten Hook SetRulesBackward.
 func (f *Field) SetRules(rules *Rules) {
 	f.rules = rules
 }
 
-// gibt den gesetzten Regel-Filter zurück (nil = keiner)
+// gibt den gesetzten Vorwärts-Regel-Filter zurück (nil = keiner)
 func (f *Field) Rules() *Rules {
 	return f.rules
 }

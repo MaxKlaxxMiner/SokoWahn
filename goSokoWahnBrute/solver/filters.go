@@ -34,9 +34,11 @@ func (s *Solver) SetRulesEnabled(on bool) {
 	if on {
 		if r := s.base.Rules(); r != nil {
 			s.work.SetRules(r.Clone())
+			s.work.SetRulesBackward(r.Clone())
 		}
 	} else {
 		s.work.SetRules(nil)
+		s.work.SetRulesBackward(nil)
 	}
 	s.workers = nil
 }

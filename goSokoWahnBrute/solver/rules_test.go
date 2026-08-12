@@ -17,7 +17,9 @@ func solveLevelWithRules(t *testing.T, level string, expectedMoves int) (*Solver
 	if err != nil {
 		t.Fatal(err)
 	}
-	field.SetRules(soko.NewRules(field))
+	rules := soko.NewRules(field)
+	field.SetRules(rules)
+	field.SetRulesBackward(rules)
 
 	s := New(field)
 	for s.Step(1000000000) {
@@ -84,7 +86,9 @@ func TestSolveRulesUnsolvable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field.SetRules(soko.NewRules(field))
+	rules := soko.NewRules(field)
+	field.SetRules(rules)
+	field.SetRulesBackward(rules)
 
 	s := New(field)
 	for s.Step(1000000000) {
@@ -114,7 +118,9 @@ func TestSolveRulesDiagonalUnsolvable(t *testing.T) {
 			t.Fatal(err)
 		}
 		if withRules {
-			field.SetRules(soko.NewRules(field))
+			rules := soko.NewRules(field)
+			field.SetRules(rules)
+			field.SetRulesBackward(rules)
 		}
 		s := New(field)
 		for s.Step(1000000000) {
@@ -145,7 +151,9 @@ func TestSolveRulesToggle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field.SetRules(soko.NewRules(field))
+	rules := soko.NewRules(field)
+	field.SetRules(rules)
+	field.SetRulesBackward(rules)
 
 	s := New(field)
 	if !s.RulesEnabled() {
@@ -184,7 +192,9 @@ func TestSolveRulesDirBackward(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	field.SetRules(soko.NewRules(field))
+	rules := soko.NewRules(field)
+	field.SetRules(rules)
+	field.SetRulesBackward(rules)
 
 	s := New(field)
 	s.SetDirMode(DirBackward)

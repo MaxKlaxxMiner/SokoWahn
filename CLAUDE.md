@@ -23,8 +23,13 @@ ins Repo gewandert 2015 als "alter Kram") und den aktiven Go-Nachbau `goSokoWahn
   ASCII plus korrekte Umlaute (ä ö ü ß), keine Sonder-Unicode-Zeichen (Pfeil als `->`).
 - **Commits macht Max selbst** (TortoiseGit, meist Einzeiler) - nur Commit-Messages vorschlagen,
   nie selbst committen.
-- Verhalten des Go-Ports wird **gegen das C#-Orakel verifiziert** (Knoten je Tiefe,
-  Blocker-Stufen, Lösungslängen). Abweichung = Bug oder bewusste, dokumentierte Entscheidung.
+- Verhalten des Go-Ports wird **gegen das C#-Orakel verifiziert**, soweit die Semantik
+  noch deckungsgleich ist: die Suche ohne Filter (Knoten je Tiefe, Lösungslängen) und
+  die Blocker-Stufen 1-3 sind bitgenau vergleichbar. Die Stufen ab 4 sind es seit
+  Cache-Version 5 nicht mehr (regel-gefilterter Stufenbau, bewusste
+  Go-Weiterentwicklung, siehe blocker.RulesMinBoxCount) - Referenz sind die in den
+  Go-Tests verankerten Werte. Abweichung = Bug oder bewusste, dokumentierte
+  Entscheidung.
 - Vergleichs- und Debug-Läufe klein halten: Blocker-Stufen begrenzen (`-stages N` bzw.
   `blockerbx N`), kleine Levels bevorzugen. 2-3-Steiner rechnen in Sekunden durch.
 - Bei längerer Fehlersuche: Max Bescheid geben und den Stand zeigen, er schaut direkt mit drüber.
@@ -53,7 +58,8 @@ go run . -cli [-blocker] <level.txt>                    # Go
 
 # Blocker-Stufen (schnell, ohne Suche):
 ./refcli.exe <level.txt> blockerbx <maxStufe>           # C# (Bx = Referenz-Verhalten)
-go run . -stages <maxStufe> <level.txt>                 # Go
+go run . -stages <maxStufe> <level.txt>                 # Go (Stufen 1-3 byte-gleich zum C#,
+                                                        #     ab 4 regel-gefiltert, siehe RulesMinBoxCount)
 ```
 
 Vor Vergleichen die `temp/`-Ordner löschen (Blocker-Caches). Referenzwerte sind als

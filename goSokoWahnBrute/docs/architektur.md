@@ -167,7 +167,23 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 - Lösungs-Rekonstruktion über beide Tabellen (Vorgänger/Nachfolger mit exakt passender Tiefe),
   LURD-Zugfolge per BFS-Laufweg zwischen den Schub-Stellungen (`soko.Steps`).
 
-## Blocker (Bx-Semantik)
+## Blocker (Bx-Semantik, seit Cache-Version 5 Hybrid mit regel-gefilterten großen Stufen)
+
+**Hybrid-Standard seit Cache-Version 5** (`RulesMinBoxCount = 4`): Stufen 1-3 bauen
+klassisch (winzige Hüllen, volle Muster - der Anker-Bitmasken-Test filtert billiger
+als der Freeze-Fixpunkt, und die Werte bleiben bitgenau orakel-vergleichbar mit
+refcli blockerbx). Ab Stufe 4 filtern die Vorwärts-Phasen des Stufenbaus
+(Schub-Varianten von CollectStart/CollectGoals, SearchVariants) mit einer eigenen
+Stufe-1-Regel-Instanz (nur vorwärts, siehe blocker.New): die dort explodierenden
+Hüllen verlieren ihr totes Gewebe (schnellerer Bau, weniger RAM), und es entstehen
+weniger Muster - genau die regel-erkennbaren, welche die Live-Regeln der Suche bei
+der Entstehung ohnehin fangen (Freeze/Diagonale sind monoton unter
+Kisten-Hinzufügen). Fehlende Muster kosten nie Korrektheit, nur Filterleistung
+(Muster sind reine Beschleuniger). Die Rückwärtswelle (MergeGoals) bleibt bewusst
+ungefiltert - ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
+Historie: Cache-Version 4 filterte ALLE Stufen - messbar langsamer in Stufenbau und
+Suche (die kleinen Muster fehlten als billige Vorfilter), daher der Hybrid.
+Alte Caches werden beim Laden verworfen und neu gerechnet.
 
 Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 
@@ -206,12 +222,12 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   k-Projektion jeder legalen Partie landet nach dem Schub einer Teilmengen-Kiste in
   der k-Start-Hülle). Sind alle Kandidaten abgedeckt, ist jede mögliche Entstehung
   widerlegt oder tot. Kosten: Vanilla-Suche nur ca. 1,7% mehr Knoten (s.u.).
-  Die Blocker-Stufenwerte ändern sich durch die bedingte Regel (der Stufenbau
+  Die Blocker-Stufenwerte änderten sich durch die bedingte Regel (der Stufenbau
   filtert sich selbst damit: größere Hüllen, längere Rückwärtswellen, teils deutlich
-  mehr Hinterland-Muster, z.B. lid201 Stufe 2: 2288 statt 35; nur Stufe 1 bleibt gleich) -
-  dank Rückport bleiben sie **bitgenau vergleichbar mit dem gefixten C#-refcli**
-  (verifiziert: vanilla blockerbx 5 und lid201 blockerbx 3 exakt gleich).
-  Alte v2-Caches werden verworfen und neu gerechnet.
+  mehr Hinterland-Muster) - dank Rückport waren sie unter Cache-Version 3 **bitgenau
+  vergleichbar mit dem gefixten C#-refcli** (verifiziert: vanilla blockerbx 5 und
+  lid201 blockerbx 3 exakt gleich; seit Version 4 gilt das wegen der
+  regel-gefilterten Vorwärts-Phasen nicht mehr, siehe oben).
   Zwei Beschleunigungen gegenüber dem naiven Feld-für-Feld-Vergleich:
   1. **Bitmasken**: das Field pflegt die Kistenbelegung als Bitmaske über die begehbaren
      Felder (`boxBits`, 2 Bit-Operationen pro Schub/Undo); jedes Muster liegt ebenfalls als
@@ -285,8 +301,10 @@ JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
 - **Nur beweisbare Deadlocks**: keine Dominanz-Prunings (Zugoptimalität bleibt).
   Vorwärts filtert CheckPush in pushVariantHorizontal/Vertical hinter dem
   Blocker-Check, rückwärts CheckPull in SearchVariantsBackward.
-- **Der Blocker-Stufenbau bleibt regel-frei** (blocker.New räumt die Regeln auf seinen
-  internen Feldern ab) - die Stufenwerte bleiben bitgenau vergleichbar mit refcli.
+- **Der Blocker-Stufenbau filtert seine Vorwärts-Phasen ab Stufe RulesMinBoxCount=4
+  selbst mit den Regeln** (Hybrid seit Cache-Version 5, eigene Regel-Instanz, nur
+  vorwärts - siehe Blocker-Kapitel); die kleinen Stufen bauen klassisch und bleiben
+  orakel-vergleichbar.
 - **Threading**: die Vorberechnung (tote Felder, Ziel-Maske, Geometrie) wird geteilt,
   jeder Field-Clone bekommt per Rules.Clone einen eigenen Scratch-Puffer.
   Statistik-Zähler liegen atomar im geteilten Teil (alle Worker zählen gemeinsam).
@@ -310,16 +328,16 @@ JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
 |---|---|---|
 | Vanilla (lid214) | optimale Züge | 230 |
 | Vanilla ohne Blocker | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
-| Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 |
-| Vanilla mit Blockern | Knoten am Ende | 1.595.042 (Regressionswert) |
-| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 |
+| Vanilla Blocker-Stufen 1-5 (v5 Hybrid) | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.069/209.989, 2.652/1.071.408 (1-3 = refcli; refcli-Stufe-4 wäre 1.173/210.093) |
+| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.595.820 (fast alte Vollblocker-Stärke 1.595.042) |
+| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.488.952 (besser als die alte Vollblocker-Referenz) |
+| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (bitgenau = refcli, alle unter RulesMinBoxCount) |
 | small.txt | optimale Züge | 16 |
 | Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
 | Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.825.644 / Freeze 1.104.786, Diag 71.007, PullTot 118.087, PullFreeze 783 (Regressionswerte) |
 
-Die Suche ohne Blocker bleibt bitgenau vergleichbar mit dem C#-Orakel. Die
-Blocker-Stufenwerte gelten seit der bedingten Kill-Regel (Bx-Hinterland-Fix) und
-sind bitgenau gleich dem **gefixten** C#-refcli (`blockerbx`, Cache-Version 108);
-die alten Werte der unbedingten Bx-Semantik zum Vergleich: 216/2.251, 239/26.848,
-1.024/208.306, 2.835/1.056.514 bzw. lid201 35/8.019, 781/232.082, Vanilla-Suche
-1.568.540 Knoten.
+Die Suche ohne Blocker und ohne Regeln bleibt bitgenau vergleichbar mit dem
+C#-Orakel, ebenso die Blocker-Stufen unterhalb von RulesMinBoxCount=4 (refcli
+blockerbx). Die Stufen ab 4 sind seit Cache-Version 5 regel-gefiltert und damit
+reine Go-Referenzwerte (die refcli-Vergleichswerte stehen als Kommentare in
+blocker_test.go).
