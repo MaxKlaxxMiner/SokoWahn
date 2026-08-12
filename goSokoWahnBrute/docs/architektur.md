@@ -135,9 +135,13 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   speicheroptimierte PosTable-Variante nach dem Vorbild von SokowahnHash_Index24Multi
   aus dem C#-Original (2013; dort Dictionary-Delta, Binärsuche und uint32-Limit bei
   4,29 Mrd Einträgen). Neuzugänge sammelt ein CompactTable-Delta; das Archiv hält den
-  Bestand unveränderlich in 256 Shards (untere 8 Schlüssel-Bits) als verschränkte
-  7-Byte-Records: 5 Byte Rest-Schlüssel (Bits 24..63) + 2 Byte Tiefe, ein einziger
-  8-Byte-Load liefert Vergleich und Tiefe. Gruppiert wird nach Bucket (untere Bits,
+  Bestand unveränderlich in 256 Shards (untere 8 Schlüssel-Bits) als ein uint64 je
+  Record: Bits 0..39 Rest-Schlüssel (Schlüssel-Bits 24..63), Bits 40..55 Tiefe -
+  ein nackter Slice-Zugriff liefert Vergleich und Tiefe. Format-Shootout (siehe
+  Git-Historie): gepackte 7-Byte-Records (+Unsafe-Load) und ein cacheline-
+  ausgerichtetes 9er-Zeilen-Layout verlieren beide 12-17% Lookup-Tempo gegen das
+  volle uint64 - das Frei-Byte kauft Alignment, Bounds-Check-Eliminierung und
+  Einfachheit. Gruppiert wird nach Bucket (untere Bits,
   adaptiv 24..32 mit Ziel ~12 Einträgen je Bucket = 1-2 Cachelines linearer Scan,
   ab 24 Bits sind Index- plus Rest-Bits verlustfreie 64), der Bucket-Index sind
   shard-relative uint32-Offsets. Add prüft zuerst das Archiv (Tiefen-Update in-place,
@@ -151,9 +155,9 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   CompactTable-Teil: CompactTable -> Komplett-Konvertierung, ArchiveTable ->
   vorgezogener Delta-Merge; der zweite Druck trifft automatisch die andere Richtung.
   Messwerte (i5-11400H, 15,6M bzw. 16,9M Einträge, BenchmarkArchiveTable):
-  RAM 188/178 MB gegen 320 MB CompactTable (Faktor ~1,8; bei Milliarden-Beständen
-  eher 1,9, weil der Bucket-Index dank mitwachsender Bits auf <1% Anteil fällt);
-  Lookup-Paar Hit+Miss 181/145 ns gegen 48 ns - zwei abhängige Loads (Index ->
+  RAM 200/194 MB gegen 320 MB CompactTable (Faktor ~1,6; bei Milliarden-Beständen
+  eher 1,65, weil der Bucket-Index dank mitwachsender Bits auf <1% Anteil fällt);
+  Lookup-Paar Hit+Miss 162/121 ns gegen 48 ns - zwei abhängige Loads (Index ->
   Daten) statt einem, im Suchalltag teils von der Worker-Überbelegung versteckt.
   Standard bleibt die CompactTable, das Archiv-Format ist der RAM-Joker per
   Tastendruck (Anzeige in der Hash-Zeile: "Archiv, Delta x %", 100% = nächster Merge).

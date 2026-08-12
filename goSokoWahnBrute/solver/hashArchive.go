@@ -1,12 +1,11 @@
 package solver
 
 import (
-	"encoding/binary"
-	"goSokoWahnBrute/crc64"
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"unsafe"
+
+	"goSokoWahnBrute/crc64"
 )
 
 // ArchiveTable ("SlowCompactArchiveTable"): speicheroptimierte Stellungs-Tabelle
@@ -15,8 +14,12 @@ import (
 //
 // Neue Einträge sammelt ein kleines CompactTable-Delta (volle Geschwindigkeit).
 // Läuft es voll, wandert der Inhalt in das unveränderlich gruppierte Archiv:
-// 7 Byte pro Eintrag (5 Byte Rest-Schlüssel = Bits 24..63 little-endian plus
-// 2 Byte Zugtiefe), aufgeteilt in 256 Shards über die unteren 8 Schlüssel-Bits.
+// ein uint64 pro Eintrag (Bits 0..39 Rest-Schlüssel = Schlüssel-Bits 24..63,
+// Bits 40..55 Zugtiefe, Rest frei), aufgeteilt in 256 Shards über die unteren
+// 8 Schlüssel-Bits. Historie der Record-Formate: gepackte 7-Byte-Records
+// (+ Unsafe-Load) und ein cacheline-ausgerichtetes 9er-Zeilen-Layout liegen in
+// der Git-Historie - das volle uint64 kostet 1 Byte je Eintrag mehr, ist aber
+// genauso schnell und braucht weder Offset-Arithmetik noch unsafe.
 // Innerhalb eines Shards sind die Einträge nach Bucket gruppiert (Bucket =
 // untere bits Schlüssel-Bits; mindestens 24, dann sind Index- plus Rest-Bits
 // zusammen verlustfreie 64 - eine Sortierung innerhalb des Buckets ist unnötig).
@@ -28,7 +31,7 @@ import (
 // Tiefen-Updates schreiben direkt in das Archiv (die Schlüssel liegen fest);
 // Add prüft deshalb zuerst das Archiv - Delta und Archiv bleiben disjunkt und
 // Len() ist jederzeit exakt. Speicherbilanz gegenüber der CompactTable:
-// 7 statt effektiv 13,3 Byte je Eintrag. Der Merge baut die Shards einzeln um
+// 8 statt effektiv 13,3 Byte je Eintrag. Der Merge baut die Shards einzeln um
 // (alte Shard-Arrays werden während des Umbaus frei) und läuft parallel über
 // alle Kerne; Schreibzugriffe passieren nur in der seriellen Merge-Phase des
 // Solvers, Lookups sind reine Lesezugriffe und damit worker-sicher.
@@ -42,13 +45,12 @@ type ArchiveTable struct {
 }
 
 // ein Shard des Archivs: alle Einträge, deren Schlüssel in den unteren 8 Bits
-// der Shard-Nummer entsprechen, gruppiert nach Bucket. Die Sätze liegen
-// verschränkt als 7-Byte-Records (5 Byte Rest + 2 Byte Tiefe): ein einziger
-// 8-Byte-Load liefert Schlüsselvergleich UND Tiefe aus derselben Cacheline
-// (+1 Byte Padding am Ende für den überstehenden Load des letzten Satzes)
+// der Shard-Nummer entsprechen, gruppiert nach Bucket. Ein Record pro uint64:
+// ein normaler Slice-Zugriff liefert Schlüsselvergleich UND Tiefe, natürlich
+// ausgerichtet und ohne jede Byte-Arithmetik
 type archiveShard struct {
 	offsets []uint32 // Startindex je Bucket-im-Shard (Bucket >> 8), plus End-Sentinel
-	data    []byte   // 7-Byte-Records: Bytes 0-4 Rest-Schlüssel, Bytes 5-6 Zugtiefe (beides little-endian)
+	data    []uint64 // Records: Bits 0..39 Rest-Schlüssel, Bits 40..55 Zugtiefe
 }
 
 const (
@@ -142,8 +144,8 @@ func (t *ArchiveTable) archiveGet(key uint64) uint16 {
 	bucket := (key & t.mask) >> 8
 	rest := key >> 24
 	for i := s.offsets[bucket]; i < s.offsets[bucket+1]; i++ {
-		if record := loadRecord(s.data, i); record&archiveRestMask == rest {
-			return uint16(record >> 40) // Tiefe steckt im selben 8-Byte-Load
+		if record := s.data[i]; record&archiveRestMask == rest {
+			return uint16(record >> 40) // Tiefe steckt im selben Load
 		}
 	}
 	return DepthUnknown
@@ -158,37 +160,12 @@ func (t *ArchiveTable) archiveSet(key uint64, depth uint16) bool {
 	bucket := (key & t.mask) >> 8
 	rest := key >> 24
 	for i := s.offsets[bucket]; i < s.offsets[bucket+1]; i++ {
-		if loadRecord(s.data, i)&archiveRestMask == rest {
-			binary.LittleEndian.PutUint16(s.data[int(i)*7+5:], depth)
+		if s.data[i]&archiveRestMask == rest {
+			s.data[i] = rest | uint64(depth)<<40
 			return true
 		}
 	}
 	return false
-}
-
-// liest den 7-Byte-Record des Eintrags i als uint64 (8-Byte-Load;
-// Bits 0..39 = Rest-Schlüssel, Bits 40..55 = Tiefe, Bits 56..63 = Fremd-Byte).
-// Bewusst roh ohne Bounds-Check (heißester Load des Archiv-Pfads, ca. +2%
-// Suchdurchsatz gegenüber binary.LittleEndian). Sicher, weil:
-// 1. das +1 Padding-Byte der Allokation (total*7+1) auch den überstehenden
-//    8-Byte-Load des LETZTEN Records innerhalb des Objekts hält,
-// 2. i immer aus den Offset-Arrays des Merges stammt (i < total) - eine
-//    verletzte Invariante liest hier allerdings stumm Müll statt zu panicen,
-// 3. unaligned Loads auf amd64/arm64 erlaubt sind (little-endian vorausgesetzt)
-func loadRecord(data []byte, i uint32) uint64 {
-	return *(*uint64)(unsafe.Add(
-		unsafe.Pointer(unsafe.SliceData(data)),
-		uintptr(i)*7,
-	))
-	//return binary.LittleEndian.Uint64(data[int(i)*7:]) // die brave Variante
-}
-
-// schreibt den kompletten 7-Byte-Record des Eintrags i
-func storeRecord(data []byte, i uint32, rest uint64, depth uint16) {
-	offset := int(i) * 7
-	binary.LittleEndian.PutUint32(data[offset:], uint32(rest))
-	data[offset+4] = byte(rest >> 32)
-	binary.LittleEndian.PutUint16(data[offset+5:], depth)
 }
 
 // verschmilzt das komplette Delta in die Archiv-Shards und beginnt mit einem
@@ -228,7 +205,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 				low24 := (uint64(b)<<8 | uint64(shard)) & (1<<24 - 1)
 				for i := s.offsets[b]; i < s.offsets[b+1]; i++ {
 					// voller Schlüssel aus Rest + Bucket rekonstruiert
-					key := (loadRecord(s.data, i)&archiveRestMask)<<24 | low24
+					key := (s.data[i]&archiveRestMask)<<24 | low24
 					c[(key&newMask)>>8+1]++
 				}
 			}
@@ -262,7 +239,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 			offsets[b] = sum
 		}
 		total := offsets[len(offsets)-1]
-		data := make([]byte, int(total)*7+1)
+		data := make([]uint64, total)
 		cursor := make([]uint32, bucketsPerShard)
 		copy(cursor, offsets[:bucketsPerShard])
 
@@ -270,15 +247,14 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 		for b := 0; b+1 < len(s.offsets); b++ {
 			low24 := (uint64(b)<<8 | uint64(shard)) & (1<<24 - 1)
 			for i := s.offsets[b]; i < s.offsets[b+1]; i++ {
-				record := loadRecord(s.data, i)
-				rest := record & archiveRestMask
+				record := s.data[i]
 				bucket := uint64(b)
 				if newBits != oldBits {
-					bucket = ((rest<<24 | low24) & newMask) >> 8
+					bucket = (((record&archiveRestMask)<<24 | low24) & newMask) >> 8
 				}
 				pos := cursor[bucket]
 				cursor[bucket]++
-				storeRecord(data, pos, rest, uint16(record>>40))
+				data[pos] = record // Rest + Tiefe wandern unverändert mit
 			}
 		}
 		t.shards[shard] = archiveShard{offsets: offsets, data: data}
@@ -290,7 +266,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 	if delta.zeroDepth != DepthUnknown { // Sonderfall seriell, solange die Cursor unumkämpft sind
 		pos := cursors[0][0]
 		cursors[0][0]++
-		storeRecord(t.shards[0].data, pos, 0, delta.zeroDepth)
+		t.shards[0].data[pos] = uint64(delta.zeroDepth) << 40
 	}
 	parallelRanges(len(delta.crcs), func(from, to int) {
 		for i := from; i < to; i++ {
@@ -301,7 +277,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 			shard := key & (archiveShardCount - 1)
 			bucket := (key & newMask) >> 8
 			pos := atomic.AddUint32(&cursors[shard][bucket], 1) - 1
-			storeRecord(t.shards[shard].data, pos, key>>24, delta.depths[i])
+			t.shards[shard].data[pos] = key>>24 | uint64(delta.depths[i])<<40
 		}
 	})
 
@@ -312,7 +288,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 	t.archiveBytes = 0
 	for shard := range t.shards {
 		s := &t.shards[shard]
-		t.archiveBytes += int64(len(s.offsets))*4 + int64(len(s.data))
+		t.archiveBytes += int64(len(s.offsets))*4 + int64(len(s.data))*8
 	}
 	t.delta = newCompactTable(1 << 12)
 }
