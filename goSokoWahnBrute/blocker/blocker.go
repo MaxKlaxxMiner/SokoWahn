@@ -89,27 +89,32 @@ type Blocker struct {
 	directTable   DirectTable            // aktive Direct-Write-Tabelle der laufenden Stufe (nil = Standard-Modus)
 }
 
-// ab dieser Kistenzahl filtern die VORWÄRTS-Phasen des Stufenbaus mit den
-// Stufe-1-Regeln (Hybrid, Messungen von Max 08/2026): die kleinen Stufen bauen
-// ungefiltert - ihre Hüllen sind winzig, die vollen Muster kosten kaum Platz,
-// filtern aber billiger als die Regeln (Anker-Bitmasken-Test schlägt den
-// Freeze-Fixpunkt pro Schub) - und bleiben nebenbei bitgenau vergleichbar mit
-// dem C#-Orakel (refcli blockerbx). Erst ab dieser Stufe wachsen Hüllen und
-// Mustermengen so stark, dass sich der Regel-Filter im Bau lohnt.
-var RulesMinBoxCount = 4
+// Muster-Schwelle der adaptiven Regel-Filterung im Stufenbau (Feinanpassung von
+// Max 08/2026): solange alle fertigen Stufen höchstens so viele Muster haben,
+// baut der Stufenbau klassisch - kleine Mustermengen kosten kaum Platz, filtern
+// aber billiger als die Regeln (Anker-Bitmasken-Test schlägt den Freeze-Fixpunkt
+// pro Schub) und bleiben bitgenau vergleichbar mit dem C#-Orakel (refcli
+// blockerbx). Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion,
+// typisch für sehr große Levels), filtern alle WEITEREN Stufen ihre
+// Vorwärts-Phasen mit den Stufe-1-Regeln ("sticky", entscheidet sich
+// deterministisch aus den fertigen Stufen - auch bei Wiederaufnahme aus dem
+// Cache identisch). Zahme Levels (Vanilla, lid201) bauen damit komplett
+// klassisch, nur Muster-Explosions-Levels bezahlen den Regel-Aufpreis dort,
+// wo er sich lohnt.
+var RulesPatternThreshold = 4096
 
-// erstellt einen Blocker. Ab Stufe RulesMinBoxCount filtert der Stufenbau seine
-// Vorwärts-Phasen (CollectStart/CollectGoals-Varianten, SearchVariants) mit den
-// Stufe-1-Regeln: die Vorwärts-Hülle verliert ihr totes Gewebe (schnellerer Bau,
+// erstellt einen Blocker. Nach einer Muster-Explosion (siehe
+// RulesPatternThreshold) filtert der Stufenbau seine Vorwärts-Phasen
+// (CollectStart/CollectGoals-Varianten, SearchVariants) mit den Stufe-1-Regeln:
+// die explodierenden Hüllen verlieren ihr totes Gewebe (schnellerer Bau,
 // weniger RAM) und es entstehen weniger Muster - genau die, welche die
 // Live-Regeln der Suche ohnehin fangen (Freeze/Diagonale sind monoton unter
 // Kisten-Hinzufügen: ein toter k-Cluster wird in jeder Oberstellung bei seiner
 // Entstehung live erkannt). Fehlende Muster kosten nie Korrektheit, nur
 // Filterleistung. Die Rückwärtswelle (MergeGoals) bleibt bewusst ungefiltert -
 // ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
-// Die Stufenwerte ab RulesMinBoxCount sind damit NICHT mehr bitgenau
-// vergleichbar mit dem C#-Orakel - Referenz sind die in den Tests verankerten
-// Go-Werte; die kleinen Stufen bleiben orakel-gleich.
+// Gefilterte Stufen sind NICHT mehr bitgenau vergleichbar mit dem C#-Orakel -
+// Referenz sind die in den Tests verankerten Go-Werte.
 func New(field *soko.Field, cachePath string) *Blocker {
 	base := field.Clone()
 	base.SetRules(soko.NewRules(base)) // frische Instanz: eigene Statistik, unabhängig von den Such-Regeln des Aufrufers
@@ -304,6 +309,22 @@ func (b *Blocker) rebuildCheckIndex() {
 	b.checkIndex = index
 }
 
+// prüft, ob eine der fertigen Stufen die Muster-Schwelle überschritten hat
+// (dann filtern alle weiteren Stufen mit den Regeln, siehe RulesPatternThreshold)
+func (b *Blocker) patternThresholdExceeded() bool {
+	for i := range b.stages {
+		st := &b.stages[i]
+		count := 0
+		for _, pat := range st.patterns {
+			count += len(pat) / st.boxCount
+		}
+		if count > RulesPatternThreshold {
+			return true
+		}
+	}
+	return false
+}
+
 // initialisiert den Arbeitszustand für eine neue Stufe
 func (b *Blocker) initStage() {
 	k := b.searchBoxCount
@@ -311,8 +332,8 @@ func (b *Blocker) initStage() {
 	b.work = b.base.CloneWithBoxCount(k)
 	b.work.SetBlocker(b)         // bereits fertige Stufen filtern schon beim Stufenbau mit
 	b.work.SetBlockerBackward(b) // auch rückwärts filtern (Bx-Semantik, vermeidet redundante Muster)
-	if k < RulesMinBoxCount {
-		b.work.SetRules(nil) // kleine Stufen ungefiltert bauen (Hybrid, siehe RulesMinBoxCount)
+	if !b.patternThresholdExceeded() {
+		b.work.SetRules(nil) // vor der Muster-Explosion klassisch bauen (siehe RulesPatternThreshold)
 	}
 	if b.directFactory != nil {
 		b.directTable = b.directFactory()

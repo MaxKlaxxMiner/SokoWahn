@@ -135,13 +135,11 @@ func TestBlockerCachePartialResume(t *testing.T) {
 	}
 }
 
-// Referenzwerte der Vanilla-Blocker-Stufen (seit Cache-Version 5 Hybrid: Stufen
-// unterhalb RulesMinBoxCount=4 bauen klassisch und bleiben bitgenau gleich dem
-// C#-Orakel refcli blockerbx; ab Stufe 4 filtern die Vorwärts-Phasen mit den
-// Stufe-1-Regeln und verlieren genau die regel-erkennbaren Muster). Die
-// refcli-Werte für Stufe 4 wären 1173/210093; Stufe 5 ist trotz Filterung
-// unverändert orakel-gleich - die Regeln killen dort exakt die Zustände, welche
-// sonst die Muster der Stufe 4 filtern.
+// Orakel-Vergleich: die Vanilla-Blocker-Stufen müssen exakt den Werten des GEFIXTEN
+// C#-SokowahnBlockerBx entsprechen (refcli: "vanilla.txt blockerbx 5", Cache-Version
+// 108). Vanilla bleibt mit allen Stufen unter der Muster-Schwelle
+// (RulesPatternThreshold) und baut deshalb komplett klassisch - die adaptive
+// Regel-Filterung des Stufenbaus greift nur bei Muster-Explosions-Levels.
 func TestBlockerVanillaOracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Blocker dauert ca. 1 Sekunde plus Lösungszeit (übersprungen mit -short)")
@@ -157,7 +155,7 @@ func TestBlockerVanillaOracle(t *testing.T) {
 		{BoxCount: 1, PatternCount: 17, CheckedStates: 92},
 		{BoxCount: 2, PatternCount: 218, CheckedStates: 2257},
 		{BoxCount: 3, PatternCount: 496, CheckedStates: 27219},
-		{BoxCount: 4, PatternCount: 1069, CheckedStates: 209989},
+		{BoxCount: 4, PatternCount: 1173, CheckedStates: 210093},
 		{BoxCount: 5, PatternCount: 2652, CheckedStates: 1071408},
 	}
 
@@ -171,10 +169,9 @@ func TestBlockerVanillaOracle(t *testing.T) {
 		}
 	}
 
-	// Lösung NUR mit dem Blocker, ohne Live-Regeln: weiterhin 230 Züge und dank der
-	// vollen 1-3-Stufen fast die alte Vollblocker-Stärke (1.595.820 statt 1.595.042;
-	// die wenigen fehlenden 4er-Muster trägt im Normalbetrieb die Live-Regel).
-	// Der Lauf beweist, dass der Hybrid-Blocker auch allein korrekt bleibt.
+	// Lösung NUR mit dem Blocker, ohne Live-Regeln: weiterhin 230 Züge und
+	// 1.595.042 Knoten (Regressionswert; die alte unbedingte Kill-Regel kam auf
+	// 1.568.540, die bedingte kostet also nur ca. 1,7% Pruning-Leistung)
 	field.SetBlocker(b)
 	s := solver.New(field)
 	for s.Step(1000000000) {
@@ -182,8 +179,8 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	if moves := s.GetStats().FoundMoves; moves != 230 {
 		t.Errorf("erwartete 230 Züge, erhalten: %d", moves)
 	}
-	if nodes := s.NodeCount(); nodes != 1595820 {
-		t.Errorf("erwartete 1595820 Knoten (Regressionswert Blocker solo), erhalten: %d", nodes)
+	if nodes := s.NodeCount(); nodes != 1595042 {
+		t.Errorf("erwartete 1595042 Knoten (Regressionswert Blocker solo), erhalten: %d", nodes)
 	}
 	s.Close()
 
@@ -222,9 +219,9 @@ const mapLid201 = `
   ###########
 `
 
-// Orakel-Vergleich: die ersten drei Blocker-Stufen von Level 201 liegen unterhalb
-// von RulesMinBoxCount und bauen klassisch - sie müssen exakt den Werten des
-// GEFIXTEN C#-SokowahnBlockerBx entsprechen (refcli: "lid201.txt blockerbx 3").
+// Orakel-Vergleich: die ersten drei Blocker-Stufen von Level 201 bleiben unter der
+// Muster-Schwelle (RulesPatternThreshold) und bauen klassisch - sie müssen exakt den
+// Werten des GEFIXTEN C#-SokowahnBlockerBx entsprechen (refcli: "lid201.txt blockerbx 3").
 func TestBlockerLid201Oracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Level-201-Blocker dauert ein paar Sekunden (übersprungen mit -short)")

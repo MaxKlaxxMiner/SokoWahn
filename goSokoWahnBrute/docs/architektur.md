@@ -167,23 +167,28 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 - Lösungs-Rekonstruktion über beide Tabellen (Vorgänger/Nachfolger mit exakt passender Tiefe),
   LURD-Zugfolge per BFS-Laufweg zwischen den Schub-Stellungen (`soko.Steps`).
 
-## Blocker (Bx-Semantik, seit Cache-Version 5 Hybrid mit regel-gefilterten großen Stufen)
+## Blocker (Bx-Semantik, seit Cache-Version 6 mit adaptiver Regel-Filterung)
 
-**Hybrid-Standard seit Cache-Version 5** (`RulesMinBoxCount = 4`): Stufen 1-3 bauen
-klassisch (winzige Hüllen, volle Muster - der Anker-Bitmasken-Test filtert billiger
+**Adaptive Regel-Filterung seit Cache-Version 6** (`RulesPatternThreshold = 4096`):
+solange alle fertigen Stufen unter der Muster-Schwelle bleiben, baut der Stufenbau
+klassisch (volle Muster kosten kaum Platz, filtern als Anker-Bitmasken-Test billiger
 als der Freeze-Fixpunkt, und die Werte bleiben bitgenau orakel-vergleichbar mit
-refcli blockerbx). Ab Stufe 4 filtern die Vorwärts-Phasen des Stufenbaus
+refcli blockerbx - zahme Levels wie Vanilla und lid201 bauen damit KOMPLETT
+klassisch). Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion,
+typisch für sehr große Levels), filtern alle weiteren Stufen ihre Vorwärts-Phasen
 (Schub-Varianten von CollectStart/CollectGoals, SearchVariants) mit einer eigenen
-Stufe-1-Regel-Instanz (nur vorwärts, siehe blocker.New): die dort explodierenden
+Stufe-1-Regel-Instanz (nur vorwärts, "sticky", deterministisch aus den fertigen
+Stufen entschieden - auch bei Cache-Wiederaufnahme identisch): die explodierenden
 Hüllen verlieren ihr totes Gewebe (schnellerer Bau, weniger RAM), und es entstehen
 weniger Muster - genau die regel-erkennbaren, welche die Live-Regeln der Suche bei
 der Entstehung ohnehin fangen (Freeze/Diagonale sind monoton unter
 Kisten-Hinzufügen). Fehlende Muster kosten nie Korrektheit, nur Filterleistung
 (Muster sind reine Beschleuniger). Die Rückwärtswelle (MergeGoals) bleibt bewusst
 ungefiltert - ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
-Historie: Cache-Version 4 filterte ALLE Stufen - messbar langsamer in Stufenbau und
-Suche (die kleinen Muster fehlten als billige Vorfilter), daher der Hybrid.
-Alte Caches werden beim Laden verworfen und neu gerechnet.
+Historie: Cache-Version 4 filterte ALLE Stufen (messbar langsamer in Stufenbau und
+Suche - die kleinen Muster fehlten als billige Vorfilter), Version 5 starr ab
+Stufe 4 (auf zahmen Levels unter 5% Ersparnis, aber Speed-Kosten) - daher die
+adaptive Schwelle. Alte Caches werden beim Laden verworfen und neu gerechnet.
 
 Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 
@@ -301,10 +306,10 @@ JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
 - **Nur beweisbare Deadlocks**: keine Dominanz-Prunings (Zugoptimalität bleibt).
   Vorwärts filtert CheckPush in pushVariantHorizontal/Vertical hinter dem
   Blocker-Check, rückwärts CheckPull in SearchVariantsBackward.
-- **Der Blocker-Stufenbau filtert seine Vorwärts-Phasen ab Stufe RulesMinBoxCount=4
-  selbst mit den Regeln** (Hybrid seit Cache-Version 5, eigene Regel-Instanz, nur
-  vorwärts - siehe Blocker-Kapitel); die kleinen Stufen bauen klassisch und bleiben
-  orakel-vergleichbar.
+- **Der Blocker-Stufenbau filtert seine Vorwärts-Phasen nach einer Muster-Explosion
+  selbst mit den Regeln** (adaptiv seit Cache-Version 6, RulesPatternThreshold=4096,
+  eigene Regel-Instanz, nur vorwärts - siehe Blocker-Kapitel); zahme Levels bauen
+  komplett klassisch und bleiben orakel-vergleichbar.
 - **Threading**: die Vorberechnung (tote Felder, Ziel-Maske, Geometrie) wird geteilt,
   jeder Field-Clone bekommt per Rules.Clone einen eigenen Scratch-Puffer.
   Statistik-Zähler liegen atomar im geteilten Teil (alle Worker zählen gemeinsam).
@@ -328,16 +333,15 @@ JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
 |---|---|---|
 | Vanilla (lid214) | optimale Züge | 230 |
 | Vanilla ohne Blocker | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
-| Vanilla Blocker-Stufen 1-5 (v5 Hybrid) | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.069/209.989, 2.652/1.071.408 (1-3 = refcli; refcli-Stufe-4 wäre 1.173/210.093) |
-| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.595.820 (fast alte Vollblocker-Stärke 1.595.042) |
-| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.488.952 (besser als die alte Vollblocker-Referenz) |
-| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (bitgenau = refcli, alle unter RulesMinBoxCount) |
+| Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 (bitgenau = refcli, alles unter der Muster-Schwelle) |
+| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.595.042 (Regressionswert, wie vor den Regeln) |
+| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.488.952 (Verbesserung kommt komplett von der Pull-Seite) |
+| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (bitgenau = refcli, unter der Muster-Schwelle) |
 | small.txt | optimale Züge | 16 |
 | Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
 | Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.825.644 / Freeze 1.104.786, Diag 71.007, PullTot 118.087, PullFreeze 783 (Regressionswerte) |
 
 Die Suche ohne Blocker und ohne Regeln bleibt bitgenau vergleichbar mit dem
-C#-Orakel, ebenso die Blocker-Stufen unterhalb von RulesMinBoxCount=4 (refcli
-blockerbx). Die Stufen ab 4 sind seit Cache-Version 5 regel-gefiltert und damit
-reine Go-Referenzwerte (die refcli-Vergleichswerte stehen als Kommentare in
-blocker_test.go).
+C#-Orakel, ebenso alle Blocker-Stufen bis zur ersten Muster-Explosion
+(RulesPatternThreshold, refcli blockerbx). Danach gefilterte Stufen sind reine
+Go-Referenzwerte.

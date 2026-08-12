@@ -25,10 +25,10 @@ ins Repo gewandert 2015 als "alter Kram") und den aktiven Go-Nachbau `goSokoWahn
   nie selbst committen.
 - Verhalten des Go-Ports wird **gegen das C#-Orakel verifiziert**, soweit die Semantik
   noch deckungsgleich ist: die Suche ohne Filter (Knoten je Tiefe, Lösungslängen) und
-  die Blocker-Stufen 1-3 sind bitgenau vergleichbar. Die Stufen ab 4 sind es seit
-  Cache-Version 5 nicht mehr (regel-gefilterter Stufenbau, bewusste
-  Go-Weiterentwicklung, siehe blocker.RulesMinBoxCount) - Referenz sind die in den
-  Go-Tests verankerten Werte. Abweichung = Bug oder bewusste, dokumentierte
+  alle Blocker-Stufen bis zur ersten Muster-Explosion sind bitgenau vergleichbar.
+  Danach filtert der Stufenbau adaptiv mit den Stufe-1-Regeln (bewusste
+  Go-Weiterentwicklung, siehe blocker.RulesPatternThreshold) - Referenz sind die in
+  den Go-Tests verankerten Werte. Abweichung = Bug oder bewusste, dokumentierte
   Entscheidung.
 - Vergleichs- und Debug-Läufe klein halten: Blocker-Stufen begrenzen (`-stages N` bzw.
   `blockerbx N`), kleine Levels bevorzugen. 2-3-Steiner rechnen in Sekunden durch.
@@ -58,8 +58,8 @@ go run . -cli [-blocker] <level.txt>                    # Go
 
 # Blocker-Stufen (schnell, ohne Suche):
 ./refcli.exe <level.txt> blockerbx <maxStufe>           # C# (Bx = Referenz-Verhalten)
-go run . -stages <maxStufe> <level.txt>                 # Go (Stufen 1-3 byte-gleich zum C#,
-                                                        #     ab 4 regel-gefiltert, siehe RulesMinBoxCount)
+go run . -stages <maxStufe> <level.txt>                 # Go (byte-gleich zum C# bis zur ersten Stufe
+                                                        #     mit >4096 Mustern, siehe RulesPatternThreshold)
 ```
 
 Vor Vergleichen die `temp/`-Ordner löschen (Blocker-Caches). Referenzwerte sind als

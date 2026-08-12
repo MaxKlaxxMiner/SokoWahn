@@ -9,12 +9,12 @@ import (
 	"goSokoWahnBrute/soko"
 )
 
-// Version des Cache-Dateiformats (5: Hybrid - Vorwärts-Phasen des Stufenbaus filtern
-// erst ab RulesMinBoxCount mit den Stufe-1-Regeln, kleine Stufen bauen klassisch;
-// 4: alle Stufen regel-gefiltert (zu langsam, siehe RulesMinBoxCount); 3: Stufenbau
-// mit bedingter Kill-Regel, siehe CheckAllowed; das Format selbst ist seit v2
-// unverändert, nur die Bau-Semantik änderte sich)
-const cacheVersion = uint32(5)
+// Version des Cache-Dateiformats (6: adaptive Regel-Filterung im Stufenbau erst nach
+// Muster-Explosion, siehe RulesPatternThreshold; 5: Filterung starr ab Stufe 4;
+// 4: alle Stufen regel-gefiltert (zu langsam - die kleinen Muster fehlten als
+// billige Vorfilter); 3: Stufenbau mit bedingter Kill-Regel, siehe CheckAllowed;
+// das Format selbst ist seit v2 unverändert, nur die Bau-Semantik änderte sich)
+const cacheVersion = uint32(6)
 
 // liefert den Standard-Dateinamen der Cache-Datei eines Spielfeldes
 // (gleiche Idee wie im C#-Original: Hash über die Feldgeometrie)

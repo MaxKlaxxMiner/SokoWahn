@@ -112,17 +112,19 @@ Ebene über dem Repo (Analyse vom 11.08.2026). Grundsätze: nur beweisbare Deadl
   Freeze-Fixpunkt fängt die Fälle über die Beidseitig-tot-Achsenregel ohnehin,
   Vanilla-Knotenzahl mit/ohne identisch. Regeln ergänzen den Blocker, doppeln
   ihn nicht.)
-- ERLEDIGT: **Regel-Filter im Blocker-Stufenbau, Hybrid** (Cache-Version 5): erst ab
-  RulesMinBoxCount=4 filtern die Vorwärts-Phasen mit einer eigenen Stufe-1-Regel-
-  Instanz; die kleinen Stufen bauen klassisch (volle Muster als billige Vorfilter,
-  bitgenau orakel-gleich). Die Rückwärtswelle bleibt ungefiltert (trägt den Beweis
-  der bedingten Kill-Regel); verlorene Muster ab Stufe 4 sind genau die
-  live-erkennbaren (Monotonie-Argument in blocker.New). Vanilla: Blocker solo
-  1.595.820 (fast alte Vollblocker-Stärke), Blocker+Regeln 1.488.952 (besser als
-  die alte Referenz 1.595.042). Historie: v4 filterte alle Stufen - Ergebnisse
-  identisch, aber Stufenbau und Suche messbar langsamer (Max, 12.08.2026: die
-  kleinen Muster fehlten als billige Vorfilter, die Regeln liefen pro Schub teurer) -
-  daher der Hybrid auf Max' Vorschlag.
+- ERLEDIGT: **Regel-Filter im Blocker-Stufenbau, adaptiv** (Cache-Version 6): erst
+  nachdem eine fertige Stufe mehr als RulesPatternThreshold=4096 Muster produziert
+  hat (Muster-Explosion), filtern alle weiteren Stufen ihre Vorwärts-Phasen mit
+  einer eigenen Stufe-1-Regel-Instanz; davor baut alles klassisch (volle Muster als
+  billige Vorfilter, bitgenau orakel-gleich - Vanilla und lid201 komplett).
+  Die Rückwärtswelle bleibt ungefiltert (trägt den Beweis der bedingten Kill-Regel);
+  verlorene Muster sind genau die live-erkennbaren (Monotonie-Argument in
+  blocker.New). Vanilla: Blocker solo 1.595.042 (unverändert), Blocker+Regeln
+  1.488.952. Historie und Messungen von Max (12.08.2026): v4 filterte alle Stufen -
+  Ergebnisse identisch, aber Stufenbau und Suche messbar langsamer (die kleinen
+  Muster fehlten als billige Vorfilter); v5 starr ab Stufe 4 - auf zahmen Levels
+  (lid201) unter 5% Ersparnis bei Speed-Kosten. Beide Feinanpassungen auf Max'
+  Vorschlag.
 - Offen: Regel-Treffer auch im Blocker-Vergleich je Stufe aufschlüsseln.
 - Praxis-Messungen von Max (12.08.2026, Suche bis Tiefe ~100 bzw. ~62, Hash-Einträge):
   - Level 25291 (kompakt vollgestopft, Ziel ~472 Züge): Regeln zusätzlich zum
