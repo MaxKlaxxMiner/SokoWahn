@@ -16,6 +16,14 @@ type CompactTable struct {
 	zeroDepth uint16        // Tiefe für den Sonderfall Schlüssel 0, DepthUnknown = nicht vorhanden
 }
 
+// Max-Memory-Modus (TUI-Taste m): CompactTables verdoppeln erst bei 93,75%
+// Füllstand statt 75% (Anzeige: 125%) - quetscht ein Viertel mehr Einträge aus
+// jeder Verdopplungsstufe, auf Kosten deutlich längerer Sondierketten kurz vor
+// dem Resize. Zur Laufzeit umschaltbar, wirkt ab der nächsten Einfügung; beim
+// Zurückschalten mit über 75% Füllstand wächst die Tabelle bei der nächsten
+// Einfügung sofort. (Die SegmentTable hat ihr eigenes SegmentGrowPercent.)
+var CompactMaxMemory = false
+
 func NewCompactTable() PosTable {
 	return newCompactTable(1 << 12)
 }
@@ -55,7 +63,11 @@ func (t *CompactTable) Add(crc crc64.Value, depth uint16) {
 		return
 	}
 
-	if t.count >= int64(len(t.crcs))/4*3 {
+	limit := int64(len(t.crcs)) / 4 * 3
+	if CompactMaxMemory {
+		limit = int64(len(t.crcs)) / 16 * 15
+	}
+	if t.count >= limit {
 		t.grow()
 	}
 
@@ -87,6 +99,13 @@ func (t *CompactTable) Len() int64 {
 
 func (t *CompactTable) Bytes() int64 {
 	return int64(len(t.crcs))*8 + int64(len(t.depths))*2
+}
+
+// Füllstand relativ zur Standard-Wachstums-Schwelle (75% der Kapazität):
+// bei 1.0 löst die nächste Einfügung die Verdopplung aus; im Max-Memory-Modus
+// läuft die Anzeige bis 1.25 (Resize erst bei 93,75% der Kapazität)
+func (t *CompactTable) Fill() float64 {
+	return float64(t.count) / (float64(len(t.crcs)) * 0.75)
 }
 
 // verdoppelt die Kapazität und sortiert alle Einträge neu ein

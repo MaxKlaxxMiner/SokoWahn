@@ -73,6 +73,26 @@ func (s *Solver) RamBytes() int64 {
 	return sum
 }
 
+// Speicher-Kennzahlen einer Stellungs-Tabelle (Datenbasis der Hash-Statuszeile;
+// wird beim Ausbau der Tabellen-Varianten um deren Spezial-Infos erweitert)
+type TableInfo struct {
+	Bytes int64   // reservierter Speicher in Bytes
+	Fill  float64 // Füllstand relativ zur Resize-Schwelle (1.0 = Verdopplung steht an), -1 = unbekannt
+}
+
+func tableInfo(t PosTable) TableInfo {
+	info := TableInfo{Bytes: t.Bytes(), Fill: -1}
+	if f, ok := t.(FillTable); ok {
+		info.Fill = f.Fill()
+	}
+	return info
+}
+
+// Kennzahlen der beiden Stellungs-Tabellen (vorwärts/rückwärts) für die Anzeige
+func (s *Solver) TableInfos() (forward, backward TableInfo) {
+	return tableInfo(s.forwardKnown), tableInfo(s.backwardKnown)
+}
+
 // Gesamtzahl der bisher verarbeiteten Sätze aus den Suchlisten (läuft anders als
 // NodeCount auch in der Beweis-Endphase weiter, wenn kaum noch Neues dazukommt)
 func (s *Solver) ProcessedCount() int64 {

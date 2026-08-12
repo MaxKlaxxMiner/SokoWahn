@@ -172,6 +172,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.slv.SetMatchEnabled(on)
 			m.status = "Ziel-Matching (Regel-Stufe 2): " + onOff(on)
 			return m, nil
+		case "m": // Max-Memory-Modus: Hash-Resize erst bei 93,75% statt 75% Füllstand
+			on := !solver.CompactMaxMemory
+			solver.CompactMaxMemory = on
+			m.status = "Max-Memory-Modus (Hash-Resize erst bei 125 % Anzeige-Füllstand): " + onOff(on)
+			return m, nil
 		case "*": // Such-Worker eine Stufe hoch
 			m.changeWorkers(true)
 			return m, nil

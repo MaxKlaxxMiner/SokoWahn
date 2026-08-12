@@ -45,6 +45,98 @@ func BenchmarkCompactTable(b *testing.B) {
 	}
 }
 
+// Max-Memory-Modus: Verdopplung erst bei 93,75% statt 75% der Kapazität,
+// die Inhalte bleiben auch bei hohem Füllstand korrekt
+func TestCompactMaxMemory(t *testing.T) {
+	defer func() { CompactMaxMemory = false }()
+
+	// Referenz Normal-Modus: Kapazität 4096 verdoppelt bei der 3073. Einfügung
+	normal := newCompactTable(1 << 12)
+	seed := uint64(7)
+	for n := 0; n < 3073; n++ {
+		normal.Add(nextCrc(&seed), uint16(n))
+	}
+	if got := normal.Bytes(); got != (1<<13)*10 {
+		t.Fatalf("Normal-Modus: erwartet Verdopplung auf 8192 Slots, Bytes = %d", got)
+	}
+
+	// Max-Memory-Modus: dieselbe Tabelle bleibt bis 3840 Einträge (93,75%) klein
+	CompactMaxMemory = true
+	table := newCompactTable(1 << 12)
+	seed = uint64(7)
+	keys := make([]crc64.Value, 0, 3840)
+	for n := 0; n < 3840; n++ {
+		crc := nextCrc(&seed)
+		keys = append(keys, crc)
+		table.Add(crc, uint16(n))
+	}
+	if got := table.Bytes(); got != (1<<12)*10 {
+		t.Fatalf("Max-Memory: Tabelle ist vorzeitig gewachsen (Bytes = %d bei %d Einträgen)", got, table.Len())
+	}
+	if fill := table.Fill(); fill < 1.24 || fill > 1.26 {
+		t.Fatalf("Füllstand-Anzeige an der MaxMem-Schwelle: erwartet 1.25, erhalten %f", fill)
+	}
+	for i, crc := range keys {
+		if got := table.Get(crc); got != uint16(i) {
+			t.Fatalf("Wert weicht bei 93,75%% Füllstand ab für %x: erwartet %d, erhalten %d", uint64(crc), i, got)
+		}
+	}
+
+	// die nächste Einfügung überschreitet die Schwelle -> Verdopplung
+	table.Add(nextCrc(&seed), 4711)
+	if got := table.Bytes(); got != (1<<13)*10 {
+		t.Fatalf("Max-Memory: erwartet Verdopplung auf 8192 Slots, Bytes = %d", got)
+	}
+
+	// Zurückschalten mit Füllstand über 75%: die nächste Einfügung wächst sofort
+	over := newCompactTable(1 << 12)
+	seed = uint64(99)
+	for n := 0; n < 3200; n++ { // 78% von 4096, nur mit MaxMem erreichbar
+		over.Add(nextCrc(&seed), uint16(n))
+	}
+	CompactMaxMemory = false
+	over.Add(nextCrc(&seed), 1)
+	if got := over.Bytes(); got != (1<<13)*10 {
+		t.Fatalf("Rückschalt-Verhalten: erwartet sofortige Verdopplung, Bytes = %d", got)
+	}
+}
+
+// Vergleich Normal- gegen Max-Memory-Modus kurz vor der Resize-Schwelle:
+// 15,6M Einträge sind 93% von 2^24 - der Normal-Modus ist da längst auf 2^25
+// gewachsen (Füllstand 47%, 320 MB), MaxMem bleibt bei 2^24 (93%, 160 MB).
+// Misst den Lookup-Preis des halbierten Speichers (je Iteration ein Treffer-
+// und ein Fehlschlag-Lookup; Treffer nur solange b.N <= 15,6M)
+func BenchmarkCompactTableMaxMemory(b *testing.B) {
+	const entries = 15_600_000
+
+	for _, maxMem := range []bool{false, true} {
+		name := "normal75"
+		if maxMem {
+			name = "maxmem93"
+		}
+		b.Run(name, func(b *testing.B) {
+			CompactMaxMemory = maxMem
+			defer func() { CompactMaxMemory = false }()
+
+			table := NewCompactTable()
+			seed := uint64(12345)
+			for n := 0; n < entries; n++ {
+				table.Add(nextCrc(&seed), uint16(n&30000))
+			}
+			b.Logf("RAM: %d MB, Füllstand-Anzeige: %.1f %%", table.Bytes()>>20, table.(*CompactTable).Fill()*100)
+
+			hitSeed, missSeed := uint64(12345), uint64(98765)
+			var sum uint32
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				sum += uint32(table.Get(nextCrc(&hitSeed)))
+				sum += uint32(table.Get(nextCrc(&missSeed)))
+			}
+			_ = sum
+		})
+	}
+}
+
 // Konsistenz: die CompactTable muss sich exakt wie eine Referenz-map verhalten
 func TestCompactTableMatchesMap(t *testing.T) {
 	reference := make(map[crc64.Value]uint16)

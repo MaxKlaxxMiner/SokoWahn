@@ -127,6 +127,12 @@ func (t *SegmentTable) Bytes() int64 {
 	return int64(len(t.slots))*8 + int64(len(t.segCounts))*4
 }
 
+// Füllstand relativ zur globalen Wachstums-Schwelle (SegmentGrowPercent);
+// der Segment-voll-Backstop kann die Verdopplung vereinzelt früher auslösen
+func (t *SegmentTable) Fill() float64 {
+	return float64(t.count) / (float64(len(t.slots)) * float64(SegmentGrowPercent) / 100)
+}
+
 // verdoppelt die Kapazität; jedes Segment rehasht ausschließlich in sein eigenes,
 // verdoppeltes Gegenstück - bei großen Tabellen parallel über alle Kerne
 func (t *SegmentTable) grow() {

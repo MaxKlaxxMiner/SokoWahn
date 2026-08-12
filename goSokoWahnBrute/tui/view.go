@@ -63,7 +63,7 @@ func (m Model) helpLine() string {
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
-		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5/6 = Blocker/Regeln/Matching | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
+		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5/6 = Blocker/Regeln/Matching | m = MaxMem | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
 	case modeSolution:
 		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | c = Zugfolge kopieren | i = neues Level | q = Beenden"
 	}
@@ -188,9 +188,33 @@ func (m Model) workLine() string {
 			stats.CurrentBoxCount, stats.MaxBoxes-1, tools.FormatInt(stats.OpenStates), tools.FormatInt(stats.KnownStates), disk, tools.FormatInt(*m.bulkSize())))
 	case modeSearch:
 		return styleHelp.Render(fmt.Sprintf("Knoten: %s | Rest: %s%s | RAM: %s MB | Tiefe: %d | Worker: %d | Bulk: %s",
-			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), formatMB(m.slv.RamBytes()), m.slv.SearchDepth(), m.slv.Workers(), tools.FormatInt(*m.bulkSize())))
+			tools.FormatInt(m.slv.NodeCount()), tools.FormatInt(m.slv.OpenCount()), diskInfo(m.slv.SpillBytes()), formatMB(m.slv.RamBytes()), m.slv.SearchDepth(), m.slv.Workers(), tools.FormatInt(*m.bulkSize()))) +
+			"\n" + m.hashLine()
 	}
 	return ""
+}
+
+// Speicher-Zeile der beiden Stellungs-Tabellen (vorwärts/rückwärts): reservierte
+// Bytes und Füllstand relativ zur Resize-Schwelle - bei 100,0 % steht die nächste
+// Verdopplung an. Wird später um die Spezial-Infos weiterer Tabellen-Typen ergänzt.
+func (m Model) hashLine() string {
+	forward, backward := m.slv.TableInfos()
+	line := fmt.Sprintf("Hash-V: %s MB (%s), Hash-R: %s MB (%s)",
+		tools.FormatInt(forward.Bytes>>20), formatFill(forward.Fill),
+		tools.FormatInt(backward.Bytes>>20), formatFill(backward.Fill))
+	if solver.CompactMaxMemory {
+		line += " | MaxMem an (Resize bei 125 %)"
+	}
+	return styleHelp.Render(line)
+}
+
+// formatiert einen Füllstand als Prozentwert mit einer Nachkommastelle
+// (deutsches Komma); "?" für Tabellen ohne Füllstands-Auskunft
+func formatFill(fill float64) string {
+	if fill < 0 {
+		return "?"
+	}
+	return strings.ReplaceAll(fmt.Sprintf("%.1f %%", fill*100), ".", ",")
 }
 
 // formatiert Bytes als Megabytes mit zwei Nachkommastellen (z.B. "1.234,56")

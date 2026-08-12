@@ -16,6 +16,12 @@ type PosTable interface {
 	Bytes() int64                         // reservierter Speicher in Bytes (für die RAM-Anzeige)
 }
 
+// optionale Erweiterung einer PosTable: Füllstand relativ zur internen
+// Wachstums-Schwelle (1.0 = die nächste Einfügung löst das Resize aus)
+type FillTable interface {
+	Fill() float64
+}
+
 // Fabrik für die beiden Stellungs-Tabellen des Solvers (vorwärts + rückwärts) -
 // austauschbar, um Tabellen-Varianten unter Realbedingungen zu vergleichen
 var TableFactory func() PosTable = NewCompactTable
