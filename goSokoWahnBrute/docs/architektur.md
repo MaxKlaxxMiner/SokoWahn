@@ -123,6 +123,39 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Wichtige Lehre: synthetische Micro-Benchmarks übertreiben die Unterschiede stark
   (Hash-Zugriffe sind nur ~20-25% des Workloads) - neue Kandidaten immer als Adapter
   ins Paket `tables` hängen und unter Realbedingungen messen.
+- **Max-Memory-Modus** (TUI-Taste m, `solver.CompactMaxMemory`): CompactTables
+  verdoppeln erst bei 93,75% statt 75% Füllstand - ein Viertel mehr Einträge je
+  Verdopplungsstufe. Die Hash-Statuszeile der Suche ("Hash-V/Hash-R", reservierte MB
+  plus Füllstand relativ zur 75%-Schwelle) läuft dann bis 125%. Preis am Messpunkt
+  direkt vor der Schwelle: Lookups ~4,8x langsamer (halber freier Platz = doppelte
+  Sondierketten; Experimente von Max: 31/32 und 63/64 "zum Ende kurz langsam",
+  511/512 explodiert auf ~Faktor 1000 Gesamtaufwand - 15/16 ist der Kompromiss).
+- **ArchiveTable** (TUI-Taste h, "SlowCompactArchiveTable", `hashArchive.go`):
+  speicheroptimierte PosTable-Variante nach dem Vorbild von SokowahnHash_Index24Multi
+  aus dem C#-Original (2013; dort Dictionary-Delta, Binärsuche und uint32-Limit bei
+  4,29 Mrd Einträgen). Neuzugänge sammelt ein CompactTable-Delta; das Archiv hält den
+  Bestand unveränderlich in 256 Shards (untere 8 Schlüssel-Bits) als verschränkte
+  7-Byte-Records: 5 Byte Rest-Schlüssel (Bits 24..63) + 2 Byte Tiefe, ein einziger
+  8-Byte-Load liefert Vergleich und Tiefe. Gruppiert wird nach Bucket (untere Bits,
+  adaptiv 24..32 mit Ziel ~12 Einträgen je Bucket = 1-2 Cachelines linearer Scan,
+  ab 24 Bits sind Index- plus Rest-Bits verlustfreie 64), der Bucket-Index sind
+  shard-relative uint32-Offsets. Add prüft zuerst das Archiv (Tiefen-Update in-place,
+  die Schlüssel liegen fest) - Delta und Archiv bleiben disjunkt, Len() ist exakt und
+  die Suche bitgenau identisch zur CompactTable (Tests: Factory-Determinismus und
+  Konvertierung mitten in der Suche). Merge ab Delta > max(4M, Bestand/16) als
+  paralleler Shard-Umbau per Counting-Scatter; alte Shard-Arrays werden während des
+  Umbaus frei - kein 2x-Peak wie beim CompactTable-Resize (nur die Konvertierung
+  einer kompletten CompactTable hält einmalig alt und neu gleichzeitig, h also
+  frühzeitig drücken). Taste h verdichtet die Richtung mit dem vollsten
+  CompactTable-Teil: CompactTable -> Komplett-Konvertierung, ArchiveTable ->
+  vorgezogener Delta-Merge; der zweite Druck trifft automatisch die andere Richtung.
+  Messwerte (i5-11400H, 15,6M bzw. 16,9M Einträge, BenchmarkArchiveTable):
+  RAM 188/178 MB gegen 320 MB CompactTable (Faktor ~1,8; bei Milliarden-Beständen
+  eher 1,9, weil der Bucket-Index dank mitwachsender Bits auf <1% Anteil fällt);
+  Lookup-Paar Hit+Miss 181/145 ns gegen 48 ns - zwei abhängige Loads (Index ->
+  Daten) statt einem, im Suchalltag teils von der Worker-Überbelegung versteckt.
+  Standard bleibt die CompactTable, das Archiv-Format ist der RAM-Joker per
+  Tastendruck (Anzeige in der Hash-Zeile: "Archiv, Delta x %", 100% = nächster Merge).
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
   Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
   Manuell übersteuerbar per `SetDirMode` (TUI-Tasten 1 = nur vorwärts, 2 = nur rückwärts,

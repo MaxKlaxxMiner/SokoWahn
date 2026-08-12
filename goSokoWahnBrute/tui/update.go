@@ -172,6 +172,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.slv.SetMatchEnabled(on)
 			m.status = "Ziel-Matching (Regel-Stufe 2): " + onOff(on)
 			return m, nil
+		case "h": // Hashing: die Tabelle mit dem vollsten CompactTable-Teil ins Archiv-Format verdichten
+			m.status = m.slv.ArchiveLargerTable()
+			return m, nil
 		case "m": // Max-Memory-Modus: Hash-Resize erst bei 93,75% statt 75% Füllstand
 			on := !solver.CompactMaxMemory
 			solver.CompactMaxMemory = on

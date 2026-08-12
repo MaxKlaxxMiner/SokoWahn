@@ -63,7 +63,7 @@ func (m Model) helpLine() string {
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
-		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5/6 = Blocker/Regeln/Matching | m = MaxMem | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
+		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5/6 = Blocker/Regeln/Matching | h = Hash-Archiv | m = MaxMem | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
 	case modeSolution:
 		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | c = Zugfolge kopieren | i = neues Level | q = Beenden"
 	}
@@ -199,13 +199,21 @@ func (m Model) workLine() string {
 // Verdopplung an. Wird später um die Spezial-Infos weiterer Tabellen-Typen ergänzt.
 func (m Model) hashLine() string {
 	forward, backward := m.slv.TableInfos()
-	line := fmt.Sprintf("Hash-V: %s MB (%s), Hash-R: %s MB (%s)",
-		tools.FormatInt(forward.Bytes>>20), formatFill(forward.Fill),
-		tools.FormatInt(backward.Bytes>>20), formatFill(backward.Fill))
+	line := "Hash-V: " + tableCell(forward) + ", Hash-R: " + tableCell(backward)
 	if solver.CompactMaxMemory {
 		line += " | MaxMem an (Resize bei 125 %)"
 	}
 	return styleHelp.Render(line)
+}
+
+// Anzeige einer Stellungs-Tabelle in der Hash-Zeile: reservierte MB plus
+// Füllstand; im Archiv-Format bezieht sich der Füllstand auf das Delta
+// (100 % = nächster Merge)
+func tableCell(info solver.TableInfo) string {
+	if info.Archive {
+		return fmt.Sprintf("%s MB (Archiv, Delta %s)", tools.FormatInt(info.Bytes>>20), formatFill(info.Fill))
+	}
+	return fmt.Sprintf("%s MB (%s)", tools.FormatInt(info.Bytes>>20), formatFill(info.Fill))
 }
 
 // formatiert einen Füllstand als Prozentwert mit einer Nachkommastelle

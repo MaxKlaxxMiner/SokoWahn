@@ -1,0 +1,258 @@
+package solver
+
+import (
+	"testing"
+
+	"goSokoWahnBrute/crc64"
+	"goSokoWahnBrute/soko"
+)
+
+// Konsistenz: die ArchiveTable muss sich exakt wie eine Referenz-map verhalten,
+// auch über viele erzwungene Delta-Merges hinweg (Updates treffen Delta UND Archiv)
+func TestArchiveTableMatchesMap(t *testing.T) {
+	oldMin := ArchiveDeltaMin
+	ArchiveDeltaMin = 4096 // viele Merges erzwingen
+	defer func() { ArchiveDeltaMin = oldMin }()
+
+	reference := make(map[crc64.Value]uint16)
+	archive := NewArchiveTable()
+
+	seed := uint64(42)
+	keys := make([]crc64.Value, 0, 50000)
+	for n := 0; n < 50000; n++ {
+		crc := nextCrc(&seed)
+		keys = append(keys, crc)
+		depth := uint16(n % 60001)
+		reference[crc] = depth
+		archive.Add(crc, depth)
+	}
+
+	// Updates auf einem Teil der Schlüssel (liegen teils im Delta, teils im Archiv)
+	for n := 0; n < len(keys); n += 7 {
+		reference[keys[n]] = uint16(n % 777)
+		archive.Update(keys[n], uint16(n%777))
+	}
+
+	if int64(len(reference)) != archive.Len() {
+		t.Fatalf("Längen weichen ab: map=%d archive=%d", len(reference), archive.Len())
+	}
+	for _, crc := range keys {
+		if archive.Get(crc) != reference[crc] {
+			t.Fatalf("Wert weicht ab für %x: map=%d archive=%d", uint64(crc), reference[crc], archive.Get(crc))
+		}
+	}
+
+	// unbekannte Schlüssel
+	seed = uint64(4711)
+	for n := 0; n < 10000; n++ {
+		crc := nextCrc(&seed)
+		if _, exists := reference[crc]; exists {
+			continue
+		}
+		if got := archive.Get(crc); got != DepthUnknown {
+			t.Fatalf("Fehlschlag-Lookup liefert %d statt DepthUnknown für %x", got, uint64(crc))
+		}
+	}
+
+	// Sonderfall Schlüssel 0: über einen Merge tragen und danach aktualisieren
+	archive.Add(0, 123)
+	for n := 0; n < 5000; n++ { // genug neue Schlüssel für den nächsten Merge
+		crc := nextCrc(&seed)
+		reference[crc] = uint16(n)
+		archive.Add(crc, uint16(n))
+	}
+	if got := archive.Get(0); got != 123 {
+		t.Fatalf("Schlüssel 0 nach Merge: erwartet 123, erhalten %d", got)
+	}
+	archive.Update(0, 321)
+	if got := archive.Get(0); got != 321 {
+		t.Fatalf("Schlüssel 0 nach Archiv-Update: erwartet 321, erhalten %d", got)
+	}
+}
+
+// Konvertierung einer bestehenden CompactTable (Taste h): alle Einträge müssen
+// verlustfrei übernommen werden, danach normale Weiterarbeit mit frischem Delta
+func TestArchiveConvertFromCompact(t *testing.T) {
+	src := newCompactTable(1 << 12)
+	reference := make(map[crc64.Value]uint16)
+
+	seed := uint64(1337)
+	for n := 0; n < 30000; n++ {
+		crc := nextCrc(&seed)
+		depth := uint16(n % 50000)
+		reference[crc] = depth
+		src.Add(crc, depth)
+	}
+	src.Add(0, 999) // Sonderfall Schlüssel 0 der CompactTable
+	reference[0] = 999
+
+	archive := NewArchiveTableFrom(src)
+	if archive.Len() != int64(len(reference)) {
+		t.Fatalf("Längen weichen ab: map=%d archive=%d", len(reference), archive.Len())
+	}
+	if archive.delta.count != 0 {
+		t.Fatalf("Delta muss nach der Konvertierung leer sein, enthält %d Einträge", archive.delta.count)
+	}
+	for crc, depth := range reference {
+		if got := archive.Get(crc); got != depth {
+			t.Fatalf("Wert weicht nach Konvertierung ab für %x: erwartet %d, erhalten %d", uint64(crc), depth, got)
+		}
+	}
+
+	// Weiterarbeit: neue Einträge und Updates auf Archiv-Bestand
+	crc := nextCrc(&seed)
+	archive.Add(crc, 42)
+	if got := archive.Get(crc); got != 42 {
+		t.Fatalf("neuer Eintrag nach Konvertierung: erwartet 42, erhalten %d", got)
+	}
+	first := crc64.Value(0)
+	for k := range reference {
+		if k != 0 {
+			first = k
+			break
+		}
+	}
+	archive.Update(first, 7)
+	if got := archive.Get(first); got != 7 {
+		t.Fatalf("Archiv-Update nach Konvertierung: erwartet 7, erhalten %d", got)
+	}
+}
+
+// Bit-Wachstum: der Umbau auf mehr Bucket-Bits rekonstruiert die vollen Schlüssel
+// aus Rest + Bucket - hier von Hand erzwungen (die echte Schwelle liegt bei
+// über 200 Mio Einträgen und ist im Test unerreichbar)
+func TestArchiveBitsGrowth(t *testing.T) {
+	oldMin := ArchiveDeltaMin
+	ArchiveDeltaMin = 1024
+	defer func() { ArchiveDeltaMin = oldMin }()
+
+	archive := NewArchiveTable().(*ArchiveTable)
+	reference := make(map[crc64.Value]uint16)
+	seed := uint64(2024)
+	for n := 0; n < 10000; n++ {
+		crc := nextCrc(&seed)
+		depth := uint16(n)
+		reference[crc] = depth
+		archive.Add(crc, depth)
+	}
+
+	for _, bits := range []uint{26, 29} {
+		archive.mergeBits(bits)
+		if archive.bits != bits {
+			t.Fatalf("erwartete %d Bucket-Bits, erhalten %d", bits, archive.bits)
+		}
+		if archive.Len() != int64(len(reference)) {
+			t.Fatalf("Länge nach Bit-Wachstum auf %d: erwartet %d, erhalten %d", bits, len(reference), archive.Len())
+		}
+		for crc, depth := range reference {
+			if got := archive.Get(crc); got != depth {
+				t.Fatalf("Wert weicht nach Bit-Wachstum auf %d ab für %x: erwartet %d, erhalten %d", bits, uint64(crc), depth, got)
+			}
+		}
+	}
+}
+
+// das kleine Mehrkisten-Level aus TestSolveSmall (Referenz: 16 Züge)
+const archiveTestLevel = `
+#######
+#.@ # #
+#$* $ #
+#   $ #
+# ..  #
+#  *  #
+#######
+`
+
+// die Suche muss mit der ArchiveTable exakt dieselben Knoten und Züge liefern
+// wie mit der Standard-CompactTable (das Tabellen-Format ist reine Speicherfrage)
+func TestSolveArchiveTableDeterminism(t *testing.T) {
+	refSolver, refSolution := solveLevel(t, archiveTestLevel, 16)
+	refNodes := refSolver.NodeCount()
+
+	oldFactory, oldMin := TableFactory, ArchiveDeltaMin
+	TableFactory, ArchiveDeltaMin = NewArchiveTable, 256 // viele Merges während der Suche
+	defer func() { TableFactory, ArchiveDeltaMin = oldFactory, oldMin }()
+
+	s, solution := solveLevel(t, archiveTestLevel, 16)
+	if s.NodeCount() != refNodes {
+		t.Errorf("Knotenzahl weicht ab: CompactTable=%d ArchiveTable=%d", refNodes, s.NodeCount())
+	}
+	if solution.Moves != refSolution.Moves {
+		t.Errorf("Zugfolge weicht ab: %q gegen %q", refSolution.Moves, solution.Moves)
+	}
+}
+
+// Konvertierung mitten in der Suche (Taste h, zweimal gedrückt): beide Richtungen
+// wandern ins Archiv-Format, das Ergebnis bleibt bitgenau identisch
+func TestSolveArchiveConversionMidSearch(t *testing.T) {
+	refSolver, refSolution := solveLevel(t, archiveTestLevel, 16)
+	refNodes := refSolver.NodeCount()
+
+	oldMin := ArchiveDeltaMin
+	ArchiveDeltaMin = 256
+	defer func() { ArchiveDeltaMin = oldMin }()
+
+	field, err := soko.Parse(archiveTestLevel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(field)
+	for i := 0; i < 10 && s.Step(3); i++ {
+	}
+	s.ArchiveLargerTable() // erste Richtung konvertieren
+	s.ArchiveLargerTable() // beim zweiten Druck ist die andere Richtung dran
+	forward, backward := s.TableInfos()
+	if !forward.Archive || !backward.Archive {
+		t.Fatalf("beide Tabellen müssen nach zwei Tastendrücken im Archiv-Format sein (V=%v R=%v)", forward.Archive, backward.Archive)
+	}
+	for s.Step(1000000000) {
+	}
+
+	stats := s.GetStats()
+	if stats.FoundMoves != 16 {
+		t.Fatalf("erwartete Lösungslänge 16, erhalten: %d", stats.FoundMoves)
+	}
+	if s.NodeCount() != refNodes {
+		t.Errorf("Knotenzahl weicht ab: Referenz=%d konvertiert=%d", refNodes, s.NodeCount())
+	}
+	solution, err := s.GetSolution()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if solution.Moves != refSolution.Moves {
+		t.Errorf("Zugfolge weicht ab: %q gegen %q", refSolution.Moves, solution.Moves)
+	}
+}
+
+// Vergleichs-Benchmark zur CompactTable (siehe BenchmarkCompactTableMaxMemory):
+// gleicher Workload - misst RAM-Ersparnis und Lookup-Preis des Archiv-Formats
+// (je Iteration ein Treffer- und ein Fehlschlag-Lookup). Zwei Messpunkte des
+// Merge-Zyklus: Delta fast voll (15,6M, teuerster Punkt) und Delta frisch
+// geleert (16,9M, günstigster Punkt) - der Suchalltag liegt dazwischen
+func BenchmarkArchiveTable(b *testing.B) {
+	for _, entries := range []int{15_600_000, 16_900_000} {
+		name := "deltaVoll"
+		if entries > 16_000_000 {
+			name = "deltaLeer"
+		}
+		b.Run(name, func(b *testing.B) {
+			table := NewArchiveTable()
+			seed := uint64(12345)
+			for n := 0; n < entries; n++ {
+				table.Add(nextCrc(&seed), uint16(n&30000))
+			}
+			archive := table.(*ArchiveTable)
+			b.Logf("RAM: %d MB (Archiv: %d MB, %d Einträge, %d Bucket-Bits | Delta: %d Einträge)",
+				table.Bytes()>>20, archive.archiveBytes>>20, archive.archiveCount, archive.bits, archive.delta.count)
+
+			hitSeed, missSeed := uint64(12345), uint64(98765)
+			var sum uint32
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				sum += uint32(table.Get(nextCrc(&hitSeed)))
+				sum += uint32(table.Get(nextCrc(&missSeed)))
+			}
+			_ = sum
+		})
+	}
+}

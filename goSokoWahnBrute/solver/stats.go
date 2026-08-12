@@ -1,6 +1,10 @@
 package solver
 
-import "math"
+import (
+	"math"
+
+	"goSokoWahnBrute/tools"
+)
 
 // Momentaufnahme des Suchfortschritts (Datenbasis für Anzeige und Vergleiche)
 type Stats struct {
@@ -76,8 +80,9 @@ func (s *Solver) RamBytes() int64 {
 // Speicher-Kennzahlen einer Stellungs-Tabelle (Datenbasis der Hash-Statuszeile;
 // wird beim Ausbau der Tabellen-Varianten um deren Spezial-Infos erweitert)
 type TableInfo struct {
-	Bytes int64   // reservierter Speicher in Bytes
-	Fill  float64 // Füllstand relativ zur Resize-Schwelle (1.0 = Verdopplung steht an), -1 = unbekannt
+	Bytes   int64   // reservierter Speicher in Bytes
+	Fill    float64 // Füllstand relativ zur Resize-/Merge-Schwelle (1.0 = steht an), -1 = unbekannt
+	Archive bool    // true = Tabelle läuft im Archiv-Format (Fill bezieht sich auf das Delta)
 }
 
 func tableInfo(t PosTable) TableInfo {
@@ -85,12 +90,61 @@ func tableInfo(t PosTable) TableInfo {
 	if f, ok := t.(FillTable); ok {
 		info.Fill = f.Fill()
 	}
+	_, info.Archive = t.(*ArchiveTable)
 	return info
 }
 
 // Kennzahlen der beiden Stellungs-Tabellen (vorwärts/rückwärts) für die Anzeige
 func (s *Solver) TableInfos() (forward, backward TableInfo) {
 	return tableInfo(s.forwardKnown), tableInfo(s.backwardKnown)
+}
+
+// verdichtet per Taste h die Stellungs-Tabelle, deren schneller CompactTable-Teil
+// aktuell die meisten Einträge hält: eine reine CompactTable wird komplett ins
+// Archiv-Format konvertiert (7 statt 13,3 Byte je Eintrag), bei einer bereits
+// konvertierten Tabelle wird der Delta-Merge vorgezogen. Der nächste Tastendruck
+// trifft damit automatisch die jeweils andere Richtung. Liefert die Beschreibung
+// für die Statuszeile. Nur zwischen zwei Steps aufrufen (das TUI garantiert das:
+// Tasten und Ticks laufen seriell im selben Event-Loop).
+func (s *Solver) ArchiveLargerTable() string {
+	table, name := &s.forwardKnown, "Vorwärts-Hash"
+	if fastPartLen(s.backwardKnown) > fastPartLen(s.forwardKnown) {
+		table, name = &s.backwardKnown, "Rückwärts-Hash"
+	}
+
+	switch t := (*table).(type) {
+	case *CompactTable:
+		before := t.Bytes()
+		converted := NewArchiveTableFrom(t)
+		*table = converted
+		return name + ": ins Archiv-Format konvertiert (" + formatMBStatus(before) +
+			" -> " + formatMBStatus(converted.Bytes()) + ")"
+	case *ArchiveTable:
+		if t.delta.count == 0 {
+			return name + ": Delta ist leer, nichts zu verdichten"
+		}
+		before := t.Bytes()
+		t.merge()
+		return name + ": Delta-Merge vorgezogen (" + formatMBStatus(before) +
+			" -> " + formatMBStatus(t.Bytes()) + ")"
+	}
+	return name + ": Tabellen-Typ unterstützt keine Archiv-Konvertierung"
+}
+
+// Einträge im schnellen CompactTable-Teil einer Tabelle (Auswahl-Kriterium der Taste h)
+func fastPartLen(t PosTable) int64 {
+	switch table := t.(type) {
+	case *CompactTable:
+		return table.count
+	case *ArchiveTable:
+		return table.delta.count
+	}
+	return 0
+}
+
+// formatiert Bytes als ganze Megabytes für Status-Meldungen
+func formatMBStatus(bytes int64) string {
+	return tools.FormatInt(bytes>>20) + " MB"
 }
 
 // Gesamtzahl der bisher verarbeiteten Sätze aus den Suchlisten (läuft anders als
