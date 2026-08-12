@@ -23,7 +23,9 @@ type FillTable interface {
 }
 
 // Fabrik für die beiden Stellungs-Tabellen des Solvers (vorwärts + rückwärts) -
-// austauschbar, um Tabellen-Varianten unter Realbedingungen zu vergleichen
+// austauschbar, um Tabellen-Varianten unter Realbedingungen zu vergleichen.
+// Default klein (Tests und Bibliotheks-Nutzung); die App setzt in main auf
+// NewCompactTableLarge um (spart die Verdopplungs-Leiter, Messung: +10%)
 var TableFactory func() PosTable = NewCompactTable
 
 //var TableFactory func() PosTable = NewSegmentTable

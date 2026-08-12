@@ -23,6 +23,10 @@ func main() {
 	// reichen für das Kleinzeug locker
 	debug.SetGCPercent(5)
 
+	// echte Läufe starten mit groß vorbelegten Stellungs-Tabellen (2x 2,68 GB) -
+	// Tests und Bibliotheks-Nutzung behalten den kleinen Default der Factory
+	solver.TableFactory = solver.NewCompactTableLarge
+
 	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
 	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")

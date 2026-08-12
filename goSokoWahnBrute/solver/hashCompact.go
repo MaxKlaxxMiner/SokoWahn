@@ -28,6 +28,14 @@ func NewCompactTable() PosTable {
 	return newCompactTable(1 << 12)
 }
 
+// große Start-Kapazität für echte Läufe (App setzt die TableFactory in main um):
+// 2^28 Slots = 2,68 GB je Tabelle, hält 201M (bzw. 251M mit MaxMem) Einträge ohne
+// eine einzige Verdopplung - spart die Rehash-Pausen der Aufwärm-Leiter und hält
+// den Füllstand lange niedrig (Messung von Max: +10% Durchsatz im Minutentest)
+func NewCompactTableLarge() PosTable {
+	return newCompactTable(1 << 28)
+}
+
 func newCompactTable(capacity int) *CompactTable {
 	return &CompactTable{
 		crcs:      make([]crc64.Value, capacity),
