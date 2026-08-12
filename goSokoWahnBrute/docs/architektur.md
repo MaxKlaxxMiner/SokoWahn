@@ -123,9 +123,10 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Wichtige Lehre: synthetische Micro-Benchmarks übertreiben die Unterschiede stark
   (Hash-Zugriffe sind nur ~20-25% des Workloads) - neue Kandidaten immer als Adapter
   ins Paket `tables` hängen und unter Realbedingungen messen.
-- **Max-Memory-Modus** (TUI-Taste m, `solver.CompactMaxMemory`): CompactTables
-  verdoppeln erst bei 93,75% statt 75% Füllstand - ein Viertel mehr Einträge je
-  Verdopplungsstufe. Die Hash-Statuszeile der Suche ("Hash-V/Hash-R", reservierte MB
+- **Max-Memory-Modus** (TUI-Taste m, `solver.CompactMaxMemory`, setzt sich beim
+  Level-Scan zurück - der Modus ist ein gezielter Notgriff, kein Dauerzustand):
+  CompactTables verdoppeln erst bei 93,75% statt 75% Füllstand - ein Viertel mehr
+  Einträge je Verdopplungsstufe. Die Hash-Statuszeile der Suche ("Hash-V/Hash-R", reservierte MB
   plus Füllstand relativ zur 75%-Schwelle) läuft dann bis 125%. Preis am Messpunkt
   direkt vor der Schwelle: Lookups ~4,8x langsamer (halber freier Platz = doppelte
   Sondierketten; Experimente von Max: 31/32 und 63/64 "zum Ende kurz langsam",

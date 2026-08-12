@@ -78,7 +78,7 @@ func NewModel(initialLevel string, ramLimitGB int) Model {
 		mode:        modeInput,
 		input:       input,
 		bulkBlocker: 100000, // laut Benchmarks: große Batches halten alle Worker beschäftigt (~50ms pro Next)
-		bulkSearch:  1000,   // Suche ist (noch) seriell, kleiner Wert = feinere Schritte und Anzeige
+		bulkSearch:  10000,  // Messung von Max: durchweg schneller als 1k (parallele Suche will Futter), 100k bringt nichts mehr und ruckelt nur
 		ramLimit:    uint64(ramLimitGB) << 30,
 		status:      "Level eingeben, dann Strg+S zum Scannen",
 	}
@@ -163,6 +163,9 @@ func (m *Model) scan() {
 	m.solution = nil
 	m.auto = false
 	m.ramStop = false
+	// Max-Memory-Modus gilt nur gezielt für den aktuellen Lauf (Taste m in der Suche) -
+	// beim neuen Level zurück auf den schnellen Standard, wie bei den Filter-Tasten
+	solver.CompactMaxMemory = false
 
 	// Blocker mit Datei-Cache anlegen (Wiederaufnahme über Läufe hinweg)
 	cachePath := ""
