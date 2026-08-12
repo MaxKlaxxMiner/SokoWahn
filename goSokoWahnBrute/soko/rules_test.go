@@ -54,7 +54,7 @@ func TestRulesFreezeDeadlock(t *testing.T) {
 	}
 	r := NewRules(f)
 
-	if r.checkFreeze(wposAt(t, f, 2, 2), f.boxBits) {
+	if _, ok := r.checkFreeze(wposAt(t, f, 2, 2), f.boxBits); ok {
 		t.Error("2x2-Block abseits der Ziele muss als Freeze-Deadlock erkannt werden")
 	}
 	if r.CheckPush(f.player, wposAt(t, f, 2, 2), f.boxBits) {
@@ -80,7 +80,7 @@ func TestRulesFreezeMovable(t *testing.T) {
 	}
 	r := NewRules(f)
 
-	if !r.checkFreeze(wposAt(t, f, 2, 2), f.boxBits) {
+	if _, ok := r.checkFreeze(wposAt(t, f, 2, 2), f.boxBits); !ok {
 		t.Error("L-Form ist kein Deadlock (Fixpunkt muss alle Kisten entfernen)")
 	}
 }
@@ -106,7 +106,7 @@ func TestRulesFreezeAllOnGoals(t *testing.T) {
 		p := wposAt(t, f, c[0], c[1])
 		mask[p>>6] |= 1 << (p & 63)
 	}
-	if !r.checkFreeze(wposAt(t, f, 2, 2), mask) {
+	if _, ok := r.checkFreeze(wposAt(t, f, 2, 2), mask); !ok {
 		t.Error("eingefrorener 2x2-Block auf Zielen darf nicht als Deadlock gelten")
 	}
 }
@@ -201,6 +201,90 @@ func TestRulesPullFreeze(t *testing.T) {
 	// den Startfeldern -> erlaubt
 	if !r.CheckPull(wposAt(t, f, 1, 3), f.boxBits) {
 		t.Error("die Startkonfiguration darf nicht verworfen werden")
+	}
+}
+
+// Ziel-Matching (Stufe 2), Erreichbarkeits-Teil: ein eingefrorenes Kisten-Paar
+// auf den Korridor-Zielen wirkt als Wand und schneidet die Kiste im rechten Raum
+// vom letzten freien Ziel (1,1) ab. Die Kiste selbst bleibt lokal beweglich -
+// Stufe 1 (Freeze) und die statischen Totfelder greifen hier bewusst NICHT.
+// (Masken von Hand gebaut: ein solches Paar entsteht erst während der Suche,
+// beim Parsen würde der Start-Filter freeze.go es zu Wänden machen)
+func TestRulesGoalMatchReach(t *testing.T) {
+	f, err := Parse(`
+############
+#.  ###    #
+# $$ .. $  #
+#   ###@   #
+############
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRules(f)
+
+	// hypothetische Stellung nach einem Schub: Paar auf den Korridor-Zielen
+	// (5,2)/(6,2) eingefroren, die dritte Kiste eben nach (8,2) geschoben
+	mask := make([]uint64, len(f.boxBits))
+	for _, c := range [][2]int{{5, 2}, {6, 2}, {8, 2}} {
+		p := wposAt(t, f, c[0], c[1])
+		mask[p>>6] |= 1 << (p & 63)
+	}
+
+	if r.CheckPush(wposAt(t, f, 7, 2), wposAt(t, f, 8, 2), mask) {
+		t.Error("die abgeschnittene Kiste erreicht kein freies Ziel mehr - CheckPush muss verwerfen")
+	}
+	if st := r.Stats(); st.MatchKills != 1 || st.FreezeKills != 0 {
+		t.Errorf("erwartete genau 1 Matching-Treffer (und 0 Freeze), erhalten: Match=%d Freeze=%d", st.MatchKills, st.FreezeKills)
+	}
+
+	// Gegenprobe: ohne Stufe 2 lässt die Stellung sich nicht widerlegen
+	r.MatchEnabled = false
+	if !r.CheckPush(wposAt(t, f, 7, 2), wposAt(t, f, 8, 2), mask) {
+		t.Error("ohne Ziel-Matching darf die Stellung nicht verworfen werden")
+	}
+}
+
+// Ziel-Matching (Stufe 2), Matching-Teil: zwei bewegliche Kisten hinter dem
+// eingefrorenen Paar erreichen beide NUR das eine freie Ziel im rechten Raum -
+// die Erreichbarkeits-Vorstufe ist je Kiste erfüllt, erst das bipartite
+// Matching deckt den Engpass auf
+func TestRulesGoalMatchAssignment(t *testing.T) {
+	f, err := Parse(`
+#############
+#.  ###     #
+# $$ .. $.$ #
+#   ###  @  #
+#############
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := NewRules(f)
+
+	buildMask := func(coords [][2]int) []uint64 {
+		mask := make([]uint64, len(f.boxBits))
+		for _, c := range coords {
+			p := wposAt(t, f, c[0], c[1])
+			mask[p>>6] |= 1 << (p & 63)
+		}
+		return mask
+	}
+
+	// Paar eingefroren auf (5,2)/(6,2), zwei Kisten bei (8,2) und (10,2),
+	// freie Ziele: (1,1) (unerreichbar) und (9,2) (für beide erreichbar)
+	mask := buildMask([][2]int{{5, 2}, {6, 2}, {8, 2}, {10, 2}})
+	if r.CheckPush(wposAt(t, f, 11, 2), wposAt(t, f, 10, 2), mask) {
+		t.Error("zwei Kisten um ein erreichbares Ziel - das Matching muss verwerfen")
+	}
+	if st := r.Stats(); st.MatchKills != 1 {
+		t.Errorf("erwartete 1 Matching-Treffer, erhalten: %d", st.MatchKills)
+	}
+
+	// Gegenprobe: mit nur EINER beweglichen Kiste geht die Zuordnung auf
+	single := buildMask([][2]int{{5, 2}, {6, 2}, {8, 2}})
+	if !r.CheckPush(wposAt(t, f, 7, 2), wposAt(t, f, 8, 2), single) {
+		t.Error("eine Kiste, ein erreichbares freies Ziel - kein Deadlock")
 	}
 }
 

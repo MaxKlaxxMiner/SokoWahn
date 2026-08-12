@@ -25,7 +25,7 @@ func main() {
 
 	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
-	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1: Freeze + Diagonale); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
+	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
 	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
 	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
@@ -159,8 +159,8 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare bool, workers i
 
 	if rules := field.Rules(); rules != nil {
 		rst := rules.Stats()
-		fmt.Printf("Regeln vorwärts: Freeze=%s Diagonale=%s | rückwärts: Totfeld=%s PullFreeze=%s\n",
-			tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills),
+		fmt.Printf("Regeln vorwärts: Freeze=%s Diagonale=%s Matching=%s | rückwärts: Totfeld=%s PullFreeze=%s\n",
+			tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills), tools.FormatInt(rst.MatchKills),
 			tools.FormatInt(rst.PullDeadKills), tools.FormatInt(rst.PullFreezeKills))
 		if rules.CompareBlocker {
 			fmt.Printf("Vergleich: nurBlocker=%s nurRegeln=%s beide=%s\n",

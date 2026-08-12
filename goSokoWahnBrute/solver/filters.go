@@ -48,6 +48,24 @@ func (s *Solver) RulesEnabled() bool {
 	return s.work.Rules() != nil
 }
 
+// schaltet das Ziel-Matching (Regel-Stufe 2) an/aus; der Schalter lebt auf dem
+// Quell-Filter des Basisfeldes und wird über frische Klone aufs Arbeitsfeld
+// übertragen (wirkungslos, solange keine Regel-Quelle gesetzt ist)
+func (s *Solver) SetMatchEnabled(on bool) {
+	r := s.base.Rules()
+	if r == nil {
+		return
+	}
+	r.MatchEnabled = on
+	s.SetRulesEnabled(s.RulesEnabled()) // Arbeits-Klone mit dem neuen Stand neu erzeugen
+}
+
+// gibt an, ob das Ziel-Matching (Regel-Stufe 2) aktiv ist
+func (s *Solver) MatchEnabled() bool {
+	r := s.base.Rules()
+	return r != nil && r.MatchEnabled
+}
+
 // gibt den Regel-Filter des Basisfeldes zurück (nil = keiner);
 // die Statistik (Stats) ist über alle Klone geteilt und hier ablesbar
 func (s *Solver) Rules() *soko.Rules {

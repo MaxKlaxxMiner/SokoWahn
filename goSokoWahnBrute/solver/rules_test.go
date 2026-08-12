@@ -210,6 +210,54 @@ func TestSolveRulesDirBackward(t *testing.T) {
 	}
 }
 
+// Ziel-Matching (Regel-Stufe 2) in der echten Suche: drei Kisten im rechten Raum,
+// eine muss ZUERST quer durch den Korridor zum linken Ziel - füllt die Suche die
+// beiden Korridor-Ziele vorher, friert das Paar ein und schneidet die Restkiste
+// ab (Matching-Treffer). Das Level ist lösbar: die Lösungslänge muss exakt der
+// ungefilterten Suche entsprechen, der Beweis darf nicht mehr Knoten brauchen.
+func TestSolveRulesGoalMatch(t *testing.T) {
+	level := `
+##############
+#.  ###      #
+#    ..$ $ $ #
+#   ###     @#
+##############
+`
+	solve := func(withRules bool) *Solver {
+		field, err := soko.Parse(level)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if withRules {
+			rules := soko.NewRules(field)
+			field.SetRules(rules)
+			field.SetRulesBackward(rules)
+		}
+		s := New(field)
+		for s.Step(1000000000) {
+		}
+		if stats := s.GetStats(); !stats.Done || stats.FoundMoves < 0 {
+			t.Fatalf("Level ist lösbar, aber keine Lösung gefunden (Regeln: %v)", withRules)
+		}
+		return s
+	}
+
+	plain := solve(false)
+	rules := solve(true)
+	if p, r := plain.GetStats().FoundMoves, rules.GetStats().FoundMoves; p != r {
+		t.Errorf("Lösungslänge weicht ab: ohne Regeln %d, mit Regeln %d", p, r)
+	}
+	if rules.NodeCount() > plain.NodeCount() {
+		t.Errorf("mit Regeln dürfen nicht mehr Knoten entstehen: %d (Regeln) vs %d (ohne)",
+			rules.NodeCount(), plain.NodeCount())
+	}
+	if r := rules.Rules(); r != nil {
+		if st := r.Stats(); st.MatchKills == 0 {
+			t.Error("das Ziel-Matching hat nie gefeuert - Test prüft nichts")
+		}
+	}
+}
+
 // Vanilla-Level mit Regel-Filter: die optimale Lösungslänge (230 Züge) bleibt
 // erhalten, die Knotenzahl sinkt gegenüber der ungefilterten Suche (8.710.434).
 // Der Knotenwert ist als Regressionswert verankert (Änderungen am Regelwerk

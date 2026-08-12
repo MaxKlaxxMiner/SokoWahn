@@ -5,9 +5,11 @@ import (
 	"sync/atomic"
 )
 
-// Regelbasierter Live-Deadlock-Filter (Stufe 1): erkennt strukturelle Deadlocks mit
+// Regelbasierter Live-Deadlock-Filter: erkennt strukturelle Deadlocks mit
 // beliebig vielen Kisten, die dem k-Steiner-Blocker wegen seiner Kistenzahl-Grenze
-// entgehen. Vorbilder: Festival (Frozen-Boxes-Fixpunkt), JSoko (Closed-Diagonal).
+// entgehen. Stufe 1: Freeze-Fixpunkt + Closed-Diagonal (Vorbilder: Festival,
+// JSoko). Stufe 2: Ziel-Matching mit eingefrorenen Ziel-Kisten als Wänden
+// (rulesMatch.go, JSoko-Vorbild).
 //
 // Wichtig fürs Verständnis:
 //   - Es werden NUR beweisbar tote Stellungen verworfen (keine Dominanz-Prunings) -
@@ -15,7 +17,8 @@ import (
 //   - Der Filter gehört ausschließlich in die Vorwärtssuche: rückwärts erreichte
 //     Stellungen sind per Konstruktion vorwärts lösbar (die Pull-Folge rückwärts
 //     ist ein gültiger Schub-Pfad zum Ziel), die Regeln könnten dort nie feuern.
-//   - Der Blocker-Stufenbau bleibt regel-frei (Orakel-Vergleichbarkeit mit refcli).
+//   - Der Blocker-Stufenbau filtert seine Vorwärts-Phasen adaptiv mit denselben
+//     Regeln (siehe blocker.RulesPatternThreshold), die Rückwärtswelle nie.
 
 // unveränderliche Vorberechnung, von allen Klonen geteilt (nur Lese-Zugriffe)
 type rulesShared struct {
@@ -31,6 +34,8 @@ type rulesShared struct {
 	wposToField []int    // Wpos -> absolute Position
 	goalBits    []uint64 // Zielfelder als Bitmaske über die begehbaren Felder
 	deadBits    []uint64 // tote Felder: von dort erreicht keine Kiste mehr ein Ziel (per Schieben)
+	goals       []Wpos   // Zielfelder in fester Reihenfolge (Bit-Index der Matching-Masken)
+	goalWords   int      // Wortbreite der Ziel-Bitmasken (je 64 Ziele ein uint64)
 
 	// --- Spiegelwelt für die Rückwärtssuche (Pull-Freeze) ---
 	startBits    []uint64 // Start-Kistenfelder als Bitmaske
@@ -39,6 +44,7 @@ type rulesShared struct {
 	// --- Statistik (atomar: alle Klone/Worker zählen gemeinsam) ---
 	freezeKills     atomic.Uint64 // Freeze-Regel hat eine Stellung verworfen
 	diagonalKills   atomic.Uint64 // Diagonal-Regel hat eine Stellung verworfen
+	matchKills      atomic.Uint64 // Ziel-Matching-Regel hat eine Stellung verworfen
 	pullDeadKills   atomic.Uint64 // Kiste auf pull-totem Feld (rückwärts, O(1))
 	pullFreezeKills atomic.Uint64 // Pull-Freeze-Regel hat eine Rückwärts-Stellung verworfen
 	cmpBlockerOnly  atomic.Uint64 // Vergleichsmodus: nur der Blocker hat verworfen
@@ -50,6 +56,7 @@ type rulesShared struct {
 type RuleStats struct {
 	FreezeKills     uint64 // von der Freeze-Regel verworfene Stellungen
 	DiagonalKills   uint64 // von der Diagonal-Regel verworfene Stellungen
+	MatchKills      uint64 // von der Ziel-Matching-Regel verworfene Stellungen
 	PullDeadKills   uint64 // Kiste auf pull-totem Feld verworfen (rückwärts)
 	PullFreezeKills uint64 // von der Pull-Freeze-Regel verworfene Rückwärts-Stellungen
 
@@ -65,10 +72,14 @@ type RuleStats struct {
 type Rules struct {
 	shared *rulesShared
 
-	// Einzelschalter (beide an = Stufe 1); primär für Tests und Messungen,
-	// die Stufen-Umschaltung von außen läuft über SetRules(nil/rules)
+	// Einzelschalter (Freeze + Diagonale = Stufe 1); primär für Tests und
+	// Messungen, die Stufen-Umschaltung von außen läuft über SetRules(nil/rules)
 	FreezeEnabled   bool
 	DiagonalEnabled bool
+
+	// Stufe 2: Ziel-Matching mit eingefrorenen Ziel-Kisten als Wänden
+	// (rulesMatch.go); setzt den Freeze-Fixpunkt voraus (FreezeEnabled)
+	MatchEnabled bool
 
 	// Debug-Vergleichsmodus: Regeln auch für Stellungen auswerten, die der
 	// Blocker bereits verworfen hat, und die Überlappung zählen (CmpXxx-Stats).
@@ -76,6 +87,15 @@ type Rules struct {
 	CompareBlocker bool
 
 	work []uint64 // Scratch-Maske für den Freeze-Fixpunkt
+
+	// --- Scratch und Cache des Ziel-Matchings (rulesMatch.go, lazy angelegt) ---
+	matchCache map[string][]uint64 // Erreichbarkeits-Masken je eingefrorener Kistenmenge
+	matchKey   []byte              // Schlüssel-Puffer (exakte Masken-Bytes, kein Hash)
+	matchBoxes []Wpos              // bewegliche Kisten der aktuellen Prüfung
+	matchOwner []int16             // Matching: zugeordnete Kiste je Ziel (-1 = frei)
+	matchSeen  []uint64            // Matching: je Augmentation besuchte Ziele
+	reachSeen  []bool              // BFS-Markierungen der Erreichbarkeits-Berechnung
+	reachQueue []Wpos              // BFS-Queue der Erreichbarkeits-Berechnung
 }
 
 // erstellt den Regel-Filter für ein Spielfeld (Vorberechnung: tote Felder per
@@ -96,6 +116,8 @@ func NewRules(f *Field) *Rules {
 		wposToField: f.wposToField,
 		goalBits:     make([]uint64, len(f.boxBits)),
 		deadBits:     make([]uint64, len(f.boxBits)),
+		goals:        f.goals,
+		goalWords:    (len(f.goals) + 63) / 64,
 		startBits:    make([]uint64, len(f.boxBits)),
 		pullDeadBits: make([]uint64, len(f.boxBits)),
 	}
@@ -190,6 +212,7 @@ func NewRules(f *Field) *Rules {
 		shared:          sh,
 		FreezeEnabled:   true,
 		DiagonalEnabled: true,
+		MatchEnabled:    true,
 		work:            make([]uint64, len(f.boxBits)),
 	}
 }
@@ -201,6 +224,7 @@ func (r *Rules) Clone() *Rules {
 		shared:          r.shared,
 		FreezeEnabled:   r.FreezeEnabled,
 		DiagonalEnabled: r.DiagonalEnabled,
+		MatchEnabled:    r.MatchEnabled,
 		CompareBlocker:  r.CompareBlocker,
 		work:            make([]uint64, len(r.work)),
 	}
@@ -212,6 +236,7 @@ func (r *Rules) Stats() RuleStats {
 	return RuleStats{
 		FreezeKills:     sh.freezeKills.Load(),
 		DiagonalKills:   sh.diagonalKills.Load(),
+		MatchKills:      sh.matchKills.Load(),
 		PullDeadKills:   sh.pullDeadKills.Load(),
 		PullFreezeKills: sh.pullFreezeKills.Load(),
 		CmpBlockerOnly:  sh.cmpBlockerOnly.Load(),
@@ -241,9 +266,18 @@ func (r *Rules) CheckPush(player, box Wpos, boxBits []uint64) bool {
 	// (Millisekunden Rechenzeit, egal wie groß das Level). Die Regeln sollen den
 	// Blocker ergänzen, nicht doppeln. Die Totfeld-Maske (deadBits) bleibt trotzdem
 	// wichtig: als Verschärfung im Freeze-Fixpunkt (beidseitig tote Achse = blockiert).
-	if r.FreezeEnabled && !r.checkFreeze(box, boxBits) {
-		r.shared.freezeKills.Add(1)
-		return false
+	if r.FreezeEnabled {
+		frozen, ok := r.checkFreeze(box, boxBits)
+		if !ok {
+			r.shared.freezeKills.Add(1)
+			return false
+		}
+		// Stufe 2 direkt im Anschluss: frozen zeigt in den work-Puffer des
+		// Fixpunkts und ist nur bis zum nächsten Freeze-Check gültig
+		if frozen != nil && !r.checkGoalMatch(frozen, boxBits) {
+			r.shared.matchKills.Add(1)
+			return false
+		}
 	}
 	if r.DiagonalEnabled && r.isDiagonalDeadlock(player, box, boxBits) {
 		r.shared.diagonalKills.Add(1)
@@ -353,10 +387,20 @@ func (sh *rulesShared) pullDeadAt(p Wpos) bool {
 // immer durch den Schub einer Kiste ein, die selbst mit einfriert (eine naiv
 // bewegliche Kiste kann per Definition keine Nachbarkiste dauerhaft blockieren).
 // Start-eingefrorene Cluster behandelt bereits der Parse-Filter (freeze.go).
-func (r *Rules) checkFreeze(box Wpos, boxBits []uint64) bool {
+//
+// Rückgabe: ok=false bedeutet Freeze-Deadlock. frozen liefert die Menge der
+// eingefrorenen Ziel-Kisten für das Ziel-Matching (Stufe 2, Alias auf den
+// work-Puffer, nur bis zum nächsten Check gültig); nil, wenn das Matching aus
+// ist oder nichts eingefroren ist. Mit aktivem Matching entfällt der Early-Exit,
+// sobald irgendeine Kiste auf einem Ziel steht: auch der Schub einer frei
+// beweglichen Kiste muss dann gegen die BESTEHENDEN eingefrorenen Ziel-Kisten
+// geprüft werden (die Menge selbst kann dabei nicht wachsen, aber die neue
+// Kistenposition kann hinter den eingefrorenen Wänden stranden).
+func (r *Rules) checkFreeze(box Wpos, boxBits []uint64) (frozen []uint64, ok bool) {
 	sh := r.shared
-	if sh.movableNaive(box, boxBits) {
-		return true // häufigster Fall: die geschobene Kiste ist frei beweglich
+	matchActive := r.MatchEnabled && sh.anyBoxOnGoal(boxBits)
+	if !matchActive && sh.movableNaive(box, boxBits) {
+		return nil, true // häufigster Fall: die geschobene Kiste ist frei beweglich
 	}
 
 	work := r.work[:len(boxBits)]
@@ -378,12 +422,29 @@ func (r *Rules) checkFreeze(box Wpos, boxBits []uint64) bool {
 	}
 
 	// verbleibende (eingefrorene) Kisten: alle auf Zielfeldern?
+	frozenAny := false
 	for w, word := range work {
 		if word&^sh.goalBits[w] != 0 {
-			return false // eingefrorene Kiste abseits der Ziele -> Deadlock
+			return nil, false // eingefrorene Kiste abseits der Ziele -> Deadlock
+		}
+		if word != 0 {
+			frozenAny = true
 		}
 	}
-	return true
+	if !matchActive || !frozenAny {
+		return nil, true
+	}
+	return work, true
+}
+
+// steht mindestens eine Kiste auf einem Zielfeld?
+func (sh *rulesShared) anyBoxOnGoal(mask []uint64) bool {
+	for w, word := range mask {
+		if word&sh.goalBits[w] != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // naiv schiebbar (allmächtiger Spieler, konservativ): es gibt eine Achse, deren

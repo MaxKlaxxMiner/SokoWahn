@@ -162,10 +162,15 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.slv.SetBlockerEnabled(on)
 			m.status = "Blocker-Filter: " + onOff(on)
 			return m, nil
-		case "5": // Regel-Filter an/aus (Freeze + Diagonale)
+		case "5": // Regel-Filter an/aus (Freeze + Diagonale + Matching)
 			on := !m.slv.RulesEnabled()
 			m.slv.SetRulesEnabled(on)
-			m.status = "Regel-Filter (Freeze+Diagonale): " + onOff(on)
+			m.status = "Regel-Filter (Freeze+Diagonale+Matching): " + onOff(on)
+			return m, nil
+		case "6": // Ziel-Matching (Regel-Stufe 2) einzeln an/aus (teuerster Regel-Teil)
+			on := !m.slv.MatchEnabled()
+			m.slv.SetMatchEnabled(on)
+			m.status = "Ziel-Matching (Regel-Stufe 2): " + onOff(on)
 			return m, nil
 		case "*": // Such-Worker eine Stufe hoch
 			m.changeWorkers(true)

@@ -88,11 +88,33 @@ Ebene über dem Repo (Analyse vom 11.08.2026). Grundsätze: nur beweisbare Deadl
   Pull-BFS, Statistik-Zählern und Debug-Vergleichsmodus gegen den Blocker
   (-rulescompare). Vanilla: Faktor 3 weniger Knoten ohne Blocker; Details und
   Referenzwerte in docs/architektur.md.
-- **Stufe 2 - Erreichbarkeit/Matching** (JSoko BipartiteMatchings, Festival
-  check_matching_deadlock): kann jede Kiste (mit eingefrorenen Ziel-Kisten als
-  Wänden) noch irgendein Ziel erreichen, und geht die Kisten-Ziel-Zuordnung auf?
-  Teuer (Flood-Fills je Knoten) -> Cache über den Freeze-Bitvektor wie JSoko
-  (Board.java:3231). Vorstufe: nur der billige Teil "Kiste erreicht kein Ziel mehr".
+- ERLEDIGT: **Stufe 2 - Ziel-Matching mit eingefrorenen Ziel-Kisten als Wänden**
+  (soko/rulesMatch.go, 12.08.2026): eingefrorene Ziel-Kisten wirken wie Wände;
+  jede bewegliche Kiste muss noch ein freies Ziel erreichen (billige Vorstufe)
+  und alle zusammen brauchen ein bipartites Matching auf die freien Ziele
+  (Kuhn-Augmentierung über Bitmasken). Erreichbarkeits-Masken hängen nur von der
+  eingefrorenen Menge ab -> Cache je Rules-Instanz mit der exakten Maske als
+  Schlüssel (JSoko-Idee, Board.java:3231). Eigener Schalter (MatchEnabled,
+  TUI-Taste 6), wirkt auch im adaptiven Blocker-Stufenbau (Cache-Version 7).
+  Vanilla: 0 Treffer, Knotenzahlen unverändert, ~5% Laufzeit-Overhead (der
+  Fixpunkt-Early-Exit entfällt, sobald eine Kiste auf einem Ziel steht) -
+  das Revier sind Levels, deren Ziel-Kisten während der Suche zu Sperr-Riegeln
+  einfrieren; Messungen auf den Monster-Leveln macht Max. Nicht übernommen:
+  Distanz-Matching per Auktionsalgorithmus (JSoko BipartiteMatchings.java) -
+  Erreichbarkeit statt Distanzen reicht für den reinen Deadlock-Beweis.
+  Praxis-Befund (Max, 12.08.2026): Ausbeute hängt daran, WIE FRÜH die
+  Vorwärtssuche Ziel-Kisten einfriert - 2164 (Zielkammern neben den Starts)
+  über 1 Mio Treffer, 5003 (Zielraum im Mittelspiel) wenige, 2135 (Korridor-
+  Packing als Endspiel) null: das Endspiel deckt die Rückwärtssuche ab, die
+  per Konstruktion deadlock-frei ist; 201 strukturell ungeeignet (4 Zugänge,
+  5-Steiner subsumiert fast alles, 8 Treffer bei 130 Mio Hash).
+- Idee dazu: **Pull-Matching** (Stufe-2-Spiegel für die Rückwärtssuche):
+  pull-eingefrorene Kisten auf STARTfeldern wirken als Wände, jede andere Kiste
+  muss per Ziehen noch ein freies Startfeld erreichen, Zuordnung per Matching -
+  würde die Rückwärts-Front genau im Endspiel-Revier beschneiden (z.B. 2135),
+  wo das Vorwärts-Matching nie hinkommt. Aufwand/Nutzen offen, erst messen
+  lassen, wie stark die Rückwärtsseite überhaupt an unerreichbaren Stellungen
+  leidet (Pull-Freeze-Treffer als Indikator).
 - **Stufe 3 - Corral-Mini-Suche mit Cache** (Festival corral_deadlock.cpp): bei
   zerschnittenem Spielfeld je abgeschlossenem Bereich eine knoten-budgetierte
   Mini-Suche; vorher Kisten außerhalb der Zone löschen und ferne eingefrorene
@@ -113,8 +135,9 @@ Ebene über dem Repo (Analyse vom 11.08.2026). Grundsätze: nur beweisbare Deadl
   Vanilla-Knotenzahl mit/ohne identisch. Regeln ergänzen den Blocker, doppeln
   ihn nicht.)
 - ERLEDIGT: **Regel-Filter im Blocker-Stufenbau, adaptiv** (Cache-Version 6): erst
-  nachdem eine fertige Stufe mehr als RulesPatternThreshold=4096 Muster produziert
-  hat (Muster-Explosion), filtern alle weiteren Stufen ihre Vorwärts-Phasen mit
+  nachdem eine fertige Stufe mehr als RulesPatternThreshold Muster (4096, seit
+  Cache-Version 8: 10240) produziert hat (Muster-Explosion), filtern alle
+  weiteren Stufen ihre Vorwärts-Phasen mit
   einer eigenen Stufe-1-Regel-Instanz; davor baut alles klassisch (volle Muster als
   billige Vorfilter, bitgenau orakel-gleich - Vanilla und lid201 komplett).
   Die Rückwärtswelle bleibt ungefiltert (trägt den Beweis der bedingten Kill-Regel);

@@ -63,7 +63,7 @@ func (m Model) helpLine() string {
 	case modeBlocker:
 		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
-		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5 = Blocker/Regeln | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
+		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5/6 = Blocker/Regeln/Matching | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
 	case modeSolution:
 		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | c = Zugfolge kopieren | i = neues Level | q = Beenden"
 	}
@@ -132,14 +132,14 @@ func (m Model) viewSearch() string {
 	backward := depthColumn(backwardTitle, stats.BackwardOpen, stats.BackwardDepth)
 	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, forward, "   ", backward))
 
-	// aktive Deadlock-Filter samt Trefferzählern der Regeln (Tasten 4/5),
+	// aktive Deadlock-Filter samt Trefferzählern der Regeln (Tasten 4/5/6),
 	// je eine Zeile für Schalter, Vorwärts- und Rückwärts-Treffer
-	sb.WriteString("\n" + styleHelp.Render("Filter: Blocker "+onOff(m.slv.BlockerEnabled())+" | Regeln "+onOff(m.slv.RulesEnabled())))
+	sb.WriteString("\n" + styleHelp.Render("Filter: Blocker "+onOff(m.slv.BlockerEnabled())+" | Regeln "+onOff(m.slv.RulesEnabled())+" | Matching "+onOff(m.slv.MatchEnabled())))
 	if r := m.slv.Rules(); r != nil {
 		rst := r.Stats()
-		if rst.FreezeKills+rst.DiagonalKills > 0 {
-			sb.WriteString("\n" + styleHelp.Render(fmt.Sprintf("vorwärts: Freeze = %s, Diagonale = %s",
-				tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills))))
+		if rst.FreezeKills+rst.DiagonalKills+rst.MatchKills > 0 {
+			sb.WriteString("\n" + styleHelp.Render(fmt.Sprintf("vorwärts: Freeze = %s, Diagonale = %s, Matching = %s",
+				tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills), tools.FormatInt(rst.MatchKills))))
 		}
 		if rst.PullDeadKills+rst.PullFreezeKills > 0 {
 			sb.WriteString("\n" + styleHelp.Render(fmt.Sprintf("rückwärts: Totfeld = %s, Freeze = %s",

@@ -169,7 +169,8 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 
 ## Blocker (Bx-Semantik, seit Cache-Version 6 mit adaptiver Regel-Filterung)
 
-**Adaptive Regel-Filterung seit Cache-Version 6** (`RulesPatternThreshold = 4096`):
+**Adaptive Regel-Filterung seit Cache-Version 6** (`RulesPatternThreshold`, seit
+Cache-Version 8 bei 10240):
 solange alle fertigen Stufen unter der Muster-Schwelle bleiben, baut der Stufenbau
 klassisch (volle Muster kosten kaum Platz, filtern als Anker-Bitmasken-Test billiger
 als der Freeze-Fixpunkt, und die Werte bleiben bitgenau orakel-vergleichbar mit
@@ -177,7 +178,7 @@ refcli blockerbx - zahme Levels wie Vanilla und lid201 bauen damit KOMPLETT
 klassisch). Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion,
 typisch für sehr große Levels), filtern alle weiteren Stufen ihre Vorwärts-Phasen
 (Schub-Varianten von CollectStart/CollectGoals, SearchVariants) mit einer eigenen
-Stufe-1-Regel-Instanz (nur vorwärts, "sticky", deterministisch aus den fertigen
+Regel-Instanz (Stufe 1 + Ziel-Matching, nur vorwärts, "sticky", deterministisch aus den fertigen
 Stufen entschieden - auch bei Cache-Wiederaufnahme identisch): die explodierenden
 Hüllen verlieren ihr totes Gewebe (schnellerer Bau, weniger RAM), und es entstehen
 weniger Muster - genau die regel-erkennbaren, welche die Live-Regeln der Suche bei
@@ -188,7 +189,9 @@ ungefiltert - ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
 Historie: Cache-Version 4 filterte ALLE Stufen (messbar langsamer in Stufenbau und
 Suche - die kleinen Muster fehlten als billige Vorfilter), Version 5 starr ab
 Stufe 4 (auf zahmen Levels unter 5% Ersparnis, aber Speed-Kosten) - daher die
-adaptive Schwelle. Alte Caches werden beim Laden verworfen und neu gerechnet.
+adaptive Schwelle; seit Version 7 wirkt in den gefilterten Phasen auch das
+Ziel-Matching (Regel-Stufe 2) mit. Alte Caches werden beim Laden verworfen und
+neu gerechnet.
 
 Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 
@@ -267,26 +270,44 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   14 Worker 3,8 s (= 16, LP-E-Kerne irrelevant) -> 128 Worker 3,1 s -> Plateau ~3,0 s ab 128.
   Chunk-Größe: 20 und 20000 sind messbar schlechter, 200-2000 gleichwertig -> 512.
 
-## Regel-Filter (Stufe 1: Freeze + Diagonale)
+## Regel-Filter (Stufe 1: Freeze + Diagonale, Stufe 2: Ziel-Matching)
 
-Regelbasierter Live-Deadlock-Filter (`soko/rules.go`, `soko/rulesDiagonal.go`), ergänzt die
-Blocker orthogonal: der k-Steiner-Blocker deckt kleine Kistenzahlen erschöpfend ab, die
-Regeln erkennen strukturelle Deadlocks mit beliebig vielen Kisten. Vorbilder aus den
-Open-Source-Sammlungen (ein Ordner über dem Repo): Festival (Frozen-Boxes-Fixpunkt),
-JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
+Regelbasierter Live-Deadlock-Filter (`soko/rules.go`, `soko/rulesDiagonal.go`,
+`soko/rulesMatch.go`), ergänzt die Blocker orthogonal: der k-Steiner-Blocker deckt
+kleine Kistenzahlen erschöpfend ab, die Regeln erkennen strukturelle Deadlocks mit
+beliebig vielen Kisten. Vorbilder aus den Open-Source-Sammlungen (ein Ordner über
+dem Repo): Festival (Frozen-Boxes-Fixpunkt), JSoko (Closed-Diagonal-Port aus
+ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals").
 
 - **Freeze-Check** (Festival-Stil): alle naiv schiebbaren Kisten iterativ von einer
   Arbeits-Bitmaske nehmen (schiebbar = eine Achse beidseitig frei und nicht beidseitig
   tot); der Rest ist gegenseitig dauerhaft blockiert - steht davon eine Kiste abseits
   der Ziele, ist die Stellung bewiesen unlösbar. Early-Exit über die geschobene Kiste
   ist verlustfrei: ein Cluster friert immer durch den Schub einer Kiste ein, die selbst
-  mit einfriert (Start-Cluster behandelt der Parse-Filter freeze.go).
+  mit einfriert (Start-Cluster behandelt der Parse-Filter freeze.go). Mit aktivem
+  Ziel-Matching entfällt der Early-Exit, sobald irgendeine Kiste auf einem Ziel steht -
+  das Matching braucht die komplette eingefrorene Menge, und auch der Schub einer frei
+  beweglichen Kiste kann hinter bestehenden eingefrorenen Wänden stranden.
   Tote Felder werden per Pull-BFS von den Zielen vorberechnet (entspricht inhaltlich
   den 1-Steiner-Blockern, aber blocker-unabhängig).
 - **Diagonal-Check** (JSoko-Port): geschlossene Diagonalketten aus Kisten/Wänden;
   "Ziele-und-Wände-Sequenzen" entlang der Kette retten die Stellung (Kisten können
   nach innen auf Ziele geschoben werden). Scan in absoluten Koordinaten, konservativ
   am Feldrand (unbegehbar ohne Wand = kein Deadlock-Anspruch).
+- **Ziel-Matching, Stufe 2** (`rulesMatch.go`, MatchEnabled, TUI-Taste 6): eingefrorene
+  Kisten auf Zielfeldern bewegen sich nie mehr und wirken wie Wände. Jede noch
+  bewegliche Kiste muss damit weiterhin ein FREIES Ziel erreichen können (billige
+  Vorstufe), und alle beweglichen Kisten zusammen brauchen eine überschneidungsfreie
+  Zuordnung auf die freien Ziele - bipartites Matching per Kuhn-Augmentierung über
+  Bitmasken-Adjazenz. Die Erreichbarkeit je Kiste ist bewusst eine Relaxation
+  (allmächtiger Spieler, andere bewegliche Kisten ausgeblendet, je freiem Ziel eine
+  Rückwärts-BFS über Schub-Züge): findet selbst die Obermenge kein Matching, ist die
+  Stellung bewiesen unlösbar. Die Erreichbarkeits-Masken hängen nur von der
+  eingefrorenen Menge ab und werden je Rules-Instanz gecacht (JSoko-Idee, dort
+  Cache über den Freeze-Bitvektor, Board.java:3231); Schlüssel ist die exakte
+  Maske, kein Hash - eine Kollision könnte lösbare Stellungen verwerfen. Greift nur
+  bei Clustern, die WÄHREND der Suche einfrieren: start-eingefrorene Ziel-Kisten
+  macht schon der Parse-Filter freeze.go zu echten Wänden.
 - **Bewusst KEIN direkter Totfeld-Check vorwärts**: das wäre exakt das 1-Steiner-Wissen,
   und die Blocker-Stufen 1-2 sind Betriebsvoraussetzung (Millisekunden, egal wie groß
   das Level) - die Regeln sollen ergänzen, nicht doppeln. Die Totfeld-Maske dient nur
@@ -307,14 +328,16 @@ JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
   Vorwärts filtert CheckPush in pushVariantHorizontal/Vertical hinter dem
   Blocker-Check, rückwärts CheckPull in SearchVariantsBackward.
 - **Der Blocker-Stufenbau filtert seine Vorwärts-Phasen nach einer Muster-Explosion
-  selbst mit den Regeln** (adaptiv seit Cache-Version 6, RulesPatternThreshold=4096,
-  eigene Regel-Instanz, nur vorwärts - siehe Blocker-Kapitel); zahme Levels bauen
-  komplett klassisch und bleiben orakel-vergleichbar.
+  selbst mit den Regeln** (adaptiv seit Cache-Version 6, RulesPatternThreshold=10240,
+  eigene Regel-Instanz, nur vorwärts - siehe Blocker-Kapitel; seit Cache-Version 7
+  wirkt dort auch das Ziel-Matching mit); zahme Levels bauen komplett klassisch und
+  bleiben orakel-vergleichbar.
 - **Threading**: die Vorberechnung (tote Felder, Ziel-Maske, Geometrie) wird geteilt,
   jeder Field-Clone bekommt per Rules.Clone einen eigenen Scratch-Puffer.
   Statistik-Zähler liegen atomar im geteilten Teil (alle Worker zählen gemeinsam).
 - **Bedienung**: TUI Default an, reaktiviert sich bei jedem neuen Level; Tasten 4/5
-  schalten Blocker/Regeln in der Suche um (wirkt wie SetWorkers ab dem nächsten Batch).
+  schalten Blocker/Regeln in der Suche um (wirkt wie SetWorkers ab dem nächsten Batch),
+  Taste 6 nimmt einzeln das Ziel-Matching heraus (der teuerste Regel-Teil).
   CLI: `-rules` (opt-in, sonst bleibt die Ausgabe orakel-vergleichbar) und
   `-rulescompare` (Debug: beide Filter unabhängig auswerten, Überlappung ausgeben).
 - **Messwerte Vanilla**: Regeln allein 1.825.644 statt 8.710.434 Knoten (Faktor 4,8,
@@ -322,10 +345,14 @@ JSoko (Closed-Diagonal-Port aus ClosedDiagonalDeadlock.java).
   aber ohne Vorberechnung. Treffer: Freeze 1,10 Mio, Diagonale 71k, rückwärts
   Totfeld 118k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
   die Regeln auf Vanilla vorwärts nichts Zusätzliches (bei 6 Kisten subsumiert der
-  Blocker die kleinen Cluster). Der Mehrwert liegt bei großen Levels (Cluster über
-  der Steiner-Grenze, lange Diagonalen) und als Blocker-Ersatz bei Speicherdruck -
-  Praxis-Messungen von Max dazu in docs/roadmap.md (Level 47484: -62% Hash beim
-  3-Blocker; Level 43070: 4-Blocker unbezahlbar, Regeln -49% Hash).
+  Blocker die kleinen Cluster). Das Ziel-Matching feuert auf Vanilla nie (0 Treffer,
+  Knotenzahlen unverändert) und kostet dort ~5% Laufzeit (der entfallene
+  Fixpunkt-Early-Exit); sein Revier sind Levels, in denen Ziel-Kisten während der
+  Suche zu Sperr-Riegeln einfrieren. Der Mehrwert der Regeln insgesamt liegt bei
+  großen Levels (Cluster über der Steiner-Grenze, lange Diagonalen) und als
+  Blocker-Ersatz bei Speicherdruck - Praxis-Messungen von Max dazu in
+  docs/roadmap.md (Level 47484: -62% Hash beim 3-Blocker; Level 43070: 4-Blocker
+  unbezahlbar, Regeln -49% Hash).
 
 ## Referenzwerte (als Tests verankert)
 

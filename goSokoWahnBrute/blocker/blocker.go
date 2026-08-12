@@ -90,18 +90,19 @@ type Blocker struct {
 }
 
 // Muster-Schwelle der adaptiven Regel-Filterung im Stufenbau (Feinanpassung von
-// Max 08/2026): solange alle fertigen Stufen höchstens so viele Muster haben,
-// baut der Stufenbau klassisch - kleine Mustermengen kosten kaum Platz, filtern
-// aber billiger als die Regeln (Anker-Bitmasken-Test schlägt den Freeze-Fixpunkt
-// pro Schub) und bleiben bitgenau vergleichbar mit dem C#-Orakel (refcli
-// blockerbx). Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion,
-// typisch für sehr große Levels), filtern alle WEITEREN Stufen ihre
-// Vorwärts-Phasen mit den Stufe-1-Regeln ("sticky", entscheidet sich
-// deterministisch aus den fertigen Stufen - auch bei Wiederaufnahme aus dem
-// Cache identisch). Zahme Levels (Vanilla, lid201) bauen damit komplett
-// klassisch, nur Muster-Explosions-Levels bezahlen den Regel-Aufpreis dort,
-// wo er sich lohnt.
-var RulesPatternThreshold = 4096
+// Max 08/2026, seit Cache-Version 8 bei 10240 - mittelgroße Stufen wie die
+// 5.061 Muster der 201-Stufe-4 bauen damit wieder klassisch): solange alle
+// fertigen Stufen höchstens so viele Muster haben, baut der Stufenbau
+// klassisch - kleine Mustermengen kosten kaum Platz, filtern aber billiger als
+// die Regeln (Anker-Bitmasken-Test schlägt den Freeze-Fixpunkt pro Schub) und
+// bleiben bitgenau vergleichbar mit dem C#-Orakel (refcli blockerbx).
+// Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion, typisch für
+// sehr große Levels), filtern alle WEITEREN Stufen ihre Vorwärts-Phasen mit den
+// Regeln (Stufe 1 + Ziel-Matching, "sticky", entscheidet sich deterministisch
+// aus den fertigen Stufen - auch bei Wiederaufnahme aus dem Cache identisch).
+// Zahme Levels bauen damit komplett klassisch, nur Muster-Explosions-Levels
+// bezahlen den Regel-Aufpreis dort, wo er sich lohnt.
+var RulesPatternThreshold = 10240
 
 // erstellt einen Blocker. Nach einer Muster-Explosion (siehe
 // RulesPatternThreshold) filtert der Stufenbau seine Vorwärts-Phasen
