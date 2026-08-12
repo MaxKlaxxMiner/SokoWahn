@@ -2,11 +2,11 @@ package solver
 
 import (
 	"encoding/binary"
+	"goSokoWahnBrute/crc64"
 	"runtime"
 	"sync"
 	"sync/atomic"
-
-	"goSokoWahnBrute/crc64"
+	"unsafe"
 )
 
 // ArchiveTable ("SlowCompactArchiveTable"): speicheroptimierte Stellungs-Tabelle
@@ -52,12 +52,12 @@ type archiveShard struct {
 }
 
 const (
-	archiveShardCount = 256        // Shard = untere 8 Schlüssel-Bits
-	archiveRestMask   = 1<<40 - 1  // gespeicherter Rest-Schlüssel (Bits 24..63)
-	archiveMinBits    = 24         // Minimum: 24 Bucket- + 40 Rest-Bits = verlustfreie 64
-	archiveMaxBits    = 32         // Maximum: 2^32 Buckets (16 GB Index) reichen für >50 Mrd Einträge
-	archiveBucketGoal = 12         // Ziel-Einträge je Bucket (1-2 Cachelines linearer Scan)
-	archiveDeltaDiv   = 16         // Merge-Schwelle: Delta ab 1/16 des Archiv-Bestands
+	archiveShardCount = 256       // Shard = untere 8 Schlüssel-Bits
+	archiveRestMask   = 1<<40 - 1 // gespeicherter Rest-Schlüssel (Bits 24..63)
+	archiveMinBits    = 24        // Minimum: 24 Bucket- + 40 Rest-Bits = verlustfreie 64
+	archiveMaxBits    = 32        // Maximum: 2^32 Buckets (16 GB Index) reichen für >50 Mrd Einträge
+	archiveBucketGoal = 12        // Ziel-Einträge je Bucket (1-2 Cachelines linearer Scan)
+	archiveDeltaDiv   = 16        // Merge-Schwelle: Delta ab 1/16 des Archiv-Bestands
 )
 
 // Mindestgröße des Deltas, bevor der erste bzw. nächste Merge ansteht
@@ -166,10 +166,21 @@ func (t *ArchiveTable) archiveSet(key uint64, depth uint16) bool {
 	return false
 }
 
-// liest den 7-Byte-Record des Eintrags i als uint64 (8-Byte-Load dank Padding;
-// Bits 0..39 = Rest-Schlüssel, Bits 40..55 = Tiefe, Bits 56..63 = Fremd-Byte)
+// liest den 7-Byte-Record des Eintrags i als uint64 (8-Byte-Load;
+// Bits 0..39 = Rest-Schlüssel, Bits 40..55 = Tiefe, Bits 56..63 = Fremd-Byte).
+// Bewusst roh ohne Bounds-Check (heißester Load des Archiv-Pfads, ca. +2%
+// Suchdurchsatz gegenüber binary.LittleEndian). Sicher, weil:
+// 1. das +1 Padding-Byte der Allokation (total*7+1) auch den überstehenden
+//    8-Byte-Load des LETZTEN Records innerhalb des Objekts hält,
+// 2. i immer aus den Offset-Arrays des Merges stammt (i < total) - eine
+//    verletzte Invariante liest hier allerdings stumm Müll statt zu panicen,
+// 3. unaligned Loads auf amd64/arm64 erlaubt sind (little-endian vorausgesetzt)
 func loadRecord(data []byte, i uint32) uint64 {
-	return binary.LittleEndian.Uint64(data[int(i)*7:])
+	return *(*uint64)(unsafe.Add(
+		unsafe.Pointer(unsafe.SliceData(data)),
+		uintptr(i)*7,
+	))
+	//return binary.LittleEndian.Uint64(data[int(i)*7:]) // die brave Variante
 }
 
 // schreibt den kompletten 7-Byte-Record des Eintrags i
