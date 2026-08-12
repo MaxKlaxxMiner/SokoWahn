@@ -14,19 +14,20 @@ import (
 //
 // Neue Einträge sammelt ein kleines CompactTable-Delta (volle Geschwindigkeit).
 // Läuft es voll, wandert der Inhalt in das unveränderlich gruppierte Archiv:
-// ein uint64 pro Eintrag (Bits 0..39 Rest-Schlüssel = Schlüssel-Bits 24..63,
-// Bits 40..55 Zugtiefe, Rest frei), aufgeteilt in 256 Shards über die unteren
-// 8 Schlüssel-Bits. Historie der Record-Formate: gepackte 7-Byte-Records
+// ein uint64 pro Eintrag (Bits 0..47 Rest-Schlüssel = Schlüssel-Bits 16..63,
+// Bits 48..63 Zugtiefe - restlos voll), aufgeteilt in 256 Shards über die
+// unteren 8 Schlüssel-Bits. Historie der Record-Formate: gepackte 7-Byte-Records
 // (+ Unsafe-Load) und ein cacheline-ausgerichtetes 9er-Zeilen-Layout liegen in
 // der Git-Historie - das volle uint64 kostet 1 Byte je Eintrag mehr, ist aber
-// genauso schnell und braucht weder Offset-Arithmetik noch unsafe.
+// 12-17% schneller und braucht weder Offset-Arithmetik noch unsafe; das
+// Zusatz-Byte finanziert nebenbei die 48 Rest-Bits (Index- plus Rest-Bits
+// wären damit schon ab 16 Bucket-Bits verlustfreie 64).
 // Innerhalb eines Shards sind die Einträge nach Bucket gruppiert (Bucket =
-// untere bits Schlüssel-Bits; mindestens 24, dann sind Index- plus Rest-Bits
-// zusammen verlustfreie 64 - eine Sortierung innerhalb des Buckets ist unnötig).
-// Der Bucket-Index sind shard-relative uint32-Offsets, ein Lookup ist damit ein
-// Offset-Lesen plus linearer Scan über durchschnittlich unter 12 Einträge
-// (1-2 Cachelines). Die Bucket-Bits wachsen beim Merge mit dem Bestand
-// (Ziel ~12 Einträge je Bucket, Maximum 32).
+// untere bits Schlüssel-Bits, Minimum siehe archiveMinBits - eine Sortierung
+// innerhalb des Buckets ist unnötig). Der Bucket-Index sind shard-relative
+// uint32-Offsets, ein Lookup ist damit ein Offset-Lesen plus linearer Scan
+// über wenige Einträge (1-2 Cachelines). Die Bucket-Bits wachsen beim Merge
+// mit dem Bestand (ArchiveBucketGoal Einträge je Bucket, Maximum 32).
 //
 // Tiefen-Updates schreiben direkt in das Archiv (die Schlüssel liegen fest);
 // Add prüft deshalb zuerst das Archiv - Delta und Archiv bleiben disjunkt und
@@ -50,17 +51,36 @@ type ArchiveTable struct {
 // ausgerichtet und ohne jede Byte-Arithmetik
 type archiveShard struct {
 	offsets []uint32 // Startindex je Bucket-im-Shard (Bucket >> 8), plus End-Sentinel
-	data    []uint64 // Records: Bits 0..39 Rest-Schlüssel, Bits 40..55 Zugtiefe
+	data    []uint64 // Records: Bits 0..47 Rest-Schlüssel, Bits 48..63 Zugtiefe
 }
 
 const (
 	archiveShardCount = 256       // Shard = untere 8 Schlüssel-Bits
-	archiveRestMask   = 1<<40 - 1 // gespeicherter Rest-Schlüssel (Bits 24..63)
-	archiveMinBits    = 24        // Minimum: 24 Bucket- + 40 Rest-Bits = verlustfreie 64
-	archiveMaxBits    = 32        // Maximum: 2^32 Buckets (16 GB Index) reichen für >50 Mrd Einträge
-	archiveBucketGoal = 12        // Ziel-Einträge je Bucket (1-2 Cachelines linearer Scan)
-	archiveDeltaDiv   = 16        // Merge-Schwelle: Delta ab 1/16 des Archiv-Bestands
+	archiveRestMask   = 1<<48 - 1 // gespeicherter Rest-Schlüssel (Schlüssel-Bits 16..63)
+	// Bucket-Bits-Minimum: die 48 Rest-Bits würden 16 erlauben (verlustfreie 64),
+	// aber ein überdimensionierter Index ist in der echten Suche schneller: die
+	// meisten Buckets sind leer, Fehlschläge enden dann schon am Offsets-Vergleich
+	// ohne Daten-Zugriff, und frühe Bit-Wachstums-Merges (mit Rekonstruktion)
+	// entfallen. Minuten-Sweep von Max (Archiv ab Start, ~35M Einträge je
+	// Richtung): 16 -> 71,9 | 24 -> 72,3 | 25 -> 73,4 | 26 -> 73,7 | 27 -> 71,7 |
+	// 28 -> 68,2 - ab 27 kippt es, der fast leere Riesen-Index (2^28 = 1 GB
+	// Offsets je Tabelle) kostet dann selbst (TLB, Zero-Pages). Preis des 26er
+	// Sweet Spots: 268 MB Index-Floor je Tabelle; oberhalb von ~134M Einträgen
+	// übernimmt ohnehin die ArchiveBucketGoal-Leiter
+	archiveMinBits = 26
+	archiveMaxBits  = 32 // Maximum: 2^32 Buckets (16 GB Index) reichen für >50 Mrd Einträge
+	archiveDeltaDiv = 16 // Merge-Schwelle: Delta ab 1/16 des Archiv-Bestands
 )
+
+// Ziel-Einträge je Bucket - der Speed/RAM-Regler des Archivs (wirkt ab dem
+// nächsten Merge; die Zweierpotenz-Leiter pendelt real zwischen Ziel/2 und Ziel).
+// Der Index kostet 4/Ziel Byte je Eintrag, der Lookup scannt im Schnitt
+// Ziel/2 Records. Messkurve (i5-11400H, 16,7M Einträge, Hit+Miss-Paar):
+// Ziel 12 -> 201 ns bei 8,3 B/Eintrag | 4 -> 160 ns bei ~9 | 2 -> 133 ns bei ~10
+// (zum Vergleich CompactTable: 48 ns bei 13,3-26,7 B/Eintrag je nach Füllstand).
+// Default 2 nach Minuten-Messung von Max in der echten Suche: Ziel 4 kostete
+// dort ~3% Gesamtdurchsatz - das letzte Byte Index-Ersparnis ist es nicht wert
+var ArchiveBucketGoal int64 = 2
 
 // Mindestgröße des Deltas, bevor der erste bzw. nächste Merge ansteht
 // (klein stellbar in Tests; 4M Einträge = ~56 MB CompactTable)
@@ -142,10 +162,10 @@ func (t *ArchiveTable) archiveGet(key uint64) uint16 {
 		return DepthUnknown
 	}
 	bucket := (key & t.mask) >> 8
-	rest := key >> 24
+	rest := key >> 16
 	for i := s.offsets[bucket]; i < s.offsets[bucket+1]; i++ {
 		if record := s.data[i]; record&archiveRestMask == rest {
-			return uint16(record >> 40) // Tiefe steckt im selben Load
+			return uint16(record >> 48) // Tiefe steckt im selben Load
 		}
 	}
 	return DepthUnknown
@@ -158,10 +178,10 @@ func (t *ArchiveTable) archiveSet(key uint64, depth uint16) bool {
 		return false
 	}
 	bucket := (key & t.mask) >> 8
-	rest := key >> 24
+	rest := key >> 16
 	for i := s.offsets[bucket]; i < s.offsets[bucket+1]; i++ {
 		if s.data[i]&archiveRestMask == rest {
-			s.data[i] = rest | uint64(depth)<<40
+			s.data[i] = rest | uint64(depth)<<48
 			return true
 		}
 	}
@@ -173,7 +193,7 @@ func (t *ArchiveTable) archiveSet(key uint64, depth uint16) bool {
 func (t *ArchiveTable) merge() {
 	newCount := t.archiveCount + t.delta.count
 	newBits := t.bits
-	for newBits < archiveMaxBits && newCount > int64(archiveBucketGoal)<<newBits {
+	for newBits < archiveMaxBits && newCount > ArchiveBucketGoal<<newBits {
 		newBits++
 	}
 	t.mergeBits(newBits)
@@ -202,10 +222,10 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 			}
 		} else {
 			for b := 0; b+1 < len(s.offsets); b++ {
-				low24 := (uint64(b)<<8 | uint64(shard)) & (1<<24 - 1)
+				low16 := (uint64(b)<<8 | uint64(shard)) & (1<<16 - 1)
 				for i := s.offsets[b]; i < s.offsets[b+1]; i++ {
 					// voller Schlüssel aus Rest + Bucket rekonstruiert
-					key := (s.data[i]&archiveRestMask)<<24 | low24
+					key := (s.data[i]&archiveRestMask)<<16 | low16
 					c[(key&newMask)>>8+1]++
 				}
 			}
@@ -245,12 +265,12 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 
 		s := &t.shards[shard]
 		for b := 0; b+1 < len(s.offsets); b++ {
-			low24 := (uint64(b)<<8 | uint64(shard)) & (1<<24 - 1)
+			low16 := (uint64(b)<<8 | uint64(shard)) & (1<<16 - 1)
 			for i := s.offsets[b]; i < s.offsets[b+1]; i++ {
 				record := s.data[i]
 				bucket := uint64(b)
 				if newBits != oldBits {
-					bucket = (((record&archiveRestMask)<<24 | low24) & newMask) >> 8
+					bucket = (((record&archiveRestMask)<<16 | low16) & newMask) >> 8
 				}
 				pos := cursor[bucket]
 				cursor[bucket]++
@@ -266,7 +286,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 	if delta.zeroDepth != DepthUnknown { // Sonderfall seriell, solange die Cursor unumkämpft sind
 		pos := cursors[0][0]
 		cursors[0][0]++
-		t.shards[0].data[pos] = uint64(delta.zeroDepth) << 40
+		t.shards[0].data[pos] = uint64(delta.zeroDepth) << 48
 	}
 	parallelRanges(len(delta.crcs), func(from, to int) {
 		for i := from; i < to; i++ {
@@ -277,7 +297,7 @@ func (t *ArchiveTable) mergeBits(newBits uint) {
 			shard := key & (archiveShardCount - 1)
 			bucket := (key & newMask) >> 8
 			pos := atomic.AddUint32(&cursors[shard][bucket], 1) - 1
-			t.shards[shard].data[pos] = key>>24 | uint64(delta.depths[i])<<40
+			t.shards[shard].data[pos] = key>>16 | uint64(delta.depths[i])<<48
 		}
 	})
 
