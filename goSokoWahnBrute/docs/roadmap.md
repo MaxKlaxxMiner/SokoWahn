@@ -107,7 +107,11 @@ Ebene über dem Repo (Analyse vom 11.08.2026). Grundsätze: nur beweisbare Deadl
   über 1 Mio Treffer, 5003 (Zielraum im Mittelspiel) wenige, 2135 (Korridor-
   Packing als Endspiel) null: das Endspiel deckt die Rückwärtssuche ab, die
   per Konstruktion deadlock-frei ist; 201 strukturell ungeeignet (4 Zugänge,
-  5-Steiner subsumiert fast alles, 8 Treffer bei 130 Mio Hash).
+  5-Steiner subsumiert fast alles, 8 Treffer bei 130 Mio Hash). Paradebeispiel
+  29628 (14 Kisten, dichtes Ziel-Kreuz mitten im Feld): trotz 6-Steiner-Blocker
+  feuert regelbasiert NUR noch das Matching - Freeze/Diagonale sind dort
+  komplett vom Blocker subsumiert, die Ziel-Kreuz-Cluster liegen über seiner
+  Kistengrenze.
 - Idee dazu: **Pull-Matching** (Stufe-2-Spiegel für die Rückwärtssuche):
   pull-eingefrorene Kisten auf STARTfeldern wirken als Wände, jede andere Kiste
   muss per Ziehen noch ein freies Startfeld erreichen, Zuordnung per Matching -
