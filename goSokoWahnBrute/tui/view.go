@@ -19,6 +19,7 @@ var (
 	styleHelp   = lipgloss.NewStyle().Faint(true)
 	styleError  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
 	styleMark   = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
+	styleSpill  = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 )
 
 func (m Model) View() string {
@@ -128,8 +129,8 @@ func (m Model) viewSearch() string {
 	case solver.DirBackward:
 		backwardTitle = styleMark.Render("rückwärts [fix]")
 	}
-	forward := depthColumn(forwardTitle, stats.ForwardOpen, stats.ForwardDepth)
-	backward := depthColumn(backwardTitle, stats.BackwardOpen, stats.BackwardDepth)
+	forward := depthColumn(forwardTitle, stats.ForwardOpen, stats.ForwardSpilled, stats.ForwardDepth)
+	backward := depthColumn(backwardTitle, stats.BackwardOpen, stats.BackwardSpilled, stats.BackwardDepth)
 	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, forward, "   ", backward))
 
 	// verworfene Schein-Verbindungen durch 64-Bit-Hash-Kollisionen (Geburtstags-
@@ -272,8 +273,9 @@ func formatDepth(v float64) string {
 	return strings.ReplaceAll(fmt.Sprintf("%.2f", v), ".", ",")
 }
 
-// eine Spalte der Tiefenstatistik: eine Zeile je Zugtiefe, aktuelle Tiefe markiert
-func depthColumn(title string, open []int, current int) string {
+// eine Spalte der Tiefenstatistik: eine Zeile je Zugtiefe, aktuelle Tiefe markiert;
+// Tiefen, deren Liste auf die Festplatte ausgelagert hat, tragen ihre [x]-Klammer gelb
+func depthColumn(title string, open []int, spilled []bool, current int) string {
 	const maxRows = 22
 
 	var sb strings.Builder
@@ -293,7 +295,11 @@ func depthColumn(title string, open []int, current int) string {
 		if i == current {
 			marker = "->"
 		}
-		fmt.Fprintf(&sb, "%s[%3d] %s\n", marker, i, tools.FormatInt(open[i]))
+		cell := fmt.Sprintf("[%3d]", i)
+		if i < len(spilled) && spilled[i] {
+			cell = styleSpill.Render(cell)
+		}
+		fmt.Fprintf(&sb, "%s%s %s\n", marker, cell, tools.FormatInt(open[i]))
 		shown++
 	}
 	if len(open) > from+maxRows {

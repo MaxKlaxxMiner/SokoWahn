@@ -14,6 +14,9 @@ type Stats struct {
 	BackwardNodes int64 // Anzahl bekannter Stellungen der Rückwärtssuche
 	ForwardOpen   []int // noch zu prüfende Sätze je Vorwärtstiefe
 	BackwardOpen  []int // noch zu prüfende Sätze je Rückwärtstiefe
+
+	ForwardSpilled  []bool // je Vorwärtstiefe: Liste hat auf die Festplatte ausgelagert
+	BackwardSpilled []bool // je Rückwärtstiefe: Liste hat auf die Festplatte ausgelagert
 	FoundMoves    int   // beste gefundene Lösungslänge in Zügen, -1 = noch keine
 	FoundForward  int   // Vorwärtstiefe der Verbindungs-Stellung (nur gültig wenn FoundMoves >= 0)
 	Done          bool  // gibt an, ob die Suche abgeschlossen ist
@@ -29,6 +32,9 @@ func (s *Solver) GetStats() Stats {
 		BackwardNodes: s.backwardKnown.Len(),
 		ForwardOpen:   make([]int, len(s.forwardLists)),
 		BackwardOpen:  make([]int, len(s.backwardLists)),
+
+		ForwardSpilled:  make([]bool, len(s.forwardLists)),
+		BackwardSpilled: make([]bool, len(s.backwardLists)),
 		FoundMoves:    s.foundTotal,
 		FoundForward:  s.foundForwardDepth,
 		Done:          s.done,
@@ -37,9 +43,11 @@ func (s *Solver) GetStats() Stats {
 	}
 	for i, list := range s.forwardLists {
 		stats.ForwardOpen[i] = list.Count()
+		stats.ForwardSpilled[i] = list.SpillBytes() > 0
 	}
 	for i, list := range s.backwardLists {
 		stats.BackwardOpen[i] = list.Count()
+		stats.BackwardSpilled[i] = list.SpillBytes() > 0
 	}
 	return stats
 }
