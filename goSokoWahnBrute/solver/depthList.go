@@ -31,7 +31,9 @@ var (
 	// danach nach jeweils SpillBufferBytes weiterem Zuwachs: auch eine früh angelegte
 	// Liste, die erst später auf Gigabytes anwächst, bekommt den Speicherdruck so noch
 	// mit und lagert dann ihren kompletten Puffer aus.
-	// 0 = immer sofort auslagern (Tests)
+	// 0 = immer sofort auslagern (Tests). Der Wert hier ist nur der Bibliotheks-Default
+	// (erprobter Wert der 64-GB-Maschine) - main.go setzt beim Programmstart 70% des
+	// installierten RAM bzw. das Flag -spillram
 	SpillRamThresholdBytes = int64(44) << 30
 )
 

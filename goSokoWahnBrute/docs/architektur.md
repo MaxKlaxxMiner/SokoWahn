@@ -59,7 +59,9 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   RAM-Verbrauch der Suche (derselbe Wert wie die RAM-Anzeige: Hashtabellen +
   Listen-Puffer; Solver.Step und Blocker.Next melden ihn je Arbeitsschritt per
   `SetSpillRamUsage`, bewusst kein teures/GC-abhängiges ReadMemStats) unter
-  `solver.SpillRamThresholdBytes`, wächst die Liste komplett im RAM weiter und schont
+  `solver.SpillRamThresholdBytes` (beim Programmstart 70% des installierten RAM,
+  übersteuerbar per Flag `-spillram`; die RAM-Notbremse `-ram` liegt mit
+  Default 85% bewusst darüber), wächst die Liste komplett im RAM weiter und schont
   die Platte. Geprüft wird beim ersten Erreichen der Puffergröße und danach nach
   jeweils SpillBufferBytes weiterem Zuwachs - steigt der Verbrauch später über die
   Schwelle, lagert also auch eine bereits auf Gigabytes gewachsene Liste ihren
