@@ -224,6 +224,70 @@ func TestSolveArchiveConversionMidSearch(t *testing.T) {
 	}
 }
 
+// Push-Optimierung: unter den zugoptimalen Lösungen wird die mit minimaler
+// Schub-Zahl rekonstruiert (Webseiten-Bewertung mo/pu) - gleich viele Züge,
+// gültige Kette, und nie mehr Schübe als die einfache Rekonstruktion
+func TestSolutionBestPushes(t *testing.T) {
+	s, plain := solveLevel(t, archiveTestLevel, 16)
+
+	best, err := s.GetSolutionBestPushes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(best.Moves) != 16 {
+		t.Fatalf("push-optimierte Lösung hat %d Züge statt 16", len(best.Moves))
+	}
+	if CountPushes(best.Moves) > CountPushes(plain.Moves) {
+		t.Errorf("Push-Optimierung verschlechtert: %d > %d Schübe", CountPushes(best.Moves), CountPushes(plain.Moves))
+	}
+
+	// Gültigkeit: letzte Stellung muss gelöst sein
+	field, err := soko.Parse(archiveTestLevel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	work := field.Clone()
+	work.SetState(&best.States[len(best.States)-1])
+	if !work.IsSolved() {
+		t.Errorf("letzte Stellung der push-optimierten Lösung ist nicht gelöst")
+	}
+	t.Logf("Schübe: einfach %d, push-optimiert %d (Anker: %d)", CountPushes(plain.Moves), CountPushes(best.Moves), len(s.meetAnchors))
+}
+
+// simulierte 64-Bit-Hash-Kollision (Geburtstagsparadoxon): der Crc einer echten
+// Vorwärts-Stellung wird als Schein-Eintrag in die Rückwärtstabelle gepflanzt -
+// ohne Meet-Verifikation würde die Suche eine viel zu kurze "Lösung" übernehmen
+// und sich selbst beschneiden. Mit Verifikation wird die Schein-Verbindung
+// verworfen (Zähler) und die echte Lösung trotzdem bewiesen.
+func TestSolveCollisionRejected(t *testing.T) {
+	_, refSolution := solveLevel(t, archiveTestLevel, 16)
+
+	field, err := soko.Parse(archiveTestLevel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(field)
+	victim := refSolution.States[2] // echte Stellung wenige Züge nach dem Start
+	s.backwardKnown.Add(victim.Crc, 1)
+	for s.Step(1000000000) {
+	}
+
+	stats := s.GetStats()
+	if stats.CollisionRejects == 0 {
+		t.Error("die Schein-Verbindung wurde nicht als Kollision erkannt")
+	}
+	if stats.FoundMoves != 16 {
+		t.Fatalf("erwartete echte Lösungslänge 16, erhalten: %d", stats.FoundMoves)
+	}
+	solution, err := s.GetSolution()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(solution.Moves) != 16 {
+		t.Fatalf("Rekonstruktion liefert %d Züge statt 16", len(solution.Moves))
+	}
+}
+
 // Vergleichs-Benchmark zur CompactTable (siehe BenchmarkCompactTableMaxMemory):
 // gleicher Workload - misst RAM-Ersparnis und Lookup-Preis des Archiv-Formats
 // (je Iteration ein Treffer- und ein Fehlschlag-Lookup). Zwei Messpunkte des

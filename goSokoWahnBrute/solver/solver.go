@@ -3,6 +3,7 @@ package solver
 import (
 	"runtime"
 
+	"goSokoWahnBrute/crc64"
 	"goSokoWahnBrute/soko"
 )
 
@@ -36,6 +37,12 @@ type Solver struct {
 	foundTotal        int        // beste gefundene Lösungslänge in Zügen, -1 = noch keine
 	foundState        soko.State // Verbindungs-Stellung der besten Lösung
 	foundForwardDepth int        // Vorwärtstiefe der Verbindungs-Stellung
+	collisionRejects  int64      // verworfene Schein-Verbindungen (64-Bit-Hash-Kollisionen, siehe verifyMeet)
+
+	// alle verifizierten Verbindungs-Stellungen der aktuell besten Lösungslänge
+	// (Anker für die Push-Optimierung, siehe pushopt.go; gedeckelt und dedupliziert)
+	meetAnchors []meetAnchor
+	meetSeen    map[crc64.Value]struct{}
 
 	forwardOnly bool // Sonderfall: keine Zielstellungen vorhanden (sehr kurze Level) -> reine Vorwärtssuche
 	done        bool // gibt an, ob die Suche abgeschlossen ist

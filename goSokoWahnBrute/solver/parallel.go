@@ -156,8 +156,7 @@ func (s *Solver) mergeForward() {
 			} else if depth < findOwn { // kürzere Variante zu einer bekannten Stellung
 				s.forwardKnown.Update(crc, depth)
 				if s.foundTotal >= 0 && crc == s.foundState.Crc {
-					s.foundTotal -= int(findOwn - depth)
-					s.foundForwardDepth = int(depth)
+					s.adjustFoundForward(int(findOwn), int(depth))
 				}
 				if s.foundTotal < 0 || int(depth)+s.backwardDepth+1 < s.foundTotal {
 					s.pushForwardRecord(int(depth), record)
@@ -166,16 +165,23 @@ func (s *Solver) mergeForward() {
 				continue
 			}
 
-			// Verbindung zur Rückwärtssuche prüfen
+			// Verbindung zur Rückwärtssuche prüfen (verifiziert gegen Hash-Kollisionen)
 			findOpp := s.backwardKnown.Get(crc)
 			if findOpp == DepthUnknown {
 				continue
 			}
 			total := int(depth) + int(findOpp)
 			if s.foundTotal < 0 || total < s.foundTotal { // bessere Lösung gefunden?
-				s.foundTotal = total
-				s.copyFoundRecord(record, int32(depth), crc)
-				s.foundForwardDepth = int(depth)
+				s.loadRecord(record, int32(depth))
+				if s.verifyMeet(&s.curState, int(depth), total) {
+					s.foundTotal = total
+					s.copyFoundRecord(record, int32(depth), crc)
+					s.foundForwardDepth = int(depth)
+					s.resetMeetAnchors()
+				}
+			} else if total == s.foundTotal && s.wantEqualMeet(crc) {
+				s.loadRecord(record, int32(depth))
+				s.collectEqualMeet(&s.curState, int(depth)) // weiterer Anker für die Push-Optimierung
 			}
 		}
 	}
@@ -198,7 +204,7 @@ func (s *Solver) mergeBackward() {
 			} else if depth < findOwn { // kürzere Variante zu einer bekannten Stellung
 				s.backwardKnown.Update(crc, depth)
 				if s.foundTotal >= 0 && crc == s.foundState.Crc {
-					s.foundTotal -= int(findOwn - depth) // der Rückwärtsanteil der Lösung wurde kürzer
+					s.adjustFoundBackward(int(findOwn), int(depth))
 				}
 				if s.foundTotal < 0 || int(depth)+s.forwardDepth+1 < s.foundTotal {
 					s.pushBackwardRecord(int(depth), record)
@@ -207,16 +213,23 @@ func (s *Solver) mergeBackward() {
 				continue
 			}
 
-			// Verbindung zur Vorwärtssuche prüfen
+			// Verbindung zur Vorwärtssuche prüfen (verifiziert gegen Hash-Kollisionen)
 			findOpp := s.forwardKnown.Get(crc)
 			if findOpp == DepthUnknown {
 				continue
 			}
 			total := int(depth) + int(findOpp)
 			if s.foundTotal < 0 || total < s.foundTotal { // bessere Lösung gefunden?
-				s.foundTotal = total
-				s.copyFoundRecord(record, int32(depth), crc)
-				s.foundForwardDepth = int(findOpp)
+				s.loadRecord(record, int32(depth))
+				if s.verifyMeet(&s.curState, int(findOpp), total) {
+					s.foundTotal = total
+					s.copyFoundRecord(record, int32(depth), crc)
+					s.foundForwardDepth = int(findOpp)
+					s.resetMeetAnchors()
+				}
+			} else if total == s.foundTotal && s.wantEqualMeet(crc) {
+				s.loadRecord(record, int32(depth))
+				s.collectEqualMeet(&s.curState, int(findOpp)) // weiterer Anker für die Push-Optimierung
 			}
 		}
 	}

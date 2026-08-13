@@ -269,7 +269,10 @@ func (m *Model) finishSearch() {
 		return
 	}
 
-	solution, err := m.slv.GetSolution()
+	// unter den zugoptimalen Lösungen die mit den wenigsten Schüben nehmen
+	// (Webseiten-Bewertung: erst Züge, dann Schübe; fällt intern auf die
+	// einfache Rekonstruktion zurück, wenn nichts zu optimieren ist)
+	solution, err := m.slv.GetSolutionBestPushes()
 	if err != nil {
 		m.status = "Fehler bei der Lösungs-Rekonstruktion: " + err.Error()
 		return

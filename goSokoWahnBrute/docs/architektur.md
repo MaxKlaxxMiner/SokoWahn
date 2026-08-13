@@ -215,6 +215,41 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Vorwärtssuche mit direkter Gelöst-Prüfung - das konnte das C#-Original nicht.
 - Lösungs-Rekonstruktion über beide Tabellen (Vorgänger/Nachfolger mit exakt passender Tiefe),
   LURD-Zugfolge per BFS-Laufweg zwischen den Schub-Stellungen (`soko.Steps`).
+- **Push-Optimierung unter den zugoptimalen Lösungen** (`pushopt.go`,
+  `GetSolutionBestPushes`, Webseiten-Bewertung mo/pu wie sokobano bzw. JSokos
+  SolutionMetrics): die Tabellen enthalten nach der Suche implizit einen DAG
+  zugoptimaler Pfade - buildSolution nimmt den erstbesten, die Optimierung
+  minimiert stattdessen per memoisiertem DP die Kanten-Zahl (jede Kante = genau
+  ein Schub, die Zugsumme ist über die exakten Tiefen fixiert). Anker sind alle
+  verifizierten Verbindungs-Stellungen der besten Gesamtlänge (Sammlung an den
+  Meet-Fundstellen, dedupliziert, Deckel 1024; Knoten-Deckel
+  PushOptimizeNodeLimit mit Rückfall auf die einfache Rekonstruktion). Das TUI
+  zeigt Züge/Schübe und nutzt automatisch die push-optimierte Variante.
+  Vollständigkeits-Grenze: das Pruning der Suche kann alternative Optimalpfade
+  entfernen - das Ergebnis ist die beste Push-Zahl unter den in den Tabellen
+  repräsentierten zugoptimalen Lösungen, nie schlechter als GetSolution
+  (Test: TestSolutionBestPushes, auf small.txt 5 statt 7 Schübe bei 16 Zügen).
+- **Meet-Verifikation gegen Hash-Kollisionen** (`verifyMeet`, seit 08/2026): die
+  Stellungs-Schlüssel sind 64-Bit-Hashes - nach dem Geburtstagsparadoxon werden
+  Kollisionen ab Milliarden Einträgen real (P ≈ N_v*N_r/2^64, bei je 2 Mrd schon
+  ~20%; erster echter Fall: Level 201 meldete eine Schein-Lösung mit 129 Zügen
+  statt 146). Ein kollidierender Schlüssel in der Gegentabelle gaukelt ein
+  Treffen der Suchfronten vor, und das falsche foundTotal würde die weitere
+  Suche beschneiden - die echte Lösung wäre in dem Lauf unbeweisbar. Deshalb
+  wird jeder Verbindungs-Kandidat (alle vier Fundstellen: seriell/parallel x
+  vorwärts/rückwärts, auch die Verkürzungs-Updates) sofort per
+  Probe-Rekonstruktion (`buildSolution`) verifiziert: bei einer Schein-Verbindung
+  reißt die Kette garantiert (Nachfolger mit exakten Tiefen existieren nicht bzw.
+  `Steps` findet keinen Laufweg) und der Kandidat wird verworfen. Verworfene
+  Kollisionen zählt die Suche und das TUI zeigt sie rot an. Kosten: nur bei
+  Meets (Handvoll pro Lauf), Knotenzahlen bleiben bitgenau (Vanilla-Orakel
+  unverändert; Test: TestSolveCollisionRejected mit gepflanzter Kollision).
+  Restrisiko: Kollisionen INNERHALB einer Tabelle bleiben stumm (eine fremde
+  Stellung gilt als bekannt, ihr Teilbaum entfällt) - bei 11 Mrd Einträgen
+  ~3 erwartete Fälle; Optimalitäts-Verlust dadurch extrem unwahrscheinlich,
+  aber für echte Beweis-Ansprüche wären breitere Schlüssel nötig (Idee:
+  Bucket-Bits des Archivs zählen zum Schlüssel - bei 32 Bucket-Bits wären
+  80-Bit-Schlüssel ohne Record-Vergrößerung möglich, siehe roadmap).
 
 ## Blocker (Bx-Semantik, seit Cache-Version 6 mit adaptiver Regel-Filterung)
 

@@ -138,8 +138,7 @@ func (s *Solver) searchForwardSerial(batch []uint16) {
 			} else if depth < findOwn { // kürzere Variante zu einer bekannten Stellung
 				s.forwardKnown.Update(v.Crc, depth)
 				if s.foundTotal >= 0 && v.Crc == s.foundState.Crc {
-					s.foundTotal -= int(findOwn - depth)
-					s.foundForwardDepth = int(depth)
+					s.adjustFoundForward(int(findOwn), int(depth))
 				}
 				if s.foundTotal < 0 || int(depth)+s.backwardDepth+1 < s.foundTotal {
 					s.pushForward(v)
@@ -158,16 +157,21 @@ func (s *Solver) searchForwardSerial(batch []uint16) {
 				continue
 			}
 
-			// Verbindung zur Rückwärtssuche prüfen
+			// Verbindung zur Rückwärtssuche prüfen (verifiziert gegen Hash-Kollisionen)
 			findOpp := s.backwardKnown.Get(v.Crc)
 			if findOpp == DepthUnknown {
 				continue
 			}
 			total := int(depth) + int(findOpp)
-			if s.foundTotal < 0 || total < s.foundTotal { // bessere Lösung gefunden?
-				s.foundTotal = total
-				s.copyFoundState(v)
-				s.foundForwardDepth = int(depth)
+			if s.foundTotal < 0 || total < s.foundTotal {
+				if s.verifyMeet(v, int(depth), total) {
+					s.foundTotal = total
+					s.copyFoundState(v)
+					s.foundForwardDepth = int(depth)
+					s.resetMeetAnchors()
+				}
+			} else if total == s.foundTotal {
+				s.collectEqualMeet(v, int(depth)) // weiterer Anker für die Push-Optimierung
 			}
 		}
 	}
@@ -231,7 +235,7 @@ func (s *Solver) searchBackwardSerial(batch []uint16) {
 			} else if depth < findOwn { // kürzere Variante zu einer bekannten Stellung
 				s.backwardKnown.Update(v.Crc, depth)
 				if s.foundTotal >= 0 && v.Crc == s.foundState.Crc {
-					s.foundTotal -= int(findOwn - depth) // der Rückwärtsanteil der Lösung wurde kürzer
+					s.adjustFoundBackward(int(findOwn), int(depth))
 				}
 				if s.foundTotal < 0 || int(depth)+s.forwardDepth+1 < s.foundTotal {
 					s.pushBackward(v)
@@ -240,19 +244,50 @@ func (s *Solver) searchBackwardSerial(batch []uint16) {
 				continue
 			}
 
-			// Verbindung zur Vorwärtssuche prüfen
+			// Verbindung zur Vorwärtssuche prüfen (verifiziert gegen Hash-Kollisionen)
 			findOpp := s.forwardKnown.Get(v.Crc)
 			if findOpp == DepthUnknown {
 				continue
 			}
 			total := int(depth) + int(findOpp)
-			if s.foundTotal < 0 || total < s.foundTotal { // bessere Lösung gefunden?
-				s.foundTotal = total
-				s.copyFoundState(v)
-				s.foundForwardDepth = int(findOpp)
+			if s.foundTotal < 0 || total < s.foundTotal {
+				if s.verifyMeet(v, int(findOpp), total) {
+					s.foundTotal = total
+					s.copyFoundState(v)
+					s.foundForwardDepth = int(findOpp)
+					s.resetMeetAnchors()
+				}
+			} else if total == s.foundTotal {
+				s.collectEqualMeet(v, int(findOpp)) // weiterer Anker für die Push-Optimierung
 			}
 		}
 	}
+}
+
+// verkürzt die gefundene Lösung, weil die Verbindungs-Stellung vorwärts früher
+// erreicht wurde - mit Kollisions-Absicherung: meldet die Verifikation die neue
+// Gesamtlänge als Schein-Verbindung (der Treffer auf foundState.Crc kam von einer
+// kollidierenden fremden Stellung), bleibt die alte verifizierte Lösung bestehen
+func (s *Solver) adjustFoundForward(oldDepth, newDepth int) {
+	prevTotal, prevForward := s.foundTotal, s.foundForwardDepth
+	s.foundTotal -= oldDepth - newDepth
+	s.foundForwardDepth = newDepth
+	if !s.verifyMeet(&s.foundState, s.foundForwardDepth, s.foundTotal) {
+		s.foundTotal, s.foundForwardDepth = prevTotal, prevForward
+		return
+	}
+	s.resetMeetAnchors() // Anker der alten (längeren) Lösung sind hinfällig
+}
+
+// Gegenstück rückwärts: der Rückwärtsanteil der Lösung wurde kürzer
+func (s *Solver) adjustFoundBackward(oldDepth, newDepth int) {
+	prevTotal := s.foundTotal
+	s.foundTotal -= oldDepth - newDepth
+	if !s.verifyMeet(&s.foundState, s.foundForwardDepth, s.foundTotal) {
+		s.foundTotal = prevTotal
+		return
+	}
+	s.resetMeetAnchors()
 }
 
 // prüft, ob alle Kisten der Stellung auf den Zielfeldern stehen

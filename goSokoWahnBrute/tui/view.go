@@ -132,6 +132,12 @@ func (m Model) viewSearch() string {
 	backward := depthColumn(backwardTitle, stats.BackwardOpen, stats.BackwardDepth)
 	sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, forward, "   ", backward))
 
+	// verworfene Schein-Verbindungen durch 64-Bit-Hash-Kollisionen (Geburtstags-
+	// paradoxon, ab Milliarden Einträgen erwartbar) - rot, damit man es sieht
+	if stats.CollisionRejects > 0 {
+		sb.WriteString("\n" + styleError.Render(fmt.Sprintf("Hash-Kollisionen verworfen: %s", tools.FormatInt(stats.CollisionRejects))))
+	}
+
 	// aktive Deadlock-Filter samt Trefferzählern der Regeln (Tasten 4/5/6),
 	// je eine Zeile für Schalter, Vorwärts- und Rückwärts-Treffer
 	sb.WriteString("\n" + styleHelp.Render("Filter: Blocker "+onOff(m.slv.BlockerEnabled())+" | Regeln "+onOff(m.slv.RulesEnabled())+" | Matching "+onOff(m.slv.MatchEnabled())))
@@ -161,7 +167,8 @@ func (m Model) viewSolution() string {
 
 	done := m.solution.MoveOffsets[m.frame]
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Lösung: %d Züge, %d Schub-Stellungen\n", len(m.solution.Moves), len(m.solution.States))
+	fmt.Fprintf(&sb, "Lösung: %d Züge / %d Schübe (push-optimiert unter den zugoptimalen)\n",
+		len(m.solution.Moves), solver.CountPushes(m.solution.Moves))
 	fmt.Fprintf(&sb, "Stellung %d / %d - Zug %d / %d\n\n", m.frame+1, len(m.solution.States), done, len(m.solution.Moves))
 	sb.WriteString("Zugfolge (LURD, ausgeführte Züge markiert):\n")
 	sb.WriteString(wrapMoves(m.solution.Moves, 60, done))

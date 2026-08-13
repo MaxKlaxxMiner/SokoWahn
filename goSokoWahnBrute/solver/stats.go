@@ -17,6 +17,8 @@ type Stats struct {
 	FoundMoves    int   // beste gefundene Lösungslänge in Zügen, -1 = noch keine
 	FoundForward  int   // Vorwärtstiefe der Verbindungs-Stellung (nur gültig wenn FoundMoves >= 0)
 	Done          bool  // gibt an, ob die Suche abgeschlossen ist
+
+	CollisionRejects int64 // verworfene Schein-Verbindungen (64-Bit-Hash-Kollisionen)
 }
 
 func (s *Solver) GetStats() Stats {
@@ -30,6 +32,8 @@ func (s *Solver) GetStats() Stats {
 		FoundMoves:    s.foundTotal,
 		FoundForward:  s.foundForwardDepth,
 		Done:          s.done,
+
+		CollisionRejects: s.collisionRejects,
 	}
 	for i, list := range s.forwardLists {
 		stats.ForwardOpen[i] = list.Count()
