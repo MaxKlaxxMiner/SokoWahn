@@ -13,19 +13,36 @@ die verankerten Referenzwerte absichern.
   frei; Sondieren strikt im Segment, Grow parallel je Segment). Per solver.TableFactory
   schaltbar, bitgenau (Vanilla-Orakel-Test). Messung Level 38044: ~20% weniger
   Tabellen-RAM, ~10% langsamer -> Wahl je nach RAM-Druck.
-- **ArchiveTable ("SlowMemIndex24")**: zweistufig wie SokowahnHash_Index24Multi im
-  Original, aber sparsamer. Dichtes sortiertes Archiv mit 7 Byte/Eintrag zu 100%
-  gefüllt (24-Bit-Präfix implizit im Index: 2^24 uint32-Offsets = 64 MB, trägt bis
-  4,29 Mrd Einträge) + frische SegmentTable für Neuzugänge, Migration ab konfigurierbarem
-  Budget (z.B. FastTierMaxBytes). Migration fast geschenkt: SegmentTable liefert die
-  Top-16-Vorsortierung gratis, Zähl- und Platzierungspass, dann Quicksort je 24-Bit-Fach
-  (winzig, parallel); Merge mit Bestandsarchiv linear, in Chunks nach Top-8-Bits
-  (Peak = Archiv + 1/256 statt 2x), optional über Platte. Updates in-place (Tiefe ändert
-  die Sortierung nicht), Add nur ins frische Tier -> KV-Semantik bleibt, bitgenau.
-  Get im Archiv per Interpolationssuche statt Binärsuche (Keys sind FNV-uniform:
-  2-3 Probes statt 6-7 - im C# war die Archiv-Phase ein Performancefresser, das ist
-  der Haupthebel dagegen). Erwartung 1,3-Mrd-Level: ~9,2 GB statt 17,2 (Segment) bzw.
-  21,5 (Compact); Suchtempo im Archiv-Stadium messen (Schätzung +20-50%).
+- ERLEDIGT: **ArchiveTable ("SlowCompactArchiveTable")**: zweistufig wie
+  SokowahnHash_Index24Multi im Original, gebaut aber als Bucket-Archiv statt der hier
+  ursprünglich skizzierten Sortierung mit Interpolationssuche: 8-Byte-Records (48 Bit
+  Rest-Schlüssel + 16 Bit Tiefe) nach Bucket gruppiert, uint32-Offset-Index mit
+  adaptiven Bucket-Bits (26..32), 256 Shards, paralleler Merge, CompactTable als
+  Delta. TUI-Taste h, effektiv 8,25-10 Byte/Eintrag inkl. Index statt 13,3
+  (CompactTable); Details und Messwerte in docs/architektur.md.
+- **Archiv-Ausbau 1: 6-Byte-Records** (Analyse 13.08.2026): bei Index-Floor bits=26
+  sind nur 64-26 = 38 Rest-Bits nötig (Record speichert key>>26 statt key>>16, Rest
+  bleibt wie heute gegen höhere Bucket-Bits redundanz-tolerant); mit 10 Tiefen-Bits
+  (Tiefen bis 1023, DepthUnknown wird nie gespeichert) sind das exakt 48 Bit = 6 Byte
+  je Record - byte-aligned, kein Bit-Cursor, Goal-2-Leiter und Miss-Verhalten bleiben.
+  Ersparnis 37-40% Archiv-RAM bis ~8G Einträge (1G: 10,0 -> 6,25 GB; 8G: 80 -> 48 GB),
+  darüber noch 27-33%. Bei 12 Tiefen-Bits derselbe Trick mit bits=28 (36+12 = 48;
+  Preis: 1-GB-Index-Floor je Tabelle). Tiefen-Bits beim Merge aus maxTiefe+Reserve
+  ableiten; läuft ein in-place-Update über, erzwungener Merge mit Umpacken auf 7 Byte.
+  Erwartete Lookup-Kosten: ähnlich dem alten 7-Byte-Format aus der Git-Historie
+  (Mikrobench damals 12-17% langsamer als volle uint64 - der Preis kommt zurück).
+- **Archiv-Ausbau 2: echte slowHashMap (volle Bitpackung)**: Record = (64-bits)
+  Rest-Bits + v Tiefen-Bits als Bit-Stream, Bucket-Bits frei nach Gesamtverbrauch
+  optimiert. Der Trade ist vorab exakt rechenbar: +1 Bucket-Bit kostet 4*2^bits Byte
+  Index und spart N/8 Byte Daten -> Index wachsen lassen, solange 2^bits < N/32,
+  Speicher-Optimum bei 16-32 Einträgen je Bucket (statt Goal 2 - daher "slow").
+  Ersparnis 33-41% gegenüber heute (5,5-6,7 B/Eintrag inkl. Index); gegenüber
+  Ausbau 1 lohnt sie erst ab ~16G Einträgen (64G: 352 vs 384 GB) - Server-Revier.
+  Kosten: Bit-Extraktion je Record (Lookup geschätzt 2-4x langsamer als heute),
+  Read-Modify-Write über Wortgrenzen bei in-place-Updates, Komplett-Umpacken bei
+  v-Wachstum (nur eine Handvoll Mal, an den Merge koppeln). Zum Einordnen: das
+  informationstheoretische Minimum (N zufällige 64-Bit-Schlüssel als Menge) liegt
+  bei 8G um ~5,3 B/Eintrag - viel Luft bleibt danach nicht mehr.
 - ERLEDIGT: **Parallelisierung der Blocker-Phasen** (SearchVariants + MergeGoals,
   Worker-Pool mit Atomic-Chunks, seriell-identische Ergebnisse; lid349/4-Steiner:
   13,8 s -> 3,8 s bei 16 Kernen). Noch offen:
