@@ -121,6 +121,22 @@ func (t *ArchiveTable) Add(crc crc64.Value, depth uint16) {
 	if t.archiveSet(uint64(crc), depth) {
 		return // Schlüssel liegt im Archiv -> Tiefe dort in-place aktualisiert
 	}
+	// Max-Memory-Modus: stünde beim Delta die nächste Verdopplung an, obwohl der
+	// Merge bereits in Reichweite ist, wird stattdessen sofort gemerged - die
+	// Verdopplung trüge nur noch wenige Einträge und würde beim Merge samt
+	// Umkopier-Spitze sofort wieder verworfen. Die Reichweiten-Grenze (halbe
+	// Merge-Schwelle) trifft genau den letzten Verdopplungspunkt vor der Schwelle
+	// (Verdopplungspunkte liegen geometrisch, der letzte damit immer oberhalb der
+	// Hälfte); kleine Deltas wachsen weiter normal, sonst würde der Bucket-Index
+	// des Archivs (268 MB Floor je Tabelle) ständig neu gebaut. Nach dem Merge
+	// kann der Schlüssel im Archiv liegen (falls er zuvor im Delta steckte),
+	// daher die erneute in-place-Prüfung - Delta und Archiv bleiben disjunkt.
+	if CompactMaxMemory && t.delta.count >= t.delta.growLimit() && t.delta.count*2 >= t.deltaLimit() {
+		t.merge()
+		if t.archiveSet(uint64(crc), depth) {
+			return
+		}
+	}
 	t.delta.Add(crc, depth) // neu oder bereits im Delta (map-Semantik)
 	if t.delta.count >= t.deltaLimit() {
 		t.merge()

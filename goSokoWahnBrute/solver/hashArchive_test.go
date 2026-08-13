@@ -118,6 +118,65 @@ func TestArchiveConvertFromCompact(t *testing.T) {
 	}
 }
 
+// Max-Memory-Modus: das Delta darf kurz vor der Merge-Schwelle nicht mehr
+// verdoppeln, sondern merged stattdessen vorzeitig; ein Schlüssel, der dabei
+// aus dem Delta ins Archiv wandert, muss dort in-place aktualisiert werden
+// statt doppelt zu existieren
+func TestArchiveMaxMemoryMergesInsteadOfGrow(t *testing.T) {
+	oldMin := ArchiveDeltaMin
+	ArchiveDeltaMin = 1 << 12
+	CompactMaxMemory = true
+	defer func() {
+		ArchiveDeltaMin = oldMin
+		CompactMaxMemory = false
+	}()
+
+	archive := NewArchiveTable().(*ArchiveTable)
+	reference := make(map[crc64.Value]uint16)
+
+	// Delta exakt bis an den Verdopplungspunkt füllen: Start-Kapazität 4096,
+	// Max-Memory-Schwelle 15/16 = 3840 - bis hierhin weder Grow noch Merge
+	seed := uint64(7)
+	keys := make([]crc64.Value, 0, 3840)
+	for n := 0; n < 3840; n++ {
+		crc := nextCrc(&seed)
+		keys = append(keys, crc)
+		reference[crc] = uint16(n)
+		archive.Add(crc, uint16(n))
+	}
+	if archive.archiveCount != 0 || archive.delta.count != 3840 || len(archive.delta.crcs) != 4096 {
+		t.Fatalf("Vorbedingung verfehlt: archiv=%d delta=%d Kapazität=%d",
+			archive.archiveCount, archive.delta.count, len(archive.delta.crcs))
+	}
+
+	// Einfügung am Verdopplungspunkt (Update eines Delta-Schlüssels): statt der
+	// Verdopplung muss der vorgezogene Merge laufen, der Schlüssel wandert dabei
+	// ins Archiv und wird dort aktualisiert
+	reference[keys[0]] = 60000
+	archive.Add(keys[0], 60000)
+	if archive.archiveCount != 3840 || archive.delta.count != 0 {
+		t.Fatalf("vorgezogener Merge blieb aus: archiv=%d delta=%d", archive.archiveCount, archive.delta.count)
+	}
+	if len(archive.delta.crcs) != 4096 {
+		t.Fatalf("Delta hat trotz Max-Memory-Modus verdoppelt: Kapazität=%d", len(archive.delta.crcs))
+	}
+
+	// Weiterarbeit und Konsistenz: neuer Schlüssel landet im frischen Delta,
+	// Länge und alle Werte stimmen mit der Referenz überein (Len deckt auch
+	// versehentliche Archiv/Delta-Duplikate auf)
+	crc := nextCrc(&seed)
+	reference[crc] = 4711
+	archive.Add(crc, 4711)
+	if archive.Len() != int64(len(reference)) {
+		t.Fatalf("Längen weichen ab: map=%d archive=%d", len(reference), archive.Len())
+	}
+	for key, depth := range reference {
+		if got := archive.Get(key); got != depth {
+			t.Fatalf("Wert weicht ab für %x: erwartet %d, erhalten %d", uint64(key), depth, got)
+		}
+	}
+}
+
 // Bit-Wachstum: der Umbau auf mehr Bucket-Bits rekonstruiert die vollen Schlüssel
 // aus Rest + Bucket - hier von Hand erzwungen (die echte Schwelle liegt bei
 // über 200 Mio Einträgen und ist im Test unerreichbar)

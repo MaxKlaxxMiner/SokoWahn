@@ -131,6 +131,11 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   direkt vor der Schwelle: Lookups ~4,8x langsamer (halber freier Platz = doppelte
   Sondierketten; Experimente von Max: 31/32 und 63/64 "zum Ende kurz langsam",
   511/512 explodiert auf ~Faktor 1000 Gesamtaufwand - 15/16 ist der Kompromiss).
+  Wirkt auch auf das Delta der ArchiveTable: dessen interne Verdopplung nutzt
+  dieselbe Schwelle, und die letzte Verdopplung vor der Merge-Schwelle (die den
+  Riesenpuffer sofort wieder verwürfe) wird durch einen vorgezogenen Merge
+  ersetzt (ab halber Merge-Schwelle, damit kleine Deltas den Bucket-Index
+  nicht ständig neu bauen).
 - **ArchiveTable** (TUI-Taste h, "SlowCompactArchiveTable", `hashArchive.go`):
   speicheroptimierte PosTable-Variante nach dem Vorbild von SokowahnHash_Index24Multi
   aus dem C#-Original (2013; dort Dictionary-Delta, Binärsuche und uint32-Limit bei

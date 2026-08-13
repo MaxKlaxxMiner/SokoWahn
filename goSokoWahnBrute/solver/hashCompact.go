@@ -71,11 +71,7 @@ func (t *CompactTable) Add(crc crc64.Value, depth uint16) {
 		return
 	}
 
-	limit := int64(len(t.crcs)) / 4 * 3
-	if CompactMaxMemory {
-		limit = int64(len(t.crcs)) / 16 * 15
-	}
-	if t.count >= limit {
+	if t.count >= t.growLimit() {
 		t.grow()
 	}
 
@@ -99,6 +95,17 @@ func (t *CompactTable) Add(crc crc64.Value, depth uint16) {
 
 func (t *CompactTable) Update(crc crc64.Value, depth uint16) {
 	t.Add(crc, depth)
+}
+
+// Eintrags-Zahl, ab der die nächste Einfügung eines neuen Schlüssels die
+// Verdopplung auslöst: 75% der Kapazität, im Max-Memory-Modus 93,75%
+// (fragt auch die ArchiveTable ab, um im Max-Memory-Modus die letzte
+// Delta-Verdopplung vor dem Merge durch den Merge selbst zu ersetzen)
+func (t *CompactTable) growLimit() int64 {
+	if CompactMaxMemory {
+		return int64(len(t.crcs)) / 16 * 15
+	}
+	return int64(len(t.crcs)) / 4 * 3
 }
 
 func (t *CompactTable) Len() int64 {
