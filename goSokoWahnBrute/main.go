@@ -27,12 +27,19 @@ func main() {
 	// Tests und Bibliotheks-Nutzung behalten den kleinen Default der Factory
 	solver.TableFactory = solver.NewCompactTableLarge
 
+	// Default der RAM-Notbremse: 85% des installierten RAM (15% Reserve für OS und
+	// Fremdprozesse); nur wenn die Erkennung fehlschlägt, bleibt der alte Festwert
+	defaultRAMLimitGB := 100
+	if total := tools.TotalRAMBytes(); total > 0 {
+		defaultRAMLimitGB = int(total * 85 / 100 >> 30)
+	}
+
 	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
 	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
 	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
 	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
-	ramLimitGB := flag.Int("ram", 100, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus)")
+	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus; Standard: 85% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
 	flag.Parse()
 
