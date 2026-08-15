@@ -1,0 +1,20 @@
+    #######
+   ## # # ##
+  ##        #
+ #   $ $ $ $ #
+ # ####*#### #
+# $   #.#   $ #
+#    #.. #    #
+ #  $..... #$#
+ # $#$.#.. $ #
+ #  $..#*#   #
+  #  #. .# $#
+  # $ ### $ #
+   #   @   #
+    #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=25330
+catalog: AC Smileys
+name: smileys  2.52
+number: 52/457
+bestmoves: 402

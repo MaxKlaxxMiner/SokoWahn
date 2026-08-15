@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof" // Diagnose-Endpunkte für -debugport (Goroutine-Stacks, Heap-Profil)
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -53,7 +55,18 @@ func main() {
 	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "RAM-Notbremse in GB für den berechneten Verbrauch (0 = aus; Standard: 85% des installierten RAM; Tabellen weichen vorher ins Archiv-Format aus, das TUI stoppt den Auto-Modus)")
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
+	debugPort := flag.Int("debugport", 0, "Diagnose: pprof-HTTP-Server auf localhost:PORT (0 = aus); bei einem Hänger liefert curl localhost:PORT/debug/pprof/goroutine?debug=2 alle Stacks und .../heap?debug=1 die Speicher-Verteilung, ohne den Prozess zu beenden")
 	flag.Parse()
+
+	// Diagnose-Server (nur localhost): läuft in eigener Goroutine und funktioniert
+	// auch dann noch, wenn der Haupt-Loop hängt - genau dafür ist er da
+	if *debugPort > 0 {
+		go func() {
+			if err := http.ListenAndServe(fmt.Sprintf("localhost:%d", *debugPort), nil); err != nil {
+				fmt.Fprintf(os.Stderr, "debugport %d nicht verfügbar: %v\n", *debugPort, err)
+			}
+		}()
+	}
 
 	// Auslagerung großer Suchlisten auf die Festplatte aktivieren und dabei
 	// liegengebliebene Dateien abgestürzter Läufe aufräumen (älter als eine Woche;
