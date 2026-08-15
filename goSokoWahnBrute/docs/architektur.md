@@ -140,7 +140,10 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Level-Scan zurück - der Modus ist ein gezielter Notgriff, kein Dauerzustand):
   CompactTables verdoppeln erst bei 93,75% statt 75% Füllstand - ein Viertel mehr
   Einträge je Verdopplungsstufe. Die Hash-Statuszeile der Suche ("Hash-V/Hash-R", reservierte MB
-  plus Füllstand relativ zur 75%-Schwelle) läuft dann bis 125%. Preis am Messpunkt
+  plus Füllstand relativ zur 75%-Schwelle) läuft dann bis 125%; der Füllstand einer
+  normalen CompactTable leuchtet ab angezeigten 99,9% gelb auf - der kurz darauf
+  folgende Hänger ist dann als Verdopplung erkennbar, und im Max-Memory-Modus sieht
+  man zugleich, wie weit die 100% schon überschritten sind. Preis am Messpunkt
   direkt vor der Schwelle: Lookups ~4,8x langsamer (halber freier Platz = doppelte
   Sondierketten; Experimente von Max: 31/32 und 63/64 "zum Ende kurz langsam",
   511/512 explodiert auf ~Faktor 1000 Gesamtaufwand - 15/16 ist der Kompromiss).
@@ -490,3 +493,36 @@ C#-Orakel, sofern die Richtungswahl des Originals aktiv ist (`-dirclassic`;
 der Default wählt seit der Effizienz-Richtungswahl anders). Ebenso bitgenau:
 alle Blocker-Stufen bis zur ersten Muster-Explosion (RulesPatternThreshold,
 refcli blockerbx). Danach gefilterte Stufen sind reine Go-Referenzwerte.
+
+## Live-Diagnose (Flag -debugport)
+
+Für unvorhersehbare Probleme in stundenlangen Läufen (Hänger, Speicher-Explosion,
+Performance-Fragen) startet `-debugport 6060` den pprof-HTTP-Server der
+Standard-Library auf localhost (net/http/pprof, eigene Goroutine - antwortet auch,
+wenn der TUI-Event-Loop blockiert). Übersicht im Browser: `localhost:6060/debug/pprof/`;
+auf einem Server per SSH-Tunnel erreichbar. Die wichtigsten Abfragen:
+
+```
+curl "localhost:6060/debug/pprof/goroutine?debug=2"   # alle Goroutine-Stacks mit Datei+Zeile
+curl "localhost:6060/debug/pprof/profile?seconds=15"  # CPU-Profil (go tool pprof -top/-list ...)
+curl "localhost:6060/debug/pprof/heap?debug=1"        # wer hält wieviel Speicher
+```
+
+Praxis-Rezepte aus dem ersten Einsatz (Endlosschleifen-Hänger bei Level 25327,
+gefixt in soko.Steps - Wand-Prüfung der Schub-Position):
+
+- Hänger: zwei Goroutine-Dumps im Abstand ziehen - identischer Stack = Endlos-
+  schleife, wandernder Stack = langsame, aber endliche Berechnung. Timeoutet der
+  Dump selbst (er braucht ein Stop-the-World), steckt der Prozess in einer engen,
+  nicht preemptierbaren Schleife - dann stattdessen das CPU-Profil ziehen, das
+  arbeitet signalbasiert ohne Anhalten und zeigt per `go tool pprof -list` die
+  heiße Zeile.
+- Schleichendes Speicherwachstum: zwei Heap-Profile im Abstand vergleichen.
+- Ohne debugport (Notnagel): `kill -QUIT` (Linux) bzw. Strg+Untbr (Windows) geht
+  an der bubbletea-Signalbehandlung vorbei direkt an die Go-Runtime und schreibt
+  alle Stacks ins Terminal - beendet den Prozess danach allerdings. SIGTERM hilft
+  bei einem hängenden Event-Loop dagegen nicht (bubbletea verarbeitet es als
+  Nachricht, die nie zugestellt wird).
+- Flankierend begrenzt `debug.SetMemoryLimit` (in main an die -ram-Grenze
+  gekoppelt) den Go-Heap weich: eine Speicher-Explosion macht den Prozess zäh
+  statt ihn dem OOM-Killer auszuliefern - er bleibt diagnostizierbar.

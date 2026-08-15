@@ -84,6 +84,14 @@ die verankerten Referenzwerte absichern.
 - **Byte-Modus-Äquivalent im RAM**: uint8-Sätze wenn walkEof < 255 (halber Listen-Speicher;
   das Disk-Format packt bereits auf Bytes, siehe oben).
   Eventuell generisch über den Satztyp statt zwei Codepfade.
+- **Blocker.CheckAllowed beschleunigen** (pprof-Befund 15.08.2026, Level 25327 auf dem
+  640-GB-Server, 20-s-CPU-Profil während der Suche via -debugport): CheckAllowed frisst
+  48% der gesamten Rechenzeit (fast alles flat in der Muster-Prüfschleife), die
+  Regel-Filter weitere ~34% (davon Ziel-Matching 23%) - Hashtabellen-Lookups nur ~5%.
+  Bei Muster-reichen Levels ist "Nein sagen" also der Hauptkostenpunkt. Ansätze:
+  Muster-Reihenfolge nach Treffer-Häufigkeit (Early-Exit), kompakteres
+  Bitmasken-Layout, ggf. die rekursive Kisten-Abfrage der SokowahnBlockerB-Idee
+  (siehe Blocker-Ausbau unten). Vorher/nachher mit demselben CPU-Profil messen.
 
 ## Solver-Feinheiten aus der List2-Variante (noch nicht portiert)
 

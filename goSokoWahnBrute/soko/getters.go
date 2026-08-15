@@ -20,6 +20,13 @@ func (f *Field) WalkCount() int {
 	return int(f.walkEof)
 }
 
+// rechnet ein begehbares Feld in seine Spielfeld-Koordinaten um
+// (Spalte/Zeile passend zur Ausgabe von String(), fürs Einfärben im TUI)
+func (f *Field) FieldXY(pos Wpos) (x, y int) {
+	abs := f.wposToField[pos]
+	return abs % f.width, abs / f.width
+}
+
 // gibt den gesetzten Deadlock-Filter zurück (nil = keiner)
 func (f *Field) Blocker() BlockerCheck {
 	return f.blocker
