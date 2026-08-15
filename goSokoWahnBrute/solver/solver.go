@@ -11,9 +11,10 @@ import (
 type DirMode int
 
 const (
-	DirAuto     DirMode = iota // Richtung automatisch anhand der Hashtabellen-Größen wählen
+	DirAuto     DirMode = iota // Richtung automatisch: Effizienz-Verhältnis (erreichte Tiefe je Hash-Eintrag, siehe chooseForward)
 	DirForward                 // nur vorwärts suchen
 	DirBackward                // nur rückwärts suchen
+	DirClassic                 // Automatik des Originals: kleinere Hashtabelle zuerst (Basis der bitgenauen Orakel-Vergleiche, CLI-Flag -dirclassic)
 )
 
 // bidirektionaler Brute-Force-Solver: Vorwärtssuche von der Startstellung und

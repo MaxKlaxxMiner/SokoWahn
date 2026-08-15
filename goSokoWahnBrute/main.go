@@ -49,6 +49,7 @@ func main() {
 	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
 	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
+	dirClassic := flag.Bool("dirclassic", false, "CLI: Richtungswahl des Originals (kleinere Hashtabelle zuerst) statt Effizienz-Verhältnis - für bitgenaue Orakel-Vergleiche")
 	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "RAM-Notbremse in GB für den berechneten Verbrauch (0 = aus; Standard: 85% des installierten RAM; Tabellen weichen vorher ins Archiv-Format aus, das TUI stoppt den Auto-Modus)")
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
@@ -97,7 +98,7 @@ func main() {
 		return
 	}
 
-	runCli(levelData, *useBlocker, *useRules || *rulesCompare, *rulesCompare, *workers)
+	runCli(levelData, *useBlocker, *useRules || *rulesCompare, *rulesCompare, *dirClassic, *workers)
 }
 
 // berechnet nur die Blocker-Stufen bis einschließlich maxStages und gibt sie aus
@@ -126,9 +127,11 @@ func runBlockerOnly(levelData string, maxStages int, workers int) {
 }
 
 // Kommandozeilen-Modus: Level lösen und Fortschritt als Text ausgeben
-// (deterministische Ausgaben, direkt vergleichbar mit dem C#-Orakel refcli -
-// sofern die optionalen Regel-Filter aus bleiben)
-func runCli(levelData string, useBlocker, useRules, rulesCompare bool, workers int) {
+// (deterministische Ausgaben; direkt byte-gleich vergleichbar mit dem C#-Orakel
+// refcli, sofern die optionalen Regel-Filter aus bleiben UND -dirclassic die
+// Richtungswahl des Originals erzwingt - der Default wählt die Richtung seit der
+// Effizienz-Verhältnis-Umstellung anders, siehe solver.chooseForward)
+func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic bool, workers int) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
 	}
@@ -164,6 +167,9 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare bool, workers i
 
 	s := solver.New(field)
 	defer s.Close() // Auslagerungsdateien der Suchlisten löschen
+	if dirClassic {
+		s.SetDirMode(solver.DirClassic)
+	}
 	if workers > 0 {
 		s.SetWorkers(workers)
 	}

@@ -259,22 +259,24 @@ func TestSolveRulesGoalMatch(t *testing.T) {
 }
 
 // Vanilla-Level mit Regel-Filter: die optimale Lösungslänge (230 Züge) bleibt
-// erhalten, die Knotenzahl sinkt gegenüber der ungefilterten Suche (8.710.434).
-// Der Knotenwert ist als Regressionswert verankert (Änderungen am Regelwerk
-// ändern ihn - dann bewusst neu verankern und die 230 Züge erneut prüfen).
+// erhalten, die Knotenzahl sinkt gegenüber der ungefilterten Suche (8.608.727 mit
+// der Effizienz-Richtungswahl). Der Knotenwert ist als Regressionswert verankert
+// (Änderungen am Regelwerk oder an der Richtungswahl ändern ihn - dann bewusst
+// neu verankern und die 230 Züge erneut prüfen; zuletzt neu vermessen bei der
+// Umstellung auf die Effizienz-Richtungswahl, vorher 1.825.644 Knoten).
 func TestSolveRulesVanillaOracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert einige Sekunden (übersprungen mit -short)")
 	}
 
 	s, _ := solveLevelWithRules(t, maps.MapVanilla, 230)
-	if s.NodeCount() != 1825644 {
-		t.Errorf("erwartete 1.825.644 Knoten (Regressionswert der Stufe-1-Regeln inkl. Pull-Freeze), erhalten: %d", s.NodeCount())
+	if s.NodeCount() != 1828193 {
+		t.Errorf("erwartete 1.828.193 Knoten (Regressionswert der Stufe-1-Regeln inkl. Pull-Freeze), erhalten: %d", s.NodeCount())
 	}
 	if r := s.Rules(); r != nil {
 		st := r.Stats()
-		want := soko.RuleStats{FreezeKills: 1104786, DiagonalKills: 71007,
-			PullDeadKills: 118087, PullFreezeKills: 783}
+		want := soko.RuleStats{FreezeKills: 1106391, DiagonalKills: 71007,
+			PullDeadKills: 123160, PullFreezeKills: 783}
 		if st.FreezeKills != want.FreezeKills || st.DiagonalKills != want.DiagonalKills ||
 			st.PullDeadKills != want.PullDeadKills || st.PullFreezeKills != want.PullFreezeKills {
 			t.Errorf("Regel-Treffer weichen von den Regressionswerten ab:\nerwartet: %+v\nerhalten: Freeze=%d Diag=%d PullTot=%d PullFreeze=%d",

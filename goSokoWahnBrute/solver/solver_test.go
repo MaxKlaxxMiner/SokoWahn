@@ -8,7 +8,15 @@ import (
 )
 
 // löst ein Level komplett und prüft die Lösung auf Konsistenz
+// (mit der Default-Richtungswahl, dem Effizienz-Verhältnis)
 func solveLevel(t *testing.T, level string, expectedMoves int) (*Solver, *Solution) {
+	t.Helper()
+	return solveLevelDir(t, level, expectedMoves, DirAuto)
+}
+
+// wie solveLevel, aber mit expliziter Richtungswahl-Strategie (DirClassic für die
+// bitgenauen Orakel-Vergleiche mit refcli)
+func solveLevelDir(t *testing.T, level string, expectedMoves int, mode DirMode) (*Solver, *Solution) {
 	t.Helper()
 
 	field, err := soko.Parse(level)
@@ -17,6 +25,7 @@ func solveLevel(t *testing.T, level string, expectedMoves int) (*Solver, *Soluti
 	}
 
 	s := New(field)
+	s.SetDirMode(mode)
 	for s.Step(1000000000) {
 	}
 
@@ -241,14 +250,15 @@ func TestSolveSpillDeterminism(t *testing.T) {
 }
 
 // Vanilla mit aktiver Auslagerung (256-KB-Puffer): muss bitgenau dieselben
-// Orakel-Werte liefern wie die RAM-Variante (230 Züge, 8.710.434 Knoten)
+// Orakel-Werte liefern wie die RAM-Variante (230 Züge, 8.710.434 Knoten;
+// DirClassic = Richtungswahl des C#-Originals)
 func TestSolveVanillaSpillOracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
 	}
 
 	setupSpill(t, 256<<10)
-	s, _ := solveLevel(t, maps.MapVanilla, 230)
+	s, _ := solveLevelDir(t, maps.MapVanilla, 230, DirClassic)
 	if s.NodeCount() != 8710434 {
 		t.Errorf("erwartete 8710434 Knoten (Orakel-Wert), erhalten: %d", s.NodeCount())
 	}
@@ -258,15 +268,34 @@ func TestSolveVanillaSpillOracle(t *testing.T) {
 	s.Close()
 }
 
-// Vanilla-Level: bitgenauer Vergleich mit dem C#-Orakel (refcli):
+// Vanilla-Level: bitgenauer Vergleich mit dem C#-Orakel (refcli, DirClassic):
 // 230 Züge optimal, 8.710.434 bekannte Stellungen am Ende
 func TestSolveVanillaOracle(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
 	}
 
-	s, _ := solveLevel(t, maps.MapVanilla, 230)
+	s, _ := solveLevelDir(t, maps.MapVanilla, 230, DirClassic)
 	if s.NodeCount() != 8710434 {
 		t.Errorf("erwartete 8710434 Knoten (Orakel-Wert), erhalten: %d", s.NodeCount())
 	}
 }
+
+// Vanilla mit der Default-Richtungswahl (Effizienz-Verhältnis): gleiche optimale
+// Lösungslänge, aber bewusst andere Tiefenverteilung als das Orakel - der
+// Knotenwert ist der Anker des Go-Verhaltens (bei Abweichung: Bug oder bewusste,
+// dokumentierte Änderung der Richtungswahl)
+func TestSolveVanillaEfficiencyDir(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
+	}
+
+	s, _ := solveLevel(t, maps.MapVanilla, 230)
+	if s.NodeCount() != vanillaEfficiencyNodes {
+		t.Errorf("erwartete %d Knoten (Anker der Effizienz-Richtungswahl), erhalten: %d", vanillaEfficiencyNodes, s.NodeCount())
+	}
+}
+
+// Anker-Knotenzahl der Effizienz-Richtungswahl auf dem Vanilla-Level (gemessen
+// bei der Umstellung, ~1,2% unter dem Orakel-Wert 8.710.434 der klassischen Wahl)
+const vanillaEfficiencyNodes = 8608727

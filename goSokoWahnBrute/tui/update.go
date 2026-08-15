@@ -160,7 +160,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "3": // Richtungswahl wieder der Automatik überlassen
 			m.slv.SetDirMode(solver.DirAuto)
-			m.status = "Richtung: automatisch (kleinere Hashtabelle zuerst)"
+			m.status = "Richtung: automatisch (Effizienz-Verhältnis: Tiefe je Hash-Eintrag)"
 			return m, nil
 		case "4": // Blocker-Filter an/aus (Default: an, reaktiviert sich bei neuem Level)
 			on := !m.slv.BlockerEnabled()

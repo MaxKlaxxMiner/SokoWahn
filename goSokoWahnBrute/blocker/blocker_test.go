@@ -185,8 +185,10 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	s.Close()
 
 	// Standard-Kombination des TUI (Blocker + Live-Regeln beidseitig): 230 Züge mit
-	// 1.488.952 Knoten - besser als die alte Vollblocker-Referenz (1.595.042), die
+	// 1.494.811 Knoten - besser als die alte Vollblocker-Referenz (1.595.042), die
 	// Regeln ersetzen die entfallenen Muster und legen über die Pull-Seite noch drauf
+	// (neu vermessen bei der Umstellung auf die Effizienz-Richtungswahl, vorher
+	// 1.488.952; der Blocker-solo-Wert oben blieb unverändert)
 	rules := soko.NewRules(field)
 	field.SetRules(rules)
 	field.SetRulesBackward(rules)
@@ -196,8 +198,8 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	if moves := s2.GetStats().FoundMoves; moves != 230 {
 		t.Errorf("erwartete 230 Züge (Blocker+Regeln), erhalten: %d", moves)
 	}
-	if nodes := s2.NodeCount(); nodes != 1488952 {
-		t.Errorf("erwartete 1488952 Knoten (Regressionswert Blocker+Regeln), erhalten: %d", nodes)
+	if nodes := s2.NodeCount(); nodes != 1494811 {
+		t.Errorf("erwartete 1494811 Knoten (Regressionswert Blocker+Regeln), erhalten: %d", nodes)
 	}
 }
 

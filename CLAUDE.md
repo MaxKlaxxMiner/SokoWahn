@@ -24,10 +24,13 @@ ins Repo gewandert 2015 als "alter Kram") und den aktiven Go-Nachbau `goSokoWahn
 - **Commits macht Max selbst** (TortoiseGit, meist Einzeiler) - nur Commit-Messages vorschlagen,
   nie selbst committen.
 - Verhalten des Go-Ports wird **gegen das C#-Orakel verifiziert**, soweit die Semantik
-  noch deckungsgleich ist: die Suche ohne Filter (Knoten je Tiefe, Lösungslängen) und
-  alle Blocker-Stufen bis zur ersten Muster-Explosion sind bitgenau vergleichbar.
-  Danach filtert der Stufenbau adaptiv mit den Stufe-1-Regeln (bewusste
-  Go-Weiterentwicklung, siehe blocker.RulesPatternThreshold) - Referenz sind die in
+  noch deckungsgleich ist: die Suche ohne Filter (Knoten je Tiefe, Lösungslängen) mit
+  `-dirclassic` und alle Blocker-Stufen bis zur ersten Muster-Explosion sind bitgenau
+  vergleichbar. Zwei bewusste Go-Weiterentwicklungen weichen per Default ab: die
+  Richtungswahl der Suche (Effizienz-Verhältnis Tiefe je Hash-Eintrag statt kleinerer
+  Tabelle, siehe solver.chooseForward; das Original-Verhalten bleibt als DirClassic
+  bzw. CLI-Flag `-dirclassic` erhalten) und der adaptive Stufenbau des Blockers mit
+  den Stufe-1-Regeln (siehe blocker.RulesPatternThreshold) - Referenz sind die in
   den Go-Tests verankerten Werte. Abweichung = Bug oder bewusste, dokumentierte
   Entscheidung.
 - Vergleichs- und Debug-Läufe klein halten: Blocker-Stufen begrenzen (`-stages N` bzw.
@@ -52,9 +55,11 @@ bash build-winforms.sh                            # baut die alte WinForms-GUI +
 ## Orakel-Vergleiche
 
 ```
-# Suche (deterministisch, Tiefenzeilen sind byte-gleich diffbar):
+# Suche (deterministisch, Tiefenzeilen sind byte-gleich diffbar; -dirclassic
+# erzwingt die Richtungswahl des Originals - ohne das Flag wählt der Go-Default
+# per Effizienz-Verhältnis anders):
 ./refcli.exe <level.txt> [batch] [prepBatches] [-v]     # C#
-go run . -cli [-blocker] <level.txt>                    # Go
+go run . -cli -dirclassic [-blocker] <level.txt>        # Go
 
 # Blocker-Stufen (schnell, ohne Suche):
 ./refcli.exe <level.txt> blockerbx <maxStufe>           # C# (Bx = Referenz-Verhalten)
@@ -63,7 +68,8 @@ go run . -stages <maxStufe> <level.txt>                 # Go (byte-gleich zum C#
 ```
 
 Vor Vergleichen die `temp/`-Ordner löschen (Blocker-Caches). Referenzwerte sind als
-Tests verankert (`solver`: Vanilla 230 Züge / 8.710.434 Knoten ohne Blocker;
+Tests verankert (`solver`: Vanilla 230 Züge / 8.710.434 Knoten ohne Blocker mit
+DirClassic, 8.608.727 Knoten mit der Default-Richtungswahl;
 `blocker`: Vanilla- und Level-201-Stufen exakt gleich SokowahnBlockerBx).
 
 ---

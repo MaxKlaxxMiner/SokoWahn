@@ -195,7 +195,17 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   (Step-Anfang, siehe Disk-Auslagerung oben) von selbst und meldet das in der
   Statuszeile.
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
-  Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
+  Richtungswahl pro Suchtiefe (`chooseForward`): Default ist das
+  **Effizienz-Verhältnis** - vertieft wird die Richtung mit den meisten erreichten
+  Zügen je Hash-Eintrag (Kreuzmultiplikation `fd*bLen >= bd*fLen`, Anlauf über das
+  klassische Kriterium, solange eine Richtung noch keine fertige Tiefe hat).
+  Erfahrungswert von Max aus der manuellen Steuerung: die Rückwärtssuche kommt mit
+  demselben Hash-Budget oft um Faktoren weiter und verdient dann mehr Budget; die
+  Wahl reguliert sich selbst, weil das Verhältnis der vertieften Seite durch ihr
+  exponentielles Wachstum wieder sinkt. Bewusste Abweichung vom Original (dort
+  Z. 519-523: kleinere Tabelle zuerst) - das Referenz-Verhalten bleibt als
+  `DirClassic` erhalten (CLI-Flag `-dirclassic`, Basis aller bitgenauen
+  refcli-Orakel-Vergleiche und der Orakel-Tests).
   Manuell übersteuerbar per `SetDirMode` (TUI-Tasten 1 = nur vorwärts, 2 = nur rückwärts,
   3 = automatisch); wirkt nur auf die normale Suchphase, die Endphase nach gefundener
   Lösung bleibt vorgegeben. Achtung bei DirBackward: die Vorwärts-Tiefe 0 (nur die
@@ -446,10 +456,10 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
   Taste 6 nimmt einzeln das Ziel-Matching heraus (der teuerste Regel-Teil).
   CLI: `-rules` (opt-in, sonst bleibt die Ausgabe orakel-vergleichbar) und
   `-rulescompare` (Debug: beide Filter unabhängig auswerten, Überlappung ausgeben).
-- **Messwerte Vanilla**: Regeln allein 1.825.644 statt 8.710.434 Knoten (Faktor 4,8,
-  ~1 s statt ~10 s) - fast auf dem Niveau des vollen 5-Steiner-Blockers (1.595.042),
-  aber ohne Vorberechnung. Treffer: Freeze 1,10 Mio, Diagonale 71k, rückwärts
-  Totfeld 118k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
+- **Messwerte Vanilla** (seit der Effizienz-Richtungswahl): Regeln allein 1.828.193
+  statt 8.608.727 Knoten (Faktor 4,7, ~1 s statt ~10 s) - fast auf dem Niveau des
+  vollen 5-Steiner-Blockers (1.595.042), aber ohne Vorberechnung. Treffer:
+  Freeze 1,11 Mio, Diagonale 71k, rückwärts Totfeld 123k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
   die Regeln auf Vanilla vorwärts nichts Zusätzliches (bei 6 Kisten subsumiert der
   Blocker die kleinen Cluster). Das Ziel-Matching feuert auf Vanilla nie (0 Treffer,
   Knotenzahlen unverändert) und kostet dort ~5% Laufzeit (der entfallene
@@ -465,16 +475,18 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
 | Level | Messung | Wert |
 |---|---|---|
 | Vanilla (lid214) | optimale Züge | 230 |
-| Vanilla ohne Blocker | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
+| Vanilla ohne Blocker (DirClassic) | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
+| Vanilla ohne Blocker (Default, Effizienz-Wahl) | Knoten am Ende | 8.608.727 (Go-Anker, ~1,2% unter dem Orakel) |
 | Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 (bitgenau = refcli, alles unter der Muster-Schwelle) |
-| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.595.042 (Regressionswert, wie vor den Regeln) |
-| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.488.952 (Verbesserung kommt komplett von der Pull-Seite) |
+| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.595.042 (Regressionswert; identisch vor/nach der Effizienz-Richtungswahl) |
+| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.494.811 (Verbesserung kommt komplett von der Pull-Seite; vor der Effizienz-Richtungswahl 1.488.952) |
 | Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (bitgenau = refcli, unter der Muster-Schwelle) |
 | small.txt | optimale Züge | 16 |
 | Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
-| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.825.644 / Freeze 1.104.786, Diag 71.007, PullTot 118.087, PullFreeze 783 (Regressionswerte) |
+| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.828.193 / Freeze 1.106.391, Diag 71.007, PullTot 123.160, PullFreeze 783 (Regressionswerte; vor der Effizienz-Richtungswahl 1.825.644) |
 
 Die Suche ohne Blocker und ohne Regeln bleibt bitgenau vergleichbar mit dem
-C#-Orakel, ebenso alle Blocker-Stufen bis zur ersten Muster-Explosion
-(RulesPatternThreshold, refcli blockerbx). Danach gefilterte Stufen sind reine
-Go-Referenzwerte.
+C#-Orakel, sofern die Richtungswahl des Originals aktiv ist (`-dirclassic`;
+der Default wählt seit der Effizienz-Richtungswahl anders). Ebenso bitgenau:
+alle Blocker-Stufen bis zur ersten Muster-Explosion (RulesPatternThreshold,
+refcli blockerbx). Danach gefilterte Stufen sind reine Go-Referenzwerte.

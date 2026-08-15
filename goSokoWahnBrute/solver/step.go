@@ -49,10 +49,10 @@ func (s *Solver) Step(limit int) bool {
 		return false
 	}
 
-	// Richtungswahl: pro Suchtiefe einmal entscheiden, welche Seite die kleinere Tabelle hat
+	// Richtungswahl: pro Suchtiefe einmal entscheiden, welche Seite vertieft wird
 	if s.forwardDepth+s.backwardDepth != s.dirDepth {
 		s.dirDepth = s.forwardDepth + s.backwardDepth
-		s.dirForward = s.forwardKnown.Len() < s.backwardKnown.Len()
+		s.dirForward = s.chooseForward()
 		s.hashUsage = append(s.hashUsage, s.forwardKnown.Len()+s.backwardKnown.Len())
 	}
 
@@ -77,6 +77,25 @@ func (s *Solver) Step(limit int) bool {
 		return s.searchForward(limit)
 	}
 	return s.searchBackward(limit)
+}
+
+// Automatik der Richtungswahl. Default ist das Effizienz-Verhältnis: vertieft wird
+// die Richtung, die bisher pro Hash-Eintrag die meisten Züge erreicht hat
+// (Erfahrungswert von Max aus der manuellen Steuerung: die Rückwärtssuche kommt
+// mit demselben Hash-Budget oft um Faktoren weiter und verdient dann mehr Budget).
+// Die Wahl reguliert sich selbst: das Verhältnis der vertieften Seite sinkt durch
+// ihr exponentielles Hash-Wachstum wieder, beide Seiten pendeln sich dort ein, wo
+// sie gleich viele Züge je Knoten liefern. Vergleich per Kreuzmultiplikation statt
+// Division (int64 reicht: Milliarden Einträge mal vierstellige Tiefen ~ 2^41).
+// Solange eine Richtung noch keine fertige Tiefe hat - und im DirClassic-Modus
+// immer - entscheidet das Kriterium des Originals: kleinere Tabelle zuerst
+// (bitgenau zu SokoWahn_4th Z. 519-523, Basis der refcli-Orakel-Vergleiche).
+func (s *Solver) chooseForward() bool {
+	fd, bd := int64(s.forwardDepth), int64(s.backwardDepth)
+	if s.dirMode == DirClassic || fd == 0 || bd == 0 {
+		return s.forwardKnown.Len() < s.backwardKnown.Len()
+	}
+	return fd*s.backwardKnown.Len() >= bd*s.forwardKnown.Len()
 }
 
 // normale Suche nach vorne (von der Startstellung aus beginnend)
