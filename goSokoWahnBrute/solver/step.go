@@ -9,8 +9,12 @@ func (s *Solver) Step(limit int) bool {
 		return false
 	}
 
-	// den berechneten RAM-Verbrauch für die Auslagerungs-Entscheidung aktuell halten
-	SetSpillRamUsage(s.RamBytes())
+	// den berechneten RAM-Verbrauch für die Auslagerungs-Entscheidung aktuell halten;
+	// steht bei einer Stellungs-Tabelle eine Verdopplung an, die die RAM-Notbremse
+	// rechnerisch reißen würde, wandert sie stattdessen jetzt ins Archiv-Format
+	ram := s.RamBytes()
+	SetSpillRamUsage(ram)
+	s.autoArchive(ram)
 
 	// Sonderfall ohne Zielstellungen: reine Vorwärtssuche mit direkter Gelöst-Prüfung
 	if s.forwardOnly {

@@ -47,9 +47,8 @@ type Model struct {
 	auto        bool   // Auto-Modus läuft
 	bulkBlocker int    // Stellungen pro Bulk-Schritt im Blockerscan (groß: füttert alle Worker)
 	bulkSearch  int    // Stellungen pro Bulk-Schritt in der Suche (fein: bessere UI-Granularität)
-	ramLimit    uint64 // RAM-Notbremse in Bytes (0 = aus)
+	ramLimit    uint64 // RAM-Notbremse in Bytes für den berechneten Verbrauch (0 = aus)
 	ramStop     bool
-	ticks       int
 	lastTick    time.Duration // Rechenzeit des letzten Auto-Ticks
 	statesPerSec int64        // geglätteter Suchdurchsatz im Auto-Modus (verarbeitete Stellungen pro Sekunde)
 

@@ -283,6 +283,84 @@ func TestSolveArchiveConversionMidSearch(t *testing.T) {
 	}
 }
 
+// RAM-Notbremse als Archiv-Auslöser: steht bei einer CompactTable die Verdopplung
+// an und läge der berechnete Verbrauch danach über solver.RamLimitBytes, wechselt
+// der Solver sie automatisch ins Archiv-Format statt zu verdoppeln - beide
+// Richtungen wandern so nacheinander von selbst ins Archiv, Ergebnis bitgenau
+func TestSolveAutoArchiveOnRamLimit(t *testing.T) {
+	refSolver, refSolution := solveLevel(t, archiveTestLevel, 16)
+	refNodes := refSolver.NodeCount()
+
+	oldFactory, oldLimit := TableFactory, RamLimitBytes
+	// Mini-Tabellen erzwingen frühe Verdopplungspunkte, das 1-Byte-Limit lässt
+	// jede anstehende Verdopplung die Notbremse rechnerisch reißen
+	TableFactory = func() PosTable { return newCompactTable(1 << 6) }
+	RamLimitBytes = 1
+	defer func() { TableFactory, RamLimitBytes = oldFactory, oldLimit }()
+
+	field, err := soko.Parse(archiveTestLevel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(field)
+	// kleine Steps, damit die 90%-Prüfpunkte (Step-Anfang) dicht genug liegen
+	for s.Step(1) {
+	}
+
+	forward, backward := s.TableInfos()
+	if !forward.Archive || !backward.Archive {
+		t.Fatalf("beide Tabellen müssen automatisch ins Archiv-Format gewechselt sein (V=%v R=%v)", forward.Archive, backward.Archive)
+	}
+	if s.NodeCount() != refNodes {
+		t.Errorf("Knotenzahl weicht ab: Referenz=%d autoArchive=%d", refNodes, s.NodeCount())
+	}
+	stats := s.GetStats()
+	if stats.FoundMoves != 16 {
+		t.Fatalf("erwartete Lösungslänge 16, erhalten: %d", stats.FoundMoves)
+	}
+	solution, err := s.GetSolution()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if solution.Moves != refSolution.Moves {
+		t.Errorf("Zugfolge weicht ab: %q gegen %q", refSolution.Moves, solution.Moves)
+	}
+}
+
+// Delta-Pfad der RAM-Notbremse: bei einer bereits konvertierten Tabelle ersetzt
+// der vorgezogene Merge die anstehende Delta-Verdopplung; die Meldung für die
+// Statuszeile ist genau einmal abholbar
+func TestAutoArchiveDeltaMergeOnRamLimit(t *testing.T) {
+	oldMin, oldLimit := ArchiveDeltaMin, RamLimitBytes
+	ArchiveDeltaMin, RamLimitBytes = 64, 1 // Mini-Delta-Schutz aus, Limit immer gerissen
+	defer func() { ArchiveDeltaMin, RamLimitBytes = oldMin, oldLimit }()
+
+	field, err := soko.Parse(archiveTestLevel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := New(field)
+	at := NewArchiveTable().(*ArchiveTable)
+	s.forwardKnown = at
+	// Delta direkt bis in das 90%-Fenster vor seiner nächsten Verdopplung füllen
+	for i := int64(1); at.delta.count < at.delta.growLimit()/10*9; i++ {
+		at.delta.Add(crc64.Value(i), 1)
+	}
+	filled := at.delta.count
+
+	s.autoArchive(s.RamBytes())
+	if at.archiveCount != filled || at.delta.count != 0 {
+		t.Fatalf("Delta-Merge muss vorgezogen sein: archiveCount=%d (erwartet %d), delta=%d",
+			at.archiveCount, filled, at.delta.count)
+	}
+	if s.TakeArchiveNote() == "" {
+		t.Fatal("die vorgezogene Konvertierung muss eine Statuszeilen-Meldung hinterlassen")
+	}
+	if s.TakeArchiveNote() != "" {
+		t.Fatal("die Meldung darf nur einmal abholbar sein")
+	}
+}
+
 // Push-Optimierung: unter den zugoptimalen Lösungen wird die mit minimaler
 // Schub-Zahl rekonstruiert (Webseiten-Bewertung mo/pu) - gleich viele Züge,
 // gültige Kette, und nie mehr Schübe als die einfache Rekonstruktion

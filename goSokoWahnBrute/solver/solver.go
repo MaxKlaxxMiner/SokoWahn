@@ -54,6 +54,8 @@ type Solver struct {
 	hashUsage []int64 // Hash-Gesamtnutzung je Suchtiefe (Datenbasis der Max-Tiefen-Schätzung)
 	processed int64   // insgesamt verarbeitete Sätze (Datenbasis der Stellungen/s-Anzeige)
 
+	archiveNote string // Meldung der letzten automatischen Archiv-Konvertierung (siehe autoArchive)
+
 	varBuf   []soko.State // wiederverwendbarer Buffer für die Variantensuche
 	curState soko.State   // Buffer für die aktuell geladene Stellung
 

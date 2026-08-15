@@ -29,9 +29,14 @@ func main() {
 
 	// Defaults der beiden RAM-Grenzen anteilig am installierten RAM; nur wenn die
 	// Erkennung fehlschlägt, bleiben die alten Festwerte der 64-GB-Maschine.
-	// Notbremse 85% (15% Reserve für OS und Fremdprozesse), Auslagerungs-Schwelle 70%
-	// (entspricht dem erprobten 44-GB-Wert bei 64 GB und liegt bewusst unter der
-	// Notbremse: die Listen wandern erst auf die Platte, dann greift der Stopp)
+	// Beide Grenzen messen den berechneten Verbrauch der Suche (RamBytes, siehe
+	// solver.RamLimitBytes - bewusst kein ReadMemStats). Notbremse 85% (15% Reserve
+	// für OS und Fremdprozesse), Auslagerungs-Schwelle 70% (entspricht dem erprobten
+	// 44-GB-Wert bei 64 GB). Eskalations-Reihenfolge bei Speicherdruck: ab 70%
+	// lagern die Suchlisten auf die Platte aus, Tabellen-Verdopplungen, die die 85%
+	// rechnerisch reißen würden, weichen ins Archiv-Format aus (solver.autoArchive),
+	// und erst wenn der berechnete Verbrauch die 85% wirklich überschreitet,
+	// stoppt der Auto-Modus
 	defaultRAMLimitGB := 100
 	defaultSpillRAMGB := 44
 	if total := tools.TotalRAMBytes(); total > 0 {
@@ -44,7 +49,7 @@ func main() {
 	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
 	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
-	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "TUI: RAM-Notbremse in GB für den Auto-Modus (0 = aus; Standard: 85% des installierten RAM)")
+	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "RAM-Notbremse in GB für den berechneten Verbrauch (0 = aus; Standard: 85% des installierten RAM; Tabellen weichen vorher ins Archiv-Format aus, das TUI stoppt den Auto-Modus)")
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
 	flag.Parse()
@@ -68,6 +73,7 @@ func main() {
 		solver.SpillDir = spillDir
 	}
 	solver.SpillRamThresholdBytes = int64(*spillRAMGB) << 30
+	solver.RamLimitBytes = int64(*ramLimitGB) << 30
 
 	// optionales Level aus Datei laden
 	levelData := ""

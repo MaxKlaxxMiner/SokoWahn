@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -124,10 +123,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if !m.slv.Step(1) {
 				m.finishSearch()
 			}
+			if note := m.slv.TakeArchiveNote(); note != "" {
+				m.status = note
+			}
 			return m, nil
 		case "b": // Bulk-Schritt
 			if !m.slv.Step(m.bulkSearch) {
 				m.finishSearch()
+			}
+			if note := m.slv.TakeArchiveNote(); note != "" {
+				m.status = note
 			}
 			return m, nil
 		case "a", " ":
@@ -281,12 +286,20 @@ func (m Model) handleTick() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// RAM-Notbremse (nicht bei jedem Tick, ReadMemStats ist nicht kostenlos)
-	m.ticks++
-	if m.ramLimit > 0 && m.ticks%16 == 0 {
-		var mem runtime.MemStats
-		runtime.ReadMemStats(&mem)
-		if mem.Alloc > m.ramLimit {
+	// RAM-Notbremse: Vergleichsbasis ist der berechnete Verbrauch (RamBytes,
+	// dieselbe Basis wie RAM-Anzeige und Auslagerungs-Schwelle) - bewusst nicht
+	// ReadMemStats: der echte Go-Heap enthält Runtime-Reserven und GC-Transienten
+	// und hat auf einer 640-GB-Maschine gestoppt, obwohl die Suche selbst noch weit
+	// unter dem Limit lag (Details bei solver.RamLimitBytes)
+	if m.ramLimit > 0 {
+		var used int64
+		switch m.mode {
+		case modeBlocker:
+			used = m.blk.RamBytes()
+		case modeSearch:
+			used = m.slv.RamBytes()
+		}
+		if used > int64(m.ramLimit) {
 			m.auto = false
 			m.ramStop = true
 			m.status = fmt.Sprintf("RAM-Stop: %d GB überschritten (a = trotzdem weiter)", m.ramLimit>>30)
@@ -321,6 +334,10 @@ func (m Model) handleTick() (tea.Model, tea.Cmd) {
 		if elapsed := time.Since(start).Seconds(); elapsed > 0 {
 			rate := float64(m.slv.ProcessedCount()-startProcessed) / elapsed
 			m.statesPerSec = (m.statesPerSec*7 + int64(rate)*3) / 10
+		}
+		// automatische Archiv-Konvertierung sichtbar machen (seltenes Ereignis)
+		if note := m.slv.TakeArchiveNote(); note != "" {
+			m.status = note
 		}
 	default:
 		m.auto = false

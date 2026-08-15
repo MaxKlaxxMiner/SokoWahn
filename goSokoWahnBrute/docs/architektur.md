@@ -60,9 +60,20 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Listen-Puffer; Solver.Step und Blocker.Next melden ihn je Arbeitsschritt per
   `SetSpillRamUsage`, bewusst kein teures/GC-abhängiges ReadMemStats) unter
   `solver.SpillRamThresholdBytes` (beim Programmstart 70% des installierten RAM,
-  übersteuerbar per Flag `-spillram`; die RAM-Notbremse `-ram` liegt mit
-  Default 85% bewusst darüber), wächst die Liste komplett im RAM weiter und schont
-  die Platte. Geprüft wird beim ersten Erreichen der Puffergröße und danach nach
+  übersteuerbar per Flag `-spillram`), wächst die Liste komplett im RAM weiter und
+  schont die Platte. Die RAM-Notbremse `-ram` (`solver.RamLimitBytes`, Default 85%)
+  liegt bewusst darüber und misst seit dem 640-GB-Server-Lauf DENSELBEN berechneten
+  Verbrauch (vorher ReadMemStats: der echte Go-Heap enthält Runtime-Reserven und
+  GC-Transienten wie die Umkopier-Spitze einer Tabellen-Verdopplung und stoppte,
+  obwohl die Suche selbst noch weit unter dem Limit lag und die Listen nie
+  auslagerten). Eskalations-Reihenfolge bei Speicherdruck damit fest: ab 70%
+  lagern die Suchlisten aus, Tabellen-Verdopplungen, die die 85% rechnerisch
+  reißen würden, weichen automatisch ins Archiv-Format aus (`autoArchive` in
+  stats.go: ab 90% der Wachstums-Schwelle wird statt zu verdoppeln konvertiert
+  bzw. bei einer Archiv-Tabelle der Delta-Merge vorgezogen; Mini-Deltas unter
+  `ArchiveDeltaMin` wachsen normal weiter), und erst wenn der berechnete
+  Verbrauch die 85% wirklich überschreitet, stoppt der Auto-Modus im TUI
+  (Tests: TestSolveAutoArchiveOnRamLimit, TestAutoArchiveDeltaMergeOnRamLimit). Geprüft wird beim ersten Erreichen der Puffergröße und danach nach
   jeweils SpillBufferBytes weiterem Zuwachs - steigt der Verbrauch später über die
   Schwelle, lagert also auch eine bereits auf Gigabytes gewachsene Liste ihren
   kompletten Puffer aus (die Datei enthält stets die älteren Sätze, die
@@ -178,7 +189,11 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   an kostet ~20-30% Suchdurchsatz - im echten Einsatz kommt das Archiv aber
   erst per Taste h, wenn RAM wichtiger ist als Tempo).
   Standard bleibt die CompactTable, das Archiv-Format ist der RAM-Joker per
-  Tastendruck (Anzeige in der Hash-Zeile: "Archiv, Delta x %", 100% = nächster Merge).
+  Tastendruck (Anzeige in der Hash-Zeile: "Archiv, Delta x %", 100% = nächster Merge) -
+  und seit dem 640-GB-Server-Lauf auch automatisch: würde eine anstehende
+  Verdopplung die RAM-Notbremse rechnerisch reißen, konvertiert `autoArchive`
+  (Step-Anfang, siehe Disk-Auslagerung oben) von selbst und meldet das in der
+  Statuszeile.
 - `Step(limit)` verarbeitet bis zu limit Sätze der aktuellen Tiefe einer Richtung;
   Richtungswahl pro Suchtiefe: kleinere Tabelle zuerst (wie Original Z. 519-523).
   Manuell übersteuerbar per `SetDirMode` (TUI-Tasten 1 = nur vorwärts, 2 = nur rückwärts,

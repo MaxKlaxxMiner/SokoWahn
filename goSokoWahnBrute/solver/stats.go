@@ -143,6 +143,73 @@ func (s *Solver) ArchiveLargerTable() string {
 	return name + ": Tabellen-Typ unterstützt keine Archiv-Konvertierung"
 }
 
+// prüft vor einem Arbeitsschritt, ob bei einer Stellungs-Tabelle eine Verdopplung
+// ansteht, deren Ergebnis den berechneten Verbrauch über die RAM-Notbremse
+// (RamLimitBytes) heben würde - statt zu verdoppeln wandert die Tabelle dann ins
+// Archiv-Format, bei einer bereits konvertierten Tabelle wird der Delta-Merge
+// vorgezogen. So bleiben die großen Verdopplungs-Spitzen aus und die Suche läuft
+// dicht an der Grenze weiter: erst weichen nacheinander beide Tabellen ins Archiv
+// aus, parallel lagern die Suchlisten auf die Platte aus (SpillRamThresholdBytes
+// liegt darunter), und erst wenn der berechnete Verbrauch das Limit wirklich
+// überschreitet, greift der RAM-Stop im TUI.
+// ram = frisch berechneter Verbrauch (RamBytes); höchstens eine Konvertierung je
+// Aufruf, denn danach stimmt ram nicht mehr - der nächste Step prüft erneut.
+// Wie ArchiveLargerTable nur zwischen zwei Arbeitsphasen aufrufen (Step-Anfang).
+func (s *Solver) autoArchive(ram int64) {
+	if RamLimitBytes <= 0 {
+		return
+	}
+	if s.autoArchiveTable(&s.forwardKnown, "Vorwärts-Hash", ram) {
+		return
+	}
+	s.autoArchiveTable(&s.backwardKnown, "Rückwärts-Hash", ram)
+}
+
+// prüft eine einzelne Tabelle (true = konvertiert bzw. gemerged, Meldung liegt in
+// archiveNote). "Verdopplung in Reichweite" heißt ab 90% der Wachstums-Schwelle:
+// früh genug, dass ein Bulk-Step die Schwelle nicht überspringt, und spät genug,
+// dass die Tabelle bis dahin mit vollem CompactTable-Tempo läuft
+func (s *Solver) autoArchiveTable(table *PosTable, name string, ram int64) bool {
+	switch t := (*table).(type) {
+	case *CompactTable:
+		// nach der Verdopplung läge der Verbrauch bei ram + t.Bytes() (die Kapazität
+		// verdoppelt sich); die Umkopier-Spitze des Grows (alt + neu gleichzeitig)
+		// wäre sogar noch höher - die Konvertierung jetzt hat dagegen Reserven
+		if t.count < t.growLimit()/10*9 || ram+t.Bytes() <= RamLimitBytes {
+			return false
+		}
+		before := t.Bytes()
+		converted := NewArchiveTableFrom(t)
+		*table = converted
+		s.archiveNote = name + ": statt Verdopplung ins Archiv-Format konvertiert (" +
+			formatMBStatus(before) + " -> " + formatMBStatus(converted.Bytes()) + ")"
+		return true
+	case *ArchiveTable:
+		// dasselbe für das Delta einer bereits konvertierten Tabelle: der vorgezogene
+		// Merge ersetzt die Delta-Verdopplung. Mini-Deltas (unter ArchiveDeltaMin)
+		// wachsen weiter normal - ihre Verdopplung ist billig, ständiges Mergen
+		// würde dagegen nur den Bucket-Index immer wieder neu bauen
+		if t.delta.count < ArchiveDeltaMin || t.delta.count < t.delta.growLimit()/10*9 ||
+			ram+t.delta.Bytes() <= RamLimitBytes {
+			return false
+		}
+		before := t.Bytes()
+		t.merge()
+		s.archiveNote = name + ": Delta-Merge statt Verdopplung vorgezogen (" +
+			formatMBStatus(before) + " -> " + formatMBStatus(t.Bytes()) + ")"
+		return true
+	}
+	return false
+}
+
+// holt die Meldung der letzten automatischen Archiv-Konvertierung ab (einmalig,
+// "" = nichts passiert; das TUI zeigt sie nach dem Arbeitsschritt in der Statuszeile)
+func (s *Solver) TakeArchiveNote() string {
+	note := s.archiveNote
+	s.archiveNote = ""
+	return note
+}
+
 // Einträge im schnellen CompactTable-Teil einer Tabelle (Auswahl-Kriterium der Taste h)
 func fastPartLen(t PosTable) int64 {
 	switch table := t.(type) {

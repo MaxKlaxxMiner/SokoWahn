@@ -28,4 +28,17 @@ type FillTable interface {
 // NewCompactTableLarge um (spart die Verdopplungs-Leiter, Messung: +10%)
 var TableFactory func() PosTable = NewCompactTable
 
+// RAM-Notbremsen-Grenze in Bytes (0 = aus) - main.go setzt beim Programmstart 85%
+// des installierten RAM (Flag -ram). Vergleichsbasis ist überall der berechnete
+// Verbrauch der Suche (RamBytes: Hashtabellen + Listen-Puffer, dieselbe Basis wie
+// RAM-Anzeige und Auslagerungs-Schwelle), bewusst NICHT ReadMemStats: der echte
+// Go-Heap enthält Runtime-Reserven und GC-Transienten (z.B. die Umkopier-Spitze
+// einer Tabellen-Verdopplung, bei der alte und neue Arrays gleichzeitig leben)
+// und hat auf einer 640-GB-Maschine die Notbremse ausgelöst, obwohl die Suche
+// selbst noch weit unter dem Limit lag.
+// Neben dem Stopp im TUI nutzt der Solver die Grenze, um anstehende Verdopplungen
+// der Stellungs-Tabellen, die das Limit rechnerisch reißen würden, durch die
+// kompaktere Archiv-Konvertierung zu ersetzen (siehe autoArchive in stats.go).
+var RamLimitBytes int64
+
 //var TableFactory func() PosTable = NewSegmentTable
