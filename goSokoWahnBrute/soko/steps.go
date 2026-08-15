@@ -35,6 +35,15 @@ func (f *Field) Steps(a, b *State) (string, error) {
 	default:
 		return "", errors.New("pushed box is not adjacent to player")
 	}
+	if standPos >= f.walkEof {
+		// die Schub-Position ist eine Wand: der Spieler kann dort nie gestanden haben.
+		// Ohne diese Prüfung liefe die Rückverfolgung unten endlos, denn der
+		// Wand-Sentinel markiert walkEof als besucht und parent[walkEof] zeigt ins
+		// Leere. Trifft nur die Direkt-Kanten-Sonde der Push-Optimierung, die Steps
+		// mit beliebigen Stellungs-Paaren aufruft (Haenger bei Level 25327, per
+		// pprof-CPU-Profil auf die Rückverfolgungs-Schleife eingegrenzt).
+		return "", errors.New("push stand position is a wall")
+	}
 
 	// Laufweg von a.Player zur Schub-Position per Breitensuche in der Kistenstellung von a
 	f.SetState(a)
