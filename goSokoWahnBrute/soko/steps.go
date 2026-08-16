@@ -7,17 +7,40 @@ import "errors"
 // Kleinbuchstaben = Laufschritte, Großbuchstaben = Schiebeschritte
 // Hinweis: der Feldzustand wird für die Berechnung verändert und nicht wiederhergestellt
 func (f *Field) Steps(a, b *State) (string, error) {
-	// die geschobene Kiste ermitteln: bei b steht der Spieler auf dem alten Kistenfeld
+	// die geschobene Kiste ermitteln und die Ein-Schub-Bedingung verifizieren:
+	// b darf sich von a in genau einer Kistenposition unterscheiden, und die in
+	// a verschwundene Kiste muss auf dem alten Kistenfeld (= b.Player) stehen.
+	// Ohne diese Pruefung akzeptierte die Direkt-Kanten-Sonde der Push-Optimierung
+	// (die Steps mit beliebigen Stellungspaaren aufruft) auch Stellungen mehrere
+	// Schuebe hinter dem Start als Schein-1-Push-Kante - die Loesung begann dann
+	// mit einem unsinnigen Segment und falscher Schub-Zahl (Level 25523).
 	from := b.Player
-	to := f.walkEof
-	for _, box := range b.Boxes {
-		if !containsWpos(a.Boxes, box) {
-			to = box
-			break
+	vanished, to := f.walkEof, f.walkEof
+	ia, ib := 0, 0
+	for ia < len(a.Boxes) || ib < len(b.Boxes) {
+		switch {
+		case ib >= len(b.Boxes) || (ia < len(a.Boxes) && a.Boxes[ia] < b.Boxes[ib]):
+			if vanished != f.walkEof {
+				return "", errors.New("more than one box moved")
+			}
+			vanished = a.Boxes[ia]
+			ia++
+		case ia >= len(a.Boxes) || b.Boxes[ib] < a.Boxes[ia]:
+			if to != f.walkEof {
+				return "", errors.New("more than one box moved")
+			}
+			to = b.Boxes[ib]
+			ib++
+		default:
+			ia++
+			ib++
 		}
 	}
 	if to == f.walkEof {
 		return "", errors.New("no pushed box found")
+	}
+	if vanished != from {
+		return "", errors.New("moved box did not start on the player position of b")
 	}
 
 	// Schub-Richtung und die Position bestimmen, von der aus geschoben wurde
@@ -89,17 +112,4 @@ func (f *Field) Steps(a, b *State) (string, error) {
 	}
 
 	return string(steps), nil
-}
-
-// prüft, ob die (aufsteigend sortierten) Kistenpositionen den Wert enthalten
-func containsWpos(boxes []Wpos, value Wpos) bool {
-	for _, box := range boxes {
-		if box == value {
-			return true
-		}
-		if box > value {
-			return false
-		}
-	}
-	return false
 }
