@@ -67,13 +67,18 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   GC-Transienten wie die Umkopier-Spitze einer Tabellen-Verdopplung und stoppte,
   obwohl die Suche selbst noch weit unter dem Limit lag und die Listen nie
   auslagerten). Eskalations-Reihenfolge bei Speicherdruck damit fest: ab 70%
-  lagern die Suchlisten aus, Tabellen-Verdopplungen, die die 85% rechnerisch
-  reißen würden, weichen automatisch ins Archiv-Format aus (`autoArchive` in
-  stats.go: ab 90% der Wachstums-Schwelle wird statt zu verdoppeln konvertiert
-  bzw. bei einer Archiv-Tabelle der Delta-Merge vorgezogen; Mini-Deltas unter
-  `ArchiveDeltaMin` wachsen normal weiter), und erst wenn der berechnete
-  Verbrauch die 85% wirklich überschreitet, stoppt der Auto-Modus im TUI
-  (Tests: TestSolveAutoArchiveOnRamLimit, TestAutoArchiveDeltaMergeOnRamLimit). Geprüft wird beim ersten Erreichen der Puffergröße und danach nach
+  lagern die Suchlisten aus, Tabellen-Verdopplungen, deren Umkopier-Spitze
+  (alte + neue Arrays gleichzeitig = berechneter Verbrauch + 2x Tabellengröße)
+  die 85% rechnerisch reißen würde, weichen automatisch ins Archiv-Format aus
+  (`autoArchive` in stats.go: ab 90% der Wachstums-Schwelle wird statt zu
+  verdoppeln konvertiert bzw. bei einer Archiv-Tabelle der Delta-Merge
+  vorgezogen; Mini-Deltas unter `ArchiveDeltaMin` wachsen normal weiter; das
+  Spitzen- statt Dauerzustands-Kriterium stammt aus einem OOM-Kill auf dem
+  640-GB-Server: eine 80-GB-Tabelle riss mit ihrer 160-GB-Grow-Spitze das
+  physische RAM, obwohl der Wert nach der Verdopplung unter der Grenze lag),
+  und erst wenn der berechnete Verbrauch die 85% wirklich überschreitet, stoppt
+  der Auto-Modus im TUI (Tests: TestSolveAutoArchiveOnRamLimit,
+  TestAutoArchivePeakCriterion, TestAutoArchiveDeltaMergeOnRamLimit). Geprüft wird beim ersten Erreichen der Puffergröße und danach nach
   jeweils SpillBufferBytes weiterem Zuwachs - steigt der Verbrauch später über die
   Schwelle, lagert also auch eine bereits auf Gigabytes gewachsene Liste ihren
   kompletten Puffer aus (die Datei enthält stets die älteren Sätze, die

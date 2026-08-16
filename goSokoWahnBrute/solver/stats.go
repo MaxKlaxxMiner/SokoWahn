@@ -144,7 +144,8 @@ func (s *Solver) ArchiveLargerTable() string {
 }
 
 // prüft vor einem Arbeitsschritt, ob bei einer Stellungs-Tabelle eine Verdopplung
-// ansteht, deren Ergebnis den berechneten Verbrauch über die RAM-Notbremse
+// ansteht, deren Umkopier-Spitze (alte + neue Arrays gleichzeitig, also
+// ram + 2*Tabellengröße) den berechneten Verbrauch über die RAM-Notbremse
 // (RamLimitBytes) heben würde - statt zu verdoppeln wandert die Tabelle dann ins
 // Archiv-Format, bei einer bereits konvertierten Tabelle wird der Delta-Merge
 // vorgezogen. So bleiben die großen Verdopplungs-Spitzen aus und die Suche läuft
@@ -172,10 +173,16 @@ func (s *Solver) autoArchive(ram int64) {
 func (s *Solver) autoArchiveTable(table *PosTable, name string, ram int64) bool {
 	switch t := (*table).(type) {
 	case *CompactTable:
-		// nach der Verdopplung läge der Verbrauch bei ram + t.Bytes() (die Kapazität
-		// verdoppelt sich); die Umkopier-Spitze des Grows (alt + neu gleichzeitig)
-		// wäre sogar noch höher - die Konvertierung jetzt hat dagegen Reserven
-		if t.count < t.growLimit()/10*9 || ram+t.Bytes() <= RamLimitBytes {
+		// Kriterium ist die Umkopier-Spitze der Verdopplung: während des Grows leben
+		// alte und neue Arrays gleichzeitig (ram + 2*Bytes). Der frühere Vergleich
+		// mit dem Dauerzustand danach (ram + Bytes) löste zu spät aus: auf dem
+		// 640-GB-Server riss die 80-GB-Vorwärts-Tabelle mit ihrer 160-GB-Spitze
+		// das physische RAM (OOM-Kill bei 427 GB berechnetem Verbrauch), obwohl
+		// der Wert nach der Verdopplung unter der Notbremse gelegen hätte.
+		// Die Konvertierungs-Spitze selbst ist deutlich kleiner (~0,6x Bytes:
+		// Archiv-Records + Index entstehen neben der alten Tabelle) und hat am
+		// Auslösepunkt per Konstruktion noch mindestens 2*Bytes Luft bis zur Grenze.
+		if t.count < t.growLimit()/10*9 || ram+2*t.Bytes() <= RamLimitBytes {
 			return false
 		}
 		before := t.Bytes()
@@ -186,11 +193,12 @@ func (s *Solver) autoArchiveTable(table *PosTable, name string, ram int64) bool 
 		return true
 	case *ArchiveTable:
 		// dasselbe für das Delta einer bereits konvertierten Tabelle: der vorgezogene
-		// Merge ersetzt die Delta-Verdopplung. Mini-Deltas (unter ArchiveDeltaMin)
-		// wachsen weiter normal - ihre Verdopplung ist billig, ständiges Mergen
-		// würde dagegen nur den Bucket-Index immer wieder neu bauen
+		// Merge ersetzt die Delta-Verdopplung (Kriterium wie oben die Umkopier-Spitze
+		// ram + 2*Bytes). Mini-Deltas (unter ArchiveDeltaMin) wachsen weiter normal -
+		// ihre Verdopplung ist billig, ständiges Mergen würde dagegen nur den
+		// Bucket-Index immer wieder neu bauen
 		if t.delta.count < ArchiveDeltaMin || t.delta.count < t.delta.growLimit()/10*9 ||
-			ram+t.delta.Bytes() <= RamLimitBytes {
+			ram+2*t.delta.Bytes() <= RamLimitBytes {
 			return false
 		}
 		before := t.Bytes()

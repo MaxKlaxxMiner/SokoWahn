@@ -35,10 +35,10 @@ func main() {
 	// solver.RamLimitBytes - bewusst kein ReadMemStats). Notbremse 85% (15% Reserve
 	// für OS und Fremdprozesse), Auslagerungs-Schwelle 70% (entspricht dem erprobten
 	// 44-GB-Wert bei 64 GB). Eskalations-Reihenfolge bei Speicherdruck: ab 70%
-	// lagern die Suchlisten auf die Platte aus, Tabellen-Verdopplungen, die die 85%
-	// rechnerisch reißen würden, weichen ins Archiv-Format aus (solver.autoArchive),
-	// und erst wenn der berechnete Verbrauch die 85% wirklich überschreitet,
-	// stoppt der Auto-Modus
+	// lagern die Suchlisten auf die Platte aus, Tabellen-Verdopplungen, deren
+	// Umkopier-Spitze (Verbrauch + 2x Tabellengröße) die 85% rechnerisch reißen
+	// würde, weichen ins Archiv-Format aus (solver.autoArchive), und erst wenn
+	// der berechnete Verbrauch die 85% wirklich überschreitet, stoppt der Auto-Modus
 	defaultRAMLimitGB := 100
 	defaultSpillRAMGB := 44
 	if total := tools.TotalRAMBytes(); total > 0 {

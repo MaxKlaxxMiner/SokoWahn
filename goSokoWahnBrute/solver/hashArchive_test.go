@@ -327,6 +327,50 @@ func TestSolveAutoArchiveOnRamLimit(t *testing.T) {
 	}
 }
 
+// Auslöse-Kriterium der automatischen Archiv-Konvertierung ist die Umkopier-Spitze
+// der Verdopplung (ram + 2*Bytes, alte und neue Arrays leben gleichzeitig), nicht
+// der Dauerzustand danach (ram + Bytes): auf dem 640-GB-Server riss eine 80-GB-
+// Tabelle mit ihrer 160-GB-Spitze das physische RAM (OOM-Kill), obwohl der Wert
+// nach der Verdopplung unter der Notbremse gelegen hätte
+func TestAutoArchivePeakCriterion(t *testing.T) {
+	oldLimit := RamLimitBytes
+	defer func() { RamLimitBytes = oldLimit }()
+
+	makeSolver := func() (*Solver, *CompactTable) {
+		field, err := soko.Parse(archiveTestLevel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := New(field)
+		// Tabelle bis in das 90%-Fenster vor der Verdopplung füllen
+		ct := newCompactTable(1 << 8)
+		for i := int64(1); ct.count < ct.growLimit()/10*9; i++ {
+			ct.Add(crc64.Value(i), 1)
+		}
+		s.forwardKnown = ct
+		return s, ct
+	}
+
+	// Limit zwischen Dauerzustand (ram+Bytes) und Spitze (ram+2*Bytes):
+	// hier muss konvertiert werden (das alte Kriterium hätte verdoppeln lassen)
+	s, ct := makeSolver()
+	ram := s.RamBytes()
+	RamLimitBytes = ram + ct.Bytes()*3/2
+	s.autoArchive(ram)
+	if _, ok := s.forwardKnown.(*ArchiveTable); !ok {
+		t.Fatal("Verdopplungs-Spitze über der Notbremse: Tabelle muss ins Archiv-Format wechseln")
+	}
+
+	// Gegenprobe: passt auch die Spitze noch unter das Limit, bleibt die CompactTable
+	s, ct = makeSolver()
+	ram = s.RamBytes()
+	RamLimitBytes = ram + ct.Bytes()*2 + 1024
+	s.autoArchive(ram)
+	if _, ok := s.forwardKnown.(*CompactTable); !ok {
+		t.Fatal("Spitze unter der Notbremse: Tabelle darf nicht konvertiert werden")
+	}
+}
+
 // Delta-Pfad der RAM-Notbremse: bei einer bereits konvertierten Tabelle ersetzt
 // der vorgezogene Merge die anstehende Delta-Verdopplung; die Meldung für die
 // Statuszeile ist genau einmal abholbar
