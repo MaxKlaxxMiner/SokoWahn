@@ -1,8 +1,10 @@
 package blocker
 
 import (
-	"math/bits"
 	"runtime"
+	"sort"
+	"sync"
+	"sync/atomic"
 
 	"goSokoWahnBrute/soko"
 	"goSokoWahnBrute/solver"
@@ -34,13 +36,22 @@ type stage struct {
 	checkedStates int64         // Anzahl der geprüften Stellungen (Statistik)
 }
 
-// Anker-Index der Deadlock-Muster einer Spielerposition (über alle fertigen Stufen):
-// jedes Muster als Bitmaske über die begehbaren Felder, gebucketet nach dem Ankerfeld
-// (= kleinstes Muster-Feld). CheckAllowed muss dadurch nur Buckets anfassen, deren
-// Ankerfeld tatsächlich eine Kiste trägt - alle anderen Muster können nicht zutreffen.
-type playerIndex struct {
-	masks   []uint64 // flache Muster-Masken, nach Ankerfeld sortiert (Länge = Musteranzahl * maskWords)
-	anchors []int32  // je Feld der Start-Offset (in Mustern) im masks-Array (Länge walkCount+2, inkl. Sentinel)
+// Set-Trie der Deadlock-Muster einer Spielerposition (über alle fertigen Stufen):
+// jedes Muster liegt als Pfad über seine kanonisch aufsteigend sortierten Felder in
+// einem Präfix-Baum. CheckAllowed steigt nur in Kinder ab, deren Feld eine Kiste
+// trägt - der Aufwand ist dadurch durch die Teilmengen der aktuellen Kistenmenge
+// begrenzt (bei k Kisten höchstens 2^k besuchte Knoten, real weit weniger) und
+// praktisch unabhängig von der Musteranzahl. Der frühere flache Anker-Index
+// (Bitmasken-Buckets je kleinstem Muster-Feld) scannte dagegen linear über die
+// Muster und brach bei Muster-Explosionen ein (Level 25523: 3,4 Mio 6-Steiner-
+// Muster -> bis zu ~280.000 Maskenvergleiche pro Schub-Check, Suche Faktor ~30
+// langsamer; der Trie besucht dort nur noch wenige hundert Knoten).
+// Layout in BFS-Reihenfolge: die Kinder jedes Knotens liegen zusammenhängend und
+// aufsteigend sortiert in fields (Cache-freundlicher linearer Scan je Knoten).
+type playerTrie struct {
+	fields     []uint16 // Muster-Feld je Knoten (Knoten 0 = Wurzel, Wert unbenutzt)
+	childStart []int32  // Kinder von Knoten i: Knoten childStart[i] bis childStart[i+1]-1 (Länge Knotenzahl+1)
+	isPattern  []uint64 // Bitset über die Knoten: an diesem Knoten endet ein Muster
 }
 
 // Deadlock-Vorberechnung: findet für steigende Kistenanzahlen alle Kistenkombinationen,
@@ -55,8 +66,7 @@ type Blocker struct {
 
 	stages []stage // fertig berechnete Stufen (k = 1, 2, ...)
 
-	maskWords  int           // uint64-Wörter je Bitmaske (= Länge der Field-boxBits)
-	checkIndex []playerIndex // Anker-Index aller Muster je Spielerposition (nil = keine Muster)
+	checkTries []playerTrie // Set-Trie aller Muster je Spielerposition (nil = keine Muster)
 
 	status         Status
 	searchBoxCount int // Kistenanzahl der aktuellen Stufe
@@ -94,7 +104,7 @@ type Blocker struct {
 // 5.061 Muster der 201-Stufe-4 bauen damit wieder klassisch): solange alle
 // fertigen Stufen höchstens so viele Muster haben, baut der Stufenbau
 // klassisch - kleine Mustermengen kosten kaum Platz, filtern aber billiger als
-// die Regeln (Anker-Bitmasken-Test schlägt den Freeze-Fixpunkt pro Schub) und
+// die Regeln (Set-Trie-Test schlägt den Freeze-Fixpunkt pro Schub) und
 // bleiben bitgenau vergleichbar mit dem C#-Orakel (refcli blockerbx).
 // Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion, typisch für
 // sehr große Levels), filtern alle WEITEREN Stufen ihre Vorwärts-Phasen mit den
@@ -130,7 +140,6 @@ func New(field *soko.Field, cachePath string) *Blocker {
 		startPlayer:   start.Player,
 		cachePath:     cachePath,
 		status:        StatusInit,
-		maskWords:     (base.WalkCount() + 64) / 64, // walkEof+1 Bits, gleiche Länge wie Field.boxBits
 		workerCount:   runtime.NumCPU() * 8, // deutliche Überbelegung: die Worker warten meist auf den Speicher (siehe docs/architektur.md)
 		chunkSize:     defaultChunkSize,
 		tableFactory:  solver.NewCompactTable,
@@ -180,10 +189,17 @@ func (b *Blocker) Abort() {
 	b.releaseStageWork()
 }
 
+// maximale Trie-Tiefe von CheckAllowed (= größte Musterlänge + Reserve): die
+// Musterlänge entspricht der Kistenzahl der größten Stufe, und mehr als 32 Stufen
+// sind praktisch unmöglich (CollectStart müsste C(n,32) Kombinationen aufzählen);
+// buildPlayerTrie erzwingt die Grenze beim Bau
+const checkMaxDepth = 34
+
 // prüft, ob eine Stellung erlaubt ist (false = als Deadlock erkannt);
 // boxBits ist die Kisten-Bitmaske des abfragenden Feldes (Field.boxBits).
-// Über den Anker-Index werden nur Muster geprüft, deren Ankerfeld eine Kiste trägt;
-// der Mustervergleich selbst ist ein Bitmasken-Subset-Test.
+// Tiefensuche im Set-Trie der Spielerposition: abgestiegen wird nur in Kinder,
+// deren Feld eine Kiste trägt - jeder erreichte Muster-End-Knoten ist damit ein
+// zutreffendes Muster (alle Pfad-Felder tragen Kisten, Subset-Match).
 //
 // Bedingte Kill-Regel (Fix des Bx-Hinterland-Bugs, siehe docs/architektur.md):
 // Ein zutreffendes Muster allein reicht NICHT - die Stellung wird erst verworfen,
@@ -195,18 +211,17 @@ func (b *Blocker) Abort() {
 // die Stellung trotzdem legal (so verlor Level 29632 seine optimale 304er-Lösung).
 // Erst wenn alle Kandidaten abgedeckt sind, ist jede mögliche Entstehung der
 // Stellung entweder widerlegt oder ein bewiesener Deadlock.
-// (Implementierung von soko.BlockerCheck, wird von den Zuggeneratoren aufgerufen)
+// (Implementierung von soko.BlockerCheck, wird von den Zuggeneratoren aufgerufen;
+// läuft parallel aus vielen Workern - nur Lese-Zugriffe und Stack-Zustand)
 func (b *Blocker) CheckAllowed(player soko.Wpos, boxBits []uint64) bool {
-	if b.checkIndex == nil {
+	if b.checkTries == nil {
 		return true
 	}
-	idx := &b.checkIndex[player]
-	masks := idx.masks
-	if len(masks) == 0 {
-		return true
+	trie := &b.checkTries[player]
+	if len(trie.fields) <= 1 {
+		return true // keine Muster für diese Spielerposition
 	}
-	words := b.maskWords
-	anchors := idx.anchors
+	fields, childStart, isPattern := trie.fields, trie.childStart, trie.isPattern
 
 	// Schub-Pose-Kandidaten erst beim ersten Muster-Treffer ermitteln
 	// (der mit Abstand häufigste Fall ist "kein Muster trifft zu")
@@ -214,100 +229,196 @@ func (b *Blocker) CheckAllowed(player soko.Wpos, boxBits []uint64) bool {
 	candCount := 0
 	covered, allCovered := 0, 0
 
-	for w := range boxBits {
-		bitsWord := boxBits[w]
-		for bitsWord != 0 {
-			field := w<<6 | bits.TrailingZeros64(bitsWord)
-			bitsWord &= bitsWord - 1
+	// Tiefensuche mit explizitem Stack: je Ebene der Kinder-Cursor des betretenen
+	// Knotens und sein Feld (für den Kandidaten-Test über die Pfad-Felder)
+	var stkIdx, stkEnd [checkMaxDepth]int32
+	var stkField [checkMaxDepth]uint16
+	sp := 0
+	stkIdx[0], stkEnd[0] = childStart[0], childStart[1]
 
-			for m, mEnd := int(anchors[field])*words, int(anchors[field+1])*words; m < mEnd; m += words {
-				match := true
-				for j := 0; j < words; j++ {
-					if masks[m+j]&^boxBits[j] != 0 {
-						match = false // Muster-Feld ohne Kiste -> Muster trifft nicht zu
+	for sp >= 0 {
+		j := stkIdx[sp]
+		if j == stkEnd[sp] {
+			sp--
+			continue
+		}
+		stkIdx[sp]++
+		f := fields[j]
+		if boxBits[f>>6]&(1<<(f&63)) == 0 {
+			continue // Feld ohne Kiste -> kein Muster dieses Teilbaums kann zutreffen
+		}
+
+		if isPattern[j>>6]&(1<<(j&63)) != 0 {
+			// Muster gefunden: alle Pfad-Felder (stkField[1..sp] plus f) tragen Kisten
+			if allCovered == 0 { // erster Treffer -> Kandidaten aufbauen
+				candidates, candCount = b.base.PushPoseCandidates(player, boxBits)
+				if candCount == 0 {
+					return true // keine Schub-Pose -> Muster nicht anwendbar (praktisch nur bei künstlichen Abfragen)
+				}
+				allCovered = 1<<candCount - 1
+			}
+			for c := 0; c < candCount; c++ {
+				pos := candidates[c]
+				if pos == soko.Wpos(f) {
+					covered |= 1 << c // dieses Muster deckt den Kandidaten ab
+					continue
+				}
+				for l := 1; l <= sp; l++ {
+					if pos == soko.Wpos(stkField[l]) {
+						covered |= 1 << c
 						break
 					}
 				}
-				if !match {
-					continue
-				}
-
-				if allCovered == 0 { // erster Treffer -> Kandidaten aufbauen
-					candidates, candCount = b.base.PushPoseCandidates(player, boxBits)
-					if candCount == 0 {
-						return true // keine Schub-Pose -> Muster nicht anwendbar (praktisch nur bei künstlichen Abfragen)
-					}
-					allCovered = 1<<candCount - 1
-				}
-				for c := 0; c < candCount; c++ {
-					pos := candidates[c]
-					if masks[m+int(pos>>6)]&(1<<(pos&63)) != 0 {
-						covered |= 1 << c // dieses Muster deckt den Kandidaten ab
-					}
-				}
-				if covered == allCovered {
-					return false // jede mögliche zuletzt geschobene Kiste ist abgedeckt -> verbotene Stellung
-				}
 			}
+			if covered == allCovered {
+				return false // jede mögliche zuletzt geschobene Kiste ist abgedeckt -> verbotene Stellung
+			}
+		}
+
+		if childStart[j] != childStart[j+1] { // Teilbaum mit längeren Mustern betreten
+			sp++
+			stkIdx[sp], stkEnd[sp] = childStart[j], childStart[j+1]
+			stkField[sp] = f
 		}
 	}
 	return true
 }
 
-// baut den Anker-Index für CheckAllowed neu auf (nach jeder fertigen Stufe und nach dem
-// Cache-Laden): alle Muster aller Stufen als Bitmasken, je Spielerposition nach ihrem
-// Ankerfeld einsortiert (die Muster sind kanonisch aufsteigend sortiert -> Anker = erstes Feld)
+// baut die Set-Tries für CheckAllowed neu auf (nach jeder fertigen Stufe und nach
+// dem Cache-Laden): alle Muster aller Stufen je Spielerposition als Präfix-Baum
+// über ihre kanonisch aufsteigend sortierten Felder
 func (b *Blocker) rebuildCheckIndex() {
 	if len(b.stages) == 0 {
-		b.checkIndex = nil
+		b.checkTries = nil
 		return
 	}
 
-	words := b.maskWords
-	index := make([]playerIndex, b.walkCount)
-
-	for player := 0; player < b.walkCount; player++ {
-		// Muster je Ankerfeld zählen
-		anchors := make([]int32, b.walkCount+2)
-		total := 0
-		for s := range b.stages {
-			k := b.stages[s].boxCount
-			pat := b.stages[s].patterns[player]
-			for p := 0; p < len(pat); p += k {
-				anchors[pat[p]+2]++
-				total++
-			}
-		}
-		if total == 0 {
-			continue
-		}
-
-		// Zähler zu Start-Offsets aufsummieren (anchors[f+1] = Start des Buckets von Feld f)
-		for i := 2; i < len(anchors); i++ {
-			anchors[i] += anchors[i-1]
-		}
-
-		// Masken in die Buckets einsortieren (anchors[f+1] dient dabei als Schreibzeiger
-		// und steht am Ende genau auf dem Bucket-Start von Feld f)
-		masks := make([]uint64, total*words)
-		for s := range b.stages {
-			k := b.stages[s].boxCount
-			pat := b.stages[s].patterns[player]
-			for p := 0; p < len(pat); p += k {
-				slot := anchors[pat[p]+1]
-				anchors[pat[p]+1]++
-				off := int(slot) * words
-				for i := 0; i < k; i++ {
-					fld := pat[p+i]
-					masks[off+int(fld>>6)] |= 1 << (fld & 63)
+	// paralleler Bau über die Spielerpositionen (unabhängig und deterministisch;
+	// CPU-gebunden, daher ohne die Speicher-Überbelegung der Suchphasen)
+	tries := make([]playerTrie, b.walkCount)
+	workers := min(b.workerCount, runtime.NumCPU())
+	if workers < 1 {
+		workers = 1
+	}
+	var nextPlayer atomic.Int64
+	var wg sync.WaitGroup
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				player := int(nextPlayer.Add(1)) - 1
+				if player >= b.walkCount {
+					return
 				}
+				tries[player] = b.buildPlayerTrie(player)
 			}
-		}
+		}()
+	}
+	wg.Wait()
+	b.checkTries = tries
+}
 
-		index[player] = playerIndex{masks: masks, anchors: anchors[:b.walkCount+2]}
+// baut den Set-Trie einer Spielerposition: die Muster werden lexikografisch
+// sortiert und sequenziell als Pfade eingefügt (gemeinsame Präfixe teilen sich
+// die Knoten), danach wird der Baum in ein flaches BFS-Layout umkopiert -
+// die Kinder jedes Knotens liegen dort zusammenhängend und aufsteigend sortiert
+func (b *Blocker) buildPlayerTrie(player int) playerTrie {
+	// Muster-Referenzen einsammeln (Subslices in die Stufen-Arrays, keine Kopien)
+	total, totalFields := 0, 0
+	for s := range b.stages {
+		count := len(b.stages[s].patterns[player])
+		total += count / b.stages[s].boxCount
+		totalFields += count
+	}
+	if total == 0 {
+		return playerTrie{}
+	}
+	refs := make([][]soko.Wpos, 0, total)
+	for s := range b.stages {
+		k := b.stages[s].boxCount
+		if k+1 >= checkMaxDepth {
+			panic("blocker: Musterlänge übersteigt checkMaxDepth")
+		}
+		pat := b.stages[s].patterns[player]
+		for p := 0; p < len(pat); p += k {
+			refs = append(refs, pat[p:p+k:p+k])
+		}
 	}
 
-	b.checkIndex = index
+	// lexikografische Ordnung; bei gleichem Präfix kommt das kürzere Muster zuerst,
+	// dadurch hängt jedes Muster nur am gemeinsamen Präfix mit seinem Vorgänger
+	sort.Slice(refs, func(a, c int) bool {
+		ra, rc := refs[a], refs[c]
+		n := min(len(ra), len(rc))
+		for i := 0; i < n; i++ {
+			if ra[i] != rc[i] {
+				return ra[i] < rc[i]
+			}
+		}
+		return len(ra) < len(rc)
+	})
+
+	// Einfüge-Phase: Kinder als verkettete Liste (firstChild/nextSibling); dank der
+	// Sortierung wird jedes neue Kind hinten angehängt -> Kinder automatisch sortiert
+	fieldsPre := make([]uint16, 1, totalFields+1) // Knoten 0 = Wurzel
+	firstChild := make([]int32, 1, totalFields+1)
+	nextSibling := make([]int32, 1, totalFields+1)
+	lastChild := make([]int32, 1, totalFields+1)
+	isPatPre := make([]bool, 1, totalFields+1)
+
+	var pathNodes [checkMaxDepth]int32
+	var prev []soko.Wpos
+	for _, pat := range refs {
+		lcp := 0
+		for lcp < len(prev) && lcp < len(pat) && prev[lcp] == pat[lcp] {
+			lcp++
+		}
+		for i := lcp; i < len(pat); i++ {
+			parent := int32(0)
+			if i > 0 {
+				parent = pathNodes[i-1]
+			}
+			node := int32(len(fieldsPre))
+			fieldsPre = append(fieldsPre, uint16(pat[i]))
+			firstChild = append(firstChild, 0)
+			nextSibling = append(nextSibling, 0)
+			lastChild = append(lastChild, 0)
+			isPatPre = append(isPatPre, false)
+			if lastChild[parent] == 0 {
+				firstChild[parent] = node
+			} else {
+				nextSibling[lastChild[parent]] = node
+			}
+			lastChild[parent] = node
+			pathNodes[i] = node
+		}
+		isPatPre[pathNodes[len(pat)-1]] = true
+		prev = pat
+	}
+
+	// BFS-Umbau ins flache Layout (Kinder zusammenhängend, Wurzel = Knoten 0)
+	nodeCount := len(fieldsPre)
+	fields := make([]uint16, nodeCount)
+	childStart := make([]int32, nodeCount+1)
+	isPattern := make([]uint64, (nodeCount+63)/64)
+	order := make([]int32, 1, nodeCount) // alte Knoten-Indizes in BFS-Reihenfolge
+	next := int32(1)
+	for newIdx := 0; newIdx < nodeCount; newIdx++ {
+		old := order[newIdx]
+		childStart[newIdx] = next
+		for c := firstChild[old]; c != 0; c = nextSibling[c] {
+			fields[next] = fieldsPre[c]
+			if isPatPre[c] {
+				isPattern[next>>6] |= 1 << (next & 63)
+			}
+			order = append(order, c)
+			next++
+		}
+	}
+	childStart[nodeCount] = next
+
+	return playerTrie{fields: fields, childStart: childStart, isPattern: isPattern}
 }
 
 // prüft, ob eine der fertigen Stufen die Muster-Schwelle überschritten hat

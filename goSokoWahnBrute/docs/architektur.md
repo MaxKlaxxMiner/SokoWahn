@@ -296,7 +296,7 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 **Adaptive Regel-Filterung seit Cache-Version 6** (`RulesPatternThreshold`, seit
 Cache-Version 8 bei 10240):
 solange alle fertigen Stufen unter der Muster-Schwelle bleiben, baut der Stufenbau
-klassisch (volle Muster kosten kaum Platz, filtern als Anker-Bitmasken-Test billiger
+klassisch (volle Muster kosten kaum Platz, filtern als Set-Trie-Test billiger
 als der Freeze-Fixpunkt, und die Werte bleiben bitgenau orakel-vergleichbar mit
 refcli blockerbx - zahme Levels wie Vanilla und lid201 bauen damit KOMPLETT
 klassisch). Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion,
@@ -360,19 +360,31 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   vergleichbar mit dem gefixten C#-refcli** (verifiziert: vanilla blockerbx 5 und
   lid201 blockerbx 3 exakt gleich; seit Version 4 gilt das wegen der
   regel-gefilterten Vorwärts-Phasen nicht mehr, siehe oben).
-  Zwei Beschleunigungen gegenüber dem naiven Feld-für-Feld-Vergleich:
-  1. **Bitmasken**: das Field pflegt die Kistenbelegung als Bitmaske über die begehbaren
-     Felder (`boxBits`, 2 Bit-Operationen pro Schub/Undo); jedes Muster liegt ebenfalls als
-     Maske vor, der Match ist ein branchloser Subset-Test (`pattern &^ state == 0` je Wort).
-  2. **Anker-Index**: je Spielerposition sind die Muster aller Stufen nach ihrem Ankerfeld
-     (kleinstes Muster-Feld) gebucketet; geprüft werden nur Buckets, deren Ankerfeld
-     tatsächlich eine Kiste trägt - alle anderen Muster können nicht zutreffen.
-  Messung unter Realbedingungen (lid46084, 5-Steiner-Cache mit 190.708 Mustern, Suche bis
-  Tiefe 266, als Speedcheck-Test verankert): naiv 7,8 s -> nur Bitmasken 2,8 s ->
-  Bitmasken + Anker-Index **1,0 s** (Faktor 7,7; Knotenzahl bitgenau gleich). Der
-  Stufenbau selbst (lid349, wenige Muster) bleibt unverändert bei 2,44 s.
-  Der frühere `emptyBoxNumber`-Mechanismus (kistenNummerLeer-Pendant) entfällt: die
-  Bitmaske kennt nur "Kiste ja/nein" und ist damit unabhängig von der Kistenanzahl
+  Der Muster-Match läuft als **Set-Trie je Spielerposition** (seit 08/2026): jedes
+  Muster liegt als Pfad über seine kanonisch aufsteigend sortierten Felder in einem
+  Präfix-Baum (BFS-Layout, Kinder zusammenhängend und sortiert; Bau nach jeder
+  fertigen Stufe, parallel über die Spielerpositionen). CheckAllowed steigt per
+  Tiefensuche nur in Kinder ab, deren Feld eine Kiste trägt (Bit-Test auf der
+  `boxBits`-Maske des Fields, 2 Bit-Operationen pro Schub/Undo) - jeder erreichte
+  Muster-End-Knoten ist damit ein zutreffendes Muster. Der Aufwand ist durch die
+  Teilmengen der aktuellen Kistenmenge begrenzt (bei k Kisten maximal 2^k besuchte
+  Knoten, real weit weniger) und praktisch **unabhängig von der Musteranzahl**;
+  Präfix-Sharing macht den Trie zugleich kleiner als die früheren Muster-Bitmasken
+  (Level 25523: 5,2M Knoten à ~6 B für 3,76M Muster à 16 B).
+  Historie der Check-Beschleunigung: naiver Feld-für-Feld-Vergleich -> Muster als
+  Bitmasken (branchloser Subset-Test `pattern &^ state == 0`) -> Anker-Index
+  (Muster-Buckets nach kleinstem Muster-Feld; lid46084, 190.708 Muster, Suche bis
+  Tiefe 266: 7,8 -> 2,8 -> 1,0 s) -> Set-Trie. Der lineare Anker-Scan brach bei
+  Muster-Explosionen ein: Level 25523 (nach Freeze-Filter 9 Kisten) hat 3,39 Mio
+  6-Steiner-Muster, der Scan kostete bis zu ~280.000 Maskenvergleiche pro
+  Schub-Check - Suche bis Tiefe 379 mit allen 6 Stufen 20,1 s gegen 0,64 s mit
+  Stufen 1-4. Mit dem Trie: **1,1 s** (Faktor ~18, Knotenzahlen bitgenau gleich;
+  der Vollausbau kostet nur noch ~70% Aufpreis statt Faktor 31 und spart 12,5%
+  Knoten). Äquivalenz-Absicherung: TestCheckTrieMatchesNaive vergleicht den Trie
+  auf Vanilla gegen einen naiven Referenz-Scan mit der alten Logik (alle Muster
+  gezielt als Treffer-Stellungen plus 20.000 Zufallsstellungen, fester Seed).
+  Der frühere `emptyBoxNumber`-Mechanismus (kistenNummerLeer-Pendant) entfällt: der
+  Kisten-Test kennt nur "Kiste ja/nein" und ist damit unabhängig von der Kistenanzahl
   des abfragenden Feldes.
 - Der Solver filtert vorwärts UND rückwärts mit den Blockern (rückwärts wie
   `GetVariantenRückwärtsTeilRun2` der List2-Variante; bringt z.B. bei Vanilla

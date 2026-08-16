@@ -177,6 +177,17 @@ Ebene über dem Repo (Analyse vom 11.08.2026). Grundsätze: nur beweisbare Deadl
   Muster fehlten als billige Vorfilter); v5 starr ab Stufe 4 - auf zahmen Levels
   (lid201) unter 5% Ersparnis bei Speed-Kosten. Beide Feinanpassungen auf Max'
   Vorschlag.
+- ERLEDIGT: **Set-Trie für CheckAllowed** (16.08.2026): der lineare Anker-Index-Scan
+  brach bei Muster-Explosionen ein - Level 25523 (9 Kisten nach Freeze-Filter) hat
+  3,39 Mio 6-Steiner-Muster, bis zu ~280.000 Maskenvergleiche pro Schub-Check,
+  Suche bis Tiefe 379 in 20,1 s gegen 0,64 s mit nur Stufen 1-4 (Faktor 31 für
+  12,5% Knotenersparnis). Jetzt Präfix-Baum über die sortierten Muster-Felder je
+  Spielerposition, Abstieg nur in Kisten-Felder: Aufwand durch die Teilmengen der
+  Kistenmenge begrenzt, unabhängig von der Musteranzahl. 25523 mit allen 6 Stufen:
+  1,1 s (Faktor ~18), Knotenzahlen bitgenau, Trie mit 5,2M Knoten sogar kleiner
+  als die alten Muster-Bitmasken. Auch der Stufenbau filtert damit schneller
+  (CheckAllowed läuft in CollectStart/SearchVariants/MergeGoals mit) - hohe
+  Steiner-Stufen bleiben so auch auf Muster-Explosions-Levels nutzbar.
 - Offen: Regel-Treffer auch im Blocker-Vergleich je Stufe aufschlüsseln.
 - Praxis-Messungen von Max (12.08.2026, Suche bis Tiefe ~100 bzw. ~62, Hash-Einträge):
   - Level 25291 (kompakt vollgestopft, Ziel ~472 Züge): Regeln zusätzlich zum
