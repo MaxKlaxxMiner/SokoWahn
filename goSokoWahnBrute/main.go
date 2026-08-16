@@ -19,12 +19,6 @@ import (
 )
 
 func main() {
-	// GC-Headroom drosseln: der Heap besteht fast nur aus wenigen Riesen-Slices
-	// (Hashtabellen, Suchlisten-Puffer) mit kaum Pointern - der Default (100 = Ziel
-	// 2x Live-Heap) verdoppelt sonst nur nutzlos den RAM-Verbrauch, 5% Reserve
-	// reichen für das Kleinzeug locker
-	debug.SetGCPercent(5)
-
 	// echte Läufe starten mit groß vorbelegten Stellungs-Tabellen (2x 2,68 GB) -
 	// Tests und Bibliotheks-Nutzung behalten den kleinen Default der Factory
 	solver.TableFactory = solver.NewCompactTableLarge
@@ -56,7 +50,15 @@ func main() {
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
 	debugPort := flag.Int("debugport", 0, "Diagnose: pprof-HTTP-Server auf localhost:PORT (0 = aus); bei einem Hänger liefert curl localhost:PORT/debug/pprof/goroutine?debug=2 alle Stacks und .../heap?debug=1 die Speicher-Verteilung, ohne den Prozess zu beenden")
+	gcPercent := flag.Int("gc", 5, "GC-Reserve in Prozent des Live-Heaps (Go GOGC): 5 = sparsam (Standard, kaum Overhead bei den Riesen-Slices der Suche), 100 = Go-Default mit weniger GC-Läufen - auf Servern mit reichlich RAM eine Option")
 	flag.Parse()
+
+	// GC-Headroom drosseln: der Heap besteht fast nur aus wenigen Riesen-Slices
+	// (Hashtabellen, Suchlisten-Puffer) mit kaum Pointern - der Go-Default (100 =
+	// Ziel 2x Live-Heap) verdoppelt sonst nur nutzlos den RAM-Verbrauch, 5% Reserve
+	// reichen für das Kleinzeug locker. Per -gc übersteuerbar (z.B. -gc 100 auf
+	// Servern, wo der Speicher egal ist und seltenere GC-Läufe Tempo sparen)
+	debug.SetGCPercent(*gcPercent)
 
 	// Diagnose-Server (nur localhost): läuft in eigener Goroutine und funktioniert
 	// auch dann noch, wenn der Haupt-Loop hängt - genau dafür ist er da
