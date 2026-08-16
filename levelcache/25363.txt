@@ -1,0 +1,20 @@
+    #######
+   #       #
+  # $$$ # # #
+ #  $ $ #... #
+ # $$ $ #.#. #
+#   $ ## .#.$ #
+#  ## ......  #
+ #  #$.#.###$#
+ # $  .#.#   #
+ # $ #... $ ##
+  # $ ###$  #
+  #  $ $ $ ##
+   #   @   #
+    #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=25363
+catalog: AC Smileys
+name: smileys  2.85
+number: 85/457
+bestmoves: 1016

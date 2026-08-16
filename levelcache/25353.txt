@@ -1,0 +1,20 @@
+    #######
+   # .  $  #
+  #  .# $   #
+ #  #.### $  #
+ # $#.#  ##$ #
+#   #.#   $   #
+#  $#.# $##$  #
+ #  #.   #   #
+ # $ .#  #   #
+ #  #.##$$ # #
+  # #.#  # ##
+  # #.#     #
+   ##.# @# #
+    #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=25353
+catalog: AC Smileys
+name: smileys  2.75
+number: 75/457
+bestmoves: 643

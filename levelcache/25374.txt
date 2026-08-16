@@ -1,0 +1,20 @@
+    #######
+   #       #
+  # # $ $ ###
+ #  # $ $@ # #
+ #   #### #  #
+## #   .* $* ##
+##  *#.##.#  ##
+ #   #.##.#* #
+ # #*$ ..    #
+ #   # ##$#  #
+  # #  * * ##
+  ##  #  #  #
+   ##      #
+    #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=25374
+catalog: AC Smileys
+name: smileys  2.96
+number: 96/457
+bestmoves: 313
