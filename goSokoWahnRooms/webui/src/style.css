@@ -229,3 +229,10 @@ main {
   padding: 8px 12px;
   max-width: 50%;
 }
+
+/* dieselbe Box als Erfolgs-/Status-Meldung (Merge fertig, Validate ok) */
+#error.ok {
+  background: #1e4620;
+  border-color: #3a3;
+  color: #ddffdd;
+}

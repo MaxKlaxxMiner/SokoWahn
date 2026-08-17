@@ -23,16 +23,16 @@
     <div id="variantsList"></div>
   </section>
   <section id="fieldCol">
-    <div id="canvasWrap">
+    <div id="canvasWrap" title="Linksklick: Raum zur Auswahl hinzufügen (halten und ziehen: mehrere) - Rechtsklick: abwählen">
       <canvas id="field"></canvas>
     </div>
     <div id="info">Effort: …</div>
   </section>
   <aside id="buttonsCol">
-    <button disabled title="folgt mit M3">Merge Rooms</button>
+    <button id="mergeBtn" disabled title="gewählte Räume verschmelzen (mindestens 2 verbundene auswählen)">Merge Rooms</button>
     <button disabled title="folgt mit M4">Optimize</button>
     <button disabled title="folgt später">Filter</button>
-    <button disabled title="folgt mit M3">Validate</button>
+    <button id="validateBtn" title="Konsistenz des Netzwerks prüfen">Validate</button>
     <button disabled title="folgt später">Solver...</button>
   </aside>
 </main>

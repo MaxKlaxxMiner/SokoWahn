@@ -19,7 +19,8 @@ const COLOR_WALL_LIGHT = '#888888'; // Lichtkante oben/links
 const COLOR_WALL_DARK = '#444444'; // Schattenkante unten/rechts
 const COLOR_GOAL = '#888833'; // Zielfeld-Quadrat
 const COLOR_ROOM_BACK = '#003366'; // Kontur aller Räume
-const COLOR_ROOM_SEL = '#0080ff'; // Kontur des gewählten Raums
+const COLOR_ROOM_SEL = '#0080ff'; // Kontur der ausgewählten Räume
+const COLOR_ROOM_ACTIVE = '#66ccff'; // Kontur des aktiven Raums (Listen folgen ihm)
 const COLOR_ROOM_STATE = '#ffff00'; // Kontur bei gewähltem Zustand/Variante
 const HIGHLIGHT_SIZE = 0.7; // Größe der Kontur-Ketten (wie C#)
 
@@ -59,8 +60,10 @@ export class FieldCanvas {
   private oy = 0;
   private resizeObserver: ResizeObserver | null = null;
 
-  private selectedRoom = -1;
-  private portals: Portal[] = []; // eingehende Portale des gewählten Raums
+  private selection = new Set<number>(); // ausgewählte Räume (Einfüge-Reihenfolge bleibt erhalten)
+  private active = -1; // aktiver Raum (zuletzt hinzugefügt) - die Listen folgen ihm
+  private dragMode: 'add' | 'remove' | null = null; // laufende Maus-Geste
+  private portals: Portal[] = []; // eingehende Portale des aktiven Raums
   private stateBoxes: number[] | null = null; // Kisten des gewählten Zustands (Feldindizes)
   private playerHidden = false; // Zustand gewählt -> Spieler versteckt (wie C#)
   private variant: VariantPreview | null = null;
@@ -70,22 +73,64 @@ export class FieldCanvas {
   private floorPattern: CanvasPattern | null = null;
   private wallPattern: CanvasPattern | null = null;
 
-  onRoomClick: ((room: number) => void) | null = null;
+  // Auswahl geändert: aktuelle Auswahl (Einfüge-Reihenfolge) + aktiver Raum (-1 = keiner)
+  onSelectionChange: ((selection: number[], active: number) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.makePatterns();
 
-    canvas.addEventListener('click', ev => {
-      if (!this.field || this.cell <= 0) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((ev.clientX - rect.left - this.ox) / this.cell);
-      const y = Math.floor((ev.clientY - rect.top - this.oy) / this.cell);
-      if (x < 0 || y < 0 || x >= this.field.width || y >= this.field.height) return;
-      const wpos = this.gridWpos[y * this.field.width + x];
-      if (wpos >= 0 && this.onRoomClick) this.onRoomClick(this.roomOf[wpos]);
+    // Raumselektion wie im C#-FormDebugger: Linksklick fügt den Raum zur Auswahl
+    // hinzu, gedrückt halten und ziehen fügt mehrere hinzu, Rechtsklick entfernt
+    canvas.addEventListener('mousedown', ev => {
+      if (ev.button !== 0 && ev.button !== 2) return;
+      this.dragMode = ev.button === 0 ? 'add' : 'remove';
+      this.applyDrag(this.roomAt(ev));
+      ev.preventDefault();
     });
+    canvas.addEventListener('mousemove', ev => {
+      if (this.dragMode) this.applyDrag(this.roomAt(ev));
+    });
+    window.addEventListener('mouseup', () => (this.dragMode = null));
+    canvas.addEventListener('contextmenu', ev => ev.preventDefault());
+  }
+
+  // Raum unter dem Mauszeiger (-1 = Wand/außerhalb)
+  private roomAt(ev: MouseEvent): number {
+    if (!this.field || this.cell <= 0) return -1;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = Math.floor((ev.clientX - rect.left - this.ox) / this.cell);
+    const y = Math.floor((ev.clientY - rect.top - this.oy) / this.cell);
+    if (x < 0 || y < 0 || x >= this.field.width || y >= this.field.height) return -1;
+    const wpos = this.gridWpos[y * this.field.width + x];
+    return wpos >= 0 ? this.roomOf[wpos] : -1;
+  }
+
+  // wendet die laufende Maus-Geste auf einen Raum an und meldet Änderungen
+  private applyDrag(room: number): void {
+    if (room < 0) return;
+    if (this.dragMode === 'add') {
+      if (this.selection.has(room) && this.active === room) return; // nichts Neues
+      this.selection.add(room);
+      this.active = room;
+    } else {
+      if (!this.selection.has(room)) return;
+      this.selection.delete(room);
+      if (this.active === room) {
+        this.active = -1;
+        for (const r of this.selection) this.active = r; // letzter verbleibender wird aktiv
+      }
+    }
+    this.portals = [];
+    this.resetPreview();
+    this.draw();
+    this.onSelectionChange?.([...this.selection], this.active);
+  }
+
+  // aktuelle Auswahl in Einfüge-Reihenfolge
+  getSelection(): number[] {
+    return [...this.selection];
   }
 
   // Hatch-Muster des Originals nachgebildet (GDI+ zeichnet Hatches in Gerätepixeln,
@@ -143,15 +188,25 @@ export class FieldCanvas {
   }
 
   clearSelection(): void {
-    this.selectedRoom = -1;
+    this.selection.clear();
+    this.active = -1;
     this.portals = [];
     this.resetPreview();
   }
 
-  selectRoom(index: number, portals: Portal[]): void {
-    this.selectedRoom = index;
-    this.portals = portals;
+  // ersetzt die Auswahl komplett (z.B. Klick in der Raum-Liste), ohne
+  // onSelectionChange auszulösen - der Aufrufer weiß selbst Bescheid
+  setSelection(rooms: number[], active: number): void {
+    this.selection = new Set(rooms);
+    this.active = active;
+    this.portals = [];
     this.resetPreview();
+    this.draw();
+  }
+
+  // setzt die Portal-Pfeile des aktiven Raums (kommen asynchron vom Raum-Detail)
+  setActivePortals(portals: Portal[]): void {
+    this.portals = portals;
     this.draw();
   }
 
@@ -278,14 +333,19 @@ export class FieldCanvas {
       ctx.strokeRect((cell.x + 0.5 - GOAL_SIZE / 2) * c, (cell.y + 0.5 - GOAL_SIZE / 2) * c, GOAL_SIZE * c, GOAL_SIZE * c);
     }
 
-    // --- Raum-Konturen: alle dunkelblau, der gewählte leuchtet (wie C#-Highlights) ---
+    // --- Raum-Konturen: alle dunkelblau, die Auswahl leuchtet, der aktive
+    // Raum obenauf (gelb, sobald ein Zustand/eine Variante gewählt ist) ---
     for (const [room, fields] of this.roomFields) {
-      if (room === this.selectedRoom) continue; // gewählter Raum kommt zuletzt (obenauf)
+      if (this.selection.has(room)) continue; // Auswahl kommt zuletzt (obenauf)
       this.drawChain(fields, COLOR_ROOM_BACK);
     }
-    if (this.selectedRoom >= 0) {
-      const color = this.stateBoxes !== null || this.variant ? COLOR_ROOM_STATE : COLOR_ROOM_SEL;
-      this.drawChain(this.roomFields.get(this.selectedRoom) ?? [], color);
+    for (const room of this.selection) {
+      if (room === this.active) continue;
+      this.drawChain(this.roomFields.get(room) ?? [], COLOR_ROOM_SEL);
+    }
+    if (this.active >= 0) {
+      const color = this.stateBoxes !== null || this.variant ? COLOR_ROOM_STATE : COLOR_ROOM_ACTIVE;
+      this.drawChain(this.roomFields.get(this.active) ?? [], color);
     }
 
     // --- Kisten und Spieler (Startaufstellung, Zustand oder Animations-Schritt) ---

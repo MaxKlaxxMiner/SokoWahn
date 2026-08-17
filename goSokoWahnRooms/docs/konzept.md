@@ -185,9 +185,10 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
 
 ### Ansichten (an FormDebugger angelehnt)
 
-- **Spielfeld-Canvas**: Räume als farbige Flächen (gewählter Raum hervorgehoben),
-  Portale sichtbar, Klick auf Feld wählt den Raum. Zweiter Raum für Merge per
-  Strg-Klick/zweiter Auswahl. Zoom.
+- **Spielfeld-Canvas**: Räume als farbige Flächen (gewählte Räume hervorgehoben),
+  Portale sichtbar. Selektion wie im Original-FormDebugger: Linksklick fügt den
+  Raum zur Auswahl hinzu, Linksklick gedrückt halten und ziehen fügt mehrere
+  Räume hinzu, Rechtsklick deselektiert. Zoom.
 - **Raum-Liste**: Index, Felderzahl, Zustände, Varianten, Portale, Kennfeld.
 - **Zustands-Liste** des gewählten Raums; gewählter Zustand setzt die Kisten
   auf dem Canvas.
@@ -199,14 +200,26 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
 
 ## 7. Meilensteine
 
-- **M1 - Gründung + Init**: Modul, Kopien (soko/crc64/tools), Network-Aufbau mit
-  1-Feld-Räumen: Portale, Zustände, Startvarianten, Portalvarianten, BoxSwap,
+- ERLEDIGT: **M1 - Gründung + Init**: Modul, Kopien (soko/crc64/tools), Network-Aufbau
+  mit 1-Feld-Räumen: Portale, Zustände, Startvarianten, Portalvarianten, BoxSwap,
   Single-Box-Scan, Validate. Unit-Tests auf kleinen Levels.
-- **M2 - GUI read-only**: Server + Frontend: Canvas, Raum-/Zustands-/Varianten-
+- ERLEDIGT: **M2 - GUI read-only**: Server + Frontend: Canvas, Raum-/Zustands-/Varianten-
   Listen mit Paging, Level laden. Ab hier kann Max sichtprüfen.
-- **M3 - Manueller Merge**: Merge zweier gewählter Räume (6 Schritte wie C#:
-  MixStates, StartVariants, PortalVariants, UpdatePortals, OptimizeStates,
-  UpdateRooms), live in der GUI, Validate danach.
+- ERLEDIGT: **M3 - Manueller Merge** (2026-08-17): Merge in 6 Schritten wie C#
+  (MixStates, StartVariants, PortalVariants, UpdatePortals, OptimizeStates,
+  UpdateRooms), Validate nach jedem Merge. Abweichungen vom Original: die
+  Best-Moves-Suche arbeitet mit orientierungsfesten Aufgaben (state1/state2 fest
+  an Raum 1/2 gebunden) statt gespiegelter Parameterlisten, und renewStates zählt
+  StartVariantCount neu (C#-Bug: OptimizeTools.RenewStates vergaß das, wenn eine
+  Start-Variante ihren Zielzustand verlor). Netzwerk-API: MergeRooms (Paar) und
+  MergeSelection (Auswahl, merged paarweise solange verbunden). GUI: Selektion
+  wie im Original-FormDebugger (Linksklick/Ziehen fügt hinzu, Rechtsklick
+  entfernt), Merge-Button (synchron unter Schreibsperre), Validate-Button,
+  Effort-Produkt der Auswahl. Tests: Voll-Merge = perfektes Spiel (Mini/TwoPush:
+  genau 1 Variante mit optimaler Move-Zahl; TwoBox gegen Brute-Orakel 9 Züge),
+  Merge-Reihenfolge-Unabhängigkeit, Abbruch lässt das Netzwerk unverändert.
+  Noch offen (folgt mit M4/M5): SSE-Livestatus und Abbruch-Button in der GUI -
+  der Kern hat den info-Callback samt gefahrlosem Abbruch vor Schritt 4 bereits.
 - **M4 - Deadlock-Scan**: Optimize-Schritt (Reverse-Map, Scan vorwärts/rückwärts,
   unbenutzte Varianten/Zustände entfernen).
 - **M5 - Automerge**: Aufwands-Schätzung + Kachel-Pattern wie im C#-FormDebugger,

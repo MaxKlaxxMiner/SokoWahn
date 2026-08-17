@@ -302,6 +302,49 @@ func (s *Server) handleStates(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, pageJSON{Total: total, Offset: offset, Items: items})
 }
 
+// verschmilzt die übergebene Raum-Auswahl (M3): solange zwei ausgewählte Räume
+// direkt verbunden sind, wird paarweise gemergt; läuft synchron unter der
+// Schreibsperre und validiert nach jedem Merge
+func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Rooms []uint32 `json:"rooms"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
+		return
+	}
+	n, _ := s.snapshot()
+	if len(req.Rooms) < 2 {
+		writeError(w, http.StatusBadRequest, "mindestens zwei Räume auswählen")
+		return
+	}
+	for _, idx := range req.Rooms {
+		if int(idx) >= len(n.Rooms) {
+			writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
+			return
+		}
+	}
+	merges, err := n.MergeSelection(req.Rooms, nil)
+	if err != nil {
+		// Merge- oder Validate-Fehler: Zustand des Netzwerks ist verdächtig,
+		// der Fehler muss sichtbar werden (Konzept: Validate nach jedem Schritt)
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, map[string]any{"merges": merges, "rooms": len(n.Rooms)})
+}
+
+// prüft die Konsistenz des Netzwerks auf Anforderung (Validate-Button);
+// mutiert nichts und läuft daher unter der Lesesperre
+func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {
+	n, _ := s.snapshot()
+	if err := n.Validate(true); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
 // Varianten eines Raums; optional gefiltert nach eingehendem Portal + Zustand
 // (beide nur gemeinsam - der Filter läuft über die Span-Verzeichnisse der Portale)
 func (s *Server) handleVariants(w http.ResponseWriter, r *http.Request) {

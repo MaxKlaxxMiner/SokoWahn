@@ -86,8 +86,7 @@ export interface Page<T> {
   items: T[];
 }
 
-export async function getJSON<T>(url: string): Promise<T> {
-  const resp = await fetch(url);
+async function decode<T>(resp: Response): Promise<T> {
   if (!resp.ok) {
     let msg = resp.status + ' ' + resp.statusText;
     try {
@@ -99,4 +98,18 @@ export async function getJSON<T>(url: string): Promise<T> {
     throw new Error(msg);
   }
   return resp.json() as Promise<T>;
+}
+
+export async function getJSON<T>(url: string): Promise<T> {
+  return decode(await fetch(url));
+}
+
+export async function postJSON<T>(url: string, body: unknown): Promise<T> {
+  return decode(
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  );
 }

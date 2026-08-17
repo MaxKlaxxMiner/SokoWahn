@@ -52,6 +52,7 @@ namespace SokoWahnWin
          ########
     ");
 
+    // entspricht Level 202 von game-sokoban.com (aenigma "soko 03", 83 Moves optimal)
     static readonly SokoField FieldTest4 = new SokoField(@"
            #####
           ##   #
@@ -257,7 +258,8 @@ namespace SokoWahnWin
     /// <returns>fertige Test-Räume</returns>
     public static RoomNetwork CreateTestRooms()
     {
-      var roomNetwork = new RoomNetwork(FieldRunner);
+      var roomNetwork = new RoomNetwork(FieldTest4); // Level 202, wie der Go-Port zum Vergleichen
+      //var roomNetwork = new RoomNetwork(FieldRunner);
 
       //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
       //roomNetwork.MergeRooms(roomNetwork.rooms[0], roomNetwork.rooms[1]);
@@ -291,7 +293,9 @@ namespace SokoWahnWin
     /// <summary>
     /// Konstruktor
     /// </summary>
-    public FormDebugger()
+    /// <param name="levelField">optionales Spielfeld (z.B. per Kommandozeile geladen);
+    /// null = einkompilierte Test-Räume verwenden</param>
+    public FormDebugger(SokoField levelField = null)
     {
       InitializeComponent();
       splitContainer1_Resize(splitContainer1, null);
@@ -312,7 +316,9 @@ namespace SokoWahnWin
 
       //roomNetwork = new RoomNetwork(FieldBuggy);       // Spielfeld um Bugs zu lösen
 
-      roomNetwork = CreateTestRooms();                 // Testlevel generieren
+      roomNetwork = levelField != null
+        ? new RoomNetwork(levelField)                  // per Kommandozeile geladenes Level
+        : CreateTestRooms();                           // Testlevel generieren
 
       displaySettings = new DisplaySettings(roomNetwork.field);
     }

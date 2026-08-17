@@ -1,0 +1,580 @@
+package rooms
+
+import (
+	"fmt"
+	"slices"
+
+	"goSokoWahnRooms/crc64"
+	"goSokoWahnRooms/soko"
+)
+
+// Merger verschmilzt zwei benachbarte Räume zu einem neuen Raum (M3).
+// C#-Vorbild: SokoWahnLib/Rooms/Merger/RoomMerger - Konzept-Port, kein bitgenauer
+// Nachbau: die Suche arbeitet hier mit orientierungsfesten Aufgaben (state1/state2
+// bleiben immer an Raum 1/Raum 2 gebunden) statt der gespiegelten Parameterlisten
+// des Originals. Ablauf in 6 Schritten, siehe Network.MergeRooms.
+type Merger struct {
+	network *Network
+	room1   *Room // Raum mit dem kleineren Kennfeld (Fields[0])
+	room2   *Room
+	NewRoom *Room
+
+	mapOldIncoming []*Portal // neuer Portal-Index -> altes äußeres eingehendes Portal
+	mapPortal1     []uint32  // Incoming-Index Raum 1 -> neuer Portal-Index (NoPortal = inneres Portal)
+	mapPortal2     []uint32  // Incoming-Index Raum 2 -> neuer Portal-Index (NoPortal = inneres Portal)
+	state1Mul      uint64    // Zustands-Multiplikator: kombiniert = s1 * state1Mul + s2
+}
+
+// bereitet das Verschmelzen vor: prüft die Räume, legt den neuen Raum mit seinen
+// äußeren Portalen an und baut die Portal-Index-Mappings auf
+func NewMerger(n *Network, room1, room2 *Room) (*Merger, error) {
+	if room1 == nil || room2 == nil {
+		return nil, fmt.Errorf("merge: room is nil")
+	}
+	if room1 == room2 {
+		return nil, fmt.Errorf("merge: room1 == room2")
+	}
+	if int(room1.Index) >= len(n.Rooms) || n.Rooms[room1.Index] != room1 {
+		return nil, fmt.Errorf("merge: invalid room1")
+	}
+	if int(room2.Index) >= len(n.Rooms) || n.Rooms[room2.Index] != room2 {
+		return nil, fmt.Errorf("merge: invalid room2")
+	}
+	connected := false
+	for _, op := range room1.Outgoing {
+		if op.ToRoom == room2 {
+			connected = true
+			break
+		}
+	}
+	if !connected {
+		return nil, fmt.Errorf("merge: rooms %d and %d are not connected", room1.Index, room2.Index)
+	}
+
+	// Raum mit dem kleineren Kennfeld wird Raum 1 (stabile Reihenfolge wie im C#)
+	if room1.Fields[0] > room2.Fields[0] {
+		room1, room2 = room2, room1
+	}
+
+	m := &Merger{
+		network:   n,
+		room1:     room1,
+		room2:     room2,
+		state1Mul: room2.States.Count(),
+	}
+
+	// äußere eingehende Portale beider Räume (innere lösen sich beim Verschmelzen auf)
+	for _, ip := range room1.Incoming {
+		if ip.FromRoom != room2 {
+			m.mapOldIncoming = append(m.mapOldIncoming, ip)
+		}
+	}
+	for _, ip := range room2.Incoming {
+		if ip.FromRoom != room1 {
+			m.mapOldIncoming = append(m.mapOldIncoming, ip)
+		}
+	}
+
+	m.NewRoom = &Room{
+		Index:      room1.Index, // endgültig erst in Step6UpdateRooms
+		Fields:     mergeSortedWpos(room1.Fields, room2.Fields),
+		Goals:      mergeSortedWpos(room1.Goals, room2.Goals),
+		StartBoxes: mergeSortedWpos(room1.StartBoxes, room2.StartBoxes),
+		MaxBoxes:   room1.MaxBoxes,
+		States:     NewStateList(),
+		Variants:   NewVariantList(),
+	}
+
+	// neue eingehende Portale erstellen und Mappings befüllen
+	m.mapPortal1 = make([]uint32, len(room1.Incoming))
+	m.mapPortal2 = make([]uint32, len(room2.Incoming))
+	for i := range m.mapPortal1 {
+		m.mapPortal1[i] = NoPortal
+	}
+	for i := range m.mapPortal2 {
+		m.mapPortal2[i] = NoPortal
+	}
+	m.NewRoom.Incoming = make([]*Portal, len(m.mapOldIncoming))
+	m.NewRoom.Outgoing = make([]*Portal, len(m.mapOldIncoming)) // Verlinkung in Step4
+	for i, old := range m.mapOldIncoming {
+		if old.ToRoom == room1 {
+			m.mapPortal1[old.Index] = uint32(i)
+		} else {
+			m.mapPortal2[old.Index] = uint32(i)
+		}
+		m.NewRoom.Incoming[i] = &Portal{
+			From:         old.From,
+			To:           old.To,
+			FromRoom:     old.FromRoom,
+			ToRoom:       m.NewRoom,
+			Index:        uint32(i),
+			Dir:          old.Dir,
+			BlockedBox:   old.BlockedBox,
+			BoxSwap:      map[uint64]uint64{},
+			VariantSpans: map[uint64]Span{},
+		}
+	}
+
+	return m, nil
+}
+
+// vereinigt zwei aufsteigend sortierte, disjunkte Positionslisten
+func mergeSortedWpos(a, b []soko.Wpos) []soko.Wpos {
+	result := make([]soko.Wpos, 0, len(a)+len(b))
+	result = append(append(result, a...), b...)
+	slices.Sort(result)
+	return result
+}
+
+// Schritt 1: Zustands-Kreuzprodukt beider Räume aufbauen.
+// Die kombinierte ID ist rechenbar (s1*state1Mul+s2), damit bleibt Zustand 0
+// der gelöste Endzustand (0*mul+0 = 0) und der Startzustand direkt ableitbar.
+func (m *Merger) Step1MixStates() {
+	count1, count2 := m.room1.States.Count(), m.room2.States.Count()
+	for s1 := uint64(0); s1 < count1; s1++ {
+		boxes1 := m.room1.States.Get(s1)
+		for s2 := uint64(0); s2 < count2; s2++ {
+			id := m.NewRoom.States.Add(mergeSortedWpos(boxes1, m.room2.States.Get(s2)))
+			if id != s1*m.state1Mul+s2 {
+				panic("merge: state id mismatch")
+			}
+		}
+	}
+	m.NewRoom.StartState = m.room1.StartState*m.state1Mul + m.room2.StartState
+}
+
+// Schritt 2: Startvarianten verschmelzen (nur wenn der Spieler in einem der
+// beiden Räume startet)
+func (m *Merger) Step2StartVariants() {
+	if m.room1.StartVariantCount == 0 && m.room2.StartVariantCount == 0 {
+		return
+	}
+	if m.room1.StartVariantCount > 0 && m.room2.StartVariantCount > 0 {
+		panic("merge: both rooms have start variants")
+	}
+	startRoom, side1 := m.room1, true
+	if m.room2.StartVariantCount > 0 {
+		startRoom, side1 = m.room2, false
+	}
+
+	search := newMergeSearch(m)
+	for id := uint64(0); id < startRoom.StartVariantCount; id++ {
+		base := mergeTask{state1: m.room1.StartState, state2: m.room2.StartState}
+		search.follow(&base, startRoom.Variants.Get(id), side1)
+	}
+	search.run()
+	search.emit(m.NewRoom.StartState, nil, false, nil)
+}
+
+// Schritt 3: BoxSwaps und Varianten aller neuen Portale aufbauen. Je (Portal,
+// kombinierter Zustand) läuft eine Best-Moves-Suche über beide Teilräume.
+// info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab
+// (das Netzwerk ist bis hier noch unverändert).
+func (m *Merger) Step3PortalVariants(info func(string) bool) bool {
+	newStateCount := m.NewRoom.States.Count()
+	maxBoxes := int(m.NewRoom.MaxBoxes)
+
+	for pi, newPortal := range m.NewRoom.Incoming {
+		old := m.mapOldIncoming[pi]
+		toRoom1 := old.ToRoom == m.room1
+
+		// --- BoxSwaps: alte Swaps mit allen Zuständen des anderen Teilraums kombinieren ---
+		ownCount, otherCount := m.room1.States.Count(), m.room2.States.Count()
+		if !toRoom1 {
+			ownCount, otherCount = otherCount, ownCount
+		}
+		for sOwn := uint64(0); sOwn < ownCount; sOwn++ {
+			sOwnTo, ok := old.BoxSwap[sOwn]
+			if !ok {
+				continue
+			}
+			for sOther := uint64(0); sOther < otherCount; sOther++ {
+				var from, to uint64
+				if toRoom1 {
+					from, to = sOwn*m.state1Mul+sOther, sOwnTo*m.state1Mul+sOther
+				} else {
+					from, to = sOther*m.state1Mul+sOwn, sOther*m.state1Mul+sOwnTo
+				}
+				if m.NewRoom.States.BoxCount(to) > maxBoxes {
+					continue // mehr Kisten im Verbund, als insgesamt existieren
+				}
+				newPortal.AddBoxSwap(from, to)
+			}
+		}
+
+		// --- Varianten je kombiniertem Zustand ---
+		for state := uint64(0); state < newStateCount; state++ {
+			if info != nil && state&4095 == 0 {
+				if !info(fmt.Sprintf("portal %d/%d - state %d/%d", pi+1, len(m.NewRoom.Incoming), state, newStateCount)) {
+					return false
+				}
+			}
+			if m.NewRoom.States.BoxCount(state) > maxBoxes {
+				continue
+			}
+			s1, s2 := state/m.state1Mul, state%m.state1Mul
+			entryState := s1
+			if !toRoom1 {
+				entryState = s2
+			}
+			span := old.GetVariantSpan(entryState)
+			if span.Count == 0 {
+				continue
+			}
+			search := newMergeSearch(m)
+			for id := span.Start; id < span.Start+span.Count; id++ {
+				base := mergeTask{state1: s1, state2: s2}
+				search.follow(&base, old.ToRoom.Variants.Get(id), toRoom1)
+			}
+			search.run()
+			search.emit(state, old, toRoom1, newPortal)
+		}
+	}
+	return true
+}
+
+// Schritt 4: neue Portale mit den Nachbarräumen verlinken - ab hier ist der
+// neue Raum Teil des Netzwerks, die alten inneren Portale lösen sich auf
+func (m *Merger) Step4UpdatePortals() {
+	for i, ip := range m.NewRoom.Incoming {
+		op := m.mapOldIncoming[i].Opposite // Gegenportal = eingehendes Portal des Nachbarn
+		ip.Opposite = op
+		m.NewRoom.Outgoing[i] = op
+		op.Opposite = ip
+		op.FromRoom = m.NewRoom
+		op.ToRoom.Outgoing[op.Index] = ip
+	}
+}
+
+// Schritt 5: unbenutzte Zustände des neuen Raumes entfernen (samt Varianten,
+// deren Zielzustand wegfällt - Fixpunkt-Iteration, siehe optimize.go)
+func (m *Merger) Step5OptimizeStates() {
+	removeUnusedStates(m.NewRoom)
+}
+
+// Schritt 6: Raum-Liste des Netzwerks kompaktieren (Raum 1 wird ersetzt,
+// Raum 2 entfällt) und die Raum-Indizes neu vergeben
+func (m *Merger) Step6UpdateRooms() {
+	fill := uint32(0)
+	for _, room := range m.network.Rooms {
+		if room == m.room1 {
+			room = m.NewRoom
+		}
+		if room == m.room2 {
+			continue
+		}
+		room.Index = fill
+		m.network.Rooms[fill] = room
+		fill++
+	}
+	if int(fill)+1 != len(m.network.Rooms) {
+		panic("merge: room index error")
+	}
+	m.network.Rooms = m.network.Rooms[:fill]
+}
+
+// ---------- Best-Moves-Suche über beide Teilräume ----------
+
+// Zwischenstand der Suche: der Spieler hat zuletzt "variant" (im Teilraum side1
+// bzw. 2) abgeschlossen; deren PlayerPortal bestimmt, wie es weitergeht
+type mergeTask struct {
+	state1, state2 uint64       // Zustände von Raum 1 und Raum 2 (Orientierung fest)
+	boxes          []uint32     // bisher rausgeschobene Kisten (neue Portal-Indizes, sortiert)
+	moves          uint32       // Laufschritte insgesamt
+	pushes         uint32       // Kistenverschiebungen insgesamt
+	path           string       // zurückgelegter Pfad insgesamt
+	side1          bool         // variant gehört zu Raum 1 (sonst Raum 2)
+	variant        *VariantData // zuletzt verarbeitete Variante
+}
+
+// Dedup-Schlüssel der Aufgabe: gleiche Zustände + rausgeschobene Kisten +
+// gleicher Fortsetzungspunkt (Seite und Austritts-Portal) -> nur die Variante
+// mit den wenigsten Moves überlebt
+func (t *mergeTask) key() uint64 {
+	c := crc64.Start.UpdateUInt64(t.state1).UpdateUInt64(t.state2)
+	c = c.UpdateInt(len(t.boxes))
+	for _, b := range t.boxes {
+		c = c.UpdateUInt32(b)
+	}
+	return uint64(c.UpdateBool(t.side1).UpdateUInt32(t.variant.PlayerPortal))
+}
+
+type mergeSearch struct {
+	m     *Merger
+	best  map[uint64]uint32 // Aufgaben-Schlüssel -> beste bekannte Move-Zahl
+	tasks []mergeTask       // FIFO-Arbeitsliste (wächst beim Expandieren)
+
+	moveTasks []int // fertige reine Laufwege (Indizes in tasks)
+	pushTasks []int // fertige Varianten mit Kistenverschiebungen
+	endTasks  []int // fertige End-Varianten (Spieler bleibt drin, alles gelöst)
+}
+
+func newMergeSearch(m *Merger) *mergeSearch {
+	return &mergeSearch{m: m, best: map[uint64]uint32{}}
+}
+
+// hängt Variante v (des Teilraums side1) an eine Aufgabe an und nimmt das
+// Ergebnis auf, sofern es die beste bekannte Variante ihres Schlüssels ist
+func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
+	t := mergeTask{
+		state1: prev.state1,
+		state2: prev.state2,
+		moves:  prev.moves + v.Moves,
+		pushes: prev.pushes + v.Pushes,
+		path:   prev.path + v.Path,
+		side1:  side1,
+		variant: v,
+	}
+	if !s.m.resolveBoxes(&t, prev.boxes, v, side1) {
+		return // Variante ist im Verbund ungültig
+	}
+	k := t.key()
+	if bestMoves, ok := s.best[k]; ok && bestMoves <= t.moves {
+		return // eine bessere (oder gleich gute) Variante ist bereits bekannt
+	}
+	s.best[k] = t.moves
+	s.tasks = append(s.tasks, t)
+}
+
+// wendet die Kisten-Schübe einer Variante auf die Aufgabe an: Kisten durch innere
+// Portale lösen den BoxSwap des anderen Teilraums aus, Kisten durch äußere Portale
+// landen in der Liste der rausgeschobenen Kisten. false = Variante ungültig.
+func (m *Merger) resolveBoxes(t *mergeTask, oldBoxes []uint32, v *VariantData, side1 bool) bool {
+	roomCur, mapCur := m.room1, m.mapPortal1
+	stateCur, stateOther := &t.state1, &t.state2
+	if !side1 {
+		roomCur, mapCur = m.room2, m.mapPortal2
+		stateCur, stateOther = &t.state2, &t.state1
+	}
+	if *stateCur != v.OldState {
+		panic("merge: variant does not match room state")
+	}
+
+	if v.Pushes == 0 && len(oldBoxes) == 0 {
+		return true // reine Laufvariante ohne Vorgeschichte (OldState == NewState)
+	}
+
+	boxes := slices.Clone(oldBoxes)
+	for _, bp := range v.BoxPortals {
+		if newIdx := mapCur[bp]; newIdx == NoPortal {
+			// Kiste wandert durch ein inneres Portal in den anderen Teilraum
+			op := roomCur.Outgoing[bp]
+			next := op.GetBoxSwap(*stateOther)
+			if next == *stateOther {
+				return false // der andere Teilraum kann die Kiste nicht aufnehmen
+			}
+			*stateOther = next
+		} else {
+			if slices.Contains(boxes, newIdx) {
+				return false // zweite Kiste durch dasselbe äußere Portal
+			}
+			boxes = append(boxes, newIdx)
+		}
+	}
+
+	// Spieler will durch ein äußeres Portal raus, vor dem schon eine rausgeschobene
+	// Kiste liegt, die dort feststeckt (BlockedBox)? Dann käme er nicht durch.
+	if v.PlayerPortal != NoPortal {
+		if newIdx := mapCur[v.PlayerPortal]; newIdx != NoPortal &&
+			roomCur.Outgoing[v.PlayerPortal].BlockedBox && slices.Contains(boxes, newIdx) {
+			return false
+		}
+	}
+
+	*stateCur = v.NewState
+	slices.Sort(boxes)
+	t.boxes = boxes
+	return true
+}
+
+// arbeitet die Aufgabenliste ab: Austritt durch ein inneres Portal expandiert in
+// den anderen Teilraum, Austritt durch ein äußeres Portal (oder Spielende) macht
+// die Aufgabe zur fertigen Variante
+func (s *mergeSearch) run() {
+	for i := 0; i < len(s.tasks); i++ {
+		t := s.tasks[i] // Kopie: tasks kann beim Expandieren umziehen
+		if s.best[t.key()] != t.moves {
+			continue // von einer besseren Variante überholt
+		}
+
+		exit := t.variant.PlayerPortal
+		if exit == NoPortal {
+			// Spieler bleibt drin: gültiges Spielende nur, wenn beide Teilräume gelöst sind
+			if t.state1 == 0 && t.state2 == 0 {
+				s.endTasks = append(s.endTasks, i)
+			}
+			continue
+		}
+
+		roomCur, mapCur := s.m.room1, s.m.mapPortal1
+		otherRoom, otherState, otherSide1 := s.m.room2, t.state2, false
+		if !t.side1 {
+			roomCur, mapCur = s.m.room2, s.m.mapPortal2
+			otherRoom, otherState, otherSide1 = s.m.room1, t.state1, true
+		}
+
+		if mapCur[exit] != NoPortal {
+			// Austritt durch ein äußeres Portal -> fertige Variante
+			if t.pushes > 0 {
+				s.pushTasks = append(s.pushTasks, i)
+			} else {
+				s.moveTasks = append(s.moveTasks, i)
+			}
+			continue
+		}
+
+		// inneres Portal: im anderen Teilraum jede Anschluss-Variante verfolgen
+		span := roomCur.Outgoing[exit].GetVariantSpan(otherState)
+		for id := span.Start; id < span.Start+span.Count; id++ {
+			s.follow(&t, otherRoom.Variants.Get(id), otherSide1)
+		}
+	}
+}
+
+// gibt den neuen Portal-Index zurück, über den der Spieler den Verbund verlässt
+func (s *mergeSearch) mapExit(t *mergeTask) uint32 {
+	if t.side1 {
+		return s.m.mapPortal1[t.variant.PlayerPortal]
+	}
+	return s.m.mapPortal2[t.variant.PlayerPortal]
+}
+
+// trägt die fertigen Varianten in den neuen Raum ein (Reihenfolge: Laufwege,
+// Kisten-Varianten, End-Varianten - hält die Span-Invariante "Moves vor Pushes").
+// entry/entrySide1: eingehendes altes Portal samt Ziel-Teilraum (nil = Startvarianten),
+// newPortal: neues Portal fürs Span-Verzeichnis (nil = Startvarianten)
+func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, newPortal *Portal) {
+	add := func(t *mergeTask, playerPortal uint32, newState uint64) {
+		if uint64(len(t.path)) != uint64(t.moves) {
+			panic("merge: path length != moves")
+		}
+		id := s.m.NewRoom.Variants.Add(VariantData{
+			OldState:     startState,
+			NewState:     newState,
+			Moves:        t.moves,
+			Pushes:       t.pushes,
+			BoxPortals:   t.boxes,
+			PlayerPortal: playerPortal,
+			Path:         t.path,
+		})
+		if newPortal != nil {
+			newPortal.AddVariant(startState, id)
+		} else {
+			if id != s.m.NewRoom.StartVariantCount {
+				panic("merge: start variants must come first")
+			}
+			s.m.NewRoom.StartVariantCount++
+		}
+	}
+
+	// überholte Aufgaben überspringen (nur die beste je Schlüssel wird eingetragen)
+	isBest := func(t *mergeTask) bool { return s.best[t.key()] == t.moves }
+
+	for _, idx := range s.moveTasks {
+		t := &s.tasks[idx]
+		if !isBest(t) {
+			continue
+		}
+		// sinnloser Rückweg: reiner Laufweg zurück durch das Eintritts-Portal
+		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index {
+			continue
+		}
+		add(t, s.mapExit(t), startState)
+	}
+
+	for _, idx := range s.pushTasks {
+		t := &s.tasks[idx]
+		if !isBest(t) {
+			continue
+		}
+		endState := t.state1*s.m.state1Mul + t.state2
+		// sinnloser Rückweg mit folgenlosen Kistenverschiebungen
+		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index && endState == startState {
+			continue
+		}
+		add(t, s.mapExit(t), endState)
+	}
+
+	for _, idx := range s.endTasks {
+		t := &s.tasks[idx]
+		if !isBest(t) {
+			continue
+		}
+		if t.state1 != 0 || t.state2 != 0 {
+			panic("merge: end variant without solved state")
+		}
+		add(t, NoPortal, 0)
+	}
+}
+
+// ---------- öffentliche Einstiege am Netzwerk ----------
+
+// MergeRooms verschmilzt zwei direkt verbundene Räume zu einem neuen Raum
+// (C#-Vorbild: RoomNetwork.MergeRooms) und validiert danach das ganze Netzwerk.
+// info (optional) bekommt Fortschritts-Meldungen; liefert der Callback false,
+// wird abgebrochen (Rückgabe nil, nil) - das Netzwerk bleibt dann unverändert,
+// weil erst Schritt 4 die Verlinkungen anfasst.
+func (n *Network) MergeRooms(room1, room2 *Room, info func(string) bool) (*Room, error) {
+	m, err := NewMerger(n, room1, room2)
+	if err != nil {
+		return nil, err
+	}
+	m.Step1MixStates()
+	m.Step2StartVariants()
+	if !m.Step3PortalVariants(info) {
+		return nil, nil // abgebrochen, Netzwerk unverändert
+	}
+	m.Step4UpdatePortals()
+	m.Step5OptimizeStates()
+	m.Step6UpdateRooms()
+	if err := n.Validate(true); err != nil {
+		return nil, fmt.Errorf("validate after merge: %w", err)
+	}
+	return m.NewRoom, nil
+}
+
+// MergeSelection verschmilzt eine Raum-Auswahl: solange zwei ausgewählte Räume
+// direkt verbunden sind, wird (in Index-Reihenfolge) paarweise gemergt. Nicht
+// verbundene Reste bleiben stehen. Liefert die Anzahl der ausgeführten Merges.
+func (n *Network) MergeSelection(indices []uint32, info func(string) bool) (int, error) {
+	selected := map[*Room]bool{}
+	for _, idx := range indices {
+		if int(idx) >= len(n.Rooms) {
+			return 0, fmt.Errorf("merge: invalid room index %d", idx)
+		}
+		selected[n.Rooms[idx]] = true
+	}
+
+	merges := 0
+	for {
+		var a, b *Room
+		for _, room := range n.Rooms {
+			if !selected[room] {
+				continue
+			}
+			for _, op := range room.Outgoing {
+				if selected[op.ToRoom] {
+					a, b = room, op.ToRoom
+					break
+				}
+			}
+			if a != nil {
+				break
+			}
+		}
+		if a == nil {
+			return merges, nil // kein verbundenes Paar mehr in der Auswahl
+		}
+		delete(selected, a)
+		delete(selected, b)
+		merged, err := n.MergeRooms(a, b, info)
+		if err != nil {
+			return merges, err
+		}
+		if merged == nil {
+			return merges, nil // abgebrochen
+		}
+		selected[merged] = true
+		merges++
+	}
+}

@@ -1,5 +1,5 @@
 // goSokoWahnRooms - Rooms-Framework (Nachbau des C#-Raum-/Portal-Konzepts).
-// Konzept siehe docs/konzept.md. Aktueller Stand: M2 (Debug-GUI read-only).
+// Konzept siehe docs/konzept.md. Aktueller Stand: M3 (manueller Merge in der GUI).
 //
 // Aufruf: goSokoWahnRooms.exe [flags] [level.txt | level-nummer | game-sokoban.com-URL]
 // (ohne Level-Argument: eingebautes Vanilla-Level; Web-Levels landen im geteilten

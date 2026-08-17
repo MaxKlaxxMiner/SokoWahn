@@ -30,13 +30,15 @@ func New(network *rooms.Network, title string) *Server {
 	s := &Server{network: network, title: title}
 
 	s.mux = http.NewServeMux()
-	s.mux.HandleFunc("GET /api/summary", s.handleSummary)
-	s.mux.HandleFunc("GET /api/field", s.handleField)
-	s.mux.HandleFunc("GET /api/map", s.handleMap)
-	s.mux.HandleFunc("GET /api/rooms", s.handleRooms)
-	s.mux.HandleFunc("GET /api/rooms/{index}", s.handleRoom)
-	s.mux.HandleFunc("GET /api/rooms/{index}/states", s.handleStates)
-	s.mux.HandleFunc("GET /api/rooms/{index}/variants", s.handleVariants)
+	s.mux.HandleFunc("GET /api/summary", s.read(s.handleSummary))
+	s.mux.HandleFunc("GET /api/field", s.read(s.handleField))
+	s.mux.HandleFunc("GET /api/map", s.read(s.handleMap))
+	s.mux.HandleFunc("GET /api/rooms", s.read(s.handleRooms))
+	s.mux.HandleFunc("GET /api/rooms/{index}", s.read(s.handleRoom))
+	s.mux.HandleFunc("GET /api/rooms/{index}/states", s.read(s.handleStates))
+	s.mux.HandleFunc("GET /api/rooms/{index}/variants", s.read(s.handleVariants))
+	s.mux.HandleFunc("POST /api/merge", s.write(s.handleMerge))
+	s.mux.HandleFunc("POST /api/validate", s.read(s.handleValidate))
 
 	static, err := fs.Sub(staticFS, "static")
 	if err != nil {
@@ -59,11 +61,27 @@ func (s *Server) SetNetwork(network *rooms.Network, title string) {
 	s.title = title
 }
 
-// liefert Netzwerk und Titel unter Lesesperre (Handler arbeiten mit dem Schnappschuss
-// weiter - das Netzwerk selbst wird nur per SetNetwork komplett ersetzt, nie mutiert;
-// sobald M3 mutierende Aktionen bringt, wandert die Sperre um die ganze Anfrage)
+// kapselt einen Handler unter der Lesesperre: das Netzwerk bleibt für die ganze
+// Anfrage stabil, während mutierende Aktionen (Merge & Co.) exklusiv laufen
+func (s *Server) read(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		h(w, r)
+	}
+}
+
+// kapselt einen mutierenden Handler unter der Schreibsperre
+func (s *Server) write(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		h(w, r)
+	}
+}
+
+// liefert Netzwerk und Titel; die Aufrufer laufen bereits unter der
+// read-/write-Sperre der Anfrage
 func (s *Server) snapshot() (*rooms.Network, string) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	return s.network, s.title
 }

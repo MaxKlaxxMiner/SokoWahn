@@ -16,6 +16,7 @@ import {
   Summary,
   VariantItem,
   getJSON,
+  postJSON,
 } from './api';
 import { VirtualList } from './vlist';
 import { AnimFrame, FieldCanvas, OPPOSITE } from './canvas';
@@ -46,34 +47,144 @@ let variantsList: VirtualList<VRow>;
 let currentRoom: RoomDetail | null = null;
 let currentState: StateItem | null = null;
 let variantsFetch: ((offset: number, limit: number) => Promise<Page<VRow>>) | null = null;
+let networkEffort = ''; // Effort des ganzen Netzwerks (Anzeige ohne Auswahl)
+let mergeBusy = false;
+let selectionGen = 0; // entwertet überholte Auswahl-Berechnungen (Drag erzeugt viele)
+const roomCache = new Map<number, RoomDetail>(); // Raum-Details je Index (bis zum nächsten Merge)
 
 function showError(err: unknown): void {
   const box = $('error');
+  box.className = '';
   box.textContent = 'Fehler: ' + (err instanceof Error ? err.message : String(err));
   box.hidden = false;
   setTimeout(() => (box.hidden = true), 6000);
 }
 
+function showStatus(msg: string): void {
+  const box = $('error');
+  box.className = 'ok';
+  box.textContent = msg;
+  box.hidden = false;
+  setTimeout(() => (box.hidden = true), 6000);
+}
+
+async function roomDetail(index: number): Promise<RoomDetail> {
+  let detail = roomCache.get(index);
+  if (!detail) {
+    detail = await getJSON<RoomDetail>(`/api/rooms/${index}`);
+    roomCache.set(index, detail);
+  }
+  return detail;
+}
+
 // ---------- Raumwahl ----------
 
-async function selectRoom(index: number, fromList: boolean): Promise<void> {
-  try {
-    currentRoom = await getJSON<RoomDetail>(`/api/rooms/${index}`);
-  } catch (err) {
-    showError(err);
+// reagiert auf jede Auswahl-Änderung: Listen folgen dem aktiven Raum,
+// die Effort-Zeile zeigt das Produkt der Variantenzahlen der Auswahl
+async function handleSelection(selection: number[], active: number, fromList: boolean): Promise<void> {
+  const gen = ++selectionGen;
+  updateMergeButton(selection);
+
+  if (active < 0) {
+    currentRoom = null;
+    currentState = null;
+    variantsFetch = null;
+    $('statesHead').textContent = '-- States --';
+    statesList.reset(0);
+    variantsList.reset(0);
+    $('info').textContent = 'Effort: ' + networkEffort;
     return;
   }
+
+  try {
+    const detail = await roomDetail(active);
+    if (gen !== selectionGen) return; // Auswahl hat sich inzwischen geändert
+    currentRoom = detail;
+    currentState = null;
+    variantsFetch = null;
+    canvas.setActivePortals(detail.portalList);
+    if (!fromList) roomsList.highlight(active);
+
+    $('statesHead').textContent = `-- Room ${active + 1} [${fmt(detail.states)}] --`;
+    statesList.reset(detail.states);
+    variantsList.reset(0);
+
+    // wie das Original: Effort der Raum-Auswahl = Produkt der Variantenzahlen
+    // (Räume ohne Varianten zählen nicht mit, wie im Netzwerk-Effort)
+    let product = 1n;
+    for (const idx of selection) {
+      const room = await roomDetail(idx);
+      if (room.variants > 0) product *= BigInt(room.variants);
+    }
+    if (gen !== selectionGen) return;
+    const rooms = selection.length > 1 ? ` (${selection.length} Räume)` : '';
+    $('info').textContent = 'Effort: ' + product.toLocaleString('de-DE') + rooms;
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function updateMergeButton(selection: number[]): void {
+  ($('mergeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 2;
+}
+
+// ---------- Aktionen (M3) ----------
+
+async function doMerge(): Promise<void> {
+  const selection = canvas.getSelection();
+  if (mergeBusy || selection.length < 2) return;
+  mergeBusy = true;
+  const btn = $('mergeBtn') as HTMLButtonElement;
+  btn.disabled = true;
+  btn.textContent = 'merging…';
+  try {
+    const result = await postJSON<{ merges: number; rooms: number }>('/api/merge', { rooms: selection });
+    await reloadNetwork();
+    showStatus(
+      result.merges > 0
+        ? `Merge fertig: ${result.merges} Merge(s), ${fmt(result.rooms)} Räume übrig`
+        : 'Merge: keine zwei ausgewählten Räume sind verbunden',
+    );
+  } catch (err) {
+    showError(err);
+  }
+  btn.textContent = 'Merge Rooms';
+  mergeBusy = false;
+  updateMergeButton(canvas.getSelection());
+}
+
+async function doValidate(): Promise<void> {
+  try {
+    await postJSON<{ ok: boolean }>('/api/validate', {});
+    showStatus('Validate: ok');
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// holt Kennzahlen und Raum-Karte neu (nach Merge) - das Feld selbst bleibt gleich
+async function reloadNetwork(): Promise<void> {
+  roomCache.clear();
+  const summary = await getJSON<Summary>('/api/summary');
+  const map = await getJSON<{ rooms: number[] }>('/api/map');
+  networkEffort = summary.effort;
+  updateStats(summary);
+  canvas.setData(field, map.rooms); // setzt auch die Auswahl zurück
+  roomsList.reset(summary.roomCount);
+  currentRoom = null;
   currentState = null;
   variantsFetch = null;
-  canvas.selectRoom(index, currentRoom.portalList);
-  if (!fromList) roomsList.highlight(index);
-
-  $('statesHead').textContent = `-- Room ${index + 1} [${fmt(currentRoom.states)}] --`;
-  statesList.reset(currentRoom.states);
+  $('statesHead').textContent = '-- States --';
+  statesList.reset(0);
   variantsList.reset(0);
+  $('info').textContent = 'Effort: ' + summary.effort;
+}
 
-  // wie das Original: Effort der Raum-Auswahl (bei einem Raum = dessen Variantenzahl)
-  $('info').textContent = 'Effort: ' + fmt(currentRoom.variants);
+function updateStats(summary: Summary): void {
+  $('stats').innerHTML =
+    `<span>R&auml;ume <b>${fmt(summary.roomCount)}</b></span>` +
+    `<span>Zust&auml;nde <b>${fmt(summary.stateCount)}</b></span>` +
+    `<span>Varianten <b>${fmt(summary.variantCount)}</b></span>`;
 }
 
 // ---------- Zustandswahl -> Varianten-Sektionen aufbauen ----------
@@ -220,14 +331,12 @@ async function boot(): Promise<void> {
 
   document.title = 'Rooms - ' + summary.title;
   $('title').textContent = summary.title;
-  $('stats').innerHTML =
-    `<span>R&auml;ume <b>${fmt(summary.roomCount)}</b></span>` +
-    `<span>Zust&auml;nde <b>${fmt(summary.stateCount)}</b></span>` +
-    `<span>Varianten <b>${fmt(summary.variantCount)}</b></span>`;
+  networkEffort = summary.effort;
+  updateStats(summary);
   $('info').textContent = 'Effort: ' + summary.effort;
 
   canvas = new FieldCanvas($('field') as HTMLCanvasElement);
-  canvas.onRoomClick = index => void selectRoom(index, false);
+  canvas.onSelectionChange = (selection, active) => void handleSelection(selection, active, false);
   canvas.setData(field, map.rooms);
 
   roomsList = new VirtualList<RoomSummary>(
@@ -236,8 +345,15 @@ async function boot(): Promise<void> {
     room => `Room ${room.index + 1} [${room.fields.length}]`,
     (offset, limit) => getJSON<Page<RoomSummary>>(`/api/rooms?offset=${offset}&limit=${limit}`),
   );
-  roomsList.onSelect = room => void selectRoom(room.index, true);
+  // Klick in der Raum-Liste ersetzt die Auswahl (Einzelwahl wie im Original)
+  roomsList.onSelect = room => {
+    canvas.setSelection([room.index], room.index);
+    void handleSelection([room.index], room.index, true);
+  };
   roomsList.reset(summary.roomCount);
+
+  ($('mergeBtn') as HTMLButtonElement).addEventListener('click', () => void doMerge());
+  ($('validateBtn') as HTMLButtonElement).addEventListener('click', () => void doValidate());
 
   statesList = new VirtualList<StateItem>(
     $('statesList'),

@@ -249,6 +249,57 @@ func TestVariants(t *testing.T) {
 	get(t, s, "/api/rooms/2/variants?portal=0&state=99", 400, nil)
 }
 
+// führt eine POST-Anfrage mit JSON-Body aus und dekodiert die Antwort nach out
+func post(t *testing.T, s *Server, path, body string, wantStatus int, out any) {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest("POST", path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	s.ServeHTTP(rec, req)
+	if rec.Code != wantStatus {
+		t.Fatalf("POST %s: Status %d, erwartet %d (Body: %s)", path, rec.Code, wantStatus, rec.Body.String())
+	}
+	if out != nil {
+		if err := json.Unmarshal(rec.Body.Bytes(), out); err != nil {
+			t.Fatalf("POST %s: JSON-Fehler %v (Body: %s)", path, err, rec.Body.String())
+		}
+	}
+}
+
+func TestMerge(t *testing.T) {
+	s := testServer(t)
+	var result struct {
+		Merges int `json:"merges"`
+		Rooms  int `json:"rooms"`
+	}
+
+	// Räume 1+2 verschmelzen (Kistenfeld + freies Feld)
+	post(t, s, "/api/merge", `{"rooms":[1,2]}`, 200, &result)
+	if result.Merges != 1 || result.Rooms != 3 {
+		t.Errorf("Merge-Ergebnis falsch: %+v", result)
+	}
+
+	// die Karte muss den neuen Raum zeigen (Felder 1 und 2 im selben Raum)
+	var m struct {
+		Rooms []uint32 `json:"rooms"`
+	}
+	get(t, s, "/api/map", 200, &m)
+	if m.Rooms[1] != m.Rooms[2] {
+		t.Errorf("Felder 1 und 2 nach Merge in verschiedenen Räumen: %v", m.Rooms)
+	}
+
+	// nicht verbundene Auswahl: kein Merge, kein Fehler
+	post(t, s, "/api/merge", `{"rooms":[0,2]}`, 200, &result)
+	if result.Merges != 0 {
+		t.Errorf("unverbundene Auswahl darf nicht mergen: %+v", result)
+	}
+
+	// Fehlerfälle
+	post(t, s, "/api/merge", `{"rooms":[0]}`, 400, nil)
+	post(t, s, "/api/merge", `{"rooms":[0,99]}`, 400, nil)
+	post(t, s, "/api/merge", `kein json`, 400, nil)
+}
+
 func TestStaticIndex(t *testing.T) {
 	s := testServer(t)
 	rec := httptest.NewRecorder()
