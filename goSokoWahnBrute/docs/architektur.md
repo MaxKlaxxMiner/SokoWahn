@@ -269,6 +269,11 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   entfernen - das Ergebnis ist die beste Push-Zahl unter den in den Tabellen
   repräsentierten zugoptimalen Lösungen, nie schlechter als GetSolution
   (Test: TestSolutionBestPushes, auf small.txt 5 statt 7 Schübe bei 16 Zügen).
+  Bekannter Fall: Level 361 liefert 110 statt der 108 Schübe einer bekannten
+  315-Züge-Lösung (Filter sind ausgeschlossen - alle 108 Kanten passieren
+  Blocker und Regeln in beiden Richtungen; Diagnose per `-checksol`, siehe
+  Live-Diagnose). Kennzahlen des Laufs (Anker, Deckel, DP-Knoten, Overflow):
+  `PushOptStats`, im TUI in der Statuszeile nach Suchende.
 - **Meet-Verifikation gegen Hash-Kollisionen** (`verifyMeet`, seit 08/2026): die
   Stellungs-Schlüssel sind 64-Bit-Hashes - nach dem Geburtstagsparadoxon werden
   Kollisionen ab Milliarden Einträgen real (P ≈ N_v*N_r/2^64, bei je 2 Mrd schon
@@ -510,6 +515,27 @@ C#-Orakel, sofern die Richtungswahl des Originals aktiv ist (`-dirclassic`;
 der Default wählt seit der Effizienz-Richtungswahl anders). Ebenso bitgenau:
 alle Blocker-Stufen bis zur ersten Muster-Explosion (RulesPatternThreshold,
 refcli blockerbx). Danach gefilterte Stufen sind reine Go-Referenzwerte.
+
+## Referenz-Lösungs-Diagnose (Flag -checksol)
+
+Findet die Push-Optimierung eine extern bekannte Lösung nicht (z.B. JSOKO findet
+bei gleicher Zugzahl weniger Schübe), zeigt `-checksol <lurd.txt>` nach Abschluss
+der Suche, wie der Referenz-Pfad in den Hashtabellen repräsentiert ist: je Schub
+die exakte Vorwärtstiefe bzw. der Rückwärtsrest ("ok" / "Tiefe X statt Y" /
+"fehlt"), Anker-Treffer, dazu die PushOptStats (Anker-Deckel, DP-Knoten,
+Overflow-Fallback). Die Kettenanalyse meldet, ob ein Anker existiert, über den
+das DP den Pfad komplett ablaufen könnte - wenn ja, das DP aber mehr Schübe
+liefert, liegt der Fehler im DP; wenn nein, fehlen die Stellungen in den
+Tabellen (Nach-Fund-Beschneidung oder nie erzeugt). Der Anker selbst braucht
+keinen Tabellen-Eintrag (ein besserer Zweit-Fund wird selbst nicht mehr
+gespeichert, seine Nachbarn tragen die Rekonstruktion).
+
+TUI: Report landet als `<lurd-datei>.report.txt` neben der Eingabe, die
+Statuszeile zeigt Kurzfassung und Pfad. CLI: Report am Ende der Ausgabe
+(die Orakel-Zeilen davor bleiben byte-gleich). Die LURD-Datei wird beim
+Start validiert - Tippfehler fallen nicht erst nach einer Nacht Rechenzeit auf.
+Replayer: `soko.ReplayLurd` (spielt beliebige LURD-Folgen ab dem aktuellen
+Spielstand ab und liefert die Schub-Stellungen in Suchen-Repräsentation).
 
 ## Live-Diagnose (Flag -debugport)
 

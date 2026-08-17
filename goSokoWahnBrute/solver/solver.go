@@ -42,8 +42,9 @@ type Solver struct {
 
 	// alle verifizierten Verbindungs-Stellungen der aktuell besten Lösungslänge
 	// (Anker für die Push-Optimierung, siehe pushopt.go; gedeckelt und dedupliziert)
-	meetAnchors []meetAnchor
-	meetSeen    map[crc64.Value]struct{}
+	meetAnchors  []meetAnchor
+	meetSeen     map[crc64.Value]struct{}
+	pushOptStats PushOptStats // Kennzahlen des letzten GetSolutionBestPushes-Laufs
 
 	forwardOnly bool // Sonderfall: keine Zielstellungen vorhanden (sehr kurze Level) -> reine Vorwärtssuche
 	done        bool // gibt an, ob die Suche abgeschlossen ist

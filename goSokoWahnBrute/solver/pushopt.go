@@ -64,6 +64,23 @@ func (s *Solver) collectEqualMeet(state *soko.State, forwardDepth int) {
 	s.meetAnchors = append(s.meetAnchors, meetAnchor{state: cloneState(state), forwardDepth: forwardDepth})
 }
 
+// Kennzahlen eines GetSolutionBestPushes-Laufs (für Statuszeile und -checksol:
+// zeigt, ob die Optimierung überhaupt lief und ob einer der Deckel zugeschlagen hat)
+type PushOptStats struct {
+	Ran         bool // DP wurde ausgeführt (false = forwardOnly oder keine Anker)
+	Anchors     int  // gesammelte Verbindungs-Anker
+	AnchorCap   bool // Anker-Deckel (meetAnchorLimit) erreicht - weitere Treffen wurden verworfen
+	DPNodes     int  // memoisierte DP-Knoten beider Richtungen zusammen
+	Overflow    bool // Knoten-Limit gerissen - Ergebnis ist die einfache Rekonstruktion
+	PlainPushes int  // Schübe der einfachen Rekonstruktion (GetSolution)
+	BestPushes  int  // Schübe des zurückgegebenen Ergebnisses
+}
+
+// Kennzahlen des letzten GetSolutionBestPushes-Laufs
+func (s *Solver) PushOptStats() PushOptStats {
+	return s.pushOptStats
+}
+
 // GetSolutionBestPushes rekonstruiert unter den zugoptimalen Lösungen der
 // Tabellen eine mit minimaler Schub-Zahl. Erst nach Abschluss der Suche
 // aufrufen; fällt bei Sonderfällen oder Knoten-Überlauf auf GetSolution zurück.
@@ -71,8 +88,19 @@ func (s *Solver) GetSolutionBestPushes() (*Solution, error) {
 	if s.foundTotal < 0 {
 		return nil, errors.New("no solution found")
 	}
+	plain, err := s.GetSolution()
+	if err != nil {
+		return nil, err
+	}
+	stats := PushOptStats{
+		Anchors:     len(s.meetAnchors),
+		AnchorCap:   len(s.meetAnchors) >= meetAnchorLimit,
+		PlainPushes: CountPushes(plain.Moves),
+		BestPushes:  CountPushes(plain.Moves),
+	}
+	s.pushOptStats = stats
 	if s.forwardOnly || len(s.meetAnchors) == 0 {
-		return s.GetSolution()
+		return plain, nil
 	}
 
 	opt := &pushOptimizer{
@@ -101,8 +129,12 @@ func (s *Solver) GetSolutionBestPushes() (*Solution, error) {
 			bestAnchor = anchor
 		}
 	}
+	stats.Ran = true
+	stats.DPNodes = len(opt.toStart) + len(opt.toGoal)
+	stats.Overflow = opt.overflow
+	s.pushOptStats = stats
 	if bestAnchor == nil || opt.overflow {
-		return s.GetSolution() // Überlauf oder (theoretisch) kein Anker begehbar
+		return plain, nil // Überlauf oder (theoretisch) kein Anker begehbar
 	}
 
 	// Kette zusammensetzen: Start ... Anker (toStart-Parents rückwärts),
@@ -119,7 +151,13 @@ func (s *Solver) GetSolutionBestPushes() (*Solution, error) {
 		states = append(states, node.state)
 	}
 
-	return s.statesToSolution(states, s.foundTotal)
+	solution, err := s.statesToSolution(states, s.foundTotal)
+	if err != nil {
+		return nil, err
+	}
+	stats.BestPushes = CountPushes(solution.Moves)
+	s.pushOptStats = stats
+	return solution, nil
 }
 
 // DP-Knoten: minimale Schübe von dieser Stellung bis zum Start bzw. Ziel

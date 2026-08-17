@@ -56,6 +56,10 @@ type Model struct {
 	solution *solver.Solution
 	frame    int
 
+	// --- Diagnose (Flag -checksol) ---
+	checkSol     string // LURD-Referenzlösung, "" = keine Diagnose
+	checkSolPath string // Pfad der LURD-Datei (Report wird daneben geschrieben)
+
 	width  int
 	height int
 	status string
@@ -279,5 +283,35 @@ func (m *Model) finishSearch() {
 	m.solution = solution
 	m.frame = 0
 	m.mode = modeSolution
-	m.status = "Lösung gefunden - mit Pfeiltasten blättern"
+	m.status = "Lösung gefunden (" + pushOptInfo(m.slv.PushOptStats()) + ") - mit Pfeiltasten blättern"
+
+	// Diagnose gegen die Referenz-Lösung (Flag -checksol): Report neben die LURD-Datei
+	if m.checkSol != "" {
+		report, err := m.slv.CheckSolution(m.checkSol)
+		if err != nil {
+			m.status += " | Checksol-Fehler: " + err.Error()
+			return
+		}
+		reportPath := m.checkSolPath + ".report.txt"
+		if err := os.WriteFile(reportPath, []byte(report), 0644); err != nil {
+			m.status += " | Checksol-Report nicht schreibbar: " + err.Error()
+			return
+		}
+		m.status += " | Checksol-Report: " + reportPath
+	}
+}
+
+// fasst die Kennzahlen der Push-Optimierung für die Statuszeile zusammen
+func pushOptInfo(st solver.PushOptStats) string {
+	info := fmt.Sprintf("Schübe einfach %d / optimiert %d, Anker %d", st.PlainPushes, st.BestPushes, st.Anchors)
+	if st.AnchorCap {
+		info += " (Deckel!)"
+	}
+	if st.Ran {
+		info += fmt.Sprintf(", DP %d Knoten", st.DPNodes)
+		if st.Overflow {
+			info += " (Überlauf -> einfache Rekonstruktion!)"
+		}
+	}
+	return info
 }

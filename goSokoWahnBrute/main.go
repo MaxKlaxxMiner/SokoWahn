@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"goSokoWahnBrute/blocker"
@@ -50,6 +51,7 @@ func main() {
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
 	debugPort := flag.Int("debugport", 0, "Diagnose: pprof-HTTP-Server auf localhost:PORT (0 = aus); bei einem Hänger liefert curl localhost:PORT/debug/pprof/goroutine?debug=2 alle Stacks und .../heap?debug=1 die Speicher-Verteilung, ohne den Prozess zu beenden")
+	checkSolFile := flag.String("checksol", "", "Diagnose: LURD-Datei einer bekannten zugoptimalen Lösung - nach Abschluss der Suche wird geprüft, wie der Pfad in den Hashtabellen/Ankern der Push-Optimierung repräsentiert ist (TUI: Report als <datei>.report.txt, CLI: Ausgabe am Ende)")
 	gcPercent := flag.Int("gc", 5, "GC-Reserve in Prozent des Live-Heaps (Go GOGC): 5 = sparsam (Standard, kaum Overhead bei den Riesen-Slices der Suche), 100 = Go-Default mit weniger GC-Läufen - auf Servern mit reichlich RAM eine Option")
 	flag.Parse()
 
@@ -101,19 +103,40 @@ func main() {
 		levelData = string(fileData)
 	}
 
+	// optionale Referenz-Lösung für die Diagnose laden - Fehler sofort melden,
+	// nicht erst nach einem stundenlangen Suchlauf (Datei fehlt, keine LURD-Zeichen)
+	checkSol := ""
+	if *checkSolFile != "" {
+		fileData, err := os.ReadFile(*checkSolFile)
+		if err != nil {
+			panic(err)
+		}
+		checkSol = strings.TrimSpace(string(fileData))
+		for i := 0; i < len(checkSol); i++ {
+			switch checkSol[i] {
+			case 'l', 'u', 'r', 'd', 'L', 'U', 'R', 'D':
+			default:
+				panic(fmt.Sprintf("-checksol %s: ungültiges LURD-Zeichen %q an Position %d", *checkSolFile, checkSol[i], i))
+			}
+		}
+		if checkSol == "" {
+			panic(fmt.Sprintf("-checksol %s: Datei enthält keine LURD-Zugfolge", *checkSolFile))
+		}
+	}
+
 	if *blockerStages > 0 {
 		runBlockerOnly(levelData, *blockerStages, *workers)
 		return
 	}
 
 	if !*cliMode {
-		if err := tui.Run(levelData, *ramLimitGB); err != nil {
+		if err := tui.Run(levelData, *ramLimitGB, checkSol, *checkSolFile); err != nil {
 			panic(err)
 		}
 		return
 	}
 
-	runCli(levelData, *useBlocker, *useRules || *rulesCompare, *rulesCompare, *dirClassic, *workers)
+	runCli(levelData, *useBlocker, *useRules || *rulesCompare, *rulesCompare, *dirClassic, *workers, checkSol)
 }
 
 // berechnet nur die Blocker-Stufen bis einschließlich maxStages und gibt sie aus
@@ -146,7 +169,7 @@ func runBlockerOnly(levelData string, maxStages int, workers int) {
 // refcli, sofern die optionalen Regel-Filter aus bleiben UND -dirclassic die
 // Richtungswahl des Originals erzwingt - der Default wählt die Richtung seit der
 // Effizienz-Verhältnis-Umstellung anders, siehe solver.chooseForward)
-func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic bool, workers int) {
+func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic bool, workers int, checkSol string) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
 	}
@@ -224,4 +247,22 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic boo
 	}
 	fmt.Printf("Lösung: %d Züge, %d Schub-Stellungen\n", len(solution.Moves), len(solution.States))
 	fmt.Println(solution.Moves)
+
+	// Diagnose der Push-Optimierung gegen eine Referenz-Lösung (Flag -checksol);
+	// hängt nur zusätzliche Ausgaben an - die Zeilen oben bleiben byte-gleich
+	// zu den Orakel-Vergleichen
+	if checkSol != "" {
+		best, err := s.GetSolutionBestPushes()
+		if err != nil {
+			fmt.Printf("Push-Optimierung fehlgeschlagen: %v\n", err)
+		} else {
+			fmt.Printf("\nPush-optimiert: %d Züge, %d Schübe\n", len(best.Moves), solver.CountPushes(best.Moves))
+		}
+		report, err := s.CheckSolution(checkSol)
+		if err != nil {
+			fmt.Printf("Checksol fehlgeschlagen: %v\n", err)
+			return
+		}
+		fmt.Print(report)
+	}
 }
