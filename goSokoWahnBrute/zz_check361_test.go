@@ -1,12 +1,14 @@
 package main
 
-// Temporärer Diagnose-Test für Level 361: spielt die von Max/JSOKO gefundene
-// 315-Züge/108-Schübe-Lösung Schub für Schub ab und prüft für jede Kante,
-// ob die Varianten-Generierung sie liefert - ungefiltert, nur mit Blocker
-// (6-Steiner-Cache aus temp/), nur mit Regeln und mit beidem, jeweils
-// vorwärts (CheckPush/CheckAllowed) und rückwärts (CheckPull/CheckAllowed).
-// Fällt eine Kante nur mit Filter weg, filtert der Filter unsound.
-// Nicht einchecken.
+// Diagnose-Test für Level 361 (Pushopt findet 110 statt der bekannten 108
+// Schübe bei 315 Zügen): spielt die von Max/JSOKO gefundene Lösung (lurd361.txt)
+// Schub für Schub ab und prüft für jede Kante, ob die Varianten-Generierung sie
+// liefert - ungefiltert, nur mit Blocker (6-Steiner-Cache aus temp/), nur mit
+// Regeln und mit beidem, jeweils vorwärts (CheckPush/CheckAllowed) und rückwärts
+// (CheckPull/CheckAllowed). Fällt eine Kante nur mit Filter weg, filtert der
+// Filter unsound. Ergebnis 08/2026: alle Kanten passieren alle Filter - die
+// Filter sind als Ursache ausgeschlossen. Läuft nur, wenn Leveldatei, Lösung
+// und Blocker-Cache lokal vorliegen (sonst Skip; -short überspringt ebenfalls).
 
 import (
 	"os"
@@ -95,13 +97,16 @@ func replaySolution(t *testing.T, field *soko.Field, lurd string) []soko.State {
 }
 
 func TestCheck361Solution(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Diagnose-Lauf mit lokalen Dateien")
+	}
 	levelData, err := os.ReadFile(filepath.Join(repoRoot, "levelcache", "361.txt"))
 	if err != nil {
-		t.Fatal(err)
+		t.Skipf("Leveldatei fehlt lokal: %v", err)
 	}
-	lurdData, err := os.ReadFile(filepath.Join(repoRoot, "solution-id361-315.108.txt"))
+	lurdData, err := os.ReadFile(filepath.Join(repoRoot, "lurd361.txt"))
 	if err != nil {
-		t.Fatal(err)
+		t.Skipf("Referenz-Lösung fehlt lokal: %v", err)
 	}
 	lurd := string(lurdData)
 	for len(lurd) > 0 && (lurd[len(lurd)-1] == '\n' || lurd[len(lurd)-1] == '\r') {
@@ -128,7 +133,7 @@ func TestCheck361Solution(t *testing.T) {
 	// Blocker aus dem 6-Steiner-Cache laden (nur lesen, nicht weiterbauen)
 	cachePath := filepath.Join(repoRoot, "temp", blocker.CacheName(baseField))
 	if _, err := os.Stat(cachePath); err != nil {
-		t.Fatalf("Blocker-Cache fehlt: %s (%v)", cachePath, err)
+		t.Skipf("Blocker-Cache fehlt lokal: %s (%v)", cachePath, err)
 	}
 	blk := blocker.New(baseField.Clone(), cachePath)
 	blk.Abort()
