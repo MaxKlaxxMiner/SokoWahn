@@ -7,6 +7,14 @@ nicht über ein C#-Orakel.
 
 ## 1. Ziel und Abgrenzung
 
+Die Grundidee hinter der Raum-Aufteilung (Max, 2026-08-18): Komplette Levels sind
+nur bis zu einer bestimmten Größe/Kistenzahl/Komplexität direkt lösbar (z.B. per
+goSokoWahnBrute - im Grunde "alles Mögliche durchrechnen"). Zu große Levels werden
+deshalb in kleinere Räume aufgeteilt, und diese Räume werden einzeln PERFEKT
+optimiert: doppelte und ineffizientere Varianten/Zustände fliegen raus, bis je
+Raum nur noch das Nötige übrig ist. Die Optimierung der Räume ist damit kein
+Nebenschritt, sondern der Kern des Ansatzes.
+
 Primäres Ziel ist das **Rooms-Framework** selbst:
 
 - Spielfeld in Räume zerlegen (Start: 1-Feld-Räume), verbunden über Portale
@@ -133,6 +141,27 @@ Auslagerung erst, wenn es real drückt.
 - alle Zustände/Varianten werden referenziert (nach Optimierung)
 - genau ein Startraum
 
+## 4b. Optimalitäts-Standard (festgelegt 2026-08-18)
+
+Es zählt der Move-Standard: move-perfekt zuerst, Pushes nur als Tie-Break.
+
+- Varianten mit schlechteren Moves bei gleicher Wirkung werden entfernt.
+- Bei gleichen Moves überlebt die Variante mit weniger Pushes.
+- Bei vollständig gleichwertigen Varianten (gleiche Wirkung, gleiche Moves und
+  Pushes) wird nur eine behalten.
+- Reine Push-Optimierungen (weniger Pushes auf Kosten von Moves) sind kein Ziel
+  und werden ignoriert.
+
+"Wirkung" einer Variante aus Außensicht: Endzustand des Raumes, rausgeschobene
+Kisten je Portal und Austritts-Portal des Spielers (bzw. Spielende) - die
+interne Historie zählt nicht.
+
+Umgesetzt im Merge-Emit (2026-08-18): die Best-Moves-Suche vergleicht
+(moves, pushes) lexikographisch, und je Netto-Wirkung wird nur die beste
+Variante eingetragen. Der alte Task-Schlüssel war bereits fast wirkungs-scharf;
+real neu sind der Push-Tie-Break bei Move-Gleichstand und das Zusammenfallen
+wirkungsgleicher End-Varianten aus verschiedenen Teilraum-Seiten.
+
 ## 5. Bewusste Abweichungen vom C#
 
 - **Kein Orakel, keine Bitgleichheit.** Verifikation: GUI-Sichtprüfung + Tests (Kap. 8).
@@ -227,14 +256,51 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Zustände (renewVariants + removeUnusedStates). Läuft automatisch nach jedem
   Merge (Gating wie C#: max. 12 Portale, mehr als 2 Räume übrig, unter 10 Mio
   Varianten) und manuell per Optimize-Button/POST /api/optimize auf der Auswahl.
-  Bewusste Abweichungen vom C#-RoomDeadlockScanner (siehe Kommentar in
-  deadlock.go): die dort selbst mit "todo: bug?" markierte Selbes-Portal-Regel
-  entfällt (hätte erreichbare Varianten wegwerfen können; die Vorwärts-Suche
-  wird dadurch zur reinen Zustands-Erreichbarkeit), Varianten werden einzeln
-  statt Span-weise markiert (Doppelzähl-Bug), Ziele-Check auch für
-  End-Startvarianten. Referenz-Zahlen als Test verankert (Vanilla, erste 20
-  Räume: 5 Scans entfernen 1164 Varianten, Effort 6,5e40 -> 7,8e30); ein zweiter
-  Scan direkt nach den Merges findet nichts mehr (Idempotenz-Test).
+  Die Selbes-Portal-Regel des Originals (Wiedereintritt durchs Austritts-Portal
+  nur nach rausgeschobener Kiste, dort noch mit "todo: bug?" markiert) ist in
+  REPARIERTER Form übernommen (2026-08-18, Kommentar in deadlock.go): sie gilt
+  nur, wenn der Besuch durch dasselbe Portal herein- UND hinauskam. Dann ist sie
+  bewiesen: das Portal-Außenfeld war beim Eintritt frei (der Spieler stand
+  darauf) und bleibt es bis zum Austritt, der Besuch lässt die Außenwelt also
+  komplett unverändert - statt raus- und wieder reinzulaufen kann der Spieler
+  drinbleiben und dieselbe Fortsetzung 2 Züge billiger spielen. Die pauschale
+  C#-Fassung hatte ein Loch: bei Eintritt über ein anderes Portal kann der
+  Austritts-Schritt draußen eine Nachbar-Kiste schieben (wird beim Nachbarraum
+  verbucht, lokal unsichtbar) - der Besuch ist dann NICHT wirkungslos, und die
+  Regel hätte zwingend nötige Wiedereintritte wegwerfen können. Die Regel ist
+  die Hauptquelle der Ausdünnung: bei Ein-Portal-Kammern (wo sie immer greift)
+  kaskadiert sie ganze tote Zustands-Äste weg (Fassung ganz ohne Regel:
+  20 Zustände / 90 Varianten in der 202er-Kammer statt 10 / 25). Kleinere Abweichungen: Varianten
+  werden einzeln statt Span-weise markiert (Doppelzähl-Bug im C#), Ziele-Check
+  auch für End-Startvarianten, Aufgaben werden dedupliziert.
+  Referenz-Zahlen als Tests verankert: Vanilla erste 20 Räume (5 Scans entfernen
+  1176 Varianten, Effort 6,5e40 -> 7,8e30), Idempotenz (zweiter Scan findet 0)
+  und der Orakel-Vergleich der 202er-Kammer gegen die SokoWahnLib
+  (rooms/oracle202_test.go, C#-Seite: SokoWahn/roomscli/ - kleines Konsolen-Tool,
+  das dieselben Merges im Original ausführt und Zustände/Varianten dumpt;
+  Muster für künftige Vergleichsfälle).
+- IN DISKUSSION: **M4b - konstruktive Dominanzsuche** (Ansatz gewählt 2026-08-18,
+  Semantik noch offen): statt weiterer handgemachter Prune-Regeln (jede braucht
+  einen eigenen Beweis, siehe das Portalfeld-belegt-Loch im verworfenen
+  "Park-Verbot") rechnet eine lokale Suche pro Raum die Dominanz nach. Ein Raum
+  ist aus Außensicht eine Black Box; sichtbar ist nur die Signatur seiner
+  Nutzung (Folge von Portal-Ereignissen: Besuch mit Eintritt/Austritt/Exporten,
+  Kisten-Einschub; plus Endzustand). Eine Variante ist überflüssig, wenn jede
+  Nutzung, in der sie vorkommt, durch eine Nutzung mit identischer Signatur und
+  besseren Kosten (moves, dann pushes) ersetzbar ist - inklusive
+  signatur-kompatibler Reduktionen (Besuch weglassen/fusionieren, wenn Ein- und
+  Austritt am selben Portal liegen). Die bisherige Selbes-Portal-Regel ist der
+  bewiesene Spezialfall davon. Erster Schritt: Semantik an der 202er-Kammer von
+  Hand durchdeklinieren (Erwartung: ~4 Zustände / ~4 Varianten statt 10/25) und
+  als Referenz-Testfall verankern, erst dann implementieren.
+  Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
+  (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
+  Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht
+  als inkrementelle Endlos-Funktion, die immer tiefer/komplexer weiterrechnet
+  (Budget/Horizont wächst), bis der Nutzer per Stop-Button entscheidet, dass
+  genug gerechnet ist; bis dahin gefundene überflüssige Varianten/Zustände sind
+  dann bereits entfernt. Das braucht den bei M3 zurückgestellten SSE-Livestatus
+  samt Abbruch.
 - **M5 - Automerge**: Aufwands-Schätzung + Kachel-Pattern wie im C#-FormDebugger,
   Abbruchkriterien, jederzeit stoppbar; Effort-Verlauf sichtbar.
 - **M6 - Path-Mapping** (neu, gab es im C# nicht; bewusst vor dem Solver):

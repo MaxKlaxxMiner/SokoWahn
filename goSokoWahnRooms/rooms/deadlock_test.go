@@ -9,8 +9,8 @@ import (
 
 // Regressionstest für Merge + Deadlock-Scan zusammen: die ersten 20 Räume des
 // Vanilla-Levels werden gemergt, der Scan im MergeRooms-Gating läuft mit.
-// Kennzahlen eingefroren am 2026-08-17 (5 Scans entfernen zusammen 1164
-// Varianten, Effort sinkt von 6,5e40 auf 7,8e30).
+// Kennzahlen eingefroren am 2026-08-17, seit der Selbes-Portal-Regel: 5 Scans
+// entfernen zusammen 1176 Varianten, Effort sinkt von 6,5e40 auf 7,8e30.
 func TestMergeWithDeadlockScanVanilla(t *testing.T) {
 	n := buildNetwork(t, maps.MapVanilla)
 
@@ -41,11 +41,11 @@ func TestMergeWithDeadlockScanVanilla(t *testing.T) {
 		states += room.States.Count()
 		variants += room.Variants.Count()
 	}
-	if states != 211 || variants != 7879 {
-		t.Errorf("totals: got %d states / %d variants, want 211 / 7879", states, variants)
+	if states != 211 || variants != 7867 {
+		t.Errorf("totals: got %d states / %d variants, want 211 / 7867", states, variants)
 	}
-	if got := n.EffortString(); !strings.HasPrefix(got, "7,815e30") {
-		t.Errorf("effort: got %s, want 7,815e30 (...)", got)
+	if got := n.EffortString(); !strings.HasPrefix(got, "7,803e30") {
+		t.Errorf("effort: got %s, want 7,803e30 (...)", got)
 	}
 }
 

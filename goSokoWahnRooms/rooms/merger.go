@@ -299,10 +299,21 @@ func (t *mergeTask) key() uint64 {
 	return uint64(c.UpdateBool(t.side1).UpdateUInt32(t.variant.PlayerPortal))
 }
 
+// Kosten einer Aufgabe: move-perfekt zuerst, Pushes als Tie-Break
+// (Optimalitäts-Standard, siehe docs/konzept.md Kap. 4b)
+type mergeCost struct {
+	moves  uint32
+	pushes uint32
+}
+
+func (c mergeCost) better(other mergeCost) bool {
+	return c.moves < other.moves || (c.moves == other.moves && c.pushes < other.pushes)
+}
+
 type mergeSearch struct {
 	m     *Merger
-	best  map[uint64]uint32 // Aufgaben-Schlüssel -> beste bekannte Move-Zahl
-	tasks []mergeTask       // FIFO-Arbeitsliste (wächst beim Expandieren)
+	best  map[uint64]mergeCost // Aufgaben-Schlüssel -> beste bekannte Kosten
+	tasks []mergeTask          // FIFO-Arbeitsliste (wächst beim Expandieren)
 
 	moveTasks []int // fertige reine Laufwege (Indizes in tasks)
 	pushTasks []int // fertige Varianten mit Kistenverschiebungen
@@ -310,7 +321,11 @@ type mergeSearch struct {
 }
 
 func newMergeSearch(m *Merger) *mergeSearch {
-	return &mergeSearch{m: m, best: map[uint64]uint32{}}
+	return &mergeSearch{m: m, best: map[uint64]mergeCost{}}
+}
+
+func (t *mergeTask) cost() mergeCost {
+	return mergeCost{moves: t.moves, pushes: t.pushes}
 }
 
 // hängt Variante v (des Teilraums side1) an eine Aufgabe an und nimmt das
@@ -329,10 +344,10 @@ func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
 		return // Variante ist im Verbund ungültig
 	}
 	k := t.key()
-	if bestMoves, ok := s.best[k]; ok && bestMoves <= t.moves {
+	if bestCost, ok := s.best[k]; ok && !t.cost().better(bestCost) {
 		return // eine bessere (oder gleich gute) Variante ist bereits bekannt
 	}
-	s.best[k] = t.moves
+	s.best[k] = t.cost()
 	s.tasks = append(s.tasks, t)
 }
 
@@ -393,7 +408,7 @@ func (m *Merger) resolveBoxes(t *mergeTask, oldBoxes []uint32, v *VariantData, s
 func (s *mergeSearch) run() {
 	for i := 0; i < len(s.tasks); i++ {
 		t := s.tasks[i] // Kopie: tasks kann beim Expandieren umziehen
-		if s.best[t.key()] != t.moves {
+		if s.best[t.key()] != t.cost() {
 			continue // von einer besseren Variante überholt
 		}
 
@@ -439,22 +454,88 @@ func (s *mergeSearch) mapExit(t *mergeTask) uint32 {
 	return s.m.mapPortal2[t.variant.PlayerPortal]
 }
 
-// trägt die fertigen Varianten in den neuen Raum ein (Reihenfolge: Laufwege,
-// Kisten-Varianten, End-Varianten - hält die Span-Invariante "Moves vor Pushes").
+// Netto-Wirkung einer fertigen Variante aus Außensicht: Endzustand des Raumes,
+// rausgeschobene Kisten und Austritts-Portal - die interne Historie zählt nicht
+// (Optimalitäts-Standard Kap. 4b: je Wirkung überlebt nur die beste Variante)
+type effectKey struct {
+	endState uint64
+	exit     uint32
+	boxes    string
+}
+
+func effectKeyOf(endState uint64, exit uint32, boxes []uint32) effectKey {
+	packed := make([]byte, 0, len(boxes)*4)
+	for _, b := range boxes {
+		packed = append(packed, byte(b), byte(b>>8), byte(b>>16), byte(b>>24))
+	}
+	return effectKey{endState: endState, exit: exit, boxes: string(packed)}
+}
+
+// trägt die fertigen Varianten in den neuen Raum ein: je Netto-Wirkung nur die
+// beste (moves, dann pushes); Reihenfolge Laufwege, Kisten-Varianten,
+// End-Varianten (hält die Span-Invariante "Moves vor Pushes").
 // entry/entrySide1: eingehendes altes Portal samt Ziel-Teilraum (nil = Startvarianten),
 // newPortal: neues Portal fürs Span-Verzeichnis (nil = Startvarianten)
 func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, newPortal *Portal) {
-	add := func(t *mergeTask, playerPortal uint32, newState uint64) {
+	type candidate struct {
+		task     *mergeTask
+		exit     uint32 // neuer Portal-Index (NoPortal = Spielende)
+		endState uint64
+	}
+	bestEffect := map[effectKey]int{} // Wirkung -> Index in candidates
+	var candidates []candidate
+	consider := func(t *mergeTask, exit uint32, endState uint64) {
+		if s.best[t.key()] != t.cost() {
+			return // von einer besseren Aufgabe gleichen Schlüssels überholt
+		}
+		key := effectKeyOf(endState, exit, t.boxes)
+		if idx, exists := bestEffect[key]; exists {
+			if t.cost().better(candidates[idx].task.cost()) {
+				candidates[idx] = candidate{task: t, exit: exit, endState: endState}
+			}
+			return
+		}
+		bestEffect[key] = len(candidates)
+		candidates = append(candidates, candidate{task: t, exit: exit, endState: endState})
+	}
+
+	for _, idx := range s.moveTasks {
+		t := &s.tasks[idx]
+		// sinnloser Rückweg: reiner Laufweg zurück durch das Eintritts-Portal
+		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index {
+			continue
+		}
+		consider(t, s.mapExit(t), startState)
+	}
+	for _, idx := range s.pushTasks {
+		t := &s.tasks[idx]
+		endState := t.state1*s.m.state1Mul + t.state2
+		// sinnloser Rückweg mit folgenlosen Kistenverschiebungen
+		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index && endState == startState {
+			continue
+		}
+		consider(t, s.mapExit(t), endState)
+	}
+	for _, idx := range s.endTasks {
+		t := &s.tasks[idx]
+		if t.state1 != 0 || t.state2 != 0 {
+			panic("merge: end variant without solved state")
+		}
+		consider(t, NoPortal, 0)
+	}
+
+	add := func(c candidate) {
+		t := c.task
 		if uint64(len(t.path)) != uint64(t.moves) {
 			panic("merge: path length != moves")
 		}
 		id := s.m.NewRoom.Variants.Add(VariantData{
 			OldState:     startState,
-			NewState:     newState,
+			NewState:     c.endState,
 			Moves:        t.moves,
 			Pushes:       t.pushes,
 			BoxPortals:   t.boxes,
-			PlayerPortal: playerPortal,
+			PlayerPortal: c.exit,
 			Path:         t.path,
 		})
 		if newPortal != nil {
@@ -467,43 +548,23 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 		}
 	}
 
-	// überholte Aufgaben überspringen (nur die beste je Schlüssel wird eingetragen)
-	isBest := func(t *mergeTask) bool { return s.best[t.key()] == t.moves }
-
-	for _, idx := range s.moveTasks {
-		t := &s.tasks[idx]
-		if !isBest(t) {
-			continue
+	// eintragen in Gruppen: 0 = reine Laufwege, 1 = Kisten-Varianten, 2 = Spielende
+	group := func(c candidate) int {
+		switch {
+		case c.exit == NoPortal:
+			return 2
+		case c.task.pushes == 0:
+			return 0
+		default:
+			return 1
 		}
-		// sinnloser Rückweg: reiner Laufweg zurück durch das Eintritts-Portal
-		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index {
-			continue
-		}
-		add(t, s.mapExit(t), startState)
 	}
-
-	for _, idx := range s.pushTasks {
-		t := &s.tasks[idx]
-		if !isBest(t) {
-			continue
+	for pass := 0; pass <= 2; pass++ {
+		for _, c := range candidates {
+			if group(c) == pass {
+				add(c)
+			}
 		}
-		endState := t.state1*s.m.state1Mul + t.state2
-		// sinnloser Rückweg mit folgenlosen Kistenverschiebungen
-		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index && endState == startState {
-			continue
-		}
-		add(t, s.mapExit(t), endState)
-	}
-
-	for _, idx := range s.endTasks {
-		t := &s.tasks[idx]
-		if !isBest(t) {
-			continue
-		}
-		if t.state1 != 0 || t.state2 != 0 {
-			panic("merge: end variant without solved state")
-		}
-		add(t, NoPortal, 0)
 	}
 }
 

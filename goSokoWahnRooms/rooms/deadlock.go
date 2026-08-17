@@ -6,18 +6,20 @@ import "fmt"
 // aus nie erreichbar sind (Vorwärts-Scan) oder nie zu einem lokalen Spielende
 // führen können (Rückwärts-Scan), samt dabei verwaisender Zustände.
 // C#-Vorbild: RoomDeadlockScanner + RoomReverse. Bewusste Abweichungen:
-//   - die dort selbst mit "todo: bug?" markierte Regel "Rückweg durchs gleiche
-//     Portal nur nach rausgeschobener Kiste" entfällt - raus- und wieder
-//     reinlaufen ist physisch immer möglich, die Regel hätte erreichbare
-//     Varianten wegwerfen können. Die Vorwärts-Suche läuft dadurch als simple
-//     Zustands-Erreichbarkeit (Aufgaben sind Zustände statt Austritts-Tripel).
 //   - Varianten werden einzeln statt Span-weise markiert (das C# konnte beim
 //     Masken-Zweig bereits markierte Varianten doppelt zählen).
 //   - der Ziele-Check für End-Varianten gilt auch für End-Startvarianten.
+//   - Aufgaben werden dedupliziert (das C# erzeugte je markierter Variante eine).
+//
+// Die Selbes-Portal-Regel des Originals (Wiedereintritt durchs Austritts-Portal
+// nur nach rausgeschobener Kiste, dort noch mit "todo: bug?" markiert) ist
+// übernommen - sie ist beweisbar korrekt und die Hauptquelle der Ausdünnung,
+// Begründung siehe Kommentar im Vorwärts-Scan.
 //
 // Beide Scans sind Über-Approximationen der echten Erreichbarkeit (die Außenwelt
 // wird nur über die BoxSwap-Masken angenähert) - entfernt wird nur, was selbst
-// unter diesen großzügigen Annahmen nie vorkommen kann.
+// unter diesen großzügigen Annahmen nie vorkommen kann bzw. immer von einer
+// kürzeren Spielweise dominiert wird (Zugoptimalität bleibt erhalten).
 //
 // info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab,
 // der Raum bleibt dann unverändert (die Umbauten passieren erst ganz am Ende).
@@ -46,55 +48,92 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 		if info != nil && !info(fmt.Sprintf("deadlock scan room %d: forward", room.Index)) {
 			return 0, false
 		}
-		// alle Zustände, die durch von außen reingeschobene Kisten entstehen können
-		maskStates := buildMaskStates(len(room.Incoming), stateCount, func(portal int, state uint64) uint64 {
+		// Zustände, die durch von außen reingeschobene Kisten entstehen können
+		// (ohne Identität - der unveränderte Zustand läuft über den Regel-Zweig)
+		maskStates := buildMaskStates(len(room.Incoming), stateCount, false, func(portal int, state uint64) uint64 {
 			return room.Incoming[portal].GetBoxSwap(state)
 		})
 
-		seen := make([]bool, stateCount)
-		var stack []uint64
-		visit := func(state uint64) {
-			if !seen[state] {
-				seen[state] = true
-				stack = append(stack, state)
+		// Austritts-Situation: der Spieler hat den Raum über exitPortal verlassen
+		// (NoPortal = er war noch nie drin); blockSame sperrt den Wiedereintritt
+		// durchs Austritts-Portal (siehe Selbes-Portal-Regel unten)
+		type fwdTask struct {
+			exitPortal uint32
+			blockSame  bool
+			state      uint64
+		}
+		seen := map[fwdTask]bool{}
+		var stack []fwdTask
+		visit := func(t fwdTask) {
+			if !seen[t] {
+				seen[t] = true
+				stack = append(stack, t)
 			}
+		}
+
+		// markiert eine Variante als erreichbar und erzeugt ihre Austritts-Aufgabe;
+		// enterPortal = Portal, über das der Besuch hereinkam (NoPortal = Startvariante)
+		mark := func(id uint64, enterPortal uint32) {
+			if usedForward[id] {
+				return
+			}
+			v := room.Variants.Get(id)
+			if v.PlayerPortal == NoPortal {
+				if endValid(v) {
+					usedForward[id] = true
+				}
+				return
+			}
+			usedForward[id] = true
+			visit(fwdTask{
+				exitPortal: v.PlayerPortal,
+				blockSame:  enterPortal == v.PlayerPortal && len(v.BoxPortals) == 0,
+				state:      v.NewState,
+			})
 		}
 
 		if room.StartVariantCount > 0 {
 			for id := uint64(0); id < room.StartVariantCount; id++ {
-				v := room.Variants.Get(id)
-				if v.PlayerPortal == NoPortal {
-					if endValid(v) {
-						usedForward[id] = true
-					}
-					continue
-				}
-				usedForward[id] = true
-				visit(v.NewState)
+				mark(id, NoPortal)
 			}
 		} else {
-			visit(room.StartState)
+			visit(fwdTask{exitPortal: NoPortal, state: room.StartState})
 		}
 
 		for len(stack) > 0 {
-			state := stack[len(stack)-1]
+			task := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
-			for _, s := range maskStates[state] {
+
+			// Wiedereintritt bei unverändertem Zustand: alle Portale, außer der
+			// Selbes-Portal-Regel. Die gilt NUR, wenn der Besuch durch dasselbe
+			// Portal herein- UND hinauskam und nichts exportiert hat: dann war das
+			// Portal-Außenfeld beim Eintritt frei (der Spieler stand darauf), beim
+			// Austritt also auch (draußen bewegt sich nichts, solange er drin ist) -
+			// der Besuch hat die Außenwelt komplett unverändert gelassen, und statt
+			// raus- und wieder reinzulaufen kann der Spieler auf dem Portalfeld
+			// stehen bleiben und dieselbe Fortsetzung 2 Züge billiger direkt spielen
+			// (Außen-Aktionen sind vorziehbar). Bei Eintritt über ein ANDERES Portal
+			// gilt das nicht: der Austritts-Schritt kann draußen eine Nachbar-Kiste
+			// schieben (wird beim Nachbarraum verbucht, hier unsichtbar) - die
+			// pauschale C#-Regel hatte hier ein Loch und hätte zwingend nötige
+			// Wiedereintritte wegwerfen können.
+			for _, ip := range room.Incoming {
+				if ip.Index == task.exitPortal && task.blockSame {
+					continue
+				}
+				span := ip.GetVariantSpan(task.state)
+				for id := span.Start; id < span.Start+span.Count; id++ {
+					mark(id, ip.Index)
+				}
+			}
+
+			// Wiedereintritt nach reingeschobenen Kisten: die Außenwelt hat den Raum
+			// verändert, hier ist jedes Portal erlaubt
+			for _, s := range maskStates[task.state] {
 				for _, ip := range room.Incoming {
 					span := ip.GetVariantSpan(s)
 					for id := span.Start; id < span.Start+span.Count; id++ {
-						if usedForward[id] {
-							continue
-						}
-						v := room.Variants.Get(id)
-						if v.PlayerPortal == NoPortal {
-							if endValid(v) {
-								usedForward[id] = true
-							}
-							continue
-						}
-						usedForward[id] = true
-						visit(v.NewState)
+						mark(id, ip.Index)
 					}
 				}
 			}
@@ -115,7 +154,7 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 			}
 			pullSwaps[i] = pull
 		}
-		maskStates := buildMaskStates(len(room.Incoming), stateCount, func(portal int, state uint64) uint64 {
+		maskStates := buildMaskStates(len(room.Incoming), stateCount, true, func(portal int, state uint64) uint64 {
 			if next, exists := pullSwaps[portal][state]; exists {
 				return next
 			}
@@ -220,19 +259,24 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 }
 
 // buildMaskStates liefert je Ausgangszustand alle Zustände, die durch eine
-// beliebige Portal-Teilmenge von Kisten-Zustandswechseln entstehen können
-// (inklusive der leeren Teilmenge = Zustand selbst). Teilmengen werden wie im
-// C#-Original in fester Portal-Reihenfolge angewendet - für Kisten-Mengen ist
-// die Reihenfolge egal, nur bei Lücken in den Zwischen-Zuständen könnte eine
-// andere Reihenfolge theoretisch mehr finden (Parität zum Original).
-// swap liefert den Folgezustand (unverändert = Wechsel nicht möglich).
-func buildMaskStates(portalCount int, stateCount uint64, swap func(portal int, state uint64) uint64) [][]uint64 {
+// beliebige Portal-Teilmenge von Kisten-Zustandswechseln entstehen können;
+// includeIdentity nimmt die leere Teilmenge (= Zustand selbst) mit auf.
+// Teilmengen werden wie im C#-Original in fester Portal-Reihenfolge angewendet -
+// für Kisten-Mengen ist die Reihenfolge egal, nur bei Lücken in den
+// Zwischen-Zuständen könnte eine andere Reihenfolge theoretisch mehr finden
+// (Parität zum Original). swap liefert den Folgezustand (unverändert = Wechsel
+// nicht möglich).
+func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, swap func(portal int, state uint64) uint64) [][]uint64 {
 	result := make([][]uint64, stateCount)
 	maskEnd := uint64(1) << portalCount
+	maskStart := uint64(1)
+	if includeIdentity {
+		maskStart = 0
+	}
 	for state := uint64(0); state < stateCount; state++ {
 		seen := map[uint64]bool{}
 		var list []uint64
-		for mask := uint64(0); mask < maskEnd; mask++ {
+		for mask := maskStart; mask < maskEnd; mask++ {
 			s := state
 			valid := true
 			for p := 0; p < portalCount; p++ {
