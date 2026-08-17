@@ -1,0 +1,20 @@
+    #######
+   #  #    #
+  #  $# ..  #
+ #  $ #.##.  #
+ # $ $#.#  $ #
+#   $ #.#$#$# #
+#  $ $#...    #
+ #  $ #.##. ##
+ # $ $#. #.  #
+ #  $ #.# . ##
+  #  $#*##.$#
+  #  $ @..$ #
+   #   #   #
+    #######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=25616
+catalog: AC Smileys
+name: smileys 3.095
+number: 199/457
+bestmoves: 720
