@@ -113,10 +113,13 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 			// raus- und wieder reinzulaufen kann der Spieler auf dem Portalfeld
 			// stehen bleiben und dieselbe Fortsetzung 2 Züge billiger direkt spielen
 			// (Außen-Aktionen sind vorziehbar). Bei Eintritt über ein ANDERES Portal
-			// gilt das nicht: der Austritts-Schritt kann draußen eine Nachbar-Kiste
-			// schieben (wird beim Nachbarraum verbucht, hier unsichtbar) - die
-			// pauschale C#-Regel hatte hier ein Loch und hätte zwingend nötige
-			// Wiedereintritte wegwerfen können.
+			// gilt das nicht: vor dem Austritts-Portal kann von früher eine Kiste
+			// liegen, die der Austritts-Schritt schiebt (wird beim Nachbarraum
+			// verbucht, hier unsichtbar) - die pauschale C#-Regel hatte hier ein
+			// Loch und hätte zwingend nötige Wiedereintritte wegwerfen können.
+			// Gleiches gilt für Startvarianten (Spieler startet im Raum): beim
+			// ersten Austritt kann draußen noch die Start-Aufstellung liegen -
+			// Startvarianten setzen blockSame daher nie (mark mit NoPortal).
 			for _, ip := range room.Incoming {
 				if ip.Index == task.exitPortal && task.blockSame {
 					continue
