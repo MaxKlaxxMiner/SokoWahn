@@ -38,6 +38,7 @@ func New(network *rooms.Network, title string) *Server {
 	s.mux.HandleFunc("GET /api/rooms/{index}/states", s.read(s.handleStates))
 	s.mux.HandleFunc("GET /api/rooms/{index}/variants", s.read(s.handleVariants))
 	s.mux.HandleFunc("POST /api/merge", s.write(s.handleMerge))
+	s.mux.HandleFunc("POST /api/optimize", s.write(s.handleOptimize))
 	s.mux.HandleFunc("POST /api/validate", s.read(s.handleValidate))
 
 	static, err := fs.Sub(staticFS, "static")

@@ -1,9 +1,9 @@
 // goSokoWahnRooms - Rooms-Framework (Nachbau des C#-Raum-/Portal-Konzepts).
-// Konzept siehe docs/konzept.md. Aktueller Stand: M3 (manueller Merge in der GUI).
+// Konzept siehe docs/konzept.md. Aktueller Stand: M4 (Merge + Deadlock-Scan in der GUI).
 //
 // Aufruf: goSokoWahnRooms.exe [flags] [level.txt | level-nummer | game-sokoban.com-URL]
-// (ohne Level-Argument: eingebautes Vanilla-Level; Web-Levels landen im geteilten
-// levelcache/-Ordner, derselbe wie bei goSokoWahnBrute)
+// (ohne Level-Argument: eingebautes Level 202, wie das C#-Original; Web-Levels
+// landen im geteilten levelcache/-Ordner, derselbe wie bei goSokoWahnBrute)
 //
 // Standard ist der Debug-GUI-Modus: Webserver starten und Browser öffnen.
 // Mit -cli gibt es nur die Kennzahlen auf der Konsole (Verhalten von M1).
@@ -33,7 +33,7 @@ func main() {
 	noBrowser := flag.Bool("nobrowser", false, "Browser nicht automatisch öffnen")
 	flag.Parse()
 
-	sokoMap, title := maps.MapVanilla, "Vanilla"
+	sokoMap, title := maps.Map202, "Level 202: aenigma - soko 03" // Standard wie im C#-Original (FieldTest4)
 	var webInfo *weblevel.Info
 	if arg := flag.Arg(0); arg != "" {
 		if weblevel.IsWebInput(arg) {
@@ -64,6 +64,17 @@ func main() {
 	if err != nil {
 		fmt.Println("network error:", err)
 		os.Exit(1)
+	}
+
+	// Level 202: die linke Kammer direkt beim Start zusammenmergen (Max' Arbeitsstand).
+	// Die Zahlen sind die Raum-Nummern der GUI ("Room N", 1-basiert): 12,19,25,26,27,
+	// 34,35,36,37,47,48,49 - als Indizes also jeweils minus 1.
+	if flag.Arg(0) == "" || (webInfo != nil && webInfo.ID == "202") {
+		startMerge := []uint32{11, 18, 24, 25, 26, 33, 34, 35, 36, 46, 47, 48}
+		if _, err := network.MergeSelection(startMerge, nil); err != nil {
+			fmt.Println("merge error:", err)
+			os.Exit(1)
+		}
 	}
 
 	if webInfo != nil {

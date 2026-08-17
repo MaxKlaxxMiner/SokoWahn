@@ -527,6 +527,15 @@ func (n *Network) MergeRooms(room1, room2 *Room, info func(string) bool) (*Room,
 	m.Step4UpdatePortals()
 	m.Step5OptimizeStates()
 	m.Step6UpdateRooms()
+
+	// Deadlock-Scan auf dem neuen Raum (M4), mit dem Kosten-Gating des Originals:
+	// die Zustands-Masken wachsen mit 2^Portale, und beim (fast) fertig gemergten
+	// Netzwerk lohnt der Scan nicht mehr. Ein Abbruch im Scan lässt den bereits
+	// gemergten Raum einfach unoptimiert stehen.
+	if len(m.NewRoom.Incoming) <= 12 && len(n.Rooms) > 2 && m.NewRoom.Variants.Count() < 10_000_000 {
+		n.DeadlockScan(m.NewRoom, info)
+	}
+
 	if err := n.Validate(true); err != nil {
 		return nil, fmt.Errorf("validate after merge: %w", err)
 	}

@@ -334,6 +334,35 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"merges": merges, "rooms": len(n.Rooms)})
 }
 
+// führt den Deadlock-Scan (M4) auf der übergebenen Raum-Auswahl aus;
+// läuft synchron unter der Schreibsperre und validiert danach
+func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Rooms []uint32 `json:"rooms"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
+		return
+	}
+	n, _ := s.snapshot()
+	if len(req.Rooms) == 0 {
+		writeError(w, http.StatusBadRequest, "mindestens einen Raum auswählen")
+		return
+	}
+	for _, idx := range req.Rooms {
+		if int(idx) >= len(n.Rooms) {
+			writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
+			return
+		}
+	}
+	removed, err := n.OptimizeRooms(req.Rooms, nil)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, map[string]any{"removed": removed})
+}
+
 // prüft die Konsistenz des Netzwerks auf Anforderung (Validate-Button);
 // mutiert nichts und läuft daher unter der Lesesperre
 func (s *Server) handleValidate(w http.ResponseWriter, r *http.Request) {

@@ -72,6 +72,54 @@ func removeUnusedStatesOnce(room *Room) bool {
 	return false
 }
 
+// entfernt alle nicht markierten Varianten eines Raumes und baut die
+// Span-Verzeichnisse der Portale neu auf; Zustände und BoxSwaps bleiben
+// unangetastet (dafür danach removeUnusedStates aufrufen).
+// C#-Vorbild: OptimizeTools.RenewVariants
+func renewVariants(room *Room, used []bool) {
+	oldVariants := room.Variants
+	variantMap := make([]uint64, oldVariants.Count())
+	newVariants := NewVariantList()
+	newStartCount := uint64(0)
+	for id := uint64(0); id < oldVariants.Count(); id++ {
+		if !used[id] {
+			variantMap[id] = droppedID
+			continue
+		}
+		variantMap[id] = newVariants.Add(*oldVariants.Get(id))
+		if id < room.StartVariantCount {
+			newStartCount++
+		}
+	}
+	room.Variants = newVariants
+	room.StartVariantCount = newStartCount
+
+	for _, ip := range room.Incoming {
+		newSpans := make(map[uint64]Span, len(ip.VariantSpans))
+		for state, span := range ip.VariantSpans {
+			// überlebende Varianten eines Spans bleiben lückenlos (globale
+			// Neunummerierung erhält die Reihenfolge, alter Span war zusammenhängend)
+			newSpan := Span{}
+			for id := span.Start; id < span.Start+span.Count; id++ {
+				nid := variantMap[id]
+				if nid == droppedID {
+					continue
+				}
+				if newSpan.Count == 0 {
+					newSpan.Start = nid
+				} else if newSpan.Start+newSpan.Count != nid {
+					panic("renewVariants: span not contiguous")
+				}
+				newSpan.Count++
+			}
+			if newSpan.Count > 0 {
+				newSpans[state] = newSpan
+			}
+		}
+		ip.VariantSpans = newSpans
+	}
+}
+
 // baut Zustände, Varianten, BoxSwaps und Span-Verzeichnisse eines Raumes mit den
 // markierten Zuständen neu auf (C#-Vorbild: OptimizeTools.RenewStates)
 func renewStates(room *Room, used []bool) {

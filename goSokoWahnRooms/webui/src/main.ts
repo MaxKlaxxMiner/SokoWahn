@@ -126,6 +126,7 @@ async function handleSelection(selection: number[], active: number, fromList: bo
 
 function updateMergeButton(selection: number[]): void {
   ($('mergeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 2;
+  ($('optimizeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 1;
 }
 
 // ---------- Aktionen (M3) ----------
@@ -149,6 +150,29 @@ async function doMerge(): Promise<void> {
     showError(err);
   }
   btn.textContent = 'Merge Rooms';
+  mergeBusy = false;
+  updateMergeButton(canvas.getSelection());
+}
+
+async function doOptimize(): Promise<void> {
+  const selection = canvas.getSelection();
+  if (mergeBusy || selection.length < 1) return;
+  mergeBusy = true;
+  const btn = $('optimizeBtn') as HTMLButtonElement;
+  btn.disabled = true;
+  btn.textContent = 'scanning…';
+  try {
+    const result = await postJSON<{ removed: number }>('/api/optimize', { rooms: selection });
+    await reloadNetwork();
+    showStatus(
+      result.removed > 0
+        ? `Optimize fertig: ${fmt(result.removed)} Varianten entfernt`
+        : 'Optimize: nichts zu entfernen',
+    );
+  } catch (err) {
+    showError(err);
+  }
+  btn.textContent = 'Optimize';
   mergeBusy = false;
   updateMergeButton(canvas.getSelection());
 }
@@ -353,6 +377,7 @@ async function boot(): Promise<void> {
   roomsList.reset(summary.roomCount);
 
   ($('mergeBtn') as HTMLButtonElement).addEventListener('click', () => void doMerge());
+  ($('optimizeBtn') as HTMLButtonElement).addEventListener('click', () => void doOptimize());
   ($('validateBtn') as HTMLButtonElement).addEventListener('click', () => void doValidate());
 
   statesList = new VirtualList<StateItem>(

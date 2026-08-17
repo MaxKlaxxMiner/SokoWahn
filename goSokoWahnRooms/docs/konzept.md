@@ -220,8 +220,21 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Merge-Reihenfolge-Unabhängigkeit, Abbruch lässt das Netzwerk unverändert.
   Noch offen (folgt mit M4/M5): SSE-Livestatus und Abbruch-Button in der GUI -
   der Kern hat den info-Callback samt gefahrlosem Abbruch vor Schritt 4 bereits.
-- **M4 - Deadlock-Scan**: Optimize-Schritt (Reverse-Map, Scan vorwärts/rückwärts,
-  unbenutzte Varianten/Zustände entfernen).
+- ERLEDIGT: **M4 - Deadlock-Scan** (2026-08-17, rooms/deadlock.go): Vorwärts-Scan
+  (von der Startsituation erreichbare Varianten) und Rückwärts-Scan (Varianten,
+  die zum lokalen Ende führen können) über Zustands-Masken (alle Portal-Teilmengen
+  von BoxSwaps bzw. Pull-Swaps), Schnittmenge entfernt den Rest samt verwaister
+  Zustände (renewVariants + removeUnusedStates). Läuft automatisch nach jedem
+  Merge (Gating wie C#: max. 12 Portale, mehr als 2 Räume übrig, unter 10 Mio
+  Varianten) und manuell per Optimize-Button/POST /api/optimize auf der Auswahl.
+  Bewusste Abweichungen vom C#-RoomDeadlockScanner (siehe Kommentar in
+  deadlock.go): die dort selbst mit "todo: bug?" markierte Selbes-Portal-Regel
+  entfällt (hätte erreichbare Varianten wegwerfen können; die Vorwärts-Suche
+  wird dadurch zur reinen Zustands-Erreichbarkeit), Varianten werden einzeln
+  statt Span-weise markiert (Doppelzähl-Bug), Ziele-Check auch für
+  End-Startvarianten. Referenz-Zahlen als Test verankert (Vanilla, erste 20
+  Räume: 5 Scans entfernen 1164 Varianten, Effort 6,5e40 -> 7,8e30); ein zweiter
+  Scan direkt nach den Merges findet nichts mehr (Idempotenz-Test).
 - **M5 - Automerge**: Aufwands-Schätzung + Kachel-Pattern wie im C#-FormDebugger,
   Abbruchkriterien, jederzeit stoppbar; Effort-Verlauf sichtbar.
 - **M6 - Path-Mapping** (neu, gab es im C# nicht; bewusst vor dem Solver):

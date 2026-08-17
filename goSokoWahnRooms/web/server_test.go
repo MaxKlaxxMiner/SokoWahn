@@ -300,6 +300,20 @@ func TestMerge(t *testing.T) {
 	post(t, s, "/api/merge", `kein json`, 400, nil)
 }
 
+func TestOptimize(t *testing.T) {
+	s := testServer(t)
+	var result struct {
+		Removed uint64 `json:"removed"`
+	}
+	// Scan über alle Räume des Mini-Levels: muss sauber durchlaufen
+	post(t, s, "/api/optimize", `{"rooms":[0,1,2,3]}`, 200, &result)
+	get(t, s, "/api/summary", 200, nil)
+
+	// Fehlerfälle
+	post(t, s, "/api/optimize", `{"rooms":[]}`, 400, nil)
+	post(t, s, "/api/optimize", `{"rooms":[99]}`, 400, nil)
+}
+
 func TestStaticIndex(t *testing.T) {
 	s := testServer(t)
 	rec := httptest.NewRecorder()
