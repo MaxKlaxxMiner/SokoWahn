@@ -1,0 +1,14 @@
+###########
+#     .   #
+#@####$####
+# #       #
+# $ .* $#$#
+##..*#$  .#
+## $    . #
+###########
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=20533
+catalog: David Dahlem
+name: level 2.84
+number: 127/143
+bestmoves: 296

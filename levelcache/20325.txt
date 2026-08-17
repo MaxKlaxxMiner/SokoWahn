@@ -1,0 +1,14 @@
+##############
+###.##########
+## * #########
+## .$ $   $  #
+#@$.$.**.*.*.#
+# $     $    #
+##  ##########
+##############
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=20325
+catalog: David Dahlem
+name: level 1.20
+number: 20/143
+bestmoves: 1891

@@ -1,0 +1,13 @@
+#######
+#.. *+#
+# $$$$#
+#.* * #
+# $ $ #
+#  . .#
+#######
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=20306
+catalog: David Dahlem
+name: level 1.01
+number: 1/143
+bestmoves: 175

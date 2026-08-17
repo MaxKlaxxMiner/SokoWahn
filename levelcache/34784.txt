@@ -1,0 +1,20 @@
+  ###
+  #.#
+ ## ####
+ #  $@ #   ###
+## $.$ #####.##
+#.  $ $. .#.$.##
+###  $.$ $.$ $.##
+  ###.#.$.$ $ $.##
+    ####.$ $.$ $.#
+       ##.$ $ $.##
+        ##.$ $.##
+         ##.$.##
+          ##.##
+           ###
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=34784
+catalog: Cadushi
+name: cadushi 03
+number: 3/35
+bestmoves: 71
