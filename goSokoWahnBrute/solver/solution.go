@@ -9,7 +9,7 @@ import (
 // fertiger Lösungsweg
 type Solution struct {
 	States      []soko.State // Stellungsfolge vom Start bis zum Ziel (nur die Schub-Stellungen)
-	Moves       string       // komplette Zugfolge in LURD-Notation (Grossbuchstaben = Schiebeschritte)
+	Moves       string       // komplette Zugfolge in LURD-Notation (Großbuchstaben = Schiebeschritte)
 	MoveOffsets []int        // je Stellung die Anzahl der bis dahin ausgeführten Züge (Index in Moves)
 }
 

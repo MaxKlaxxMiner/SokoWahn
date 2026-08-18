@@ -1,7 +1,9 @@
 # Architektur goSokoWahnBrute
 
-Go-Nachbau des C#-Solvers `SokoWahn_4th_generation` (bidirektionale Breitensuche über Moves)
-mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-Tea-TUI.
+Sokoban-Löser: bidirektionale Breitensuche über Moves mit Blocker-Deadlock-Vorberechnung
+(Bx-Semantik) und Bubble-Tea-TUI. Entstanden als Go-Nachbau des C#-Solvers
+`SokoWahn_4th_generation` - die Herkunft, die Orakel-Ära und alles Erledigte stehen
+in docs/history.md; hier steht nur der aktuelle Stand.
 
 ## Pakete
 
@@ -11,9 +13,9 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 | `solver` | bidirektionaler Such-Treiber, Hashtabellen-Interface, Tiefenlisten, Lösungs-Rekonstruktion |
 | `blocker` | Deadlock-Vorberechnung (k-Steiner-Muster) mit Step-API und gzip-Cache |
 | `tui` | Terminal-Oberfläche (Bubble Tea) inkl. game-sokoban.com-Loader |
-| `crc64` | FNV-1a-64-Hashing (Fluent-API), trotz Namens kein echtes CRC |
-| `tools` | Kleinkram: ClearBools, UnsafeString, FormatInt (Tausender-Punkte, generisch) |
-| `maps` | Test-Levels |
+| `crc64` | FNV-1a-64-Hashing der Stellungs-Schlüssel, trotz Namens kein echtes CRC |
+| `tools` | Kleinkram: ClearBools, FormatInt (Tausender-Punkte, generisch), RAM-Erkennung |
+| `maps` | eingebettete Referenz-Levels (Vanilla) |
 
 ## Kern-Datenstrukturen (Paket soko)
 
@@ -34,12 +36,10 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
 - **Freeze-Filter beim Parsen** (`freeze.go`, JSoko-Verhalten, immer aktiv): eingefrorene
   Kisten auf Zielfeldern werden durch Wände ersetzt, Kiste und Ziel entfallen ersatzlos
   (kaskadierend bis zum Fixpunkt, erkennt auch gegenseitig blockierte 2x2-Blöcke;
-  Kisten abseits der Ziele zählen konservativ nie als Blockade). Das C#-Orakel wendet
-  denselben Filter an (FreezeGoalBoxesToWalls in refcli/Program.cs) - Diff-Vergleiche
-  bleiben auch bei betroffenen Levels byte-gleich (verifiziert per refcli-Diff auf einem
-  Level mit einfrierender *-Spalte; Transformation als Tests in soko/freeze_test.go verankert).
-  Die verankerten Referenz-Levels (Vanilla, small, lid201, SolvedStart) enthalten nur
-  bewegliche *-Kisten und sind unverändert. Gleicher Filter auch in goSokoWahnRooms.
+  Kisten abseits der Ziele zählen konservativ nie als Blockade). Transformation als
+  Tests in soko/freeze_test.go verankert. Die verankerten Referenz-Levels (Vanilla,
+  small, lid201, SolvedStart) enthalten nur bewegliche *-Kisten und sind unverändert.
+  Gleicher Filter auch in goSokoWahnRooms.
 
 ## Solver (bidirektionale Suche)
 
@@ -55,7 +55,7 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   hunderten aktiven Listen auf zweistellige GB RAM), wandert der Schreibpuffer blockweise in eine
   Temp-Datei (`sokolist_*.tmp`, Zufallsname via os.CreateTemp - mehrere Prozesse
   stören sich nicht); gelesen wird sequenziell über einen gleich großen Lesepuffer.
-  Ausgelagert wird aber erst bei echtem Speicherdruck: liegt der berechnete
+  Ausgelagert wird erst bei echtem Speicherdruck: liegt der berechnete
   RAM-Verbrauch der Suche (derselbe Wert wie die RAM-Anzeige: Hashtabellen +
   Listen-Puffer; Solver.Step und Blocker.Next melden ihn je Arbeitsschritt per
   `SetSpillRamUsage`, bewusst kein teures/GC-abhängiges ReadMemStats) unter
@@ -114,16 +114,12 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Sondieren, 10 Byte pro Slot (voller 64-Bit-Schlüssel + uint16-Tiefe, verlustfrei),
   crc==0 als Frei-Marker (Sondieren berührt nur das Schlüssel-Array), Verdopplung bei
   75% Füllstand. Die map-Variante bleibt als Vergleichs-Referenz erhalten.
-- Hashtable-Shootout unter **Realbedingungen** (echter Blocker-Workload lid349 bis
-  4-Steiner, 4 Worker, je 2 Läufe, historisches Ergebnis vom 05.08.2026):
-  CompactTable 6,3 s, builtin map 6,8 s, cockroachdb/swiss 6,9 s, brentp/intintmap 6,9 s,
-  dolthub/swiss 7,4 s, tidwall/hashmap 7,8 s, puzpuzpuz/xsync 8,0 s (einzige Concurrent-Map
-  im Limit); alphadose/haxmap und cornelk/hashmap DNF (>12 s, brechen unter Masseninserts ein).
-  Die Verlierer-Adapter (Paket tables) wurden danach entfernt - für neue Kandidaten
-  einfach wieder einen kleinen PosTable-Adapter schreiben und über SetTableFactory bzw.
-  SetDirectTableFactory unter Realbedingungen messen.
-  Anmerkung zu xsync: im Serial-Merge-Design zahlt sie Atomic-Kosten ohne Nutzen -
-  ihr Potenzial zeigt sich erst im Direct-Write-Modus (siehe unten).
+- Die CompactTable hat einen Hashtable-Shootout unter Realbedingungen gewonnen
+  (7 Kandidaten, Ergebnis in docs/history.md); für neue Kandidaten einfach wieder
+  einen kleinen PosTable-Adapter schreiben und über SetTableFactory bzw.
+  SetDirectTableFactory unter Realbedingungen messen - synthetische
+  Micro-Benchmarks übertreiben die Unterschiede stark (Hash-Zugriffe sind nur
+  ~20-25% des Workloads).
 - **Direct-Write-Modus** (Standard, `blocker/direct.go`): die Worker beanspruchen ihre
   Funde atomar selbst (ClaimPending per first-wins, MergeTransition für die monotonen
   Marker-Übergänge unbekannt -> pending -> good), der serielle Merge entfällt komplett;
@@ -136,11 +132,9 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Buche, daher ist die sparsame Variante Standard.
   Messwerte lid349 bis 4-Steiner (Worker / Serial-Merge / DW-Shard / DW-xsync):
   4: 6,3 / 5,7 / 5,9 s | 8: 4,5 / 3,7 / 3,8 s | 14: 3,8 / 2,9 / 2,9 s |
-  128: 3,0 / 2,5 / **2,2 s**. Gesamt seit Baseline: 13,8 s -> 2,2 s (Faktor 6+). Die CompactTable gewinnt, weil die
-  Crc64-Schlüssel bereits Hashes sind (Identity-Hashing, kein Re-Hash, keine Metadaten).
-  Wichtige Lehre: synthetische Micro-Benchmarks übertreiben die Unterschiede stark
-  (Hash-Zugriffe sind nur ~20-25% des Workloads) - neue Kandidaten immer als Adapter
-  ins Paket `tables` hängen und unter Realbedingungen messen.
+  128: 3,0 / 2,5 / **2,2 s**. Gesamt seit Baseline: 13,8 s -> 2,2 s (Faktor 6+).
+  Die CompactTable gewinnt, weil die Crc64-Schlüssel bereits Hashes sind
+  (Identity-Hashing, kein Re-Hash, keine Metadaten).
 - **Max-Memory-Modus** (TUI-Taste m, `solver.CompactMaxMemory`, setzt sich beim
   Level-Scan zurück - der Modus ist ein gezielter Notgriff, kein Dauerzustand):
   CompactTables verdoppeln erst bei 93,75% statt 75% Füllstand - ein Viertel mehr
@@ -158,21 +152,19 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   ersetzt (ab halber Merge-Schwelle, damit kleine Deltas den Bucket-Index
   nicht ständig neu bauen).
 - **ArchiveTable** (TUI-Taste h, "SlowCompactArchiveTable", `hashArchive.go`):
-  speicheroptimierte PosTable-Variante nach dem Vorbild von SokowahnHash_Index24Multi
-  aus dem C#-Original (2013; dort Dictionary-Delta, Binärsuche und uint32-Limit bei
-  4,29 Mrd Einträgen). Neuzugänge sammelt ein CompactTable-Delta; das Archiv hält den
+  speicheroptimierte PosTable-Variante (Vorbild: SokowahnHash_Index24Multi).
+  Neuzugänge sammelt ein CompactTable-Delta; das Archiv hält den
   Bestand unveränderlich in 256 Shards (untere 8 Schlüssel-Bits) als ein uint64 je
   Record: Bits 0..47 Rest-Schlüssel (Schlüssel-Bits 16..63), Bits 48..63 Tiefe -
-  ein nackter Slice-Zugriff liefert Vergleich und Tiefe. Format-Shootout (siehe
-  Git-Historie): gepackte 7-Byte-Records (+Unsafe-Load) und ein cacheline-
-  ausgerichtetes 9er-Zeilen-Layout verlieren beide 12-17% Lookup-Tempo gegen das
-  volle uint64 - das Frei-Byte kauft Alignment, Bounds-Check-Eliminierung,
-  Einfachheit und finanziert die 48 Rest-Bits (Bucket-Minimum 16 wäre damit
-  verlustfrei möglich; empirisch gewinnt ein überdimensionierter Index, weil
-  Fehlschläge in leeren Buckets schon am Offsets-Vergleich enden - Minuten-Sweep
-  über das Floor-Minimum: 16 -> 71,9 | 24 -> 72,3 | 26 -> 73,7 (Sweet Spot,
-  268 MB Floor je Tabelle) | 28 -> 68,2, dort kostet der fast leere
-  1-GB-Index selbst per TLB/Zero-Pages). Gruppiert wird nach Bucket (untere
+  ein nackter Slice-Zugriff liefert Vergleich und Tiefe. Das volle uint64 hat
+  einen Format-Shootout gegen gepackte Varianten gewonnen (docs/history.md):
+  das Frei-Byte kauft Alignment, Bounds-Check-Eliminierung, Einfachheit und
+  finanziert die 48 Rest-Bits (Bucket-Minimum 16 wäre damit verlustfrei
+  möglich; empirisch gewinnt ein überdimensionierter Index, weil Fehlschläge
+  in leeren Buckets schon am Offsets-Vergleich enden - Minuten-Sweep über das
+  Floor-Minimum: 16 -> 71,9 | 24 -> 72,3 | 26 -> 73,7 (Sweet Spot, 268 MB
+  Floor je Tabelle) | 28 -> 68,2, dort kostet der fast leere 1-GB-Index
+  selbst per TLB/Zero-Pages). Gruppiert wird nach Bucket (untere
   Bits, adaptiv bis 32; Index- plus Rest-Bits sind zusammen verlustfreie 64),
   der Bucket-Index sind shard-relative uint32-Offsets. Die Bucket-Dichte ist der Speed/RAM-Regler
   (`ArchiveBucketGoal`, wirkt ab dem nächsten Merge): der Index kostet 4/Ziel
@@ -210,10 +202,9 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Erfahrungswert von Max aus der manuellen Steuerung: die Rückwärtssuche kommt mit
   demselben Hash-Budget oft um Faktoren weiter und verdient dann mehr Budget; die
   Wahl reguliert sich selbst, weil das Verhältnis der vertieften Seite durch ihr
-  exponentielles Wachstum wieder sinkt. Bewusste Abweichung vom Original (dort
-  Z. 519-523: kleinere Tabelle zuerst) - das Referenz-Verhalten bleibt als
-  `DirClassic` erhalten (CLI-Flag `-dirclassic`, Basis aller bitgenauen
-  refcli-Orakel-Vergleiche und der Orakel-Tests).
+  exponentielles Wachstum wieder sinkt. Solange eine Richtung noch keine fertige
+  Tiefe hat, wäre das Kreuzprodukt sinnfrei - als Anlauf-Kriterium gilt dann:
+  kleinere Tabelle zuerst.
   Manuell übersteuerbar per `SetDirMode` (TUI-Tasten 1 = nur vorwärts, 2 = nur rückwärts,
   3 = automatisch); wirkt nur auf die normale Suchphase, die Endphase nach gefundener
   Lösung bleibt vorgegeben. Achtung bei DirBackward: die Vorwärts-Tiefe 0 (nur die
@@ -227,8 +218,8 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   geteilt; die Worker generieren Varianten und filtern gegen die (während der Generierung
   eingefrorene) Hashtabelle vor, der serielle Merge läuft in Bereichs-Reihenfolge = exakter
   FIFO-Reihenfolge mit der Originallogik -> bitgenau identisch zur seriellen Suche, egal
-  wie viele Worker (Tests: TestSolveParallelDeterminism, Vanilla-Orakel läuft im Default
-  parallel). Wichtig fürs Verständnis: die dynamischen Chunks des Blockers wären hier
+  wie viele Worker (Tests: TestSolveParallelDeterminism, der Vanilla-Anker läuft im
+  Default parallel). Wichtig fürs Verständnis: die dynamischen Chunks des Blockers wären hier
   falsch, weil foundTotal-Pruning und Tiefen-Updates reihenfolge-abhängig sind; und der
   eingefrorene Vorfilter ist äquivalent zum Live-Zugriff, weil Add/Update innerhalb eines
   Tiefen-Batches nur Tiefen > Listentiefe schreiben und Tabellen-Tiefen nur sinken.
@@ -265,32 +256,27 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Meet-Fundstellen, dedupliziert, Deckel 1024; Knoten-Deckel
   PushOptimizeNodeLimit mit Rückfall auf die einfache Rekonstruktion). Das TUI
   zeigt Züge/Schübe und nutzt automatisch die push-optimierte Variante.
-  Vollständigkeits-Grenze (weitgehend geschlossen, siehe keepEqual unten): das
+  Vollständigkeits-Grenze (weitgehend geschlossen, siehe Gleichstands-Stellungen
+  unten): das
   Ergebnis ist die beste Push-Zahl unter den in den Tabellen repräsentierten
   zugoptimalen Lösungen, nie schlechter als GetSolution
   (Test: TestSolutionBestPushes, auf small.txt 5 statt 7 Schübe bei 16 Zügen).
   Kennzahlen des Laufs (Anker, Deckel, DP-Knoten, Overflow): `PushOptStats`,
   im TUI in der Statuszeile nach Suchende.
-- **Gleichstands-Stellungen behalten** (`keepEqual`, Default an, seit 08/2026):
-  die Nach-Fund-Beschneidung des Originals verwirft Stellungen, die die Lösung
-  nicht mehr verkürzen können - darunter genau die, die NUR auf alternativen
-  zugoptimalen Pfaden liegen. Der Push-Optimierung fehlten dadurch Kanten und
-  Anker an der Naht der Suchfronten: Level 361 fand 110 statt der 108 Schübe
-  einer bekannten 315-Züge-Lösung (Filter per 361-Kanten-Test ausgeschlossen,
-  `-checksol`-Report zeigte die Bruchstelle exakt bei Schub 29: rückwärts als
-  Gleichstand verworfen, vorwärts nie expandiert, 0 Anker auf dem Pfad).
-  keepEqual speichert und expandiert auch exakte Gleichstands-Kandidaten
-  (`solver.keepForward`/`keepBackward`); Preis auf Vanilla ~1,6% mehr Knoten.
-  `-dirclassic` schaltet zusätzlich zur Richtungswahl auch diese Beschneidung
-  auf Original-Verhalten zurück (bitgenaue Orakel-Vergleiche). Theoretische
-  Restlücke: eine Stellung exakt auf der Terminierungs-Tiefe kann bei
-  ungünstigem Timing weiter beidseitig durchs Raster fallen - der
-  `-checksol`-Report weist das im Zweifel nach.
+- **Gleichstands-Stellungen behalten** (seit 08/2026): nach dem ersten Fund
+  speichert und expandiert die Suche auch Stellungen mit exaktem Gleichstand
+  zur besten Lösungslänge (`solver.keepForward`/`keepBackward`) - sie liegen
+  auf alternativen zugoptimalen Pfaden und sind das Futter der Push-Optimierung
+  (ohne sie fehlen dem DP Kanten und Anker an der Naht der Suchfronten; die
+  Level-361-Detektivgeschichte dazu in docs/history.md). Preis auf Vanilla
+  ~1,6% mehr Knoten. Theoretische Restlücke: eine Stellung exakt auf der
+  Terminierungs-Tiefe kann bei ungünstigem Timing beidseitig durchs Raster
+  fallen - der `-checksol`-Report weist das im Zweifel nach.
 - **Meet-Verifikation gegen Hash-Kollisionen** (`verifyMeet`, seit 08/2026): die
   Stellungs-Schlüssel sind 64-Bit-Hashes - nach dem Geburtstagsparadoxon werden
   Kollisionen ab Milliarden Einträgen real (P ≈ N_v*N_r/2^64, bei je 2 Mrd schon
-  ~20%; erster echter Fall: Level 201 meldete eine Schein-Lösung mit 129 Zügen
-  statt 146). Ein kollidierender Schlüssel in der Gegentabelle gaukelt ein
+  ~20%; erster echter Fall: Level 201 meldete eine Schein-Lösung, siehe
+  docs/history.md). Ein kollidierender Schlüssel in der Gegentabelle gaukelt ein
   Treffen der Suchfronten vor, und das falsche foundTotal würde die weitere
   Suche beschneiden - die echte Lösung wäre in dem Lauf unbeweisbar. Deshalb
   wird jeder Verbindungs-Kandidat (alle vier Fundstellen: seriell/parallel x
@@ -299,7 +285,7 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   reißt die Kette garantiert (Nachfolger mit exakten Tiefen existieren nicht bzw.
   `Steps` findet keinen Laufweg) und der Kandidat wird verworfen. Verworfene
   Kollisionen zählt die Suche und das TUI zeigt sie rot an. Kosten: nur bei
-  Meets (Handvoll pro Lauf), Knotenzahlen bleiben bitgenau (Vanilla-Orakel
+  Meets (Handvoll pro Lauf), Knotenzahlen bleiben bitgenau (Vanilla-Anker
   unverändert; Test: TestSolveCollisionRejected mit gepflanzter Kollision).
   Restrisiko: Kollisionen INNERHALB einer Tabelle bleiben stumm (eine fremde
   Stellung gilt als bekannt, ihr Teilbaum entfällt) - bei 11 Mrd Einträgen
@@ -308,14 +294,12 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Bucket-Bits des Archivs zählen zum Schlüssel - bei 32 Bucket-Bits wären
   80-Bit-Schlüssel ohne Record-Vergrößerung möglich, siehe roadmap).
 
-## Blocker (Bx-Semantik, seit Cache-Version 6 mit adaptiver Regel-Filterung)
+## Blocker (Bx-Semantik mit adaptiver Regel-Filterung)
 
-**Adaptive Regel-Filterung seit Cache-Version 6** (`RulesPatternThreshold`, seit
-Cache-Version 8 bei 10240):
+**Adaptive Regel-Filterung** (`RulesPatternThreshold`, aktuell 10240):
 solange alle fertigen Stufen unter der Muster-Schwelle bleiben, baut der Stufenbau
-klassisch (volle Muster kosten kaum Platz, filtern als Set-Trie-Test billiger
-als der Freeze-Fixpunkt, und die Werte bleiben bitgenau orakel-vergleichbar mit
-refcli blockerbx - zahme Levels wie Vanilla und lid201 bauen damit KOMPLETT
+klassisch (volle Muster kosten kaum Platz und filtern als Set-Trie-Test billiger
+als der Freeze-Fixpunkt - zahme Levels wie Vanilla und lid201 bauen damit KOMPLETT
 klassisch). Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion,
 typisch für sehr große Levels), filtern alle weiteren Stufen ihre Vorwärts-Phasen
 (Schub-Varianten von CollectStart/CollectGoals, SearchVariants) mit einer eigenen
@@ -327,12 +311,8 @@ der Entstehung ohnehin fangen (Freeze/Diagonale sind monoton unter
 Kisten-Hinzufügen). Fehlende Muster kosten nie Korrektheit, nur Filterleistung
 (Muster sind reine Beschleuniger). Die Rückwärtswelle (MergeGoals) bleibt bewusst
 ungefiltert - ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
-Historie: Cache-Version 4 filterte ALLE Stufen (messbar langsamer in Stufenbau und
-Suche - die kleinen Muster fehlten als billige Vorfilter), Version 5 starr ab
-Stufe 4 (auf zahmen Levels unter 5% Ersparnis, aber Speed-Kosten) - daher die
-adaptive Schwelle; seit Version 7 wirkt in den gefilterten Phasen auch das
-Ziel-Matching (Regel-Stufe 2) mit. Alte Caches werden beim Laden verworfen und
-neu gerechnet.
+Die Schwelle wurde in mehreren Cache-Versionen justiert (Chronik in
+docs/history.md); alte Caches werden beim Laden verworfen und neu gerechnet.
 
 Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 
@@ -349,21 +329,16 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
 5. **CreatePatterns**: alles was noch 12345 ist -> Deadlock-Muster, abgelegt pro Spielerposition.
 
 - `CheckAllowed(player, boxBits)`: Muster trifft zu, wenn ALLE Muster-Felder Kisten tragen
-  (Subset-Match). **Bedingte Kill-Regel** (seit 08/2026, Cache-Version 3): ein zutreffendes
+  (Subset-Match). **Bedingte Kill-Regel** (seit 08/2026): ein zutreffendes
   Muster allein blockt noch nicht - verworfen wird erst, wenn JEDER Schub-Pose-Kandidat
   (jede Kiste neben dem Spieler, die als "zuletzt geschobene" infrage kommt:
   Kiste auf Nachbarfeld, Gegenfeld frei) von einem zutreffenden Muster abgedeckt ist.
   Hintergrund: Die Bx-Hinterland-Muster ("rückwärts erreichbar, vorwärts nie gesehen")
   beweisen nur, dass die Stellung nicht durch den Schub einer MUSTER-Kiste entstanden
   sein kann - steht der Spieler nach dem Schub einer fremden Kiste in der Muster-Pose,
-  ist die Stellung trotzdem legal. Die unbedingte Anwendung (so auch im C#-Original
-  SokowahnBlockerBx) verwarf so bei Level 29632 eine Stellung der optimalen
-  304-Züge-Lösung, der Solver fand nur 306 (Regressionstest:
-  blocker/lid29632_debug_test.go, braucht solution-29632.txt im Repo-Root).
-  Der Fix wurde ins C# zurückportiert (SokowahnBlockerBx.CheckErlaubt, Cache-Version
-  107 -> 108, alte Caches werden ignoriert statt Exception) - gen4-plain (SokowahnBlocker),
-  SokowahnBlockerB und gen5 (SokowahnBlockerB2) hatten den Bug nie: sie registrieren
-  kein Ziel-Hinterland (B2s Blocker sind per Konstruktion echte Teilspiel-Deadlocks).
+  ist die Stellung trotzdem legal. Die unbedingte Anwendung verwarf bei Level 29632
+  eine Stellung der optimalen 304-Züge-Lösung (Fund- und Fix-Geschichte inkl.
+  C#-Rückport in docs/history.md).
   Beweisskizze der bedingten Regel: jedes Muster ist entweder (a) in der Start-Hülle
   des k-Spiels und dann per vollständiger Rückwärtswelle beweisbar tot (Kill immer
   korrekt) oder (b) nicht in der Start-Hülle, dann ist jede Entstehung als
@@ -371,12 +346,6 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   k-Projektion jeder legalen Partie landet nach dem Schub einer Teilmengen-Kiste in
   der k-Start-Hülle). Sind alle Kandidaten abgedeckt, ist jede mögliche Entstehung
   widerlegt oder tot. Kosten: Vanilla-Suche nur ca. 1,7% mehr Knoten (s.u.).
-  Die Blocker-Stufenwerte änderten sich durch die bedingte Regel (der Stufenbau
-  filtert sich selbst damit: größere Hüllen, längere Rückwärtswellen, teils deutlich
-  mehr Hinterland-Muster) - dank Rückport waren sie unter Cache-Version 3 **bitgenau
-  vergleichbar mit dem gefixten C#-refcli** (verifiziert: vanilla blockerbx 5 und
-  lid201 blockerbx 3 exakt gleich; seit Version 4 gilt das wegen der
-  regel-gefilterten Vorwärts-Phasen nicht mehr, siehe oben).
   Der Muster-Match läuft als **Set-Trie je Spielerposition** (seit 08/2026): jedes
   Muster liegt als Pfad über seine kanonisch aufsteigend sortierten Felder in einem
   Präfix-Baum (BFS-Layout, Kinder zusammenhängend und sortiert; Bau nach jeder
@@ -387,34 +356,26 @@ Pro Kistenzahl k = 1, 2, ... (automatisches Ende nach Stufe KistenAnzahl-1):
   Teilmengen der aktuellen Kistenmenge begrenzt (bei k Kisten maximal 2^k besuchte
   Knoten, real weit weniger) und praktisch **unabhängig von der Musteranzahl**;
   Präfix-Sharing macht den Trie zugleich kleiner als die früheren Muster-Bitmasken
-  (Level 25523: 5,2M Knoten à ~6 B für 3,76M Muster à 16 B).
-  Historie der Check-Beschleunigung: naiver Feld-für-Feld-Vergleich -> Muster als
-  Bitmasken (branchloser Subset-Test `pattern &^ state == 0`) -> Anker-Index
-  (Muster-Buckets nach kleinstem Muster-Feld; lid46084, 190.708 Muster, Suche bis
-  Tiefe 266: 7,8 -> 2,8 -> 1,0 s) -> Set-Trie. Der lineare Anker-Scan brach bei
-  Muster-Explosionen ein: Level 25523 (nach Freeze-Filter 9 Kisten) hat 3,39 Mio
-  6-Steiner-Muster, der Scan kostete bis zu ~280.000 Maskenvergleiche pro
-  Schub-Check - Suche bis Tiefe 379 mit allen 6 Stufen 20,1 s gegen 0,64 s mit
-  Stufen 1-4. Mit dem Trie: **1,1 s** (Faktor ~18, Knotenzahlen bitgenau gleich;
-  der Vollausbau kostet nur noch ~70% Aufpreis statt Faktor 31 und spart 12,5%
-  Knoten). Äquivalenz-Absicherung: TestCheckTrieMatchesNaive vergleicht den Trie
+  (Level 25523: 5,2M Knoten à ~6 B für 3,76M Muster à 16 B; die Vorgänger-Stufen
+  der Check-Beschleunigung und ihre Messwerte in docs/history.md).
+  Äquivalenz-Absicherung: TestCheckTrieMatchesNaive vergleicht den Trie
   auf Vanilla gegen einen naiven Referenz-Scan mit der alten Logik (alle Muster
   gezielt als Treffer-Stellungen plus 20.000 Zufallsstellungen, fester Seed).
-  Der frühere `emptyBoxNumber`-Mechanismus (kistenNummerLeer-Pendant) entfällt: der
-  Kisten-Test kennt nur "Kiste ja/nein" und ist damit unabhängig von der Kistenanzahl
-  des abfragenden Feldes.
+  Der Kisten-Test kennt nur "Kiste ja/nein" und ist damit unabhängig von der
+  Kistenanzahl des abfragenden Feldes.
 - Der Solver filtert vorwärts UND rückwärts mit den Blockern (rückwärts wie
   `GetVariantenRückwärtsTeilRun2` der List2-Variante; bringt z.B. bei Vanilla
   1,60 Mio statt 2,06 Mio Knoten).
-- Cache: gzip, versioniert (aktuell v2), benannt per FNV über die Feldgeometrie,
-  gespeichert nach jeder fertigen Stufe -> Wiederaufnahme jederzeit.
+- Cache: gzip, versioniert (aktuell v8, Chronik in docs/history.md), benannt per
+  FNV über die Feldgeometrie, gespeichert nach jeder fertigen Stufe ->
+  Wiederaufnahme jederzeit.
 - **Parallelisierung**: die beiden teuren Phasen (SearchVariants, MergeGoals) verteilen
   jeden Batch per Atomic-Zähler in Chunks (Standard 512 Sätze, `SetChunkSize`) auf Worker.
   Jeder Worker hat einen eigenen Field-Clone und generiert/vorfiltert nur (Lese-Zugriffe
   auf die Hashtabelle); das Einsortieren läuft danach seriell in fester Worker-Reihenfolge.
   Die Ergebnis-Sets sind dadurch beweisbar identisch zum seriellen Lauf (Fixpunkt der
   Vorwärts-Hülle ist unabhängig von der Wellen-Reihenfolge) - abgesichert über die
-  Orakel-Referenzwerte im Benchmark.
+  verankerten Stufen-Referenzwerte im Benchmark.
 - **Worker-Anzahl**: Standard ist 8x NumCPU (`SetWorkers`). Die Arbeit ist memory-latency-
   gebunden (Hash-Lookups und Flood-Fills über große Arrays), deshalb hilft deutliche
   Überbelegung: die Goroutinen verstecken gegenseitig ihre DRAM-Wartezeiten
@@ -481,19 +442,17 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
   Vorwärts filtert CheckPush in pushVariantHorizontal/Vertical hinter dem
   Blocker-Check, rückwärts CheckPull in SearchVariantsBackward.
 - **Der Blocker-Stufenbau filtert seine Vorwärts-Phasen nach einer Muster-Explosion
-  selbst mit den Regeln** (adaptiv seit Cache-Version 6, RulesPatternThreshold=10240,
-  eigene Regel-Instanz, nur vorwärts - siehe Blocker-Kapitel; seit Cache-Version 7
-  wirkt dort auch das Ziel-Matching mit); zahme Levels bauen komplett klassisch und
-  bleiben orakel-vergleichbar.
+  selbst mit den Regeln** (adaptiv, RulesPatternThreshold=10240, eigene
+  Regel-Instanz mit Ziel-Matching, nur vorwärts - siehe Blocker-Kapitel);
+  zahme Levels bauen komplett klassisch.
 - **Threading**: die Vorberechnung (tote Felder, Ziel-Maske, Geometrie) wird geteilt,
   jeder Field-Clone bekommt per Rules.Clone einen eigenen Scratch-Puffer.
   Statistik-Zähler liegen atomar im geteilten Teil (alle Worker zählen gemeinsam).
 - **Bedienung**: TUI Default an, reaktiviert sich bei jedem neuen Level; Tasten 4/5
   schalten Blocker/Regeln in der Suche um (wirkt wie SetWorkers ab dem nächsten Batch),
   Taste 6 nimmt einzeln das Ziel-Matching heraus (der teuerste Regel-Teil).
-  CLI: `-rules` (opt-in, sonst bleibt die Ausgabe orakel-vergleichbar) und
-  `-rulescompare` (Debug: beide Filter unabhängig auswerten, Überlappung ausgeben).
-- **Messwerte Vanilla** (Stand keepEqual, 08/2026): Regeln allein 1.866.791
+  Im CLI laufen Blocker und Regeln immer mit (identisch zur TUI, kein Schalter).
+- **Messwerte Vanilla** (Stand 08/2026): Regeln allein 1.866.791
   statt 8.747.345 Knoten (Faktor 4,7, ~1 s statt ~10 s) - fast auf dem Niveau des
   vollen 5-Steiner-Blockers (1.624.408), aber ohne Vorberechnung. Treffer:
   Freeze 1,11 Mio, Diagonale 71k, rückwärts Totfeld 123k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
@@ -504,7 +463,7 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
   Suche zu Sperr-Riegeln einfrieren. Der Mehrwert der Regeln insgesamt liegt bei
   großen Levels (Cluster über der Steiner-Grenze, lange Diagonalen) und als
   Blocker-Ersatz bei Speicherdruck - Praxis-Messungen von Max dazu in
-  docs/roadmap.md (Level 47484: -62% Hash beim 3-Blocker; Level 43070: 4-Blocker
+  docs/history.md (Level 47484: -62% Hash beim 3-Blocker; Level 43070: 4-Blocker
   unbezahlbar, Regeln -49% Hash).
 
 ## Referenzwerte (als Tests verankert)
@@ -512,23 +471,18 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
 | Level | Messung | Wert |
 |---|---|---|
 | Vanilla (lid214) | optimale Züge | 230 |
-| Vanilla ohne Blocker (DirClassic) | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
-| Vanilla ohne Blocker (Default: Effizienz-Wahl + keepEqual) | Knoten am Ende | 8.747.345 (Go-Anker; 8.608.727 vor keepEqual, ~1,2% unter dem Orakel) |
-| Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 (bitgenau = refcli, alles unter der Muster-Schwelle) |
-| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.624.408 (Regressionswert; 1.595.042 vor keepEqual) |
-| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.524.476 (Verbesserung kommt komplett von der Pull-Seite; 1.494.811 vor keepEqual, 1.488.952 vor der Effizienz-Richtungswahl) |
-| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (bitgenau = refcli, unter der Muster-Schwelle) |
+| Vanilla ohne Filter | Knoten am Ende | 8.747.345 (Vanilla-Anker: TestSolveVanilla, auch Spill- und SegmentTable-Variante) |
+| Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 (alles unter der Muster-Schwelle) |
+| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.624.408 |
+| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.524.476 (Verbesserung kommt komplett von der Pull-Seite) |
+| Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (unter der Muster-Schwelle) |
 | small.txt | optimale Züge | 16 |
-| Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
-| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.866.791 / Freeze 1.108.508, Diag 71.007, PullTot 123.209, PullFreeze 783 (Regressionswerte; vor keepEqual 1.828.193, vor der Effizienz-Richtungswahl 1.825.644) |
+| archiveTestLevel | Push-Optimierung | 7 Schübe, 1 Anker, 918 Knoten (TestPushOptAnchorRegression) |
+| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.866.791 / Freeze 1.108.508, Diag 71.007, PullTot 123.209, PullFreeze 783 |
 
-Die Suche ohne Blocker und ohne Regeln bleibt bitgenau vergleichbar mit dem
-C#-Orakel, sofern `-dirclassic` die volle Original-Semantik herstellt
-(Richtungswahl des Originals UND Nach-Fund-Beschneidung; der Default wählt
-die Richtung per Effizienz-Verhältnis und behält Gleichstands-Stellungen für
-die Push-Optimierung). Ebenso bitgenau: alle Blocker-Stufen bis zur ersten
-Muster-Explosion (RulesPatternThreshold, refcli blockerbx). Danach gefilterte
-Stufen sind reine Go-Referenzwerte.
+Diese Anker sind die Referenz des Suchverhaltens: eine Abweichung ist ein Bug
+oder eine bewusste, dokumentierte Entscheidung (dann neu verankern und die
+Vorgänger-Werte in docs/history.md ergänzen - dort stehen auch die bisherigen).
 
 ## Referenz-Lösungs-Diagnose (Flag -checksol)
 
@@ -540,13 +494,13 @@ die exakte Vorwärtstiefe bzw. der Rückwärtsrest ("ok" / "Tiefe X statt Y" /
 Overflow-Fallback). Die Kettenanalyse meldet, ob ein Anker existiert, über den
 das DP den Pfad komplett ablaufen könnte - wenn ja, das DP aber mehr Schübe
 liefert, liegt der Fehler im DP; wenn nein, fehlen die Stellungen in den
-Tabellen (Nach-Fund-Beschneidung oder nie erzeugt). Der Anker selbst braucht
+Tabellen (Terminierungs-Restlücke oder nie erzeugt). Der Anker selbst braucht
 keinen Tabellen-Eintrag (ein besserer Zweit-Fund wird selbst nicht mehr
 gespeichert, seine Nachbarn tragen die Rekonstruktion).
 
 TUI: Report landet als `<lurd-datei>.report.txt` neben der Eingabe, die
 Statuszeile zeigt Kurzfassung und Pfad. CLI: Report am Ende der Ausgabe
-(die Orakel-Zeilen davor bleiben byte-gleich). Die LURD-Datei wird beim
+(die Tiefenzeilen davor bleiben unverändert). Die LURD-Datei wird beim
 Start validiert - Tippfehler fallen nicht erst nach einer Nacht Rechenzeit auf.
 Replayer: `soko.ReplayLurd` (spielt beliebige LURD-Folgen ab dem aktuellen
 Spielstand ab und liefert die Schub-Stellungen in Suchen-Repräsentation).

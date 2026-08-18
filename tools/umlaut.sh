@@ -7,8 +7,7 @@
 # absichtlich voller Funde und würde sich sonst selbst zerstören.
 # Ebenfalls ausgenommen (siehe EXCLUDES, PCRE - deshalb grep -P):
 # - goSokoWahn/ (eingefrorener erster Go-Ansatz, wird nicht mehr angefasst)
-# - oldstuff/ (historische C#-Originale von 2013) - AUSSER refcli/, das ist
-#   das neue Konsolen-Orakel und gehört zur aktiven Codebasis
+# - oldstuff/ (historische C#-Originale von 2013, ruhendes Archiv)
 #
 # Verwendung:
 #   tools/umlaut.sh          Check: verdächtige Wörter melden (Exit 1 bei Fund)
@@ -31,7 +30,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 # Pfade, die weder Check noch Fix anfassen (PCRE auf den Dateipfad)
-EXCLUDES='tools/umlaut\.sh|/goSokoWahn/|/oldstuff/(?!refcli/)'
+EXCLUDES='tools/umlaut\.sh|/goSokoWahn/|/oldstuff/'
 
 # --- Stufe 1: Ersetzungs-Wörterbuch (Stämme, Substring-Match gewollt) ---
 # Der umschließende Block schaltet den Auto-Fix auf Zeilen mit URL/E-Mail ab.

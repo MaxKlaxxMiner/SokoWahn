@@ -114,12 +114,3 @@ func (b *Blocker) Next(limit int) bool {
 		return false
 	}
 }
-
-// Summe der geprüften Stellungen über alle fertigen Stufen
-func (b *Blocker) totalChecked() int64 {
-	var sum int64
-	for i := range b.stages {
-		sum += b.stages[i].checkedStates
-	}
-	return sum
-}

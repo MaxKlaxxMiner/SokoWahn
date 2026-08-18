@@ -1,11 +1,5 @@
 package soko
 
-func (f *Field) sortBoxesFull() {
-	for box := f.boxCount - 1; box > 0; box-- {
-		f.sortBoxesUp(box)
-	}
-}
-
 func (f *Field) sortBoxesUp(box uint32) {
 	for box > 0 {
 		pos := f.boxes[box]

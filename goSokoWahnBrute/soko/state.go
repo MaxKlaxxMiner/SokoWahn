@@ -9,10 +9,6 @@ type State struct {
 	Crc       crc64.Value // Crc64-Schlüssel der gesammten Stellung
 }
 
-func (f *Field) DebugState(state *State) string {
-	return state.Debug(f)
-}
-
 func (s *State) Debug(refField *Field) string {
 	tmp := refField.Clone()
 	tmp.SetState(s)

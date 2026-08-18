@@ -14,7 +14,6 @@ const (
 	DirAuto     DirMode = iota // Richtung automatisch: Effizienz-Verhältnis (erreichte Tiefe je Hash-Eintrag, siehe chooseForward)
 	DirForward                 // nur vorwärts suchen
 	DirBackward                // nur rückwärts suchen
-	DirClassic                 // Automatik des Originals: kleinere Hashtabelle zuerst (Basis der bitgenauen Orakel-Vergleiche, CLI-Flag -dirclassic)
 )
 
 // bidirektionaler Brute-Force-Solver: Vorwärtssuche von der Startstellung und
@@ -47,7 +46,6 @@ type Solver struct {
 	pushOptStats PushOptStats // Kennzahlen des letzten GetSolutionBestPushes-Laufs
 
 	forwardOnly bool // Sonderfall: keine Zielstellungen vorhanden (sehr kurze Level) -> reine Vorwärtssuche
-	keepEqual   bool // Gleichstands-Stellungen nach dem ersten Fund behalten (Futter der Push-Optimierung, siehe keepForward); false = Beschneidung des Originals
 	done        bool // gibt an, ob die Suche abgeschlossen ist
 
 	dirDepth   int     // Suchtiefe, für welche die Richtungswahl zuletzt getroffen wurde
@@ -87,7 +85,6 @@ func New(field *soko.Field) *Solver {
 		forwardDepth:  0,
 		backwardDepth: 0,
 		foundTotal:    -1,
-		keepEqual:     true,
 		dirDepth:      -1,
 		workerCount:   runtime.NumCPU() * 4, // Überbelegung kaschiert die Speicherlatenz (Benchmark-Sweep lid4208, siehe docs/architektur.md)
 	}
@@ -131,13 +128,6 @@ func (s *Solver) SetDirMode(mode DirMode) {
 // aktuelle manuelle Richtungsvorgabe
 func (s *Solver) DirMode() DirMode {
 	return s.dirMode
-}
-
-// schaltet das Behalten der Gleichstands-Stellungen nach dem ersten Fund um
-// (Default an, siehe keepForward; false = Beschneidung des C#-Originals für
-// bitgenaue Orakel-Vergleiche, CLI -dirclassic). Vor dem ersten Step setzen.
-func (s *Solver) SetKeepEqual(keep bool) {
-	s.keepEqual = keep
 }
 
 // gibt alle Suchlisten samt eventueller Auslagerungsdateien frei; die Hashtabellen

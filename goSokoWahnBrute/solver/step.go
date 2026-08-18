@@ -87,12 +87,11 @@ func (s *Solver) Step(limit int) bool {
 // ihr exponentielles Hash-Wachstum wieder, beide Seiten pendeln sich dort ein, wo
 // sie gleich viele Züge je Knoten liefern. Vergleich per Kreuzmultiplikation statt
 // Division (int64 reicht: Milliarden Einträge mal vierstellige Tiefen ~ 2^41).
-// Solange eine Richtung noch keine fertige Tiefe hat - und im DirClassic-Modus
-// immer - entscheidet das Kriterium des Originals: kleinere Tabelle zuerst
-// (bitgenau zu SokoWahn_4th Z. 519-523, Basis der refcli-Orakel-Vergleiche).
+// Solange eine Richtung noch keine fertige Tiefe hat, wäre das Kreuzprodukt
+// sinnfrei (0 >= 0) - als Anlauf-Kriterium gilt dann: kleinere Tabelle zuerst.
 func (s *Solver) chooseForward() bool {
 	fd, bd := int64(s.forwardDepth), int64(s.backwardDepth)
-	if s.dirMode == DirClassic || fd == 0 || bd == 0 {
+	if fd == 0 || bd == 0 {
 		return s.forwardKnown.Len() < s.backwardKnown.Len()
 	}
 	return fd*s.backwardKnown.Len() >= bd*s.forwardKnown.Len()
@@ -140,19 +139,18 @@ func (s *Solver) searchForward(limit int) bool {
 
 // entscheidet, ob eine neu erzeugte Vorwärts-Stellung der Tiefe depth noch
 // gespeichert und expandiert wird. Vor dem ersten Fund immer; danach nur, wenn
-// sie die Lösung verkürzen könnte - mit keepEqual (Default) auch bei exaktem
-// Gleichstand: solche Stellungen liegen nur auf alternativen zugoptimalen
-// Pfaden und sind das Futter der Push-Optimierung (ohne sie fehlen dem DP
-// Kanten und Anker an der Naht der Suchfronten - Level 361 fand deshalb 110
-// statt der 108 Schübe). keepEqual=false ist die Beschneidung des Originals
-// (CLI -dirclassic, bitgenaue Orakel-Vergleiche); im forwardOnly-Sonderfall
-// sind Gleichstands-Stellungen nutzlos (keine Push-Optimierung möglich).
+// sie die Lösung verkürzen könnte - auch bei exaktem Gleichstand: solche
+// Stellungen liegen nur auf alternativen zugoptimalen Pfaden und sind das
+// Futter der Push-Optimierung (ohne sie fehlen dem DP Kanten und Anker an der
+// Naht der Suchfronten - Level 361 fand deshalb 110 statt der 108 Schübe).
+// Im forwardOnly-Sonderfall sind Gleichstands-Stellungen nutzlos
+// (keine Push-Optimierung möglich).
 func (s *Solver) keepForward(depth int) bool {
 	if s.foundTotal < 0 {
 		return true
 	}
 	total := depth + s.backwardDepth + 1
-	return total < s.foundTotal || (s.keepEqual && !s.forwardOnly && total == s.foundTotal)
+	return total < s.foundTotal || (!s.forwardOnly && total == s.foundTotal)
 }
 
 // Gegenstück rückwärts (Gleichstand über die Vorwärts-Suchtiefe)
@@ -160,8 +158,7 @@ func (s *Solver) keepBackward(depth int) bool {
 	if s.foundTotal < 0 {
 		return true
 	}
-	total := depth + s.forwardDepth + 1
-	return total < s.foundTotal || (s.keepEqual && total == s.foundTotal)
+	return depth+s.forwardDepth+1 <= s.foundTotal
 }
 
 // serieller Kern der Vorwärtssuche (Referenz-Verhalten, von den Workern gespiegelt)

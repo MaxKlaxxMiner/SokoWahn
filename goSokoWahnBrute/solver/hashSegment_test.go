@@ -145,9 +145,8 @@ func TestSegmentTableGrow(t *testing.T) {
 
 // Vanilla-Level mit der SegmentTable statt der CompactTable: die Tabelle ist ein
 // reiner Key-Value-Store ohne Iteration, das Suchverhalten muss also bitgenau
-// den Orakel-Werten entsprechen (230 Züge, 8.710.434 Knoten; DirClassic =
-// Richtungswahl des C#-Originals)
-func TestSolveVanillaOracleSegmentTable(t *testing.T) {
+// dem Vanilla-Anker entsprechen (230 Züge, vanillaNodes Knoten)
+func TestSolveVanillaSegmentTable(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
 	}
@@ -156,8 +155,8 @@ func TestSolveVanillaOracleSegmentTable(t *testing.T) {
 	TableFactory = NewSegmentTable
 	defer func() { TableFactory = oldFactory }()
 
-	s, _ := solveLevelDir(t, maps.MapVanilla, 230, DirClassic)
-	if s.NodeCount() != 8710434 {
-		t.Errorf("erwartete 8710434 Knoten (Orakel-Wert), erhalten: %d", s.NodeCount())
+	s, _ := solveLevel(t, maps.MapVanilla, 230)
+	if s.NodeCount() != vanillaNodes {
+		t.Errorf("erwartete %d Knoten (Vanilla-Anker), erhalten: %d", vanillaNodes, s.NodeCount())
 	}
 }

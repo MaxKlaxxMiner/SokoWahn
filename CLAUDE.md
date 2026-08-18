@@ -1,18 +1,22 @@
 # SokoWahn - Projektanweisungen
 
-Sokoban-Löser-Projekt von Max. Das Repo enthält die historischen C#-Solver (Copyright 2013,
-ins Repo gewandert 2015 als "alter Kram") und den aktiven Go-Nachbau `goSokoWahnBrute`.
+Sokoban-Löser-Projekt von Max. Aktiv entwickelt wird der Go-Solver `goSokoWahnBrute`;
+die historischen C#-Solver (Copyright 2013) liegen als ruhendes Archiv im Repo.
 
 ## Ordnerstruktur
 
-- `goSokoWahnBrute/` - **aktives Projekt**: Go-Nachbau des SokoWahn_4th-Solvers mit TUI.
-  Details siehe `goSokoWahnBrute/docs/architektur.md`, offene Ideen in `goSokoWahnBrute/docs/roadmap.md`.
+- `goSokoWahnBrute/` - **aktives Projekt**: Go-Solver mit TUI. Architektur in
+  `goSokoWahnBrute/docs/architektur.md`, offene Ideen in `docs/roadmap.md`,
+  Vergangenes (Herkunft, Orakel-Ära, erledigte Ausbaustufen, Messprotokolle)
+  in `docs/history.md`.
 - `goSokoWahn/` - erster Go-Ansatz (eingefroren). Diente als Kopiervorlage, **nicht mehr anfassen**.
   Achtung: enthält einen bekannten Bug (vertauschte sortBoxes-Aufrufe in der Rückwärtssuche),
   der nur in goSokoWahnBrute gefixt wurde.
-- `oldstuff/` - die C#-Originale (2nd bis 5th generation, WinForms-GUI, SokowahnTools).
-  - `oldstuff/refcli/` - Konsolen-Orakel + Build-Skripte (siehe unten). Die alten Solver gelten
-    als Referenz: der Go-Port wird bitgenau gegen sie verifiziert.
+- `oldstuff/` - die C#-Originale (2nd bis 5th generation, WinForms-GUI, SokowahnTools),
+  ruhendes Archiv. Bis 08/2026 diente `oldstuff/refcli/` als bitgenaues Verifikations-Orakel
+  des Go-Ports (Geschichte in `goSokoWahnBrute/docs/history.md`); seitdem sind die
+  Go-Test-Anker die Referenz. `oldstuff/refcli/build-winforms.sh` baut weiterhin die
+  alte WinForms-GUI.
 - `SokoWahn/` - späteres C#-Projekt (Raum-/Ketten-Ansatz), ruht.
 - `sokosolver-forms.exe` / `goSokoWahnBrute.exe` im Root - von Max genutzte Binary-Kopien,
   werden von den Build-Skripten automatisch aktualisiert.
@@ -21,22 +25,16 @@ ins Repo gewandert 2015 als "alter Kram") und den aktiven Go-Nachbau `goSokoWahn
 
 - Sprache: Prosa/Kommentare/Doku/Commits deutsch, Code-Identifier englisch.
   ASCII plus korrekte Umlaute (ä ö ü ß), keine Sonder-Unicode-Zeichen (Pfeil als `->`).
+  Prüfwerkzeug: `bash tools/umlaut.sh` (Check/Fix für ASCII-Ersatzschreibweisen).
 - **Commits macht Max selbst** (TortoiseGit, meist Einzeiler) - nur Commit-Messages vorschlagen,
   nie selbst committen.
-- Verhalten des Go-Ports wird **gegen das C#-Orakel verifiziert**, soweit die Semantik
-  noch deckungsgleich ist: die Suche ohne Filter (Knoten je Tiefe, Lösungslängen) mit
-  `-dirclassic` und alle Blocker-Stufen bis zur ersten Muster-Explosion sind bitgenau
-  vergleichbar. Drei bewusste Go-Weiterentwicklungen weichen per Default ab: die
-  Richtungswahl der Suche (Effizienz-Verhältnis Tiefe je Hash-Eintrag statt kleinerer
-  Tabelle, siehe solver.chooseForward), das Behalten der Gleichstands-Stellungen
-  nach dem ersten Fund (Futter der Push-Optimierung, siehe solver.keepForward;
-  Level 361: 108 statt 110 Schübe) und der adaptive Stufenbau des Blockers mit
-  den Stufe-1-Regeln (siehe blocker.RulesPatternThreshold) - Referenz sind die in
-  den Go-Tests verankerten Werte. Das CLI-Flag `-dirclassic` stellt die volle
-  Original-Semantik der Suche her (Richtungswahl UND Nach-Fund-Beschneidung).
-  Abweichung = Bug oder bewusste, dokumentierte Entscheidung.
-- Vergleichs- und Debug-Läufe klein halten: Blocker-Stufen begrenzen (`-stages N` bzw.
-  `blockerbx N`), kleine Levels bevorzugen. 2-3-Steiner rechnen in Sekunden durch.
+- **Referenz des Suchverhaltens sind die in den Go-Tests verankerten Anker-Werte**
+  (Tabelle in `docs/architektur.md`, Kapitel Referenzwerte; u.a. Vanilla ohne Filter
+  8.747.345 Knoten, Blocker-Stufen Vanilla/lid201). Abweichung = Bug oder bewusste,
+  dokumentierte Entscheidung - dann neu verankern und die Vorgänger-Werte in
+  `docs/history.md` festhalten.
+- Vergleichs- und Debug-Läufe klein halten: Blocker-Stufen begrenzen (`-stages N`),
+  kleine Levels bevorzugen. 2-3-Steiner rechnen in Sekunden durch.
 - Bei längerer Fehlersuche: Max Bescheid geben und den Stand zeigen, er schaut direkt mit drüber.
 - `go.mod`: Go-Version exakt festgenagelt (`go 1.26.0`), keine `toolchain`-Zeile.
 
@@ -46,39 +44,31 @@ Alles läuft in der MSYS2/UCRT64-Bash.
 
 ```
 # Go-Projekt (in goSokoWahnBrute/)
-go build ./... && go vet ./... && go test ./...   # Tests; -short überspringt die Orakel-Läufe
+go build ./... && go vet ./... && go test ./...   # Tests; -short überspringt die langen Suchläufe
 bash build.sh                                     # baut goSokoWahnBrute.exe + Kopie im Root
 
-# C#-Orakel (in oldstuff/refcli/, .NET-Framework-csc, kein SDK nötig)
-bash build.sh                                     # baut refcli.exe (mit parallelDeaktivieren)
-bash build-winforms.sh                            # baut die alte WinForms-GUI + Kopie im Root
+# alte WinForms-GUI (in oldstuff/refcli/, .NET-Framework-csc, kein SDK nötig)
+bash build-winforms.sh                            # baut sokosolver-forms.exe + Kopie im Root
 ```
 
-## Orakel-Vergleiche
+## Referenz-Läufe
 
 ```
-# Suche (deterministisch, Tiefenzeilen sind byte-gleich diffbar; -dirclassic
-# erzwingt die volle Original-Semantik: Richtungswahl UND Nach-Fund-Beschneidung -
-# ohne das Flag wählt der Go-Default die Richtung per Effizienz-Verhältnis und
-# behält Gleichstands-Stellungen für die Push-Optimierung):
-./refcli.exe <level.txt> [batch] [prepBatches] [-v]     # C#
-go run . -cli -dirclassic [-blocker] <level.txt>        # Go
+# Suche im CLI-Modus (deterministisch, Tiefenzeilen sind zwischen Go-Ständen
+# byte-gleich diffbar; Blocker inkl. temp/-Cache und Regel-Filter laufen immer mit):
+go run . -cli <level.txt>
 
-# Blocker-Stufen (schnell, ohne Suche):
-./refcli.exe <level.txt> blockerbx <maxStufe>           # C# (Bx = Referenz-Verhalten)
-go run . -stages <maxStufe> <level.txt>                 # Go (byte-gleich zum C# bis zur ersten Stufe
-                                                        #     mit >4096 Mustern, siehe RulesPatternThreshold)
+# Blocker-Stufen (schnell, ohne Suche, ohne Cache):
+go run . -stages <maxStufe> <level.txt>
 ```
 
-Vor Vergleichen die `temp/`-Ordner löschen (Blocker-Caches). Referenzwerte sind als
-Tests verankert (`solver`: Vanilla 230 Züge / 8.710.434 Knoten ohne Blocker mit
-DirClassic, 8.747.345 Knoten im Default (Effizienz-Richtungswahl + Gleichstands-
-Stellungen behalten);
-`blocker`: Vanilla- und Level-201-Stufen exakt gleich SokowahnBlockerBx).
+Vor Diff-Vergleichen zwischen Go-Ständen die `temp/`-Ordner löschen (Blocker-Caches).
+Die Anker-Werte laufen im vollen Testlauf mit (`go test ./...` ohne `-short`).
 
 ---
 
 *Go-Port erdacht und gebaut im August 2026 im Pairing: Max (Architekt des Originals,
 Blocker-Flüsterer) und Claude Fable 5 (Anthropic), das hier hiermit ordnungsgemäß
 verewigt ist. Der alte C#-Code (Copyright 2013, seit 2019 unangetastet) hat nach
-13 Jahren auf Anhieb wieder kompiliert - Respekt an das Original.* :)
+13 Jahren auf Anhieb wieder kompiliert und den Go-Port als Orakel bitgenau
+abgenommen - Respekt an das Original.* :)

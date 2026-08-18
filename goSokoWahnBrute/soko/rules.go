@@ -47,9 +47,6 @@ type rulesShared struct {
 	matchKills      atomic.Uint64 // Ziel-Matching-Regel hat eine Stellung verworfen
 	pullDeadKills   atomic.Uint64 // Kiste auf pull-totem Feld (rückwärts, O(1))
 	pullFreezeKills atomic.Uint64 // Pull-Freeze-Regel hat eine Rückwärts-Stellung verworfen
-	cmpBlockerOnly  atomic.Uint64 // Vergleichsmodus: nur der Blocker hat verworfen
-	cmpRulesOnly    atomic.Uint64 // Vergleichsmodus: nur die Regeln haben verworfen
-	cmpBoth         atomic.Uint64 // Vergleichsmodus: beide haben verworfen
 }
 
 // Momentaufnahme der Regel-Statistik
@@ -59,12 +56,6 @@ type RuleStats struct {
 	MatchKills      uint64 // von der Ziel-Matching-Regel verworfene Stellungen
 	PullDeadKills   uint64 // Kiste auf pull-totem Feld verworfen (rückwärts)
 	PullFreezeKills uint64 // von der Pull-Freeze-Regel verworfene Rückwärts-Stellungen
-
-	// Debug-Vergleichsmodus (CompareBlocker): Klassifikation aller verworfenen
-	// Stellungen nach dem, welcher Filter sie erkannt hätte
-	CmpBlockerOnly uint64
-	CmpRulesOnly   uint64
-	CmpBoth        uint64
 }
 
 // Live-Regel-Filter; jede Field-Instanz braucht ihren eigenen (Scratch-Puffer),
@@ -80,11 +71,6 @@ type Rules struct {
 	// Stufe 2: Ziel-Matching mit eingefrorenen Ziel-Kisten als Wänden
 	// (rulesMatch.go); setzt den Freeze-Fixpunkt voraus (FreezeEnabled)
 	MatchEnabled bool
-
-	// Debug-Vergleichsmodus: Regeln auch für Stellungen auswerten, die der
-	// Blocker bereits verworfen hat, und die Überlappung zählen (CmpXxx-Stats).
-	// Im Normalmodus laufen die Regeln nur hinter dem Blocker.
-	CompareBlocker bool
 
 	work []uint64 // Scratch-Maske für den Freeze-Fixpunkt
 
@@ -225,7 +211,6 @@ func (r *Rules) Clone() *Rules {
 		FreezeEnabled:   r.FreezeEnabled,
 		DiagonalEnabled: r.DiagonalEnabled,
 		MatchEnabled:    r.MatchEnabled,
-		CompareBlocker:  r.CompareBlocker,
 		work:            make([]uint64, len(r.work)),
 	}
 }
@@ -239,21 +224,6 @@ func (r *Rules) Stats() RuleStats {
 		MatchKills:      sh.matchKills.Load(),
 		PullDeadKills:   sh.pullDeadKills.Load(),
 		PullFreezeKills: sh.pullFreezeKills.Load(),
-		CmpBlockerOnly:  sh.cmpBlockerOnly.Load(),
-		CmpRulesOnly:    sh.cmpRulesOnly.Load(),
-		CmpBoth:         sh.cmpBoth.Load(),
-	}
-}
-
-// zählt im Vergleichsmodus die Überlappung von Blocker- und Regel-Urteil
-func (r *Rules) countCompare(blockerOK, rulesOK bool) {
-	switch {
-	case !blockerOK && !rulesOK:
-		r.shared.cmpBoth.Add(1)
-	case !blockerOK:
-		r.shared.cmpBlockerOnly.Add(1)
-	case !rulesOK:
-		r.shared.cmpRulesOnly.Add(1)
 	}
 }
 

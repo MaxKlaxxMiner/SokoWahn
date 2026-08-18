@@ -29,9 +29,9 @@ func (s *Solver) Workers() int {
 	return s.workerCount
 }
 
-// setzt die Anzahl der Such-Worker (1 = komplett seriell, z.B. für Debugging
-// und Orakel-Vergleiche); wirkt ab dem nächsten Batch und ist damit auch
-// zur Laufzeit gefahrlos umschaltbar
+// setzt die Anzahl der Such-Worker (1 = komplett seriell, z.B. für Debugging);
+// wirkt ab dem nächsten Batch und ist damit auch zur Laufzeit gefahrlos
+// umschaltbar
 func (s *Solver) SetWorkers(count int) {
 	if count < 1 {
 		count = 1

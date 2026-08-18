@@ -81,7 +81,7 @@ func TestSearchVariantsForwardBackwardConsistency(t *testing.T) {
 				}
 			}
 			if !found {
-				t.Errorf("Variante %d/%d führt rückwärts nicht zum Vorgänger zurück:\n%s", i, j, work.DebugState(&secondGen[j]))
+				t.Errorf("Variante %d/%d führt rückwärts nicht zum Vorgänger zurück:\n%s", i, j, secondGen[j].Debug(work))
 			}
 
 			work.SetState(&firstGen[i]) // Zustand für die nächste zweite Stufe wiederherstellen
@@ -109,15 +109,15 @@ func TestSearchVariantsForwardRestoresField(t *testing.T) {
 }
 
 func TestSearchGoalStates(t *testing.T) {
-	// Quirk aus dem C#-Original: Zielstellungen werden nur geliefert, wenn von ihnen aus
-	// ein Rückwärtszug mit anschließendem weiteren Rückwärtszug möglich ist -
-	// 1-Schub-Level haben daher keine Zielstellungen (das Original konnte sie nicht lösen)
+	// bekannter Quirk (siehe roadmap "Aufgeräumtes"): Zielstellungen werden nur geliefert,
+	// wenn von ihnen aus ein Rückwärtszug mit anschließendem weiteren Rückwärtszug möglich
+	// ist - 1-Schub-Level haben daher keine Zielstellungen (Solver: forwardOnly-Sonderfall)
 	field, err := Parse(mapMini)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if goals := field.SearchGoalStates(); len(goals) != 0 {
-		t.Errorf("Mini-Level: erwartet 0 Zielstellungen (C#-Verhalten), erhalten: %d", len(goals))
+		t.Errorf("Mini-Level: erwartet 0 Zielstellungen, erhalten: %d", len(goals))
 	}
 
 	// beim 2-Schub-Level muss genau eine Zielstellung gefunden werden

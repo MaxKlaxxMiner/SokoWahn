@@ -135,12 +135,12 @@ func TestBlockerCachePartialResume(t *testing.T) {
 	}
 }
 
-// Orakel-Vergleich: die Vanilla-Blocker-Stufen müssen exakt den Werten des GEFIXTEN
-// C#-SokowahnBlockerBx entsprechen (refcli: "vanilla.txt blockerbx 5", Cache-Version
-// 108). Vanilla bleibt mit allen Stufen unter der Muster-Schwelle
-// (RulesPatternThreshold) und baut deshalb komplett klassisch - die adaptive
-// Regel-Filterung des Stufenbaus greift nur bei Muster-Explosions-Levels.
-func TestBlockerVanillaOracle(t *testing.T) {
+// fester Anker der Vanilla-Blocker-Stufen (Bx-Semantik mit bedingter Kill-Regel;
+// Herkunft der Werte in docs/history.md). Vanilla bleibt mit allen Stufen unter
+// der Muster-Schwelle (RulesPatternThreshold) und baut deshalb komplett
+// klassisch - die adaptive Regel-Filterung des Stufenbaus greift nur bei
+// Muster-Explosions-Levels.
+func TestBlockerVanillaStages(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Blocker dauert ca. 1 Sekunde plus Lösungszeit (übersprungen mit -short)")
 	}
@@ -170,9 +170,7 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	}
 
 	// Lösung NUR mit dem Blocker, ohne Live-Regeln: weiterhin 230 Züge und
-	// 1.624.408 Knoten (Regressionswert; Historie: 1.568.540 mit der alten
-	// unbedingten Kill-Regel, 1.595.042 vor dem Behalten der Gleichstands-
-	// Stellungen/keepEqual)
+	// 1.624.408 Knoten (Regressionswert; Vorgänger-Werte in docs/history.md)
 	field.SetBlocker(b)
 	s := solver.New(field)
 	for s.Step(1000000000) {
@@ -185,11 +183,10 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	}
 	s.Close()
 
-	// Standard-Kombination des TUI (Blocker + Live-Regeln beidseitig): 230 Züge mit
-	// 1.524.476 Knoten - besser als die Vollblocker-Referenz oben, die Regeln
-	// ersetzen die entfallenen Muster und legen über die Pull-Seite noch drauf
-	// (Historie: 1.488.952 vor der Effizienz-Richtungswahl, 1.494.811 vor dem
-	// Behalten der Gleichstands-Stellungen/keepEqual)
+	// Standard-Kombination von TUI und CLI (Blocker + Live-Regeln beidseitig):
+	// 230 Züge mit 1.524.476 Knoten - besser als die Vollblocker-Referenz oben,
+	// die Regeln ersetzen die entfallenen Muster und legen über die Pull-Seite
+	// noch drauf (Vorgänger-Werte in docs/history.md)
 	rules := soko.NewRules(field)
 	field.SetRules(rules)
 	field.SetRulesBackward(rules)
@@ -222,10 +219,10 @@ const mapLid201 = `
   ###########
 `
 
-// Orakel-Vergleich: die ersten drei Blocker-Stufen von Level 201 bleiben unter der
-// Muster-Schwelle (RulesPatternThreshold) und bauen klassisch - sie müssen exakt den
-// Werten des GEFIXTEN C#-SokowahnBlockerBx entsprechen (refcli: "lid201.txt blockerbx 3").
-func TestBlockerLid201Oracle(t *testing.T) {
+// fester Anker der ersten drei Blocker-Stufen von Level 201: sie bleiben unter der
+// Muster-Schwelle (RulesPatternThreshold) und bauen klassisch (Herkunft der Werte
+// in docs/history.md).
+func TestBlockerLid201Stages(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Level-201-Blocker dauert ein paar Sekunden (übersprungen mit -short)")
 	}

@@ -104,8 +104,7 @@ type Blocker struct {
 // 5.061 Muster der 201-Stufe-4 bauen damit wieder klassisch): solange alle
 // fertigen Stufen höchstens so viele Muster haben, baut der Stufenbau
 // klassisch - kleine Mustermengen kosten kaum Platz, filtern aber billiger als
-// die Regeln (Set-Trie-Test schlägt den Freeze-Fixpunkt pro Schub) und
-// bleiben bitgenau vergleichbar mit dem C#-Orakel (refcli blockerbx).
+// die Regeln (Set-Trie-Test schlägt den Freeze-Fixpunkt pro Schub).
 // Überschreitet eine fertige Stufe die Schwelle (Muster-Explosion, typisch für
 // sehr große Levels), filtern alle WEITEREN Stufen ihre Vorwärts-Phasen mit den
 // Regeln (Stufe 1 + Ziel-Matching, "sticky", entscheidet sich deterministisch
@@ -124,8 +123,7 @@ var RulesPatternThreshold = 10240
 // Entstehung live erkannt). Fehlende Muster kosten nie Korrektheit, nur
 // Filterleistung. Die Rückwärtswelle (MergeGoals) bleibt bewusst ungefiltert -
 // ihre Vollständigkeit trägt den Beweis der bedingten Kill-Regel.
-// Gefilterte Stufen sind NICHT mehr bitgenau vergleichbar mit dem C#-Orakel -
-// Referenz sind die in den Tests verankerten Go-Werte.
+// Referenz der Stufenwerte sind die in den Tests verankerten Anker.
 func New(field *soko.Field, cachePath string) *Blocker {
 	base := field.Clone()
 	base.SetRules(soko.NewRules(base)) // frische Instanz: eigene Statistik, unabhängig von den Such-Regeln des Aufrufers

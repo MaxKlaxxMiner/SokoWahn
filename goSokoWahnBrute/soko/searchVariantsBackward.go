@@ -17,11 +17,6 @@ func (f *Field) SetRulesBackward(rules *Rules) {
 	f.rulesBackward = rules
 }
 
-// gibt den gesetzten Rückwärts-Regel-Filter zurück (nil = keiner)
-func (f *Field) RulesBackward() *Rules {
-	return f.rulesBackward
-}
-
 func (f *Field) SearchVariantsBackward(result []State) []State {
 	posStart := f.player
 	posLeft := f.walkLeft[posStart]

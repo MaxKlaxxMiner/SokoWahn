@@ -259,13 +259,11 @@ func TestSolveRulesGoalMatch(t *testing.T) {
 }
 
 // Vanilla-Level mit Regel-Filter: die optimale Lösungslänge (230 Züge) bleibt
-// erhalten, die Knotenzahl sinkt gegenüber der ungefilterten Suche (8.747.345 mit
-// der Effizienz-Richtungswahl). Der Knotenwert ist als Regressionswert verankert
-// (Änderungen am Regelwerk, an der Richtungswahl oder an der Nach-Fund-
-// Beschneidung ändern ihn - dann bewusst neu verankern und die 230 Züge erneut
-// prüfen; Historie: 1.825.644 vor der Effizienz-Richtungswahl, 1.828.193 vor
-// dem Behalten der Gleichstands-Stellungen/keepEqual).
-func TestSolveRulesVanillaOracle(t *testing.T) {
+// erhalten, die Knotenzahl sinkt gegenüber der ungefilterten Suche (vanillaNodes).
+// Der Knotenwert ist als Regressionswert verankert (Änderungen am Regelwerk oder
+// an der Richtungswahl ändern ihn - dann bewusst neu verankern und die 230 Züge
+// erneut prüfen; historische Vorgänger-Werte in docs/history.md).
+func TestSolveRulesVanillaAnchor(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert einige Sekunden (übersprungen mit -short)")
 	}
@@ -276,8 +274,8 @@ func TestSolveRulesVanillaOracle(t *testing.T) {
 	}
 	if r := s.Rules(); r != nil {
 		st := r.Stats()
-		// neu vermessen mit keepEqual (mehr expandierte Stellungen -> mehr
-		// Regel-Treffer; vorher Freeze=1.106.391, PullTot=123.160)
+		// Regressionswerte (Stand 08/2026, seit dem Behalten der
+		// Gleichstands-Stellungen; Vorgänger-Werte in docs/history.md)
 		want := soko.RuleStats{FreezeKills: 1108508, DiagonalKills: 71007,
 			PullDeadKills: 123209, PullFreezeKills: 783}
 		if st.FreezeKills != want.FreezeKills || st.DiagonalKills != want.DiagonalKills ||

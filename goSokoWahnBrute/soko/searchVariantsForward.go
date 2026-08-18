@@ -27,18 +27,12 @@ func (f *Field) Rules() *Rules {
 }
 
 // prüft Blocker und Regel-Filter für die gerade ausgeführte Schub-Stellung
-// (p2 = neue Position der geschobenen Kiste). Im Normalmodus laufen die Regeln
-// nur hinter dem Blocker; im Debug-Vergleichsmodus werden beide Filter
-// unabhängig ausgewertet und die Überlappung gezählt.
+// (p2 = neue Position der geschobenen Kiste); die Regeln laufen nur hinter
+// dem Blocker
 func (f *Field) pushAllowed(p2 Wpos) bool {
 	blockerOK := f.blocker == nil || f.blocker.CheckAllowed(f.player, f.boxBits)
 	if f.rules == nil {
 		return blockerOK
-	}
-	if f.rules.CompareBlocker {
-		rulesOK := f.rules.CheckPush(f.player, p2, f.boxBits)
-		f.rules.countCompare(blockerOK, rulesOK)
-		return blockerOK && rulesOK
 	}
 	return blockerOK && f.rules.CheckPush(f.player, p2, f.boxBits)
 }

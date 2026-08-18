@@ -10,9 +10,9 @@ func (f *Field) Steps(a, b *State) (string, error) {
 	// die geschobene Kiste ermitteln und die Ein-Schub-Bedingung verifizieren:
 	// b darf sich von a in genau einer Kistenposition unterscheiden, und die in
 	// a verschwundene Kiste muss auf dem alten Kistenfeld (= b.Player) stehen.
-	// Ohne diese Pruefung akzeptierte die Direkt-Kanten-Sonde der Push-Optimierung
+	// Ohne diese Prüfung akzeptierte die Direkt-Kanten-Sonde der Push-Optimierung
 	// (die Steps mit beliebigen Stellungspaaren aufruft) auch Stellungen mehrere
-	// Schuebe hinter dem Start als Schein-1-Push-Kante - die Loesung begann dann
+	// Schübe hinter dem Start als Schein-1-Push-Kante - die Lösung begann dann
 	// mit einem unsinnigen Segment und falscher Schub-Zahl (Level 25523).
 	from := b.Player
 	vanished, to := f.walkEof, f.walkEof
@@ -63,7 +63,7 @@ func (f *Field) Steps(a, b *State) (string, error) {
 		// Ohne diese Prüfung liefe die Rückverfolgung unten endlos, denn der
 		// Wand-Sentinel markiert walkEof als besucht und parent[walkEof] zeigt ins
 		// Leere. Trifft nur die Direkt-Kanten-Sonde der Push-Optimierung, die Steps
-		// mit beliebigen Stellungs-Paaren aufruft (Haenger bei Level 25327, per
+		// mit beliebigen Stellungs-Paaren aufruft (Hänger bei Level 25327, per
 		// pprof-CPU-Profil auf die Rückverfolgungs-Schleife eingegrenzt).
 		return "", errors.New("push stand position is a wall")
 	}

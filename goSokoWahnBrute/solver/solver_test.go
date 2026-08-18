@@ -11,13 +11,6 @@ import (
 // (mit der Default-Richtungswahl, dem Effizienz-Verhältnis)
 func solveLevel(t *testing.T, level string, expectedMoves int) (*Solver, *Solution) {
 	t.Helper()
-	return solveLevelDir(t, level, expectedMoves, DirAuto)
-}
-
-// wie solveLevel, aber mit expliziter Richtungswahl-Strategie (DirClassic für die
-// bitgenauen Orakel-Vergleiche mit refcli)
-func solveLevelDir(t *testing.T, level string, expectedMoves int, mode DirMode) (*Solver, *Solution) {
-	t.Helper()
 
 	field, err := soko.Parse(level)
 	if err != nil {
@@ -25,13 +18,6 @@ func solveLevelDir(t *testing.T, level string, expectedMoves int, mode DirMode) 
 	}
 
 	s := New(field)
-	s.SetDirMode(mode)
-	if mode == DirClassic {
-		// DirClassic steht in den Tests für die volle Original-Semantik (wie CLI
-		// -dirclassic): auch die Nach-Fund-Beschneidung, sonst stimmen die
-		// bitgenauen Orakel-Knotenzahlen nicht mehr
-		s.SetKeepEqual(false)
-	}
 	for s.Step(1000000000) {
 	}
 
@@ -92,7 +78,7 @@ func TestSolveTwoPush(t *testing.T) {
 	}
 }
 
-// kleines Mehrkisten-Level (Referenzlösung: refcli = 16 Züge)
+// kleines Mehrkisten-Level (verankerte Referenz: 16 Züge)
 func TestSolveSmall(t *testing.T) {
 	solveLevel(t, `
 #######
@@ -256,17 +242,16 @@ func TestSolveSpillDeterminism(t *testing.T) {
 }
 
 // Vanilla mit aktiver Auslagerung (256-KB-Puffer): muss bitgenau dieselben
-// Orakel-Werte liefern wie die RAM-Variante (230 Züge, 8.710.434 Knoten;
-// DirClassic = Richtungswahl des C#-Originals)
-func TestSolveVanillaSpillOracle(t *testing.T) {
+// Anker-Werte liefern wie die RAM-Variante (230 Züge, vanillaNodes Knoten)
+func TestSolveVanillaSpill(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
 	}
 
 	setupSpill(t, 256<<10)
-	s, _ := solveLevelDir(t, maps.MapVanilla, 230, DirClassic)
-	if s.NodeCount() != 8710434 {
-		t.Errorf("erwartete 8710434 Knoten (Orakel-Wert), erhalten: %d", s.NodeCount())
+	s, _ := solveLevel(t, maps.MapVanilla, 230)
+	if s.NodeCount() != vanillaNodes {
+		t.Errorf("erwartete %d Knoten (Vanilla-Anker), erhalten: %d", vanillaNodes, s.NodeCount())
 	}
 	if s.SpillBytes() == 0 {
 		t.Error("die Vanilla-Suche hätte bei 256-KB-Puffern auslagern müssen")
@@ -274,37 +259,22 @@ func TestSolveVanillaSpillOracle(t *testing.T) {
 	s.Close()
 }
 
-// Vanilla-Level: bitgenauer Vergleich mit dem C#-Orakel (refcli, DirClassic):
-// 230 Züge optimal, 8.710.434 bekannte Stellungen am Ende
-func TestSolveVanillaOracle(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
-	}
-
-	s, _ := solveLevelDir(t, maps.MapVanilla, 230, DirClassic)
-	if s.NodeCount() != 8710434 {
-		t.Errorf("erwartete 8710434 Knoten (Orakel-Wert), erhalten: %d", s.NodeCount())
-	}
-}
-
-// Vanilla mit der Default-Richtungswahl (Effizienz-Verhältnis): gleiche optimale
-// Lösungslänge, aber bewusst andere Tiefenverteilung als das Orakel - der
-// Knotenwert ist der Anker des Go-Verhaltens (bei Abweichung: Bug oder bewusste,
-// dokumentierte Änderung der Richtungswahl)
-func TestSolveVanillaEfficiencyDir(t *testing.T) {
+// Vanilla-Level ohne Filter: 230 Züge optimal, vanillaNodes bekannte Stellungen
+// am Ende - der zentrale Anker des Suchverhaltens (bei Abweichung: Bug oder
+// bewusste, dokumentierte Änderung)
+func TestSolveVanilla(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Vanilla-Level dauert ca. 10 Sekunden (übersprungen mit -short)")
 	}
 
 	s, _ := solveLevel(t, maps.MapVanilla, 230)
-	if s.NodeCount() != vanillaEfficiencyNodes {
-		t.Errorf("erwartete %d Knoten (Anker der Effizienz-Richtungswahl), erhalten: %d", vanillaEfficiencyNodes, s.NodeCount())
+	if s.NodeCount() != vanillaNodes {
+		t.Errorf("erwartete %d Knoten (Vanilla-Anker), erhalten: %d", vanillaNodes, s.NodeCount())
 	}
 }
 
-// Anker-Knotenzahl des Default-Verhaltens auf dem Vanilla-Level: Effizienz-
+// Anker-Knotenzahl des Suchverhaltens auf dem Vanilla-Level: Effizienz-
 // Richtungswahl plus Behalten der Gleichstands-Stellungen nach dem ersten Fund
-// (keepEqual, Futter der Push-Optimierung - Level 361). Historie: 8.608.727 vor
-// keepEqual (~1,2% unter dem Orakel-Wert 8.710.434 der klassischen Wahl), das
-// Behalten kostet auf Vanilla ~1,6% zusätzliche Knoten
-const vanillaEfficiencyNodes = 8747345
+// (Futter der Push-Optimierung - Level 361); Herkunft der Zahl und die
+// historischen Vorgänger-Werte in docs/history.md
+const vanillaNodes = 8747345

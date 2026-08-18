@@ -41,12 +41,8 @@ func main() {
 		defaultSpillRAMGB = int(total * 70 / 100 >> 30)
 	}
 
-	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Orakel-Vergleiche)")
-	useBlocker := flag.Bool("blocker", false, "CLI: Deadlock-Blocker vorberechnen (alle Stufen bis Kistenanzahl-1)")
-	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
-	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
+	cliMode := flag.Bool("cli", false, "Kommandozeilen-Modus ohne TUI (für Skripte und Referenz-Läufe); Blocker und Regel-Filter laufen wie in der TUI immer mit")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
-	dirClassic := flag.Bool("dirclassic", false, "CLI: volle Original-Semantik für bitgenaue Orakel-Vergleiche - Richtungswahl (kleinere Hashtabelle zuerst statt Effizienz-Verhältnis) und Nach-Fund-Beschneidung (Gleichstands-Stellungen verwerfen statt sie für die Push-Optimierung zu behalten)")
 	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "RAM-Notbremse in GB für den berechneten Verbrauch (0 = aus; Standard: 85% des installierten RAM; Tabellen weichen vorher ins Archiv-Format aus, das TUI stoppt den Auto-Modus)")
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
@@ -136,11 +132,11 @@ func main() {
 		return
 	}
 
-	runCli(levelData, *useBlocker, *useRules || *rulesCompare, *rulesCompare, *dirClassic, *workers, checkSol)
+	runCli(levelData, *workers, checkSol)
 }
 
 // berechnet nur die Blocker-Stufen bis einschließlich maxStages und gibt sie aus
-// (ohne Suche und ohne Cache-Datei, für schnelle Orakel-Vergleiche)
+// (ohne Suche und ohne Cache-Datei, für schnelle Stufen-Diffs zwischen Go-Ständen)
 func runBlockerOnly(levelData string, maxStages int, workers int) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
@@ -165,11 +161,10 @@ func runBlockerOnly(levelData string, maxStages int, workers int) {
 }
 
 // Kommandozeilen-Modus: Level lösen und Fortschritt als Text ausgeben
-// (deterministische Ausgaben; direkt byte-gleich vergleichbar mit dem C#-Orakel
-// refcli, sofern die optionalen Regel-Filter aus bleiben UND -dirclassic die
-// Richtungswahl des Originals erzwingt - der Default wählt die Richtung seit der
-// Effizienz-Verhältnis-Umstellung anders, siehe solver.chooseForward)
-func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic bool, workers int, checkSol string) {
+// (deterministische Ausgaben mit fester Filter-Konfiguration - Blocker inkl.
+// temp/-Cache und Regel-Filter immer an, identisch zur TUI; Tiefenzeilen sind
+// damit zwischen Go-Ständen byte-gleich diffbar)
+func runCli(levelData string, workers int, checkSol string) {
 	if levelData == "" {
 		levelData = maps.MapVanilla
 	}
@@ -181,41 +176,32 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic boo
 
 	fmt.Println(field)
 
-	if useRules {
-		rules := soko.NewRules(field)
-		rules.CompareBlocker = rulesCompare
-		field.SetRules(rules)
-		field.SetRulesBackward(rules)
-	}
+	rules := soko.NewRules(field)
+	field.SetRules(rules)
+	field.SetRulesBackward(rules)
 
-	if useBlocker {
-		if err := os.MkdirAll("temp", 0755); err != nil {
-			panic(err)
-		}
-		blk := blocker.New(field, filepath.Join("temp", blocker.CacheName(field)))
-		if workers > 0 {
-			blk.SetWorkers(workers)
-		}
-		blockerStart := time.Now()
-		for blk.Next(1000000000) {
-		}
-		fmt.Printf("Blocker fertig nach %s:\n%s\n", time.Since(blockerStart).Round(time.Millisecond), blk)
-		field.SetBlocker(blk)
+	if err := os.MkdirAll("temp", 0755); err != nil {
+		panic(err)
 	}
+	blk := blocker.New(field, filepath.Join("temp", blocker.CacheName(field)))
+	if workers > 0 {
+		blk.SetWorkers(workers)
+	}
+	blockerStart := time.Now()
+	for blk.Next(1000000000) {
+	}
+	fmt.Printf("Blocker fertig nach %s:\n%s\n", time.Since(blockerStart).Round(time.Millisecond), blk)
+	field.SetBlocker(blk)
 
 	s := solver.New(field)
 	defer s.Close() // Auslagerungsdateien der Suchlisten löschen
-	if dirClassic {
-		s.SetDirMode(solver.DirClassic)
-		s.SetKeepEqual(false) // auch die Nach-Fund-Beschneidung des Originals (Knotenzahlen bitgenau)
-	}
 	if workers > 0 {
 		s.SetWorkers(workers)
 	}
 	startTime := time.Now()
 	lastDepth := -1
 
-	// ganze Tiefenstufen pro Schritt (vergleichbar mit refcli-Standardaufruf)
+	// ganze Tiefenstufen pro Schritt
 	for s.Step(1000000000) {
 		if depth := s.SearchDepth(); depth != lastDepth {
 			lastDepth = depth
@@ -226,16 +212,10 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic boo
 	stats := s.GetStats()
 	fmt.Printf("\nFertig nach %s: SuchTiefe=%d Knoten=%s\n", time.Since(startTime).Round(time.Millisecond), s.SearchDepth(), tools.FormatInt(s.NodeCount()))
 
-	if rules := field.Rules(); rules != nil {
-		rst := rules.Stats()
-		fmt.Printf("Regeln vorwärts: Freeze=%s Diagonale=%s Matching=%s | rückwärts: Totfeld=%s PullFreeze=%s\n",
-			tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills), tools.FormatInt(rst.MatchKills),
-			tools.FormatInt(rst.PullDeadKills), tools.FormatInt(rst.PullFreezeKills))
-		if rules.CompareBlocker {
-			fmt.Printf("Vergleich: nurBlocker=%s nurRegeln=%s beide=%s\n",
-				tools.FormatInt(rst.CmpBlockerOnly), tools.FormatInt(rst.CmpRulesOnly), tools.FormatInt(rst.CmpBoth))
-		}
-	}
+	rst := rules.Stats()
+	fmt.Printf("Regeln vorwärts: Freeze=%s Diagonale=%s Matching=%s | rückwärts: Totfeld=%s PullFreeze=%s\n",
+		tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills), tools.FormatInt(rst.MatchKills),
+		tools.FormatInt(rst.PullDeadKills), tools.FormatInt(rst.PullFreezeKills))
 
 	if stats.FoundMoves < 0 {
 		fmt.Println("keine Lösung gefunden")
@@ -250,8 +230,7 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic boo
 	fmt.Println(solution.Moves)
 
 	// Diagnose der Push-Optimierung gegen eine Referenz-Lösung (Flag -checksol);
-	// hängt nur zusätzliche Ausgaben an - die Zeilen oben bleiben byte-gleich
-	// zu den Orakel-Vergleichen
+	// hängt nur zusätzliche Ausgaben an - die Zeilen oben bleiben unverändert
 	if checkSol != "" {
 		best, err := s.GetSolutionBestPushes()
 		if err != nil {

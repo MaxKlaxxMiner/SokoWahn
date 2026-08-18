@@ -8,7 +8,7 @@ import "goSokoWahnBrute/soko"
 // nächsten parallelen Batch neu vom Arbeitsfeld klonen (gleiche Mechanik wie
 // SetWorkers - damit ist das Umschalten auch mitten in der Suche gefahrlos).
 // Achtung: Umschalten ändert natürlich die Knotenzahlen des Laufs - für
-// Orakel-Vergleiche die Schalter nicht anfassen.
+// Vergleiche mit den verankerten Referenzwerten die Schalter nicht anfassen.
 
 // schaltet den Blocker-Filter (vorwärts und rückwärts) an/aus;
 // ohne vorhandenen Blocker bleibt der Filter aus
