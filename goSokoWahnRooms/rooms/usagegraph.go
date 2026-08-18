@@ -1,9 +1,9 @@
 package rooms
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
-	"strings"
 )
 
 // Graph-Sicht auf die Nutzungen eines Ein-Portal-Raums (M4b, siehe docs/konzept.md).
@@ -85,6 +85,31 @@ type usageGraph struct {
 	edges [][]usageEdge
 	ends  [][]usageEnd
 	start int // -1 = der Raum hat keine einzige akzeptierende Nutzung
+
+	// Kanten nach Label vorsortiert (für die heiße Konfigurations-Rechnung)
+	epsEdges [][]usageEdge // exportlose Besuche (unsichtbar)
+	insEdges [][]usageEdge // Einschübe 'E'
+	expEdges [][]usageEdge // Export-Besuche 'X'
+}
+
+// leitet die Label-sortierten Kanten-Listen aus edges ab (nach dem Pruning)
+func (g *usageGraph) buildLabelIndex() {
+	n := len(g.nodes)
+	g.epsEdges = make([][]usageEdge, n)
+	g.insEdges = make([][]usageEdge, n)
+	g.expEdges = make([][]usageEdge, n)
+	for id := range g.nodes {
+		for _, e := range g.edges[id] {
+			switch e.label {
+			case usageInvisible:
+				g.epsEdges[id] = append(g.epsEdges[id], e)
+			case usageInsert:
+				g.insEdges[id] = append(g.insEdges[id], e)
+			default:
+				g.expEdges[id] = append(g.expEdges[id], e)
+			}
+		}
+	}
 }
 
 // baut den Nutzungs-Graphen eines Ein-Portal-Raums; allowed (optional)
@@ -163,6 +188,7 @@ func buildUsageGraph(room *Room, allowed func(id uint64) bool) *usageGraph {
 	}
 
 	g.pruneNonAccepting()
+	g.buildLabelIndex()
 	return g
 }
 
@@ -301,81 +327,137 @@ func (g *usageGraph) enumerateLoops(maxLoops int) []usageLoop {
 
 // ---------------------------------------------------------------------------
 // Konfigurationen: "wo könnte eine Optimal-Nutzung nach diesem Wort-Präfix
-// stehen, und was hat sie mindestens gekostet" - eine min-plus-Potenzmenge
+// stehen, und was hat sie mindestens gekostet" - eine min-plus-Potenzmenge.
+// Kompakte Form: nach Knoten sortierte (Knoten, Kosten)-Paare; gerechnet
+// wird in einem wiederverwendeten Workspace (dichte Arrays mit Versions-
+// Zähler statt Maps - der Vergleich läuft in der Dominanzsuche tausendfach).
 
-// Knoten -> günstigste bekannte Kosten
-type usageConfig map[int]usageCost
+type usageEntry struct {
+	node int
+	cost usageCost
+}
+
+type usageConfig []usageEntry
+
+// Arbeitsflächen für einen Konfigurations-Schritt (je Graph-Seite eine)
+type usageWorkspace struct {
+	cost    []usageCost
+	version []uint32
+	current uint32
+	active  []int // erreichte Knoten (kann Duplikate nach Verbesserungen enthalten)
+}
+
+func (ws *usageWorkspace) reset(n int) {
+	if len(ws.cost) < n {
+		ws.cost = make([]usageCost, n)
+		ws.version = make([]uint32, n)
+		ws.current = 0
+	}
+	ws.current++
+	ws.active = ws.active[:0]
+}
 
 // nimmt einen Kandidaten auf, wenn er billiger ist als das bisher Bekannte
-func (c usageConfig) relax(node int, cost usageCost) bool {
-	old, exists := c[node]
-	if !exists || cost.less(old) {
-		c[node] = cost
-		return true
+func (ws *usageWorkspace) relax(node int, c usageCost) (improved, isNew bool) {
+	if ws.version[node] != ws.current {
+		ws.version[node] = ws.current
+		ws.cost[node] = c
+		ws.active = append(ws.active, node)
+		return true, true
 	}
-	return false
+	if c.less(ws.cost[node]) {
+		ws.cost[node] = c
+		return true, false
+	}
+	return false, false
 }
 
-// Epsilon-Abschluss: exportlose Besuche (B) sind außen unsichtbar, eine
-// Nutzung kann beliebig viele davon einstreuen. Kosten sind positiv und
-// Epsilon-Zyklen gibt es nicht, eine simple Relax-Schleife konvergiert.
-func (g *usageGraph) epsilonClose(c usageConfig) {
-	for changed := true; changed; {
-		changed = false
-		for node, cost := range c {
-			for _, e := range g.edges[node] {
-				if e.label == usageInvisible && c.relax(e.to, cost.add(e.cost)) {
-					changed = true
-				}
+// Epsilon-Abschluss über die Worklist (exportlose Besuche sind außen
+// unsichtbar, eine Nutzung kann beliebig viele einstreuen; Kosten sind
+// positiv und Epsilon-Zyklen gibt es nicht) und Verdichtung des Ergebnisses
+func (g *usageGraph) closeAndPack(ws *usageWorkspace) usageConfig {
+	for i := 0; i < len(ws.active); i++ {
+		node := ws.active[i]
+		cost := ws.cost[node]
+		for _, e := range g.epsEdges[node] {
+			if improved, isNew := ws.relax(e.to, cost.add(e.cost)); improved && !isNew {
+				ws.active = append(ws.active, e.to) // mit besseren Kosten erneut expandieren
 			}
 		}
 	}
-}
-
-// ein sichtbares Zeichen konsumieren (ohne Epsilon-Abschluss danach)
-func (g *usageGraph) step(c usageConfig, label byte) usageConfig {
-	next := usageConfig{}
-	for node, cost := range c {
-		for _, e := range g.edges[node] {
-			if e.label == label {
-				next.relax(e.to, cost.add(e.cost))
-			}
+	sort.Ints(ws.active)
+	result := make(usageConfig, 0, len(ws.active))
+	prev := -1
+	for _, node := range ws.active {
+		if node != prev {
+			result = append(result, usageEntry{node: node, cost: ws.cost[node]})
+			prev = node
 		}
 	}
-	return next
+	return result
+}
+
+// Start-Konfiguration (Epsilon-abgeschlossen)
+func (g *usageGraph) startConfig(ws *usageWorkspace) usageConfig {
+	ws.reset(len(g.nodes))
+	ws.relax(g.start, usageCost{})
+	return g.closeAndPack(ws)
+}
+
+// ein sichtbares Zeichen konsumieren, inklusive Epsilon-Abschluss danach
+func (g *usageGraph) stepClose(src usageConfig, label byte, ws *usageWorkspace) usageConfig {
+	ws.reset(len(g.nodes))
+	edges := g.insEdges
+	if label == usageExport {
+		edges = g.expEdges
+	}
+	for _, entry := range src {
+		for _, e := range edges[entry.node] {
+			ws.relax(e.to, entry.cost.add(e.cost))
+		}
+	}
+	return g.closeAndPack(ws)
 }
 
 // Akzeptanzkosten einer Konfiguration je Terminal-Art:
 //
 //	""   = Kammer im Zustand 0 hinterlassen, Spieler draußen
 //	"!"  = End-Variante ohne Export, "X!" = End-Variante mit Export
-//
-// fehlender Eintrag = mit diesem Terminal nicht akzeptierbar
-func (g *usageGraph) accept(c usageConfig) map[string]usageCost {
-	result := map[string]usageCost{}
-	takeMin := func(label string, cost usageCost) {
-		old, exists := result[label]
-		if !exists || cost.less(old) {
-			result[label] = cost
+type usageAccept struct {
+	out, end, endX          usageCost
+	hasOut, hasEnd, hasEndX bool
+}
+
+func (g *usageGraph) accept(c usageConfig) usageAccept {
+	var a usageAccept
+	for _, entry := range c {
+		if g.nodes[entry.node].state == 0 && (!a.hasOut || entry.cost.less(a.out)) {
+			a.out, a.hasOut = entry.cost, true
 		}
-	}
-	for node, cost := range c {
-		if g.nodes[node].state == 0 {
-			takeMin("", cost)
+		if g.nodes[entry.node].blocked {
+			continue // End-Variante ist ein Besuch (Selbes-Portal-Regel)
 		}
-		if !g.nodes[node].blocked { // End-Variante ist ein Besuch
-			for _, end := range g.ends[node] {
-				takeMin(end.label, cost.add(end.cost))
+		for _, end := range g.ends[entry.node] {
+			cost := entry.cost.add(end.cost)
+			if end.label == "!" {
+				if !a.hasEnd || cost.less(a.end) {
+					a.end, a.hasEnd = cost, true
+				}
+			} else {
+				if !a.hasEndX || cost.less(a.endX) {
+					a.endX, a.hasEndX = cost, true
+				}
 			}
 		}
 	}
-	return result
+	return a
 }
 
-// Anmerkung zu accept(""): das nackte Startwort "" würde bei StartState == 0
-// fälschlich mit Kosten 0 akzeptiert (das Labor verlangt mindestens eine
-// benutzte Variante). Für den Vergleich zweier Graphen ist das harmlos
-// (beide Seiten teilen den Fehler), die Kreuzvalidierung filtert den Fall.
+// Anmerkung zur Out-Akzeptanz: das nackte Startwort "" würde bei
+// StartState == 0 fälschlich mit Kosten 0 akzeptiert (das Labor verlangt
+// mindestens eine benutzte Variante). Für den Vergleich zweier Graphen ist
+// das harmlos (beide Seiten teilen den Fehler), die Kreuzvalidierung
+// filtert den Fall.
 
 // ---------------------------------------------------------------------------
 // Signatur-Enumeration bis fester Ereigniszahl (Kreuzvalidierung gegen das
@@ -395,30 +477,32 @@ func (g *usageGraph) signatures(maxEvents int) map[string]usageCost {
 
 	type item struct {
 		word string
-		cfg  usageConfig // Epsilon-abgeschlossen
+		cfg  usageConfig
 	}
-	start := usageConfig{g.start: {}}
-	g.epsilonClose(start)
-	queue := []item{{word: "", cfg: start}}
+	ws := &usageWorkspace{}
+	queue := []item{{word: "", cfg: g.startConfig(ws)}}
 
 	for len(queue) > 0 {
 		it := queue[0]
 		queue = queue[1:]
-		for label, cost := range g.accept(it.cfg) {
-			if it.word == "" && label == "" && cost == (usageCost{}) {
-				continue // nacktes Startwort zählt nicht als Nutzung
-			}
-			takeMin(it.word+label, cost)
+		a := g.accept(it.cfg)
+		if a.hasOut && !(it.word == "" && a.out == (usageCost{})) {
+			takeMin(it.word, a.out) // nacktes Startwort zählt nicht als Nutzung
+		}
+		if a.hasEnd {
+			takeMin(it.word+"!", a.end)
+		}
+		if a.hasEndX {
+			takeMin(it.word+"X!", a.endX)
 		}
 		if len(it.word) >= maxEvents {
 			continue
 		}
 		for _, label := range []byte{usageInsert, usageExport} {
-			next := g.step(it.cfg, label)
+			next := g.stepClose(it.cfg, label, ws)
 			if len(next) == 0 {
 				continue
 			}
-			g.epsilonClose(next)
 			queue = append(queue, item{word: it.word + string(label), cfg: next})
 		}
 	}
@@ -467,23 +551,21 @@ func (v usageVerdict) String() string {
 	}
 }
 
-// Fingerprint einer normalisierten Vergleichs-Situation
-func usageFingerprint(full, reduced usageConfig) string {
-	var b strings.Builder
+// Fingerprint einer normalisierten Vergleichs-Situation (binär, in einen
+// wiederverwendeten Buffer)
+func usageFingerprint(full, reduced usageConfig, buf []byte) (string, []byte) {
+	buf = buf[:0]
 	writeSide := func(c usageConfig) {
-		nodes := make([]int, 0, len(c))
-		for node := range c {
-			nodes = append(nodes, node)
-		}
-		sort.Ints(nodes)
-		for _, node := range nodes {
-			fmt.Fprintf(&b, "%d:%d/%d;", node, c[node].moves, c[node].pushes)
+		for _, entry := range c {
+			buf = binary.AppendVarint(buf, int64(entry.node))
+			buf = binary.AppendVarint(buf, entry.cost.moves)
+			buf = binary.AppendVarint(buf, entry.cost.pushes)
 		}
 	}
 	writeSide(full)
-	b.WriteByte('|')
+	buf = append(buf, 0xff)
 	writeSide(reduced)
-	return b.String()
+	return string(buf), buf
 }
 
 // zieht das gemeinsame (lexikographisch) minimale Kostenpaar beider Seiten ab
@@ -491,18 +573,18 @@ func usageNormalize(full, reduced usageConfig) usageCost {
 	first := true
 	var min usageCost
 	for _, c := range []usageConfig{full, reduced} {
-		for _, cost := range c {
-			if first || cost.less(min) {
-				min = cost
+		for _, entry := range c {
+			if first || entry.cost.less(min) {
+				min = entry.cost
 				first = false
 			}
 		}
 	}
-	for node, cost := range full {
-		full[node] = cost.sub(min)
+	for i := range full {
+		full[i].cost = full[i].cost.sub(min)
 	}
-	for node, cost := range reduced {
-		reduced[node] = cost.sub(min)
+	for i := range reduced {
+		reduced[i].cost = reduced[i].cost.sub(min)
 	}
 	return min
 }
@@ -524,16 +606,13 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 		reduced usageConfig
 	}
 
-	fullStart := usageConfig{full.start: {}}
-	full.epsilonClose(fullStart)
-	reducedStart := usageConfig{reduced.start: {}}
-	reduced.epsilonClose(reducedStart)
-
+	wsFull, wsReduced := &usageWorkspace{}, &usageWorkspace{}
+	var buf []byte
 	seen := map[string]bool{}
-	queue := []item{{full: fullStart, reduced: reducedStart}}
-	base := usageNormalize(queue[0].full, queue[0].reduced)
-	queue[0].base = base
-	seen[usageFingerprint(queue[0].full, queue[0].reduced)] = true
+	queue := []item{{full: full.startConfig(wsFull), reduced: reduced.startConfig(wsReduced)}}
+	queue[0].base = usageNormalize(queue[0].full, queue[0].reduced)
+	fp, buf := usageFingerprint(queue[0].full, queue[0].reduced, buf)
+	seen[fp] = true
 
 	for len(queue) > 0 {
 		it := queue[0]
@@ -542,31 +621,33 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 		// Akzeptanzen vergleichen (reduced ist bei uns eine Teilmenge der
 		// Kanten, kann also nie billiger sein - geprüft wird trotzdem
 		// symmetrisch, der Vergleich ist allgemein)
-		fullAccept := full.accept(it.full)
-		reducedAccept := reduced.accept(it.reduced)
-		for label, fc := range fullAccept {
-			rc, exists := reducedAccept[label]
-			if !exists {
+		fa := full.accept(it.full)
+		ra := reduced.accept(it.reduced)
+		for _, term := range [3]struct {
+			label  string
+			fh, rh bool
+			fc, rc usageCost
+		}{
+			{"", fa.hasOut, ra.hasOut, fa.out, ra.out},
+			{"!", fa.hasEnd, ra.hasEnd, fa.end, ra.end},
+			{"X!", fa.hasEndX, ra.hasEndX, fa.endX, ra.endX},
+		} {
+			switch {
+			case term.fh && !term.rh:
 				return usageDiffers, fmt.Sprintf("Wort %q: nur voll bedienbar (Kosten %s)",
-					it.word+label, fc.add(it.base))
-			}
-			if rc != fc {
+					it.word+term.label, term.fc.add(it.base))
+			case !term.fh && term.rh:
+				return usageDiffers, fmt.Sprintf("Wort %q: nur reduziert bedienbar", it.word+term.label)
+			case term.fh && term.fc != term.rc:
 				return usageDiffers, fmt.Sprintf("Wort %q: reduziert %s statt %s",
-					it.word+label, rc.add(it.base), fc.add(it.base))
-			}
-		}
-		for label := range reducedAccept {
-			if _, exists := fullAccept[label]; !exists {
-				return usageDiffers, fmt.Sprintf("Wort %q: nur reduziert bedienbar", it.word+label)
+					it.word+term.label, term.rc.add(it.base), term.fc.add(it.base))
 			}
 		}
 
 		// Übergänge für beide sichtbaren Zeichen
 		for _, label := range []byte{usageInsert, usageExport} {
-			nextFull := full.step(it.full, label)
-			full.epsilonClose(nextFull)
-			nextReduced := reduced.step(it.reduced, label)
-			reduced.epsilonClose(nextReduced)
+			nextFull := full.stepClose(it.full, label, wsFull)
+			nextReduced := reduced.stepClose(it.reduced, label, wsReduced)
 			if len(nextFull) == 0 && len(nextReduced) == 0 {
 				continue // Zweig tot (dank Pruning: keine akzeptierende Fortsetzung)
 			}
@@ -579,7 +660,8 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 					it.word+string(label), side)
 			}
 			delta := usageNormalize(nextFull, nextReduced)
-			fp := usageFingerprint(nextFull, nextReduced)
+			var fp string
+			fp, buf = usageFingerprint(nextFull, nextReduced, buf)
 			if seen[fp] {
 				continue // Situation bekannt: jede Fortsetzung wiederholt sich
 			}

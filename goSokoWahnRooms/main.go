@@ -33,7 +33,7 @@ func main() {
 	noBrowser := flag.Bool("nobrowser", false, "Browser nicht automatisch öffnen")
 	flag.Parse()
 
-	sokoMap, title := maps.Map202, "Level 202: aenigma - soko 03" // Standard wie im C#-Original (FieldTest4)
+	sokoMap, title := maps.Map5018, "Level 5018: aenigma - soko 47" // aktuelles Arbeits-Level (202 weiter per Argument)
 	var webInfo *weblevel.Info
 	if arg := flag.Arg(0); arg != "" {
 		if weblevel.IsWebInput(arg) {
@@ -69,7 +69,7 @@ func main() {
 	// Level 202: die linke Kammer direkt beim Start zusammenmergen (Max' Arbeitsstand).
 	// Die Zahlen sind die Raum-Nummern der GUI ("Room N", 1-basiert): 12,19,25,26,27,
 	// 34,35,36,37,47,48,49 - als Indizes also jeweils minus 1.
-	if flag.Arg(0) == "" || (webInfo != nil && webInfo.ID == "202") {
+	if webInfo != nil && webInfo.ID == "202" {
 		startMerge := []uint32{11, 18, 24, 25, 26, 33, 34, 35, 36, 46, 47, 48}
 		if _, err := network.MergeSelection(startMerge, nil); err != nil {
 			fmt.Println("merge error:", err)

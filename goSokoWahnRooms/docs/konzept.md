@@ -347,8 +347,27 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   (Arbeitsteilung siehe unten). End-to-End verankert: nach Merge der
   202er-Kammer entfernt der Button 18 Varianten, übrig 7 auf 5 Zuständen,
   zweiter Lauf findet nichts (TestOptimizeRoomsDominance202).
+  Härtetest Level 5018 (aenigma "soko 47", zweites Test-Level, jetzt als
+  maps.Map5018 eingebaut): der Ziel-Trakt links (3x5 Felder, 9 Ziele, ein
+  Portal) hat nach dem Merge 1718 Zustände / 42887 Varianten. Dafür nötig
+  waren zwei Ausbauten (2026-08-18): Gruppen-Tests (divide & conquer statt
+  Variante-für-Variante - Differenz-Antworten sind billig, Abbruch am ersten
+  Gegenbeispiel-Wort; Kostengleichheit ist teuer, räumt dafür ganze Gruppen
+  ab; Blätter sind Einzeltests, lokale Minimalität bleibt) und ein
+  performanter Vergleichskern (Konfigurationen als dichte Arrays mit
+  Versions-Zähler + Worklist statt Maps mit Fixpunkt-Schleifen, Kanten nach
+  Label vorsortiert, binäre Fingerprints - Einzelvergleich 277ms -> 46ms).
+  Dazu ein Zeitbudget je Raum (30s): bei Ablauf wird das bis dahin Bewiesene
+  angewandt, erneutes Drücken macht weiter - der erste Baustein der
+  inkrementellen Endlos-Funktion (siehe Arbeitsteilung unten). Ergebnis:
+  Fixpunkt nach ~78s in 5 Button-Runden, der Trakt schrumpft auf
+  312 Zustände / 325 Varianten - 99,2% der Varianten bewiesen entbehrlich
+  (TestOptimizeRoomsDominance5018, läuft nur ohne -short; weiche Anker, weil
+  der Budget-Schnitt den exakten Fixpunkt leicht verschieben kann).
   Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
-  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
+  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt);
+  der Optimize-Request blockiert bis zu 30s je Ein-Portal-Raum (SSE-Status
+  weiter zurückgestellt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht
