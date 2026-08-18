@@ -339,12 +339,16 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   die "richtigen" und hält Gleichstands-Familien am Leben), das Zwei-Phasen-
   Greedy trifft exakt die Handrechnung: 7 Varianten {1,3,5,6,17,19,20} auf
   5 Zuständen, jede Streichung einzeln bewiesen (TestReduceVariants202).
-  Der Finder beschreibt nur (der Raum wird nicht verändert); anwendbar auf
-  Ein-Portal-Räume ohne Startvarianten.
-  Offene Punkte: das ECHTE Entfernen am Raum (VariantList kürzen,
-  renewVariants/removeUnusedStates, dann in den Optimize-Button) steht aus;
-  Mehr-Portal-Räume brauchen eine reichere Signatur (Ereignisse tragen ihr
-  Portal, Transparenz nur bei Eintritt == Austritt).
+  Anwendbar auf Ein-Portal-Räume ohne Startvarianten.
+  Eingebaut in den Optimize-Button (2026-08-18): OptimizeRooms fährt je Raum
+  erst den billigen Deadlock-Scan, dann DominanceReduce (Finder + echtes
+  Entfernen über renewVariants/removeUnusedStates, danach Validate). Die
+  Dominanz läuft NUR am Button, nicht beim Auto-Scan der Merges
+  (Arbeitsteilung siehe unten). End-to-End verankert: nach Merge der
+  202er-Kammer entfernt der Button 18 Varianten, übrig 7 auf 5 Zuständen,
+  zweiter Lauf findet nichts (TestOptimizeRoomsDominance202).
+  Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
+  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht

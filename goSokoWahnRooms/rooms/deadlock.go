@@ -304,8 +304,10 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 	return result
 }
 
-// OptimizeRooms führt den Deadlock-Scan auf einer Raum-Auswahl aus (M4) und
-// validiert danach das Netzwerk; liefert die Zahl der entfernten Varianten
+// OptimizeRooms führt den Deadlock-Scan (M4) und die Dominanzsuche (M4b) auf
+// einer Raum-Auswahl aus und validiert danach das Netzwerk; liefert die Zahl
+// der entfernten Varianten. Reihenfolge: erst der billige Scan (räumt
+// Unerreichbares weg), dann die Dominanz auf dem Rest.
 func (n *Network) OptimizeRooms(indices []uint32, info func(string) bool) (removed uint64, err error) {
 	for _, idx := range indices {
 		if int(idx) >= len(n.Rooms) {
@@ -314,6 +316,11 @@ func (n *Network) OptimizeRooms(indices []uint32, info func(string) bool) (remov
 		count, scanOK := n.DeadlockScan(n.Rooms[idx], info)
 		if !scanOK {
 			return removed, nil // abgebrochen, restliche Räume bleiben unangetastet
+		}
+		removed += count
+		count, scanOK = n.DominanceReduce(n.Rooms[idx], info)
+		if !scanOK {
+			return removed, nil
 		}
 		removed += count
 	}

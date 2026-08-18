@@ -66,12 +66,17 @@ func TestOptimizeRoomsIdempotent(t *testing.T) {
 	for i := range all {
 		all[i] = uint32(i)
 	}
+	// erster Lauf darf noch finden (die Dominanzsuche geht über den beim Merge
+	// automatisch gelaufenen Deadlock-Scan hinaus), der zweite muss leer sein
+	if _, err := n.OptimizeRooms(all, nil); err != nil {
+		t.Fatal("optimize:", err)
+	}
 	removed, err := n.OptimizeRooms(all, nil)
 	if err != nil {
 		t.Fatal("optimize:", err)
 	}
 	if removed != 0 {
-		t.Errorf("second scan removed %d variants, want 0", removed)
+		t.Errorf("second optimize removed %d variants, want 0", removed)
 	}
 }
 

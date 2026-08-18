@@ -1,6 +1,9 @@
 package rooms
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+)
 
 // Kandidaten-Finder der Dominanzsuche (M4b, siehe docs/konzept.md): findet
 // für einen Ein-Portal-Raum automatisch eine reduzierte Varianten-Menge,
@@ -130,4 +133,38 @@ func reduceVariants(room *Room, maxConfigs int) ReduceResult {
 	}
 	result.Detail = detail
 	return result
+}
+
+// Sicherheitslimit je Einzelvergleich der Dominanzsuche (Vergleichs-
+// Situationen; real sättigen die Räume nach einer Handvoll)
+const dominanceMaxConfigs = 100000
+
+// DominanceReduce führt die Dominanzsuche auf einem Raum aus und entfernt
+// bewiesen entbehrliche Varianten samt dabei verwaisender Zustände. Nicht
+// anwendbare Räume (mehr als ein Portal, Startvarianten) bleiben unberührt.
+// info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab,
+// der Raum bleibt dann unverändert.
+func (n *Network) DominanceReduce(room *Room, info func(string) bool) (removed uint64, ok bool) {
+	if !canReduceVariants(room) || room.Variants.Count() == 0 {
+		return 0, true
+	}
+	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %d variants", room.Index, room.Variants.Count())) {
+		return 0, false
+	}
+	result := reduceVariants(room, dominanceMaxConfigs)
+	if len(result.Removed) == 0 {
+		return 0, true
+	}
+	if info != nil && !info(fmt.Sprintf("dominance scan room %d: remove %d variants (%d states)",
+		room.Index, len(result.Removed), len(result.RemovedStates))) {
+		return 0, false
+	}
+
+	used := make([]bool, room.Variants.Count())
+	for _, vid := range result.Kept {
+		used[vid] = true
+	}
+	renewVariants(room, used)
+	removeUnusedStates(room)
+	return uint64(len(result.Removed)), true
 }

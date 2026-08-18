@@ -68,3 +68,37 @@ func TestReduceVariantsFreshNetworks(t *testing.T) {
 			tc.name, rooms, removed, variants)
 	}
 }
+
+// End-to-End über den Optimize-Pfad des Buttons: nach dem Merge der
+// 202er-Kammer entfernt OptimizeRooms die 18 entbehrlichen Varianten
+// wirklich aus dem Raum - übrig bleiben 7 Varianten auf 5 Zuständen
+func TestOptimizeRoomsDominance202(t *testing.T) {
+	n, room := merge202Chamber(t)
+
+	all := make([]uint32, len(n.Rooms))
+	for i := range all {
+		all[i] = uint32(i)
+	}
+	removed, err := n.OptimizeRooms(all, nil)
+	if err != nil {
+		t.Fatal("optimize:", err)
+	}
+	t.Logf("entfernt: %d varianten; kammer: %d states, %d varianten",
+		removed, room.States.Count(), room.Variants.Count())
+
+	if room.Variants.Count() != 7 {
+		t.Errorf("kammer hat %d varianten, want 7", room.Variants.Count())
+	}
+	if room.States.Count() != 5 {
+		t.Errorf("kammer hat %d states, want 5", room.States.Count())
+	}
+
+	// zweiter Lauf: nichts mehr zu holen
+	removed, err = n.OptimizeRooms(all, nil)
+	if err != nil {
+		t.Fatal("second optimize:", err)
+	}
+	if removed != 0 {
+		t.Errorf("second optimize removed %d, want 0", removed)
+	}
+}
