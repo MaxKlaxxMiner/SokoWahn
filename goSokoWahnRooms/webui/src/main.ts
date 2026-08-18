@@ -292,7 +292,7 @@ function spanSegment(room: RoomDetail, start: number, count: number, entry: Port
           path += ' > ' + v.boxPortals.map(bi => `${bi + 1}${OPPOSITE[room.portalList[bi].dir]}`).join(',');
         }
         const name = v.playerPortal < 0 ? 'End' : String(local + i + 1);
-        return { text: `Variant ${name} -> ${v.newState} (${path})`, variant: v, entry };
+        return { text: `Variant ${name} [${v.moves}/${v.pushes}] -> ${v.newState} (${path})`, variant: v, entry };
       });
     },
   };
@@ -344,6 +344,12 @@ async function selectVariant(row: VRow): Promise<void> {
     ends: v.playerPortal < 0,
     frames,
   });
+
+  // Statuszeile: Kosten der gewählten Variante. Achtung Zähl-Konvention
+  // (rooms/variantlist.go): der Eintritts-Schritt gehört zur Vorgänger-
+  // Variante - bei Startvarianten (z.B. der Einzellösung nach einem
+  // Voll-Merge) ist daher alles enthalten.
+  $('info').textContent = `Variant ${v.id}: ${v.moves} moves, ${v.pushes} pushes`;
 }
 
 // ---------- Aufbau ----------
