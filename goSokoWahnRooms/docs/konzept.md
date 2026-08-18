@@ -327,11 +327,24 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   bestätigt nebenbei Max' Loop-These wörtlich: alle Garagen-Loops der Kammer
   kosten 9 moves / 5 pushes je Einschub+Export-Paar (TestUsageGraphLoops202);
   der Automat ist gegen das Labor kreuzvalidiert (TestUsageGraphCrossCheck202).
-  Offene Punkte: die Suche VERIFIZIERT bisher eine vorgegebene Reduktion -
-  der Kandidaten-Finder (welche Varianten probeweise streichen? Loop-Analyse
-  liefert die Hinweise) fehlt noch; Gleichstands-Auswahl ist ein kleines
-  Überdeckungsproblem; Mehr-Portal-Räume brauchen eine reichere Signatur
-  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
+  Kandidaten-Finder (rooms/dominance.go, 2026-08-18): Greedy-Elimination auf
+  dem Verifier. Dank Monotonie (weniger Varianten bedienen nie billiger, nur
+  teurer) genügt EIN Durchlauf für ein lokales Minimum: was einmal als nicht
+  streichbar erkannt wurde, bleibt es in jeder kleineren Menge. Zwei Phasen:
+  erst ganze ZUSTÄNDE probeweise eliminieren (alle Varianten streichen, die
+  den Zustand berühren - Zustände sind die teure Größe, sie gehen beim Mergen
+  multiplikativ ein), dann einzelne Varianten. Die Zustands-Phase entschärft
+  das Überdeckungsproblem: reine Varianten-Elimination in ID-Reihenfolge
+  strandet in der 202er-Kammer bei 9 Varianten auf 8 Zuständen (streicht früh
+  die "richtigen" und hält Gleichstands-Familien am Leben), das Zwei-Phasen-
+  Greedy trifft exakt die Handrechnung: 7 Varianten {1,3,5,6,17,19,20} auf
+  5 Zuständen, jede Streichung einzeln bewiesen (TestReduceVariants202).
+  Der Finder beschreibt nur (der Raum wird nicht verändert); anwendbar auf
+  Ein-Portal-Räume ohne Startvarianten.
+  Offene Punkte: das ECHTE Entfernen am Raum (VariantList kürzen,
+  renewVariants/removeUnusedStates, dann in den Optimize-Button) steht aus;
+  Mehr-Portal-Räume brauchen eine reichere Signatur (Ereignisse tragen ihr
+  Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht
