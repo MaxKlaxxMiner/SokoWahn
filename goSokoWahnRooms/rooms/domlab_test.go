@@ -8,7 +8,7 @@ import (
 
 // Dominanz-Labor (Vorarbeit für M4b, siehe docs/konzept.md): enumeriert alle
 // terminalen Nutzungen der 202er-Kammer aus Außenwelt-Sicht und kürt je
-// Außen-Signatur den Pareto-Sieger (moves, dann pushes).
+// Außen-Signatur die kostenoptimalen Ketten (moves, dann pushes).
 //
 // Modell: die Kammer hat ein Portal; eine Nutzung ist eine Folge von Ereignissen,
 // von denen die Außenwelt nur sieht:
@@ -25,13 +25,17 @@ import (
 // mit "!"). Als einzige Reduktion ist die bewiesene Selbes-Portal-Regel
 // eingebaut: nach einem exportlosen Besuch darf nicht direkt der nächste
 // Besuch folgen (fusionierbar = dominiert); nach Export oder Einschub schon.
-//
-// Varianten, die in KEINEM Signatur-Sieger vorkommen, sind Kandidaten für die
-// Dominanzsuche - Varianten, die nur in "exotischen" Signaturen siegen, zeigen,
-// wo lokale Signatur-Gleichheit allein nicht reicht und signatur-übergreifende
-// Argumente (Außenwelt-Annahmen) nötig wären.
-func TestDominanceLab202(t *testing.T) {
-	_, room := merge202Chamber(t)
+
+// kostenoptimale Ketten einer Außen-Signatur
+type labSigInfo struct {
+	moves  uint32
+	pushes uint32
+	chains [][]uint64
+}
+
+// enumeriert alle terminalen Nutzungen eines Ein-Portal-Raums bis maxEvents
+// sichtbare Ereignisse; allowed (optional) schränkt die nutzbaren Varianten ein
+func enumerateUsages(room *Room, maxEvents int, allowed func(id uint64) bool) map[string]*labSigInfo {
 	ip := room.Incoming[0]
 
 	type chain struct {
@@ -44,18 +48,12 @@ func TestDominanceLab202(t *testing.T) {
 		lastExported bool // ... und der hat eine Kiste exportiert
 	}
 
-	// je Signatur alle kostenoptimalen Ketten (Sieger + Gleichstände)
-	type sigInfo struct {
-		moves  uint32
-		pushes uint32
-		chains [][]uint64
-	}
-	best := map[string]*sigInfo{}
+	best := map[string]*labSigInfo{}
 	record := func(c chain, terminal string) {
 		sig := c.sig + terminal
 		info := best[sig]
 		if info == nil || c.moves < info.moves || (c.moves == info.moves && c.pushes < info.pushes) {
-			best[sig] = &sigInfo{moves: c.moves, pushes: c.pushes, chains: [][]uint64{slices.Clone(c.vars)}}
+			best[sig] = &labSigInfo{moves: c.moves, pushes: c.pushes, chains: [][]uint64{slices.Clone(c.vars)}}
 			return
 		}
 		if c.moves == info.moves && c.pushes == info.pushes {
@@ -63,7 +61,6 @@ func TestDominanceLab202(t *testing.T) {
 		}
 	}
 
-	const maxEvents = 11
 	var walk func(c chain)
 	walk = func(c chain) {
 		if c.state == 0 && len(c.vars) > 0 {
@@ -89,6 +86,9 @@ func TestDominanceLab202(t *testing.T) {
 		}
 		span := ip.GetVariantSpan(c.state)
 		for id := span.Start; id < span.Start+span.Count; id++ {
+			if allowed != nil && !allowed(id) {
+				continue
+			}
 			v := room.Variants.Get(id)
 			nc := c
 			nc.state = v.NewState
@@ -110,8 +110,11 @@ func TestDominanceLab202(t *testing.T) {
 		}
 	}
 	walk(chain{state: room.StartState})
+	return best
+}
 
-	// --- Auswertung: je Variante das Urteil über alle Signaturen ---
+// sortiert Signaturen nach Länge, dann alphabetisch
+func sortedSigs(best map[string]*labSigInfo) []string {
 	sigs := make([]string, 0, len(best))
 	for sig := range best {
 		sigs = append(sigs, sig)
@@ -122,13 +125,23 @@ func TestDominanceLab202(t *testing.T) {
 		}
 		return sigs[i] < sigs[j]
 	})
+	return sigs
+}
 
-	contains := func(chain []uint64, id uint64) bool { return slices.Contains(chain, id) }
-	used := map[uint64]bool{}      // kommt in mindestens einer optimalen Kette vor
-	essential := map[uint64]string{} // in mindestens einer Signatur enthalten ALLE optimalen Ketten die Variante
-	for _, sig := range sigs {
+const labHorizon = 11
+
+// Voll-Enumeration: teilt die Varianten in essenziell (irgendeine Signatur
+// braucht sie in ALLEN Optimal-Ketten), austauschbar (nur in Gleichstands-
+// Alternativen) und nie-optimal (Kandidaten für die Dominanzsuche)
+func TestDominanceLab202(t *testing.T) {
+	_, room := merge202Chamber(t)
+	best := enumerateUsages(room, labHorizon, nil)
+
+	used := map[uint64]bool{}
+	essential := map[uint64]string{}
+	for _, sig := range sortedSigs(best) {
 		info := best[sig]
-		if len(sig) <= 8 {
+		if len(sig) <= 6 {
 			t.Logf("signatur %-8s optimal: moves=%3d pushes=%2d ketten=%d, z.B. %v",
 				sig, info.moves, info.pushes, len(info.chains), info.chains[0])
 		}
@@ -141,7 +154,7 @@ func TestDominanceLab202(t *testing.T) {
 				used[id] = true
 			}
 			for id := range inAll {
-				if !contains(ch, id) {
+				if !slices.Contains(ch, id) {
 					delete(inAll, id)
 				}
 			}
@@ -165,10 +178,61 @@ func TestDominanceLab202(t *testing.T) {
 		}
 	}
 	t.Logf("varianten gesamt: %d", room.Variants.Count())
-	t.Logf("essenziell (eine Signatur braucht sie zwingend): %v", essentials)
+	t.Logf("essenziell: %v", essentials)
 	for _, id := range essentials {
 		t.Logf("  essenziell: variant %d (zwingend in signatur %s)", id, essential[id])
 	}
-	t.Logf("austauschbar (nur in Gleichstands-Alternativen): %v", replaceable)
+	t.Logf("austauschbar: %v", replaceable)
 	t.Logf("nie in einer optimalen Kette: %v", unused)
+}
+
+// Minimal-These (Max, 2026-08-18): die Kammer braucht nur 7 Varianten -
+// "ohne parken" (direkt ins Ziel + raus/END, Garage vor der Lieferung) und
+// "mit parken" (immer v3 wegen des einmaligen 2-Züge-Tricks, dann beliebig
+// viele Garagen als Loop, Abschluss raus/END). Der Test prüft: die auf diese
+// Varianten eingeschränkte Enumeration erreicht für JEDE Signatur exakt
+// dieselben Optimal-Kosten wie die Voll-Enumeration.
+func TestDominanceLab202Minimal(t *testing.T) {
+	_, room := merge202Chamber(t)
+
+	minimalSet := map[uint64]bool{
+		1:  true, // {36}: Garagen-Kiste wieder raus (vor der Ziel-Lieferung)
+		3:  true, // {36}: parken auf 26 (der Trick, Teil 1)
+		5:  true, // {36}: direkt ins Ziel + raus
+		6:  true, // {36}: direkt ins Ziel + Spielende
+		17: true, // {26}: geparkte ins Ziel + Spielende
+		19: true, // {26,36}: Garagen-Kiste raus + geparkte ins Ziel (der Trick, Teil 2)
+		20: true, // {26,36}: Garagen-Kiste raus, geparkte bleibt (der Garagen-Loop)
+	}
+
+	full := enumerateUsages(room, labHorizon, nil)
+	reduced := enumerateUsages(room, labHorizon, func(id uint64) bool { return minimalSet[id] })
+
+	for _, sig := range sortedSigs(full) {
+		f := full[sig]
+		r, exists := reduced[sig]
+		if !exists {
+			t.Errorf("signatur %s: mit Minimal-Menge nicht mehr bedienbar", sig)
+			continue
+		}
+		if r.moves != f.moves || r.pushes != f.pushes {
+			t.Errorf("signatur %s: Minimal-Menge teurer (%d/%d statt %d/%d)",
+				sig, r.moves, r.pushes, f.moves, f.pushes)
+		}
+	}
+	for _, sig := range sortedSigs(reduced) {
+		if _, exists := full[sig]; !exists {
+			t.Errorf("signatur %s: nur mit Minimal-Menge erreichbar (kann nicht sein)", sig)
+		}
+	}
+	t.Logf("alle %d Signaturen mit 7 von %d Varianten optimal bedient", len(full), room.Variants.Count())
+
+	// welche Zustände die Minimal-Menge noch braucht
+	states := map[uint64]bool{0: true, room.StartState: true}
+	for id := range minimalSet {
+		v := room.Variants.Get(id)
+		states[v.OldState] = true
+		states[v.NewState] = true
+	}
+	t.Logf("benötigte Zustände: %d von %d", len(states), room.States.Count())
 }
