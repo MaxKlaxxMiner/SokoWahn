@@ -1,9 +1,6 @@
 package soko
 
-import (
-	"math/bits"
-	"sync/atomic"
-)
+import "math/bits"
 
 // Regelbasierter Live-Deadlock-Filter: erkennt strukturelle Deadlocks mit
 // beliebig vielen Kisten, die dem k-Steiner-Blocker wegen seiner Kistenzahl-Grenze
@@ -40,22 +37,6 @@ type rulesShared struct {
 	// --- Spiegelwelt für die Rückwärtssuche (Pull-Freeze) ---
 	startBits    []uint64 // Start-Kistenfelder als Bitmaske
 	pullDeadBits []uint64 // pull-tote Felder: von dort erreicht keine Kiste per Ziehen ein Startfeld
-
-	// --- Statistik (atomar: alle Klone/Worker zählen gemeinsam) ---
-	freezeKills     atomic.Uint64 // Freeze-Regel hat eine Stellung verworfen
-	diagonalKills   atomic.Uint64 // Diagonal-Regel hat eine Stellung verworfen
-	matchKills      atomic.Uint64 // Ziel-Matching-Regel hat eine Stellung verworfen
-	pullDeadKills   atomic.Uint64 // Kiste auf pull-totem Feld (rückwärts, O(1))
-	pullFreezeKills atomic.Uint64 // Pull-Freeze-Regel hat eine Rückwärts-Stellung verworfen
-}
-
-// Momentaufnahme der Regel-Statistik
-type RuleStats struct {
-	FreezeKills     uint64 // von der Freeze-Regel verworfene Stellungen
-	DiagonalKills   uint64 // von der Diagonal-Regel verworfene Stellungen
-	MatchKills      uint64 // von der Ziel-Matching-Regel verworfene Stellungen
-	PullDeadKills   uint64 // Kiste auf pull-totem Feld verworfen (rückwärts)
-	PullFreezeKills uint64 // von der Pull-Freeze-Regel verworfene Rückwärts-Stellungen
 }
 
 // Live-Regel-Filter; jede Field-Instanz braucht ihren eigenen (Scratch-Puffer),
@@ -215,18 +196,6 @@ func (r *Rules) Clone() *Rules {
 	}
 }
 
-// liest die (über alle Klone gemeinsame) Regel-Statistik
-func (r *Rules) Stats() RuleStats {
-	sh := r.shared
-	return RuleStats{
-		FreezeKills:     sh.freezeKills.Load(),
-		DiagonalKills:   sh.diagonalKills.Load(),
-		MatchKills:      sh.matchKills.Load(),
-		PullDeadKills:   sh.pullDeadKills.Load(),
-		PullFreezeKills: sh.pullFreezeKills.Load(),
-	}
-}
-
 // prüft die Stellung nach einem Kistenschub (box = neue Position der geschobenen
 // Kiste, player = Spielerposition nach dem Schub). false = beweisbarer Deadlock,
 // die Stellung wird verworfen.
@@ -239,21 +208,15 @@ func (r *Rules) CheckPush(player, box Wpos, boxBits []uint64) bool {
 	if r.FreezeEnabled {
 		frozen, ok := r.checkFreeze(box, boxBits)
 		if !ok {
-			r.shared.freezeKills.Add(1)
 			return false
 		}
 		// Stufe 2 direkt im Anschluss: frozen zeigt in den work-Puffer des
 		// Fixpunkts und ist nur bis zum nächsten Freeze-Check gültig
 		if frozen != nil && !r.checkGoalMatch(frozen, boxBits) {
-			r.shared.matchKills.Add(1)
 			return false
 		}
 	}
-	if r.DiagonalEnabled && r.isDiagonalDeadlock(player, box, boxBits) {
-		r.shared.diagonalKills.Add(1)
-		return false
-	}
-	return true
+	return !r.DiagonalEnabled || !r.isDiagonalDeadlock(player, box, boxBits)
 }
 
 // prüft die Kisten-Konfiguration nach einem Rückwärtszug (box = neue Position der
@@ -273,14 +236,9 @@ func (r *Rules) CheckPull(box Wpos, boxBits []uint64) bool {
 	// billigster Check zuerst: von einem pull-toten Feld erreicht die Kiste per
 	// Ziehen nie mehr ein Startfeld (Startfelder sind per Konstruktion nie pull-tot)
 	if r.shared.pullDeadAt(box) {
-		r.shared.pullDeadKills.Add(1)
 		return false
 	}
-	if !r.checkPullFreeze(box, boxBits) {
-		r.shared.pullFreezeKills.Add(1)
-		return false
-	}
-	return true
+	return r.checkPullFreeze(box, boxBits)
 }
 
 // Pull-Freeze-Check (Spiegel des Freeze-Fixpunkts): alle naiv ziehbaren Kisten

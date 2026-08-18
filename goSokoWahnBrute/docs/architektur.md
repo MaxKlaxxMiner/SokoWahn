@@ -408,7 +408,7 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
   "Ziele-und-Wände-Sequenzen" entlang der Kette retten die Stellung (Kisten können
   nach innen auf Ziele geschoben werden). Scan in absoluten Koordinaten, konservativ
   am Feldrand (unbegehbar ohne Wand = kein Deadlock-Anspruch).
-- **Ziel-Matching, Stufe 2** (`rulesMatch.go`, MatchEnabled, TUI-Taste 6): eingefrorene
+- **Ziel-Matching, Stufe 2** (`rulesMatch.go`, MatchEnabled): eingefrorene
   Kisten auf Zielfeldern bewegen sich nie mehr und wirken wie Wände. Jede noch
   bewegliche Kiste muss damit weiterhin ein FREIES Ziel erreichen können (billige
   Vorstufe), und alle beweglichen Kisten zusammen brauchen eine überschneidungsfreie
@@ -447,18 +447,16 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
   zahme Levels bauen komplett klassisch.
 - **Threading**: die Vorberechnung (tote Felder, Ziel-Maske, Geometrie) wird geteilt,
   jeder Field-Clone bekommt per Rules.Clone einen eigenen Scratch-Puffer.
-  Statistik-Zähler liegen atomar im geteilten Teil (alle Worker zählen gemeinsam).
-- **Bedienung**: TUI Default an, reaktiviert sich bei jedem neuen Level; Tasten 4/5
-  schalten Blocker/Regeln in der Suche um (wirkt wie SetWorkers ab dem nächsten Batch),
-  Taste 6 nimmt einzeln das Ziel-Matching heraus (der teuerste Regel-Teil).
-  Im CLI laufen Blocker und Regeln immer mit (identisch zur TUI, kein Schalter).
+- **Bedienung**: keine - Blocker und Regeln laufen in TUI und CLI immer mit
+  (hardcoded an; die Einzelschalter FreezeEnabled/DiagonalEnabled/MatchEnabled
+  am Rules-Objekt existieren nur noch für Tests und Messungen).
 - **Messwerte Vanilla** (Stand 08/2026): Regeln allein 1.866.791
   statt 8.747.345 Knoten (Faktor 4,7, ~1 s statt ~10 s) - fast auf dem Niveau des
-  vollen 5-Steiner-Blockers (1.624.408), aber ohne Vorberechnung. Treffer:
-  Freeze 1,11 Mio, Diagonale 71k, rückwärts Totfeld 123k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
+  vollen 5-Steiner-Blockers (1.624.408), aber ohne Vorberechnung
+  (Treffer-Aufschlüsselung in docs/history.md). Mit vollem 5-Steiner-Blocker fangen
   die Regeln auf Vanilla vorwärts nichts Zusätzliches (bei 6 Kisten subsumiert der
-  Blocker die kleinen Cluster). Das Ziel-Matching feuert auf Vanilla nie (0 Treffer,
-  Knotenzahlen unverändert) und kostet dort ~5% Laufzeit (der entfallene
+  Blocker die kleinen Cluster). Das Ziel-Matching feuert auf Vanilla nie
+  und kostet dort ~5% Laufzeit (der entfallene
   Fixpunkt-Early-Exit); sein Revier sind Levels, in denen Ziel-Kisten während der
   Suche zu Sperr-Riegeln einfrieren. Der Mehrwert der Regeln insgesamt liegt bei
   großen Levels (Cluster über der Steiner-Grenze, lange Diagonalen) und als
@@ -478,7 +476,7 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
 | Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (unter der Muster-Schwelle) |
 | small.txt | optimale Züge | 16 |
 | archiveTestLevel | Push-Optimierung | 7 Schübe, 1 Anker, 918 Knoten (TestPushOptAnchorRegression) |
-| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.866.791 / Freeze 1.108.508, Diag 71.007, PullTot 123.209, PullFreeze 783 |
+| Vanilla mit Regeln (ohne Blocker) | Knoten am Ende | 1.866.791 |
 
 Diese Anker sind die Referenz des Suchverhaltens: eine Abweichung ist ein Bug
 oder eine bewusste, dokumentierte Entscheidung (dann neu verankern und die

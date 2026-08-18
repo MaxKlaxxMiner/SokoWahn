@@ -255,6 +255,15 @@ Abgeleitete offene Idee (früherer Blocker-Stopp bei aktiven Regeln): roadmap.md
   Fluent-Hash-Bibliothek (Bytes/Strings/Zeit/Komplexzahlen, Unsafe-Loads,
   Endian-Build-Tags); übrig blieb der eine FNV-1a-Schritt, den die Suche braucht
   (UpdateUInt32).
+- **TUI-Aufräumen** (18.08.2026): Taste s (Ministep/Einzelschritt) entfernt
+  (Bulkgröße 1 leistet dasselbe), Tasten 4/5/6 (Blocker/Regeln/Matching umschalten)
+  samt der Umschalt-API im Solver (solver/filters.go) entfernt - die Filter sind
+  seitdem in TUI und CLI fest an. Die atomaren Regel-Trefferzähler (RuleStats:
+  Freeze/Diagonale/Matching/Totfeld/PullFreeze) flogen komplett raus, inklusive
+  TUI-Anzeige, CLI-Diagnosezeile und Treffer-Ankern in den Tests; der letzte
+  gemessene Stand (Vanilla nur Regeln) steht in der Anker-Tabelle oben, die
+  Knoten-Anker sichern die Regeln seither allein ab. Die versteckte Taste c
+  (Feld kopieren) wanderte in die Hilfezeile.
 - **Endlosschleifen-Hänger Level 25327** (08/2026): gefixt in soko.Steps
   (Wand-Prüfung der Schub-Position); der erste Einsatz des -debugport-Workflows,
   die Praxis-Rezepte daraus stehen in architektur.md.

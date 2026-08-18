@@ -60,9 +60,6 @@ func TestRulesFreezeDeadlock(t *testing.T) {
 	if r.CheckPush(f.player, wposAt(t, f, 2, 2), f.boxBits) {
 		t.Error("CheckPush muss den 2x2-Block verwerfen")
 	}
-	if st := r.Stats(); st.FreezeKills != 1 {
-		t.Errorf("erwartete 1 Freeze-Treffer in der Statistik, erhalten: %d", st.FreezeKills)
-	}
 }
 
 // Freeze-Fixpunkt: L-Form ist beweglich (die untere Kiste kann nach unten ausweichen)
@@ -190,11 +187,11 @@ func TestRulesPullFreeze(t *testing.T) {
 		t.Error("pull-eingefrorenes Paar abseits der Startfelder muss verworfen werden")
 	}
 	// der O(1)-Vorabcheck greift hier sogar schon vor dem Fixpunkt: (1,1) ist pull-tot
+	if !r.shared.pullDeadAt(wposAt(t, f, 1, 1)) {
+		t.Error("(1,1) muss als pull-totes Feld erkannt werden")
+	}
 	if r.CheckPull(wposAt(t, f, 1, 1), mask) {
 		t.Error("CheckPull muss die Konfiguration verwerfen")
-	}
-	if st := r.Stats(); st.PullDeadKills != 1 {
-		t.Errorf("erwartete 1 Pull-Totfeld-Treffer, erhalten: %d", st.PullDeadKills)
 	}
 
 	// die echte Startkonfiguration ist pull-eingefroren, steht aber komplett auf
@@ -234,8 +231,9 @@ func TestRulesGoalMatchReach(t *testing.T) {
 	if r.CheckPush(wposAt(t, f, 7, 2), wposAt(t, f, 8, 2), mask) {
 		t.Error("die abgeschnittene Kiste erreicht kein freies Ziel mehr - CheckPush muss verwerfen")
 	}
-	if st := r.Stats(); st.MatchKills != 1 || st.FreezeKills != 0 {
-		t.Errorf("erwartete genau 1 Matching-Treffer (und 0 Freeze), erhalten: Match=%d Freeze=%d", st.MatchKills, st.FreezeKills)
+	// dass wirklich das Matching (und nicht Stufe 1) verwirft, zeigt der Fixpunkt direkt
+	if _, ok := r.checkFreeze(wposAt(t, f, 8, 2), mask); !ok {
+		t.Error("die Stellung darf nicht schon am Freeze-Fixpunkt scheitern")
 	}
 
 	// Gegenprobe: ohne Stufe 2 lässt die Stellung sich nicht widerlegen
@@ -276,9 +274,6 @@ func TestRulesGoalMatchAssignment(t *testing.T) {
 	mask := buildMask([][2]int{{5, 2}, {6, 2}, {8, 2}, {10, 2}})
 	if r.CheckPush(wposAt(t, f, 11, 2), wposAt(t, f, 10, 2), mask) {
 		t.Error("zwei Kisten um ein erreichbares Ziel - das Matching muss verwerfen")
-	}
-	if st := r.Stats(); st.MatchKills != 1 {
-		t.Errorf("erwartete 1 Matching-Treffer, erhalten: %d", st.MatchKills)
 	}
 
 	// Gegenprobe: mit nur EINER beweglichen Kiste geht die Zuordnung auf

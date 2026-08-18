@@ -212,11 +212,6 @@ func runCli(levelData string, workers int, checkSol string) {
 	stats := s.GetStats()
 	fmt.Printf("\nFertig nach %s: SuchTiefe=%d Knoten=%s\n", time.Since(startTime).Round(time.Millisecond), s.SearchDepth(), tools.FormatInt(s.NodeCount()))
 
-	rst := rules.Stats()
-	fmt.Printf("Regeln vorwärts: Freeze=%s Diagonale=%s Matching=%s | rückwärts: Totfeld=%s PullFreeze=%s\n",
-		tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills), tools.FormatInt(rst.MatchKills),
-		tools.FormatInt(rst.PullDeadKills), tools.FormatInt(rst.PullFreezeKills))
-
 	if stats.FoundMoves < 0 {
 		fmt.Println("keine Lösung gefunden")
 		return

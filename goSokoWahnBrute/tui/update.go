@@ -78,12 +78,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "q":
 			return m, tea.Quit
-		case "s": // Ministep: eine einzelne Kombination bzw. Stellung
-			if !m.blk.Next(1) {
-				m.startSearch()
-			}
-			return m, nil
-		case "b": // Bulk-Schritt
+		case "b": // Bulk-Schritt (Bulkgröße per +/- bis hinunter zu 1 = Einzelschritt)
 			if !m.blk.Next(m.bulkBlocker) {
 				m.startSearch()
 			}
@@ -119,15 +114,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch key {
 		case "q":
 			return m, tea.Quit
-		case "s": // Einzelschritt: eine Stellung
-			if !m.slv.Step(1) {
-				m.finishSearch()
-			}
-			if note := m.slv.TakeArchiveNote(); note != "" {
-				m.status = note
-			}
-			return m, nil
-		case "b": // Bulk-Schritt
+		case "b": // Bulk-Schritt (Bulkgröße per +/- bis hinunter zu 1 = Einzelschritt)
 			if !m.slv.Step(m.bulkSearch) {
 				m.finishSearch()
 			}
@@ -161,21 +148,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "3": // Richtungswahl wieder der Automatik überlassen
 			m.slv.SetDirMode(solver.DirAuto)
 			m.status = "Richtung: automatisch (Effizienz-Verhältnis: Tiefe je Hash-Eintrag)"
-			return m, nil
-		case "4": // Blocker-Filter an/aus (Default: an, reaktiviert sich bei neuem Level)
-			on := !m.slv.BlockerEnabled()
-			m.slv.SetBlockerEnabled(on)
-			m.status = "Blocker-Filter: " + onOff(on)
-			return m, nil
-		case "5": // Regel-Filter an/aus (Freeze + Diagonale + Matching)
-			on := !m.slv.RulesEnabled()
-			m.slv.SetRulesEnabled(on)
-			m.status = "Regel-Filter (Freeze+Diagonale+Matching): " + onOff(on)
-			return m, nil
-		case "6": // Ziel-Matching (Regel-Stufe 2) einzeln an/aus (teuerster Regel-Teil)
-			on := !m.slv.MatchEnabled()
-			m.slv.SetMatchEnabled(on)
-			m.status = "Ziel-Matching (Regel-Stufe 2): " + onOff(on)
 			return m, nil
 		case "h": // Hashing: die Tabelle mit dem vollsten CompactTable-Teil ins Archiv-Format verdichten
 			m.status = m.slv.ArchiveLargerTable()
@@ -259,7 +231,7 @@ func normalizeNewlines(text string) string {
 }
 
 // kopiert das Spielfeld (Level-Notation) in die Zwischenablage
-// (Taste c im Blocker- und Such-Modus, bewusst ohne Eintrag in der Hilfezeile)
+// (Taste c im Blocker- und Such-Modus; im Lösungs-Modus kopiert c stattdessen die LURD-Zugfolge)
 func (m Model) copyField() (tea.Model, tea.Cmd) {
 	if err := writeClipboard(m.field.String()); err != nil {
 		m.status = "Zwischenablage nicht beschreibbar: " + err.Error()

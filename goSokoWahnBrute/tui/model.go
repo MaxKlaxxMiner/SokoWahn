@@ -187,7 +187,7 @@ func (m *Model) scan() {
 	}
 
 	m.mode = modeBlocker
-	m.status = webInfoLine(webInfo) + "Blockerscan bereit: s = Ministep, b = Bulk, a = Auto, Enter = beenden und Suche starten"
+	m.status = webInfoLine(webInfo) + "Blockerscan bereit: b = Bulk, a = Auto, Enter = beenden und Suche starten"
 }
 
 // baut die Statuszeilen-Info eines Web-Levels ("" wenn kein Web-Level geladen wurde)
@@ -260,7 +260,7 @@ func (m *Model) startSearch() {
 	m.slv = solver.New(m.field)
 	m.mode = modeSearch
 	m.statesPerSec = 0
-	m.status = "Suche bereit: s = Einzelschritt, b = Bulk, a = Auto"
+	m.status = "Suche bereit: b = Bulk, a = Auto"
 }
 
 // schließt die Suche ab (Lösung anzeigen oder Fehlschlag melden)

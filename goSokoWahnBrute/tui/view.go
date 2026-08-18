@@ -67,11 +67,11 @@ func (m Model) helpLine() string {
 	case modeInput:
 		return "Enter = Übernehmen (bei Nummer/URL) | Strg+S = Level scannen | Esc = Beenden (leer = Vanilla)"
 	case modeBlocker:
-		return "s = Ministep | b = Bulk | a/Leer = Auto | +/- = Bulkgröße | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
+		return "c = kopieren | b = Bulk | +/- = Bulkgröße | a/Leer = Auto | Enter = Blocker beenden -> Suche | i = Eingabe | q = Beenden"
 	case modeSearch:
-		return "s = Einzelschritt | b = Bulk | a/Leer = Auto | 1/2/3 = Richtung | 4/5/6 = Blocker/Regeln/Matching | h = Hash-Archiv | m = MaxMem | +/- = Bulkgröße | *,/ = Worker | i = Eingabe | q = Beenden"
+		return "c = kopieren | b = Bulk | +/- = Bulkgröße | a/Leer = Auto | 1/2/3 = Richtung | h = Hash-Archiv | m = MaxMem | *,/ = Worker | i = Eingabe | q = Beenden"
 	case modeSolution:
-		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | c = Zugfolge kopieren | i = neues Level | q = Beenden"
+		return "Pfeile/h/l = Blättern | Home/End = Anfang/Ende | c = LURD-Lösung kopieren | i = neues Level | q = Beenden"
 	}
 	return ""
 }
@@ -142,21 +142,6 @@ func (m Model) viewSearch() string {
 	// paradoxon, ab Milliarden Einträgen erwartbar) - rot, damit man es sieht
 	if stats.CollisionRejects > 0 {
 		sb.WriteString("\n" + styleError.Render(fmt.Sprintf("Hash-Kollisionen verworfen: %s", tools.FormatInt(stats.CollisionRejects))))
-	}
-
-	// aktive Deadlock-Filter samt Trefferzählern der Regeln (Tasten 4/5/6),
-	// je eine Zeile für Schalter, Vorwärts- und Rückwärts-Treffer
-	sb.WriteString("\n" + styleHelp.Render("Filter: Blocker "+onOff(m.slv.BlockerEnabled())+" | Regeln "+onOff(m.slv.RulesEnabled())+" | Matching "+onOff(m.slv.MatchEnabled())))
-	if r := m.slv.Rules(); r != nil {
-		rst := r.Stats()
-		if rst.FreezeKills+rst.DiagonalKills+rst.MatchKills > 0 {
-			sb.WriteString("\n" + styleHelp.Render(fmt.Sprintf("vorwärts: Freeze = %s, Diagonale = %s, Matching = %s",
-				tools.FormatInt(rst.FreezeKills), tools.FormatInt(rst.DiagonalKills), tools.FormatInt(rst.MatchKills))))
-		}
-		if rst.PullDeadKills+rst.PullFreezeKills > 0 {
-			sb.WriteString("\n" + styleHelp.Render(fmt.Sprintf("rückwärts: Totfeld = %s, Freeze = %s",
-				tools.FormatInt(rst.PullDeadKills), tools.FormatInt(rst.PullFreezeKills))))
-		}
 	}
 
 	if m.auto {

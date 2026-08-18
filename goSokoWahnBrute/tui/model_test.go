@@ -212,18 +212,28 @@ func TestModelScanIndentedFirstLine(t *testing.T) {
 	}
 }
 
-// Ministep im Blockerscan: ein einzelner Next(1)-Schritt darf den Modus nicht verlassen
-func TestModelBlockerMinistep(t *testing.T) {
+// Einzelschritt im Blockerscan über die Bulkgröße: - dreht sie bis auf 1 herunter
+// (Ersatz der früheren Ministep-Taste), ein b-Schritt mit Bulkgröße 1 darf den
+// Modus nicht verlassen
+func TestModelBlockerSingleStep(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	m := NewModel("", 0)
 	m.input.SetValue(testLevel)
 	m.scan()
 
-	keyS := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}
-	m = press(t, m, keyS)
+	keyMinus := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("-")}
+	for i := 0; i < 8; i++ { // mehr Drücke als nötig: bei 1 muss Schluss sein
+		m = press(t, m, keyMinus)
+	}
+	if m.bulkBlocker != 1 {
+		t.Fatalf("Bulkgröße muss per - bis auf 1 sinken, ist: %d", m.bulkBlocker)
+	}
+
+	keyB := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b")}
+	m = press(t, m, keyB)
 	if m.mode != modeBlocker {
-		t.Fatal("ein Ministep darf den Blockerscan nicht beenden")
+		t.Fatal("ein Einzelschritt (b bei Bulkgröße 1) darf den Blockerscan nicht beenden")
 	}
 
 	// Enter beendet den Blockerscan sofort und startet die Suche

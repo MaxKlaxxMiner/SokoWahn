@@ -140,43 +140,6 @@ func TestSolveRulesDiagonalUnsolvable(t *testing.T) {
 	}
 }
 
-// Umschalter: Regeln und Blocker lassen sich am laufenden Solver an- und abschalten
-// (ohne gesetzte Quellen bleiben die Filter aus)
-func TestSolveRulesToggle(t *testing.T) {
-	field, err := soko.Parse(`
-######
-#@$ .#
-######
-`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	rules := soko.NewRules(field)
-	field.SetRules(rules)
-	field.SetRulesBackward(rules)
-
-	s := New(field)
-	if !s.RulesEnabled() {
-		t.Error("Regeln müssen nach New aktiv sein (vom Feld geerbt)")
-	}
-	s.SetRulesEnabled(false)
-	if s.RulesEnabled() {
-		t.Error("SetRulesEnabled(false) muss die Regeln abschalten")
-	}
-	s.SetRulesEnabled(true)
-	if !s.RulesEnabled() {
-		t.Error("SetRulesEnabled(true) muss die Regeln wieder anschalten")
-	}
-	if s.BlockerEnabled() {
-		t.Error("ohne Blocker-Quelle darf kein Blocker-Filter aktiv sein")
-	}
-	for s.Step(1000000000) {
-	}
-	if stats := s.GetStats(); stats.FoundMoves != 2 {
-		t.Fatalf("erwartete Lösungslänge 2, erhalten: %d", stats.FoundMoves)
-	}
-}
-
 // erzwungene Rückwärtssuche mit Regeln: die Pull-Regeln (Totfeld + Pull-Freeze)
 // tragen die Hauptlast und dürfen die optimale Lösung nicht verlieren
 func TestSolveRulesDirBackward(t *testing.T) {
@@ -202,11 +165,6 @@ func TestSolveRulesDirBackward(t *testing.T) {
 	}
 	if stats := s.GetStats(); stats.FoundMoves != 16 {
 		t.Fatalf("erwartete Lösungslänge 16, erhalten: %d", stats.FoundMoves)
-	}
-	if r := s.Rules(); r != nil {
-		if st := r.Stats(); st.PullDeadKills+st.PullFreezeKills == 0 {
-			t.Error("die Pull-Regeln haben bei reiner Rückwärtssuche nie gefeuert - Test prüft nichts")
-		}
 	}
 }
 
@@ -247,14 +205,11 @@ func TestSolveRulesGoalMatch(t *testing.T) {
 	if p, r := plain.GetStats().FoundMoves, rules.GetStats().FoundMoves; p != r {
 		t.Errorf("Lösungslänge weicht ab: ohne Regeln %d, mit Regeln %d", p, r)
 	}
-	if rules.NodeCount() > plain.NodeCount() {
-		t.Errorf("mit Regeln dürfen nicht mehr Knoten entstehen: %d (Regeln) vs %d (ohne)",
+	// dass das Matching wirklich feuert, sichert der Knotenvergleich: ohne Treffer
+	// wären die Knotenzahlen identisch (Stufe 1 greift in diesem Level nie)
+	if rules.NodeCount() >= plain.NodeCount() {
+		t.Errorf("das Ziel-Matching muss den Beweis verkürzen: %d (Regeln) vs %d (ohne)",
 			rules.NodeCount(), plain.NodeCount())
-	}
-	if r := rules.Rules(); r != nil {
-		if st := r.Stats(); st.MatchKills == 0 {
-			t.Error("das Ziel-Matching hat nie gefeuert - Test prüft nichts")
-		}
 	}
 }
 
@@ -271,17 +226,5 @@ func TestSolveRulesVanillaAnchor(t *testing.T) {
 	s, _ := solveLevelWithRules(t, maps.MapVanilla, 230)
 	if s.NodeCount() != 1866791 {
 		t.Errorf("erwartete 1.866.791 Knoten (Regressionswert der Stufe-1-Regeln inkl. Pull-Freeze), erhalten: %d", s.NodeCount())
-	}
-	if r := s.Rules(); r != nil {
-		st := r.Stats()
-		// Regressionswerte (Stand 08/2026, seit dem Behalten der
-		// Gleichstands-Stellungen; Vorgänger-Werte in docs/history.md)
-		want := soko.RuleStats{FreezeKills: 1108508, DiagonalKills: 71007,
-			PullDeadKills: 123209, PullFreezeKills: 783}
-		if st.FreezeKills != want.FreezeKills || st.DiagonalKills != want.DiagonalKills ||
-			st.PullDeadKills != want.PullDeadKills || st.PullFreezeKills != want.PullFreezeKills {
-			t.Errorf("Regel-Treffer weichen von den Regressionswerten ab:\nerwartet: %+v\nerhalten: Freeze=%d Diag=%d PullTot=%d PullFreeze=%d",
-				want, st.FreezeKills, st.DiagonalKills, st.PullDeadKills, st.PullFreezeKills)
-		}
 	}
 }
