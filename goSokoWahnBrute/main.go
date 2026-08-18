@@ -46,7 +46,7 @@ func main() {
 	useRules := flag.Bool("rules", false, "CLI: regelbasierten Live-Deadlock-Filter aktivieren (Stufe 1+2: Freeze + Diagonale + Ziel-Matching); ändert die Knotenzahlen, für Orakel-Vergleiche weglassen")
 	rulesCompare := flag.Bool("rulescompare", false, "CLI: Debug - Regeln parallel zum Blocker auswerten und die Überlappung ausgeben (impliziert -rules)")
 	blockerStages := flag.Int("stages", 0, "CLI: nur die Blocker-Stufen bis N berechnen und ausgeben (ohne Suche, ohne Cache)")
-	dirClassic := flag.Bool("dirclassic", false, "CLI: Richtungswahl des Originals (kleinere Hashtabelle zuerst) statt Effizienz-Verhältnis - für bitgenaue Orakel-Vergleiche")
+	dirClassic := flag.Bool("dirclassic", false, "CLI: volle Original-Semantik für bitgenaue Orakel-Vergleiche - Richtungswahl (kleinere Hashtabelle zuerst statt Effizienz-Verhältnis) und Nach-Fund-Beschneidung (Gleichstands-Stellungen verwerfen statt sie für die Push-Optimierung zu behalten)")
 	ramLimitGB := flag.Int("ram", defaultRAMLimitGB, "RAM-Notbremse in GB für den berechneten Verbrauch (0 = aus; Standard: 85% des installierten RAM; Tabellen weichen vorher ins Archiv-Format aus, das TUI stoppt den Auto-Modus)")
 	spillRAMGB := flag.Int("spillram", defaultSpillRAMGB, "RAM-Schwelle in GB, ab der Suchlisten auf die Platte auslagern (0 = sofort auslagern; Standard: 70% des installierten RAM)")
 	workers := flag.Int("workers", 0, "Anzahl der Worker für Blocker und Suche (0 = automatisch, 1 = seriell)")
@@ -207,6 +207,7 @@ func runCli(levelData string, useBlocker, useRules, rulesCompare, dirClassic boo
 	defer s.Close() // Auslagerungsdateien der Suchlisten löschen
 	if dirClassic {
 		s.SetDirMode(solver.DirClassic)
+		s.SetKeepEqual(false) // auch die Nach-Fund-Beschneidung des Originals (Knotenzahlen bitgenau)
 	}
 	if workers > 0 {
 		s.SetWorkers(workers)

@@ -170,8 +170,9 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	}
 
 	// Lösung NUR mit dem Blocker, ohne Live-Regeln: weiterhin 230 Züge und
-	// 1.595.042 Knoten (Regressionswert; die alte unbedingte Kill-Regel kam auf
-	// 1.568.540, die bedingte kostet also nur ca. 1,7% Pruning-Leistung)
+	// 1.624.408 Knoten (Regressionswert; Historie: 1.568.540 mit der alten
+	// unbedingten Kill-Regel, 1.595.042 vor dem Behalten der Gleichstands-
+	// Stellungen/keepEqual)
 	field.SetBlocker(b)
 	s := solver.New(field)
 	for s.Step(1000000000) {
@@ -179,16 +180,16 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	if moves := s.GetStats().FoundMoves; moves != 230 {
 		t.Errorf("erwartete 230 Züge, erhalten: %d", moves)
 	}
-	if nodes := s.NodeCount(); nodes != 1595042 {
-		t.Errorf("erwartete 1595042 Knoten (Regressionswert Blocker solo), erhalten: %d", nodes)
+	if nodes := s.NodeCount(); nodes != 1624408 {
+		t.Errorf("erwartete 1624408 Knoten (Regressionswert Blocker solo), erhalten: %d", nodes)
 	}
 	s.Close()
 
 	// Standard-Kombination des TUI (Blocker + Live-Regeln beidseitig): 230 Züge mit
-	// 1.494.811 Knoten - besser als die alte Vollblocker-Referenz (1.595.042), die
-	// Regeln ersetzen die entfallenen Muster und legen über die Pull-Seite noch drauf
-	// (neu vermessen bei der Umstellung auf die Effizienz-Richtungswahl, vorher
-	// 1.488.952; der Blocker-solo-Wert oben blieb unverändert)
+	// 1.524.476 Knoten - besser als die Vollblocker-Referenz oben, die Regeln
+	// ersetzen die entfallenen Muster und legen über die Pull-Seite noch drauf
+	// (Historie: 1.488.952 vor der Effizienz-Richtungswahl, 1.494.811 vor dem
+	// Behalten der Gleichstands-Stellungen/keepEqual)
 	rules := soko.NewRules(field)
 	field.SetRules(rules)
 	field.SetRulesBackward(rules)
@@ -198,8 +199,8 @@ func TestBlockerVanillaOracle(t *testing.T) {
 	if moves := s2.GetStats().FoundMoves; moves != 230 {
 		t.Errorf("erwartete 230 Züge (Blocker+Regeln), erhalten: %d", moves)
 	}
-	if nodes := s2.NodeCount(); nodes != 1494811 {
-		t.Errorf("erwartete 1494811 Knoten (Regressionswert Blocker+Regeln), erhalten: %d", nodes)
+	if nodes := s2.NodeCount(); nodes != 1524476 {
+		t.Errorf("erwartete 1524476 Knoten (Regressionswert Blocker+Regeln), erhalten: %d", nodes)
 	}
 }
 

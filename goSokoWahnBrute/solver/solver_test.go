@@ -26,6 +26,12 @@ func solveLevelDir(t *testing.T, level string, expectedMoves int, mode DirMode) 
 
 	s := New(field)
 	s.SetDirMode(mode)
+	if mode == DirClassic {
+		// DirClassic steht in den Tests für die volle Original-Semantik (wie CLI
+		// -dirclassic): auch die Nach-Fund-Beschneidung, sonst stimmen die
+		// bitgenauen Orakel-Knotenzahlen nicht mehr
+		s.SetKeepEqual(false)
+	}
 	for s.Step(1000000000) {
 	}
 
@@ -296,6 +302,9 @@ func TestSolveVanillaEfficiencyDir(t *testing.T) {
 	}
 }
 
-// Anker-Knotenzahl der Effizienz-Richtungswahl auf dem Vanilla-Level (gemessen
-// bei der Umstellung, ~1,2% unter dem Orakel-Wert 8.710.434 der klassischen Wahl)
-const vanillaEfficiencyNodes = 8608727
+// Anker-Knotenzahl des Default-Verhaltens auf dem Vanilla-Level: Effizienz-
+// Richtungswahl plus Behalten der Gleichstands-Stellungen nach dem ersten Fund
+// (keepEqual, Futter der Push-Optimierung - Level 361). Historie: 8.608.727 vor
+// keepEqual (~1,2% unter dem Orakel-Wert 8.710.434 der klassischen Wahl), das
+// Behalten kostet auf Vanilla ~1,6% zusätzliche Knoten
+const vanillaEfficiencyNodes = 8747345

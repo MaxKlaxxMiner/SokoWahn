@@ -138,6 +138,32 @@ func (s *Solver) searchForward(limit int) bool {
 	return true
 }
 
+// entscheidet, ob eine neu erzeugte Vorwärts-Stellung der Tiefe depth noch
+// gespeichert und expandiert wird. Vor dem ersten Fund immer; danach nur, wenn
+// sie die Lösung verkürzen könnte - mit keepEqual (Default) auch bei exaktem
+// Gleichstand: solche Stellungen liegen nur auf alternativen zugoptimalen
+// Pfaden und sind das Futter der Push-Optimierung (ohne sie fehlen dem DP
+// Kanten und Anker an der Naht der Suchfronten - Level 361 fand deshalb 110
+// statt der 108 Schübe). keepEqual=false ist die Beschneidung des Originals
+// (CLI -dirclassic, bitgenaue Orakel-Vergleiche); im forwardOnly-Sonderfall
+// sind Gleichstands-Stellungen nutzlos (keine Push-Optimierung möglich).
+func (s *Solver) keepForward(depth int) bool {
+	if s.foundTotal < 0 {
+		return true
+	}
+	total := depth + s.backwardDepth + 1
+	return total < s.foundTotal || (s.keepEqual && !s.forwardOnly && total == s.foundTotal)
+}
+
+// Gegenstück rückwärts (Gleichstand über die Vorwärts-Suchtiefe)
+func (s *Solver) keepBackward(depth int) bool {
+	if s.foundTotal < 0 {
+		return true
+	}
+	total := depth + s.forwardDepth + 1
+	return total < s.foundTotal || (s.keepEqual && total == s.foundTotal)
+}
+
 // serieller Kern der Vorwärtssuche (Referenz-Verhalten, von den Workern gespiegelt)
 func (s *Solver) searchForwardSerial(batch []uint16) {
 	for off := 0; off < len(batch); off += s.recordSize {
@@ -154,7 +180,7 @@ func (s *Solver) searchForwardSerial(batch []uint16) {
 			findOwn := s.forwardKnown.Get(v.Crc)
 
 			if findOwn == DepthUnknown { // neue Stellung gefunden
-				if s.foundTotal < 0 || int(depth)+s.backwardDepth+1 < s.foundTotal {
+				if s.keepForward(int(depth)) {
 					s.forwardKnown.Add(v.Crc, depth)
 					s.pushForward(v) // zum weiteren Durchsuchen vormerken
 				}
@@ -163,7 +189,7 @@ func (s *Solver) searchForwardSerial(batch []uint16) {
 				if s.foundTotal >= 0 && v.Crc == s.foundState.Crc {
 					s.adjustFoundForward(int(findOwn), int(depth))
 				}
-				if s.foundTotal < 0 || int(depth)+s.backwardDepth+1 < s.foundTotal {
+				if s.keepForward(int(depth)) {
 					s.pushForward(v)
 				}
 			} else {
@@ -251,7 +277,7 @@ func (s *Solver) searchBackwardSerial(batch []uint16) {
 			findOwn := s.backwardKnown.Get(v.Crc)
 
 			if findOwn == DepthUnknown { // neue Stellung gefunden
-				if s.foundTotal < 0 || int(depth)+s.forwardDepth+1 < s.foundTotal {
+				if s.keepBackward(int(depth)) {
 					s.backwardKnown.Add(v.Crc, depth)
 					s.pushBackward(v) // zum weiteren Durchsuchen vormerken
 				}
@@ -260,7 +286,7 @@ func (s *Solver) searchBackwardSerial(batch []uint16) {
 				if s.foundTotal >= 0 && v.Crc == s.foundState.Crc {
 					s.adjustFoundBackward(int(findOwn), int(depth))
 				}
-				if s.foundTotal < 0 || int(depth)+s.forwardDepth+1 < s.foundTotal {
+				if s.keepBackward(int(depth)) {
 					s.pushBackward(v)
 				}
 			} else {

@@ -149,7 +149,7 @@ func (s *Solver) mergeForward() {
 			findOwn := s.forwardKnown.Get(crc)
 
 			if findOwn == DepthUnknown { // neue Stellung gefunden
-				if s.foundTotal < 0 || int(depth)+s.backwardDepth+1 < s.foundTotal {
+				if s.keepForward(int(depth)) {
 					s.forwardKnown.Add(crc, depth)
 					s.pushForwardRecord(int(depth), record)
 				}
@@ -158,7 +158,7 @@ func (s *Solver) mergeForward() {
 				if s.foundTotal >= 0 && crc == s.foundState.Crc {
 					s.adjustFoundForward(int(findOwn), int(depth))
 				}
-				if s.foundTotal < 0 || int(depth)+s.backwardDepth+1 < s.foundTotal {
+				if s.keepForward(int(depth)) {
 					s.pushForwardRecord(int(depth), record)
 				}
 			} else {
@@ -197,7 +197,7 @@ func (s *Solver) mergeBackward() {
 			findOwn := s.backwardKnown.Get(crc)
 
 			if findOwn == DepthUnknown { // neue Stellung gefunden
-				if s.foundTotal < 0 || int(depth)+s.forwardDepth+1 < s.foundTotal {
+				if s.keepBackward(int(depth)) {
 					s.backwardKnown.Add(crc, depth)
 					s.pushBackwardRecord(int(depth), record)
 				}
@@ -206,7 +206,7 @@ func (s *Solver) mergeBackward() {
 				if s.foundTotal >= 0 && crc == s.foundState.Crc {
 					s.adjustFoundBackward(int(findOwn), int(depth))
 				}
-				if s.foundTotal < 0 || int(depth)+s.forwardDepth+1 < s.foundTotal {
+				if s.keepBackward(int(depth)) {
 					s.pushBackwardRecord(int(depth), record)
 				}
 			} else {

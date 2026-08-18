@@ -97,8 +97,10 @@ die verankerten Referenzwerte absichern.
 
 - Adaptive Richtungswahl: ab Tiefe > 10 den Hash-Zuwachs der letzten 10 Ebenen vergleichen
   statt nur der Tabellen-Größen (hashVorwärtsNutzung/hashRückwärtsNutzung im Original).
-- Push-Anzahl als Sekundärkriterium: bei gleicher Move-Zahl die Lösung mit weniger
-  Schüben bevorzugen (CountPushes + OrderBy in der Rekonstruktion).
+- ERLEDIGT: Push-Anzahl als Sekundärkriterium - umgesetzt als DP über den Optimal-DAG
+  (solver/pushopt.go, GetSolutionBestPushes) statt OrderBy in der Rekonstruktion;
+  seit keepEqual (Gleichstands-Stellungen behalten, 08/2026) auch über alternative
+  Optimalpfade vollständig (Level 361: 108 statt 110 Schübe; Diagnose -checksol).
 - Refresh/RAM-Rückgabe zur Laufzeit (Listen-Puffer verkleinern).
 
 ## Regel-Filter (Live-Deadlock-Erkennung)

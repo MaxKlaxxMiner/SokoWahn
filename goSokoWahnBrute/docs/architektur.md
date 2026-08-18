@@ -265,15 +265,27 @@ mit Blocker-Deadlock-Vorberechnung nach `SokowahnBlockerBx`-Semantik und Bubble-
   Meet-Fundstellen, dedupliziert, Deckel 1024; Knoten-Deckel
   PushOptimizeNodeLimit mit Rückfall auf die einfache Rekonstruktion). Das TUI
   zeigt Züge/Schübe und nutzt automatisch die push-optimierte Variante.
-  Vollständigkeits-Grenze: das Pruning der Suche kann alternative Optimalpfade
-  entfernen - das Ergebnis ist die beste Push-Zahl unter den in den Tabellen
-  repräsentierten zugoptimalen Lösungen, nie schlechter als GetSolution
+  Vollständigkeits-Grenze (weitgehend geschlossen, siehe keepEqual unten): das
+  Ergebnis ist die beste Push-Zahl unter den in den Tabellen repräsentierten
+  zugoptimalen Lösungen, nie schlechter als GetSolution
   (Test: TestSolutionBestPushes, auf small.txt 5 statt 7 Schübe bei 16 Zügen).
-  Bekannter Fall: Level 361 liefert 110 statt der 108 Schübe einer bekannten
-  315-Züge-Lösung (Filter sind ausgeschlossen - alle 108 Kanten passieren
-  Blocker und Regeln in beiden Richtungen; Diagnose per `-checksol`, siehe
-  Live-Diagnose). Kennzahlen des Laufs (Anker, Deckel, DP-Knoten, Overflow):
-  `PushOptStats`, im TUI in der Statuszeile nach Suchende.
+  Kennzahlen des Laufs (Anker, Deckel, DP-Knoten, Overflow): `PushOptStats`,
+  im TUI in der Statuszeile nach Suchende.
+- **Gleichstands-Stellungen behalten** (`keepEqual`, Default an, seit 08/2026):
+  die Nach-Fund-Beschneidung des Originals verwirft Stellungen, die die Lösung
+  nicht mehr verkürzen können - darunter genau die, die NUR auf alternativen
+  zugoptimalen Pfaden liegen. Der Push-Optimierung fehlten dadurch Kanten und
+  Anker an der Naht der Suchfronten: Level 361 fand 110 statt der 108 Schübe
+  einer bekannten 315-Züge-Lösung (Filter per 361-Kanten-Test ausgeschlossen,
+  `-checksol`-Report zeigte die Bruchstelle exakt bei Schub 29: rückwärts als
+  Gleichstand verworfen, vorwärts nie expandiert, 0 Anker auf dem Pfad).
+  keepEqual speichert und expandiert auch exakte Gleichstands-Kandidaten
+  (`solver.keepForward`/`keepBackward`); Preis auf Vanilla ~1,6% mehr Knoten.
+  `-dirclassic` schaltet zusätzlich zur Richtungswahl auch diese Beschneidung
+  auf Original-Verhalten zurück (bitgenaue Orakel-Vergleiche). Theoretische
+  Restlücke: eine Stellung exakt auf der Terminierungs-Tiefe kann bei
+  ungünstigem Timing weiter beidseitig durchs Raster fallen - der
+  `-checksol`-Report weist das im Zweifel nach.
 - **Meet-Verifikation gegen Hash-Kollisionen** (`verifyMeet`, seit 08/2026): die
   Stellungs-Schlüssel sind 64-Bit-Hashes - nach dem Geburtstagsparadoxon werden
   Kollisionen ab Milliarden Einträgen real (P ≈ N_v*N_r/2^64, bei je 2 Mrd schon
@@ -481,9 +493,9 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
   Taste 6 nimmt einzeln das Ziel-Matching heraus (der teuerste Regel-Teil).
   CLI: `-rules` (opt-in, sonst bleibt die Ausgabe orakel-vergleichbar) und
   `-rulescompare` (Debug: beide Filter unabhängig auswerten, Überlappung ausgeben).
-- **Messwerte Vanilla** (seit der Effizienz-Richtungswahl): Regeln allein 1.828.193
-  statt 8.608.727 Knoten (Faktor 4,7, ~1 s statt ~10 s) - fast auf dem Niveau des
-  vollen 5-Steiner-Blockers (1.595.042), aber ohne Vorberechnung. Treffer:
+- **Messwerte Vanilla** (Stand keepEqual, 08/2026): Regeln allein 1.866.791
+  statt 8.747.345 Knoten (Faktor 4,7, ~1 s statt ~10 s) - fast auf dem Niveau des
+  vollen 5-Steiner-Blockers (1.624.408), aber ohne Vorberechnung. Treffer:
   Freeze 1,11 Mio, Diagonale 71k, rückwärts Totfeld 123k und Pull-Freeze 783. Mit vollem 5-Steiner-Blocker fangen
   die Regeln auf Vanilla vorwärts nichts Zusätzliches (bei 6 Kisten subsumiert der
   Blocker die kleinen Cluster). Das Ziel-Matching feuert auf Vanilla nie (0 Treffer,
@@ -501,20 +513,22 @@ ClosedDiagonalDeadlock.java, "frozen boxes on goals block access to other goals"
 |---|---|---|
 | Vanilla (lid214) | optimale Züge | 230 |
 | Vanilla ohne Blocker (DirClassic) | Knoten am Ende | 8.710.434 (bitgenau = refcli) |
-| Vanilla ohne Blocker (Default, Effizienz-Wahl) | Knoten am Ende | 8.608.727 (Go-Anker, ~1,2% unter dem Orakel) |
+| Vanilla ohne Blocker (Default: Effizienz-Wahl + keepEqual) | Knoten am Ende | 8.747.345 (Go-Anker; 8.608.727 vor keepEqual, ~1,2% unter dem Orakel) |
 | Vanilla Blocker-Stufen 1-5 | Muster/geprüft | 17/92, 218/2.257, 496/27.219, 1.173/210.093, 2.652/1.071.408 (bitgenau = refcli, alles unter der Muster-Schwelle) |
-| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.595.042 (Regressionswert; identisch vor/nach der Effizienz-Richtungswahl) |
-| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.494.811 (Verbesserung kommt komplett von der Pull-Seite; vor der Effizienz-Richtungswahl 1.488.952) |
+| Vanilla nur Blocker (ohne Regeln) | Knoten am Ende | 1.624.408 (Regressionswert; 1.595.042 vor keepEqual) |
+| Vanilla Blocker + Regeln (Standard) | Knoten am Ende | 1.524.476 (Verbesserung kommt komplett von der Pull-Seite; 1.494.811 vor keepEqual, 1.488.952 vor der Effizienz-Richtungswahl) |
 | Level 201 Blocker-Stufen 1-3 | Muster/geprüft | 80/214, 2.288/10.272, 1.819/233.120 (bitgenau = refcli, unter der Muster-Schwelle) |
 | small.txt | optimale Züge | 16 |
 | Level 29632 | 304er-Lösung passiert Stufen 1-4 | Regressionstest (Bx-Hinterland-Fix) |
-| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.828.193 / Freeze 1.106.391, Diag 71.007, PullTot 123.160, PullFreeze 783 (Regressionswerte; vor der Effizienz-Richtungswahl 1.825.644) |
+| Vanilla mit Regeln (ohne Blocker) | Knoten / Treffer | 1.866.791 / Freeze 1.108.508, Diag 71.007, PullTot 123.209, PullFreeze 783 (Regressionswerte; vor keepEqual 1.828.193, vor der Effizienz-Richtungswahl 1.825.644) |
 
 Die Suche ohne Blocker und ohne Regeln bleibt bitgenau vergleichbar mit dem
-C#-Orakel, sofern die Richtungswahl des Originals aktiv ist (`-dirclassic`;
-der Default wählt seit der Effizienz-Richtungswahl anders). Ebenso bitgenau:
-alle Blocker-Stufen bis zur ersten Muster-Explosion (RulesPatternThreshold,
-refcli blockerbx). Danach gefilterte Stufen sind reine Go-Referenzwerte.
+C#-Orakel, sofern `-dirclassic` die volle Original-Semantik herstellt
+(Richtungswahl des Originals UND Nach-Fund-Beschneidung; der Default wählt
+die Richtung per Effizienz-Verhältnis und behält Gleichstands-Stellungen für
+die Push-Optimierung). Ebenso bitgenau: alle Blocker-Stufen bis zur ersten
+Muster-Explosion (RulesPatternThreshold, refcli blockerbx). Danach gefilterte
+Stufen sind reine Go-Referenzwerte.
 
 ## Referenz-Lösungs-Diagnose (Flag -checksol)
 

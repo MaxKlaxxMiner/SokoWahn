@@ -109,6 +109,49 @@ func TestPushOptStats(t *testing.T) {
 	}
 }
 
+// keepEqual (Default) gegen die Original-Beschneidung: gleiche optimale Zugzahl,
+// mindestens so viele Anker und nie mehr Schübe - die behaltenen Gleichstands-
+// Stellungen dürfen die Push-Optimierung nur verbessern (Hintergrund: Level 361)
+func TestKeepEqualImprovesPushes(t *testing.T) {
+	run := func(keep bool) (*Solver, *Solution) {
+		field, err := soko.Parse(archiveTestLevel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := New(field)
+		s.SetKeepEqual(keep)
+		for s.Step(1000000000) {
+		}
+		best, err := s.GetSolutionBestPushes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s, best
+	}
+
+	sClassic, bestClassic := run(false)
+	defer sClassic.Close()
+	sKeep, bestKeep := run(true)
+	defer sKeep.Close()
+
+	if len(bestKeep.Moves) != len(bestClassic.Moves) {
+		t.Errorf("Zugzahl weicht ab: keepEqual %d, klassisch %d", len(bestKeep.Moves), len(bestClassic.Moves))
+	}
+	if CountPushes(bestKeep.Moves) > CountPushes(bestClassic.Moves) {
+		t.Errorf("keepEqual verschlechtert die Schübe: %d > %d", CountPushes(bestKeep.Moves), CountPushes(bestClassic.Moves))
+	}
+	if sKeep.PushOptStats().Anchors < sClassic.PushOptStats().Anchors {
+		t.Errorf("keepEqual verliert Anker: %d < %d", sKeep.PushOptStats().Anchors, sClassic.PushOptStats().Anchors)
+	}
+	if sKeep.NodeCount() < sClassic.NodeCount() {
+		t.Errorf("keepEqual muss mindestens so viele Knoten speichern: %d < %d", sKeep.NodeCount(), sClassic.NodeCount())
+	}
+	t.Logf("Anker: klassisch %d, keepEqual %d | Schübe: %d -> %d | Knoten: %d -> %d",
+		sClassic.PushOptStats().Anchors, sKeep.PushOptStats().Anchors,
+		CountPushes(bestClassic.Moves), CountPushes(bestKeep.Moves),
+		sClassic.NodeCount(), sKeep.NodeCount())
+}
+
 // Wächter gegen versehentliche soko-Umbauten: ReplayLurd muss auf einem frisch
 // geparsten Feld arbeiten können (base der Suche bleibt auf der Startstellung)
 func TestReplayLurdFreshField(t *testing.T) {
