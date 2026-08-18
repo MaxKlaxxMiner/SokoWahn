@@ -1,7 +1,6 @@
 package rooms
 
 import (
-	"fmt"
 	"slices"
 	"sort"
 	"testing"
@@ -11,15 +10,21 @@ import (
 // terminalen Nutzungen der 202er-Kammer aus Außenwelt-Sicht und kürt je
 // Außen-Signatur den Pareto-Sieger (moves, dann pushes).
 //
-// Modell: die Kammer hat ein Portal; eine Nutzung ist eine Folge von Ereignissen
+// Modell: die Kammer hat ein Portal; eine Nutzung ist eine Folge von Ereignissen,
+// von denen die Außenwelt nur sieht:
 //   E = Einschub (Außenwelt schiebt eine Kiste rein, nur wenn der BoxSwap existiert)
-//   B = Besuch ohne Kisten-Export
 //   X = Besuch mit Kisten-Export
 //   ! = der letzte Besuch war eine End-Variante (Spieler bleibt drin, Spielende)
-// und endet, wenn die Kammer im Endzustand 0 hinterlassen wird (bzw. mit "!").
-// Als einzige Reduktion ist die bewiesene Selbes-Portal-Regel eingebaut: nach
-// einem exportlosen Besuch darf nicht direkt der nächste Besuch folgen
-// (fusionierbar = dominiert); nach einem Export oder einem Einschub schon.
+// Exportlose Besuche (B) sind außenweltlich TRANSPARENT und tauchen in der
+// Signatur nicht auf (Max' Argument, 2026-08-18): jedes Außen-Ereignis findet
+// am Portal statt, der Spieler steht dort also ohnehin - einen exportlosen
+// Besuch kann er direkt davor oder danach kostenlos einschieben (er endet, wo
+// er beginnt, und verändert draußen nichts). Nutzungen mit verschieden vielen
+// B-Besuchen konkurrieren daher in derselben Signatur-Gruppe.
+// Eine Nutzung endet, wenn die Kammer im Endzustand 0 hinterlassen wird (bzw.
+// mit "!"). Als einzige Reduktion ist die bewiesene Selbes-Portal-Regel
+// eingebaut: nach einem exportlosen Besuch darf nicht direkt der nächste
+// Besuch folgen (fusionierbar = dominiert); nach Export oder Einschub schon.
 //
 // Varianten, die in KEINEM Signatur-Sieger vorkommen, sind Kandidaten für die
 // Dominanzsuche - Varianten, die nur in "exotischen" Signaturen siegen, zeigen,
@@ -39,17 +44,26 @@ func TestDominanceLab202(t *testing.T) {
 		lastExported bool // ... und der hat eine Kiste exportiert
 	}
 
-	winners := map[string]chain{}
+	// je Signatur alle kostenoptimalen Ketten (Sieger + Gleichstände)
+	type sigInfo struct {
+		moves  uint32
+		pushes uint32
+		chains [][]uint64
+	}
+	best := map[string]*sigInfo{}
 	record := func(c chain, terminal string) {
 		sig := c.sig + terminal
-		best, exists := winners[sig]
-		if !exists || c.moves < best.moves || (c.moves == best.moves && c.pushes < best.pushes) {
-			c.sig = sig
-			winners[sig] = c
+		info := best[sig]
+		if info == nil || c.moves < info.moves || (c.moves == info.moves && c.pushes < info.pushes) {
+			best[sig] = &sigInfo{moves: c.moves, pushes: c.pushes, chains: [][]uint64{slices.Clone(c.vars)}}
+			return
+		}
+		if c.moves == info.moves && c.pushes == info.pushes {
+			info.chains = append(info.chains, slices.Clone(c.vars))
 		}
 	}
 
-	const maxEvents = 7
+	const maxEvents = 11
 	var walk func(c chain)
 	walk = func(c chain) {
 		if c.state == 0 && len(c.vars) > 0 {
@@ -83,9 +97,7 @@ func TestDominanceLab202(t *testing.T) {
 			nc.vars = append(slices.Clone(c.vars), id)
 			exported := len(v.BoxPortals) > 0
 			if exported {
-				nc.sig += "X"
-			} else {
-				nc.sig += "B"
+				nc.sig += "X" // exportlose Besuche bleiben außen unsichtbar
 			}
 			nc.lastVisit, nc.lastExported = true, exported
 			if v.PlayerPortal == NoPortal {
@@ -99,9 +111,9 @@ func TestDominanceLab202(t *testing.T) {
 	}
 	walk(chain{state: room.StartState})
 
-	// --- Auswertung: Sieger je Signatur + Varianten-Nutzung ---
-	sigs := make([]string, 0, len(winners))
-	for sig := range winners {
+	// --- Auswertung: je Variante das Urteil über alle Signaturen ---
+	sigs := make([]string, 0, len(best))
+	for sig := range best {
 		sigs = append(sigs, sig)
 	}
 	sort.Slice(sigs, func(i, j int) bool {
@@ -111,29 +123,52 @@ func TestDominanceLab202(t *testing.T) {
 		return sigs[i] < sigs[j]
 	})
 
-	used := map[uint64]bool{}
+	contains := func(chain []uint64, id uint64) bool { return slices.Contains(chain, id) }
+	used := map[uint64]bool{}      // kommt in mindestens einer optimalen Kette vor
+	essential := map[uint64]string{} // in mindestens einer Signatur enthalten ALLE optimalen Ketten die Variante
 	for _, sig := range sigs {
-		w := winners[sig]
-		t.Logf("signatur %-8s sieger: moves=%3d pushes=%2d varianten=%v", sig, w.moves, w.pushes, w.vars)
-		for _, id := range w.vars {
-			used[id] = true
+		info := best[sig]
+		if len(sig) <= 8 {
+			t.Logf("signatur %-8s optimal: moves=%3d pushes=%2d ketten=%d, z.B. %v",
+				sig, info.moves, info.pushes, len(info.chains), info.chains[0])
+		}
+		inAll := map[uint64]bool{}
+		for _, id := range info.chains[0] {
+			inAll[id] = true
+		}
+		for _, ch := range info.chains {
+			for _, id := range ch {
+				used[id] = true
+			}
+			for id := range inAll {
+				if !contains(ch, id) {
+					delete(inAll, id)
+				}
+			}
+		}
+		for id := range inAll {
+			if _, done := essential[id]; !done {
+				essential[id] = sig
+			}
 		}
 	}
 
-	var unused []uint64
+	var essentials, replaceable, unused []uint64
 	for id := uint64(0); id < room.Variants.Count(); id++ {
-		if !used[id] {
+		switch {
+		case essential[id] != "":
+			essentials = append(essentials, id)
+		case used[id]:
+			replaceable = append(replaceable, id)
+		default:
 			unused = append(unused, id)
 		}
 	}
-	t.Logf("varianten gesamt: %d, in siegern: %d, nie in einem sieger: %v",
-		room.Variants.Count(), len(used), unused)
-	for _, id := range unused {
-		v := room.Variants.Get(id)
-		t.Logf("  unbenutzt: variant %d (old=%d new=%d moves=%d pushes=%d exports=%d)",
-			id, v.OldState, v.NewState, v.Moves, v.Pushes, len(v.BoxPortals))
+	t.Logf("varianten gesamt: %d", room.Variants.Count())
+	t.Logf("essenziell (eine Signatur braucht sie zwingend): %v", essentials)
+	for _, id := range essentials {
+		t.Logf("  essenziell: variant %d (zwingend in signatur %s)", id, essential[id])
 	}
-	if fmt.Sprint(unused) == "" {
-		t.Log("(keine)")
-	}
+	t.Logf("austauschbar (nur in Gleichstands-Alternativen): %v", replaceable)
+	t.Logf("nie in einer optimalen Kette: %v", unused)
 }

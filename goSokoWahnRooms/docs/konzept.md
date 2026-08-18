@@ -290,9 +290,24 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   besseren Kosten (moves, dann pushes) ersetzbar ist - inklusive
   signatur-kompatibler Reduktionen (Besuch weglassen/fusionieren, wenn Ein- und
   Austritt am selben Portal liegen). Die bisherige Selbes-Portal-Regel ist der
-  bewiesene Spezialfall davon. Erster Schritt: Semantik an der 202er-Kammer von
-  Hand durchdeklinieren (Erwartung: ~4 Zustände / ~4 Varianten statt 10/25) und
-  als Referenz-Testfall verankern, erst dann implementieren.
+  bewiesene Spezialfall davon.
+  Stand der Handrechnung (2026-08-18, Werkzeug: rooms/domlab_test.go - Labor
+  enumeriert alle Nutzungen der 202er-Kammer je Außen-Signatur und kürt die
+  kostenoptimalen Ketten): Signatur-Alphabet ist E (Einschub), X (Besuch mit
+  Export), ! (End-Besuch); exportlose Besuche sind außenweltlich TRANSPARENT
+  (Theorem von Max: jedes Außen-Ereignis findet am Portal statt, ein exportloser
+  Besuch endet wo er beginnt und ist dort kostenlos anhängbar - Bedienungen mit
+  verschieden vielen solchen Besuchen sind dieselbe Bedienung). Ergebnis für die
+  Kammer (Horizont 11 sichtbare Ereignisse): 5 essenzielle Varianten (rein-raus-
+  Garage, parken-auf-26 + Kombi-Abschluss = der einmalige 2-Züge-Trick, direkt-
+  ins-Ziel mit/ohne Spielende), 10 austauschbare (nur in Gleichstands-
+  Alternativen, z.B. die Park-Treppe über 25), 10 nie-optimale (Abkürzungen).
+  Offene Punkte: Gleichstands-Auswahl ist ein kleines Überdeckungsproblem;
+  "nie optimal" ist horizont-abhängig (essenziell dagegen monoton sicher) -
+  für einen Beweis statt Ketten-Enumeration die Graph-Sicht (endlicher
+  Zustandsgraph, Dominanz als gewichtete Simulation); Mehr-Portal-Räume brauchen
+  eine reichere Signatur (Durchgänge sichtbar, Transparenz nur bei
+  Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht
