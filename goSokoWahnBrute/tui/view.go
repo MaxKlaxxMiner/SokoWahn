@@ -106,10 +106,16 @@ func (m Model) viewSearch() string {
 	var sb strings.Builder
 	if stats.FoundMoves >= 0 {
 		// wie das Original: Treffpunkt relativ zur Vorwärtstiefe und die Rest-Beweislücke
-		// (die Suche läuft weiter, bis vorwärts + rückwärts die gefundene Tiefe erreicht)
+		// (die Suche läuft weiter, bis vorwärts + rückwärts die gefundene Tiefe erreicht).
+		// Dahinter die aktuell beste Schub-Zahl der Zwischenlösung (Push-Optimierung
+		// über die bisher repräsentierten zugoptimalen Pfade, sinkt ggf. noch)
+		found := fmt.Sprintf("Gefunden: %d Züge", stats.FoundMoves)
+		if m.foundPushes > 0 {
+			found += fmt.Sprintf(", %d Schübe", m.foundPushes)
+		}
 		meet := stats.FoundForward - stats.ForwardDepth
 		rest := stats.FoundMoves - stats.ForwardDepth - stats.BackwardDepth
-		sb.WriteString(styleMark.Render(fmt.Sprintf("Gefunden: %d Züge", stats.FoundMoves)) +
+		sb.WriteString(styleMark.Render(found) +
 			fmt.Sprintf("  (Treffpunkt: %+d / Rest: %d)\n\n", meet, rest))
 	} else {
 		// wie das Original: addierte Zugtiefe, Anzahl der Tiefenlisten und die geschätzte

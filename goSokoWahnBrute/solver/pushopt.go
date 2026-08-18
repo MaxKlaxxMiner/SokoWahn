@@ -81,9 +81,20 @@ func (s *Solver) PushOptStats() PushOptStats {
 	return s.pushOptStats
 }
 
+// Anzahl der aktuell gesammelten Verbindungs-Anker (wächst nach dem ersten Fund
+// mit der Beweis-Endphase; Änderungs-Signal für die Live-Schub-Anzeige im TUI)
+func (s *Solver) MeetAnchorCount() int {
+	return len(s.meetAnchors)
+}
+
 // GetSolutionBestPushes rekonstruiert unter den zugoptimalen Lösungen der
-// Tabellen eine mit minimaler Schub-Zahl. Erst nach Abschluss der Suche
-// aufrufen; fällt bei Sonderfällen oder Knoten-Überlauf auf GetSolution zurück.
+// Tabellen eine mit minimaler Schub-Zahl; fällt bei Sonderfällen oder
+// Knoten-Überlauf auf GetSolution zurück. Auch während der laufenden Suche
+// (zwischen zwei Steps) aufrufbar: das Ergebnis ist dann der Stand der bisher
+// repräsentierten zugoptimalen Pfade - eine echte, spielbare Lösung, deren
+// Schub-Zahl mit dem Suchfortschritt noch sinken kann. Bricht mitten in der
+// Suche eine Kette (Tiefen-Updates), kommt ein Fehler zurück - der nächste
+// Aufruf nach mehr Suchfortschritt heilt das.
 func (s *Solver) GetSolutionBestPushes() (*Solution, error) {
 	if s.foundTotal < 0 {
 		return nil, errors.New("no solution found")

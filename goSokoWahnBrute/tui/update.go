@@ -118,6 +118,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if !m.slv.Step(m.bulkSearch) {
 				m.finishSearch()
 			}
+			if m.mode == modeSearch {
+				m.updateFoundPushes()
+			}
 			if note := m.slv.TakeArchiveNote(); note != "" {
 				m.status = note
 			}
@@ -307,6 +310,8 @@ func (m Model) handleTick() (tea.Model, tea.Cmd) {
 			rate := float64(m.slv.ProcessedCount()-startProcessed) / elapsed
 			m.statesPerSec = (m.statesPerSec*7 + int64(rate)*3) / 10
 		}
+		// Live-Schub-Zahl der Zwischenlösung nachziehen (rechnet nur bei Änderung)
+		m.updateFoundPushes()
 		// automatische Archiv-Konvertierung sichtbar machen (seltenes Ereignis)
 		if note := m.slv.TakeArchiveNote(); note != "" {
 			m.status = note

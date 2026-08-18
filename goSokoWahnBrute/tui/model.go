@@ -52,6 +52,12 @@ type Model struct {
 	lastTick    time.Duration // Rechenzeit des letzten Auto-Ticks
 	statesPerSec int64        // geglätteter Suchdurchsatz im Auto-Modus (verarbeitete Stellungen pro Sekunde)
 
+	// Live-Schub-Zahl der Zwischenlösung ("Gefunden: X Züge, Y Schübe"):
+	// aktuell beste Push-Zahl der bisher repräsentierten zugoptimalen Pfade
+	// (0 = noch keine berechnet); die Signatur erspart unnötige DP-Läufe
+	foundPushes    int
+	foundPushesSig [3]int
+
 	// --- Lösung ---
 	solution *solver.Solution
 	frame    int
@@ -260,7 +266,33 @@ func (m *Model) startSearch() {
 	m.slv = solver.New(m.field)
 	m.mode = modeSearch
 	m.statesPerSec = 0
+	m.foundPushes = 0
+	m.foundPushesSig = [3]int{}
 	m.status = "Suche bereit: b = Bulk, a = Auto"
+}
+
+// aktualisiert die Live-Schub-Zahl der Zwischenlösung. Die Push-Optimierung
+// läuft nur, wenn sich seit dem letzten Mal etwas geändert haben kann (neue
+// beste Lösung, neue Suchtiefe oder neue Verbindungs-Anker) - sonst ist der
+// DP-Lauf reine Wiederholung. Scheitert die Rekonstruktion (Tiefen-Updates
+// können mitten in der Suche eine Kette brechen), verschwindet die Anzeige
+// bis zum nächsten erfolgreichen Lauf.
+func (m *Model) updateFoundPushes() {
+	stats := m.slv.GetStats()
+	if stats.FoundMoves < 0 {
+		m.foundPushes = 0
+		return
+	}
+	sig := [3]int{stats.FoundMoves, stats.ForwardDepth + stats.BackwardDepth, m.slv.MeetAnchorCount()}
+	if sig == m.foundPushesSig {
+		return
+	}
+	m.foundPushesSig = sig
+	if _, err := m.slv.GetSolutionBestPushes(); err != nil {
+		m.foundPushes = 0
+		return
+	}
+	m.foundPushes = m.slv.PushOptStats().BestPushes
 }
 
 // schließt die Suche ab (Lösung anzeigen oder Fehlschlag melden)

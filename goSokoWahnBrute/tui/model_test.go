@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"goSokoWahnBrute/soko"
+	"goSokoWahnBrute/solver"
 )
 
 // kleines Mehrkisten-Level (Referenz: 16 Züge optimal)
@@ -209,6 +210,41 @@ func TestModelScanIndentedFirstLine(t *testing.T) {
 	}
 	if m.field.FieldCrc() != want.FieldCrc() {
 		t.Fatal("scan verändert die Feldgeometrie (erste Zeile wurde getrimmt)")
+	}
+}
+
+// Live-Schub-Zahl der Zwischenlösung: sobald "Gefunden" mitten in der Suche
+// steht, muss die aktuell beste Push-Zahl mitlaufen (Anzeige "X Züge, Y Schübe")
+func TestModelFoundPushesLive(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	m := NewModel("", 0)
+	m.input.SetValue(testLevel)
+	m.scan()
+	m.blk.Abort()
+	m.startSearch()
+	m.bulkSearch = 1 // Einzelschritte: zwischen Fund und Suchende liegen viele Steps
+
+	keyB := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b")}
+	sawLive := false
+	for i := 0; i < 100000 && m.mode == modeSearch; i++ {
+		m = press(t, m, keyB)
+		if m.mode == modeSearch && m.slv.GetStats().FoundMoves >= 0 {
+			if m.foundPushes <= 0 {
+				t.Fatal("Zwischenlösung gefunden, aber keine Live-Schub-Zahl berechnet")
+			}
+			sawLive = true
+		}
+	}
+	if !sawLive {
+		t.Fatal("die Suche lief nie mit sichtbarer Zwischenlösung (Test prüft nichts)")
+	}
+	if m.mode != modeSolution {
+		t.Fatalf("die Suche muss in der Lösungsansicht enden, Modus: %d", m.mode)
+	}
+	// die Live-Zahl muss am Ende mit der final optimierten Lösung übereinstimmen
+	if got := solver.CountPushes(m.solution.Moves); got != m.foundPushes {
+		t.Errorf("Live-Schub-Zahl %d weicht von der finalen Lösung ab: %d", m.foundPushes, got)
 	}
 }
 

@@ -255,7 +255,10 @@ in docs/history.md; hier steht nur der aktuelle Stand.
   verifizierten Verbindungs-Stellungen der besten Gesamtlänge (Sammlung an den
   Meet-Fundstellen, dedupliziert, Deckel 1024; Knoten-Deckel
   PushOptimizeNodeLimit mit Rückfall auf die einfache Rekonstruktion). Das TUI
-  zeigt Züge/Schübe und nutzt automatisch die push-optimierte Variante.
+  zeigt Züge/Schübe und nutzt automatisch die push-optimierte Variante; schon
+  während der Beweis-Endphase steht hinter "Gefunden: X Züge" live die aktuell
+  beste Schub-Zahl (nachgerechnet nur bei neuem Fund, neuer Suchtiefe oder
+  neuen Ankern - sie kann mit dem Suchfortschritt noch sinken).
   Vollständigkeits-Grenze (weitgehend geschlossen, siehe Gleichstands-Stellungen
   unten): das
   Ergebnis ist die beste Push-Zahl unter den in den Tabellen repräsentierten
