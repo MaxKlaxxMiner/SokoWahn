@@ -1,5 +1,5 @@
 // Wegwerf-Sonde: merged die linke Kammer von Level 202 (FieldTest4) wie der
-// Go-Port und dumpt Zustaende/Varianten des gemergten Raums zum Vergleich
+// Go-Port und dumpt Zustände/Varianten des gemergten Raums zum Vergleich
 using System;
 using System.Linq;
 using SokoWahnLib;
@@ -34,12 +34,12 @@ static class RoomsProbe
     var network = new RoomNetwork(Field202);
     int width = network.field.Width;
 
-    // Wpos aus dem Go-Port -> Feldpositionen: begehbare Felder zaehlen
+    // Wpos aus dem Go-Port -> Feldpositionen: begehbare Felder zählen
     var walkPosis = network.field.GetWalkPosis().OrderBy(x => x).ToArray();
     int[] wpos = { 11, 18, 24, 25, 26, 33, 34, 35, 36, 46, 47, 48 };
     var fields = wpos.Select(w => walkPosis[w]).ToArray();
 
-    // MergeSelection wie im Go-Port: solange zwei ausgewaehlte Raeume direkt
+    // MergeSelection wie im Go-Port: solange zwei ausgewählte Räume direkt
     // verbunden sind, wird paarweise gemergt
     for (; ; )
     {

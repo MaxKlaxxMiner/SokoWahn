@@ -302,12 +302,36 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Garage, parken-auf-26 + Kombi-Abschluss = der einmalige 2-Züge-Trick, direkt-
   ins-Ziel mit/ohne Spielende), 10 austauschbare (nur in Gleichstands-
   Alternativen, z.B. die Park-Treppe über 25), 10 nie-optimale (Abkürzungen).
-  Offene Punkte: Gleichstands-Auswahl ist ein kleines Überdeckungsproblem;
-  "nie optimal" ist horizont-abhängig (essenziell dagegen monoton sicher) -
-  für einen Beweis statt Ketten-Enumeration die Graph-Sicht (endlicher
-  Zustandsgraph, Dominanz als gewichtete Simulation); Mehr-Portal-Räume brauchen
-  eine reichere Signatur (Durchgänge sichtbar, Transparenz nur bei
-  Eintritt == Austritt).
+  Minimal-These (Max, 2026-08-18): die Kammer zerfällt in zwei Regime - "ohne
+  parken" (direkt ins Ziel, mit/ohne raus, plus Garage davor) und "mit parken"
+  (immer über parken-auf-26, weil der 2-Züge-Trick genau einmal wirkt; Garagen
+  danach als Loop beliebig oft). Ergebnis: 7 der 25 Varianten und 5 der 10
+  Zustände bedienen ALLE Außen-Signaturen kostengleich (Test
+  TestDominanceLab202Minimal).
+  Graph-Sicht als Beweis statt Horizont (rooms/usagegraph.go, 2026-08-18):
+  Max' Loop-Idee (Nutzung = Präfix + N x Loop + Abschluss) in Automaten-Form.
+  Der Nutzungsraum eines Ein-Portal-Raums ist ein ENDLICHER Graph (Knoten =
+  Zustand + Besuchs-Sperre der Selbes-Portal-Regel; Kanten = Einschub E,
+  Export-Besuch X, exportloser Besuch als unsichtbare Epsilon-Kante). Der
+  Kostenvergleich voll vs. reduziert läuft als synchrone Suche über
+  Konfigurations-Paare mit Offset-Normalisierung und Memoisierung: wiederholt
+  sich eine normalisierte Vergleichs-Situation, wiederholt sich alles Weitere -
+  die Wiederholung IST der Loop, die Memoisierung ersetzt die Induktion über
+  N Durchläufe. Sättigt die Suche ohne Differenz, ist die Kostengleichheit für
+  ALLE Nutzungslängen bewiesen; sonst gibt es ein konkretes Gegenbeispiel-Wort
+  (oder "unentschieden" am Sicherheitslimit, falls Loop-Raten divergieren).
+  Für die 202er-Kammer: voll (14 Knoten) vs. minimal (7 Knoten) sättigt nach
+  nur 5 Situationen -> Minimal-These BEWIESEN, ohne Horizont
+  (TestUsageGraphMinimalProven); die Negativprobe ohne v19/v20 liefert
+  Gegenbeispiele (TestUsageGraphDetectsMissing). Die Zyklen-Enumeration
+  bestätigt nebenbei Max' Loop-These wörtlich: alle Garagen-Loops der Kammer
+  kosten 9 moves / 5 pushes je Einschub+Export-Paar (TestUsageGraphLoops202);
+  der Automat ist gegen das Labor kreuzvalidiert (TestUsageGraphCrossCheck202).
+  Offene Punkte: die Suche VERIFIZIERT bisher eine vorgegebene Reduktion -
+  der Kandidaten-Finder (welche Varianten probeweise streichen? Loop-Analyse
+  liefert die Hinweise) fehlt noch; Gleichstands-Auswahl ist ein kleines
+  Überdeckungsproblem; Mehr-Portal-Räume brauchen eine reichere Signatur
+  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht

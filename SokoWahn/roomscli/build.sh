@@ -1,6 +1,6 @@
 #!/bin/bash
-# Baut das Rooms-Vergleichs-CLI (C#-Orakel fuer den Go-Port): merged Raum-Gruppen
-# im Original und dumpt Zustaende/Varianten/BoxSwaps zum direkten Vergleich.
+# Baut das Rooms-Vergleichs-CLI (C#-Orakel für den Go-Port): merged Raum-Gruppen
+# im Original und dumpt Zustände/Varianten/BoxSwaps zum direkten Vergleich.
 # Aufruf: ./build.sh  (aus dem roomscli-Ordner heraus), danach ./roomscli.exe
 set -e
 cd "$(dirname "$0")/.."

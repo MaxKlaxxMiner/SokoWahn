@@ -192,18 +192,19 @@ func TestDominanceLab202(t *testing.T) {
 // viele Garagen als Loop, Abschluss raus/END). Der Test prüft: die auf diese
 // Varianten eingeschränkte Enumeration erreicht für JEDE Signatur exakt
 // dieselben Optimal-Kosten wie die Voll-Enumeration.
+var lab202MinimalSet = map[uint64]bool{
+	1:  true, // {36}: Garagen-Kiste wieder raus (vor der Ziel-Lieferung)
+	3:  true, // {36}: parken auf 26 (der Trick, Teil 1)
+	5:  true, // {36}: direkt ins Ziel + raus
+	6:  true, // {36}: direkt ins Ziel + Spielende
+	17: true, // {26}: geparkte ins Ziel + Spielende
+	19: true, // {26,36}: Garagen-Kiste raus + geparkte ins Ziel (der Trick, Teil 2)
+	20: true, // {26,36}: Garagen-Kiste raus, geparkte bleibt (der Garagen-Loop)
+}
+
 func TestDominanceLab202Minimal(t *testing.T) {
 	_, room := merge202Chamber(t)
-
-	minimalSet := map[uint64]bool{
-		1:  true, // {36}: Garagen-Kiste wieder raus (vor der Ziel-Lieferung)
-		3:  true, // {36}: parken auf 26 (der Trick, Teil 1)
-		5:  true, // {36}: direkt ins Ziel + raus
-		6:  true, // {36}: direkt ins Ziel + Spielende
-		17: true, // {26}: geparkte ins Ziel + Spielende
-		19: true, // {26,36}: Garagen-Kiste raus + geparkte ins Ziel (der Trick, Teil 2)
-		20: true, // {26,36}: Garagen-Kiste raus, geparkte bleibt (der Garagen-Loop)
-	}
+	minimalSet := lab202MinimalSet
 
 	full := enumerateUsages(room, labHorizon, nil)
 	reduced := enumerateUsages(room, labHorizon, func(id uint64) bool { return minimalSet[id] })
