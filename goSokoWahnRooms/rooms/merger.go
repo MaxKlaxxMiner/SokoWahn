@@ -174,6 +174,7 @@ func (m *Merger) Step2StartVariants() {
 func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 	newStateCount := m.NewRoom.States.Count()
 	maxBoxes := int(m.NewRoom.MaxBoxes)
+	var throttle progressThrottle
 
 	for pi, newPortal := range m.NewRoom.Incoming {
 		old := m.mapOldIncoming[pi]
@@ -205,7 +206,7 @@ func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 
 		// --- Varianten je kombiniertem Zustand ---
 		for state := uint64(0); state < newStateCount; state++ {
-			if info != nil && state&4095 == 0 {
+			if info != nil && throttle.due() {
 				if !info(fmt.Sprintf("merge: portal %d/%d - state %d/%d - %d varianten", pi+1, len(m.NewRoom.Incoming), state, newStateCount, m.NewRoom.Variants.Count()), []*Room{m.room1, m.room2}) {
 					return false
 				}

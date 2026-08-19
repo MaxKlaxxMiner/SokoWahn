@@ -76,6 +76,7 @@ type reducer struct {
 	aborted    bool // Nutzer-Abbruch über den info-Callback
 	info       ProgressFunc
 	tested     int
+	throttle   progressThrottle
 	result     ReduceResult
 }
 
@@ -89,7 +90,7 @@ func (r *reducer) expired() bool {
 // meldet regelmäßig den Zwischenstand; false vom Callback = Nutzer-Stop
 // (bereits bewiesene Streichungen werden trotzdem angewandt)
 func (r *reducer) report() {
-	if r.info == nil || r.tested&63 != 0 {
+	if r.info == nil || !r.throttle.due() {
 		return
 	}
 	if !r.info(fmt.Sprintf("dominance room %d: %d tests, %d variants removed (%d states)",
