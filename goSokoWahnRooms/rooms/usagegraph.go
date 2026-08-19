@@ -619,7 +619,11 @@ func usageNormalize(full, reduced usageConfig) usageCost {
 
 // vergleicht die Optimal-Kosten beider Graphen über ALLE Außenwörter.
 // Bei usageDiffers beschreibt detail das Gegenbeispiel (Wort + Kosten).
-func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict, string) {
+// tick (optional) wird zeitgedrosselt mit der aktuellen Situationszahl
+// gerufen - für Statusmeldungen während LANGER Vergleiche (riesige Räume)
+// und als Abbruch: false beendet den Vergleich mit usageUndecided (Budget/
+// Stop; ohne den Haken wäre ein einzelner Riesen-Vergleich unabbrechbar).
+func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, tick func(situations int) bool) (usageVerdict, string) {
 	if full.start < 0 && reduced.start < 0 {
 		return usageEqual, "beide Räume ohne akzeptierende Nutzung"
 	}
@@ -635,6 +639,7 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 	}
 
 	wsFull, wsReduced := &usageWorkspace{}, &usageWorkspace{}
+	var throttle progressThrottle
 	var buf []byte
 	seen := map[string]bool{}
 	queue := []item{{full: full.startConfig(), reduced: reduced.startConfig()}}
@@ -645,6 +650,10 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 	for len(queue) > 0 {
 		it := queue[0]
 		queue = queue[1:]
+
+		if tick != nil && throttle.due() && !tick(len(seen)) {
+			return usageUndecided, fmt.Sprintf("abgebrochen nach %d Vergleichs-Situationen", len(seen))
+		}
 
 		// Akzeptanzen vergleichen (reduced ist bei uns eine Teilmenge der
 		// Kanten, kann also nie billiger sein - geprüft wird trotzdem

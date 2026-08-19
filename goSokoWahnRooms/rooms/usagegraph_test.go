@@ -126,7 +126,7 @@ func TestUsageGraphMinimalProven(t *testing.T) {
 	full := buildUsageGraph(room, nil)
 	reduced := buildUsageGraph(room, func(id uint64) bool { return lab202MinimalSet[id] })
 
-	verdict, detail := compareUsageGraphs(full, reduced, 100000)
+	verdict, detail := compareUsageGraphs(full, reduced, 100000, nil)
 	t.Logf("voll (%d Knoten) vs minimal (%d Knoten): %v - %s",
 		len(full.nodes), len(reduced.nodes), verdict, detail)
 	if verdict != usageEqual {
@@ -144,7 +144,7 @@ func TestUsageGraphDetectsMissing(t *testing.T) {
 		reduced := buildUsageGraph(room, func(id uint64) bool {
 			return lab202MinimalSet[id] && id != drop
 		})
-		verdict, detail := compareUsageGraphs(full, reduced, 100000)
+		verdict, detail := compareUsageGraphs(full, reduced, 100000, nil)
 		t.Logf("ohne v%d: %v - %s", drop, verdict, detail)
 		if verdict != usageDiffers {
 			t.Errorf("ohne v%d: Differenz nicht erkannt (%v - %s)", drop, verdict, detail)

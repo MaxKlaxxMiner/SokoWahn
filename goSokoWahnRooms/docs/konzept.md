@@ -375,17 +375,19 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   performanter Vergleichskern (Konfigurationen als dichte Arrays mit
   Versions-Zähler + Worklist statt Maps mit Fixpunkt-Schleifen, Kanten nach
   Label vorsortiert, binäre Fingerprints - Einzelvergleich 277ms -> 46ms).
-  Dazu ein Zeitbudget je Raum (30s): bei Ablauf wird das bis dahin Bewiesene
-  angewandt, erneutes Drücken macht weiter - der erste Baustein der
-  inkrementellen Endlos-Funktion (siehe Arbeitsteilung unten). Ergebnis:
-  Fixpunkt nach ~78s in 5 Button-Runden, der Trakt schrumpft auf
-  312 Zustände / 325 Varianten - 99,2% der Varianten bewiesen entbehrlich
-  (TestOptimizeRoomsDominance5018, läuft nur ohne -short; weiche Anker, weil
-  der Budget-Schnitt den exakten Fixpunkt leicht verschieben kann).
+  Dazu Ernte-Runden (2026-08-19, ersetzt das anfängliche 30s-Zeitbudget aus
+  der Ära vor Hintergrund-Jobs und Stop-Button): sobald eine Runde über die
+  Hälfte der Varianten als entbehrlich bewiesen hat, wird angewandt und auf
+  dem geschrumpften Raum frisch weitergesucht - alle weiteren Vergleiche
+  werden dadurch drastisch billiger (derselbe Effekt, den die Budget-Schnitte
+  zufällig hatten, nur deterministisch); DominanceReduce läuft so in einem
+  Aufruf bis zum Fixpunkt, abbrechbar jederzeit per Stop (Bewiesenes bleibt
+  angewandt). Ergebnis: Fixpunkt in einem Optimize-Druck nach ~90s, der Trakt
+  schrumpft auf 310 Zustände / 321 Varianten - 99,25% der Varianten bewiesen
+  entbehrlich, ohne Zeitbudget deterministisch und exakt verankert
+  (TestOptimizeRoomsDominance5018, läuft nur ohne -short).
   Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
-  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt);
-  der Optimize-Request blockiert bis zu 30s je Ein-Portal-Raum (SSE-Status
-  weiter zurückgestellt).
+  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht

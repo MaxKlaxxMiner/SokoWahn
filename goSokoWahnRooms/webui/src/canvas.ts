@@ -205,6 +205,20 @@ export class FieldCanvas {
     this.resetPreview();
   }
 
+  // je ausgewähltem Raum ein Feld (Wpos) als stabile Kennung: Raum-Indizes
+  // verschieben sich beim Mergen, die Felder nicht - damit lässt sich die
+  // Auswahl nach einem Netzwerk-Reload wiederherstellen
+  getSelectionWpos(): { rooms: number[]; active: number } {
+    const wposOf = (room: number): number => {
+      const fields = this.roomFields.get(room);
+      return fields && fields.length > 0 ? this.gridWpos[fields[0]] : -1;
+    };
+    return {
+      rooms: [...this.selection].map(wposOf).filter(w => w >= 0),
+      active: this.active >= 0 ? wposOf(this.active) : -1,
+    };
+  }
+
   // ersetzt die Auswahl komplett (z.B. Klick in der Raum-Liste), ohne
   // onSelectionChange auszulösen - der Aufrufer weiß selbst Bescheid
   setSelection(rooms: number[], active: number): void {

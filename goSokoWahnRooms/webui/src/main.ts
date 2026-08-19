@@ -208,8 +208,12 @@ async function doValidate(): Promise<void> {
   }
 }
 
-// holt Kennzahlen und Raum-Karte neu (nach Merge) - das Feld selbst bleibt gleich
+// holt Kennzahlen und Raum-Karte neu (nach Merge) - das Feld selbst bleibt
+// gleich. Die Auswahl überlebt den Reload: je Raum dient ein Feld (Wpos) als
+// stabile Kennung, gemergte Räume bleiben also selektiert (der nächste
+// Arbeitsschritt betrifft meist genau sie)
 async function reloadNetwork(): Promise<void> {
+  const keep = canvas.getSelectionWpos();
   roomCache.clear();
   const summary = await getJSON<Summary>('/api/summary');
   const map = await getJSON<{ rooms: number[] }>('/api/map');
@@ -224,6 +228,15 @@ async function reloadNetwork(): Promise<void> {
   statesList.reset(0);
   variantsList.reset(0);
   $('info').textContent = 'Effort: ' + summary.effort;
+
+  // Auswahl wiederherstellen: alte Felder -> neue Raum-Indizes (nach einem
+  // Merge fallen mehrere alte Räume auf denselben neuen zusammen)
+  const rooms = [...new Set(keep.rooms.map(w => map.rooms[w]))];
+  const active = keep.active >= 0 ? map.rooms[keep.active] : -1;
+  if (rooms.length > 0) {
+    canvas.setSelection(rooms, active);
+    void handleSelection(rooms, active, false);
+  }
 }
 
 function updateStats(summary: Summary): void {

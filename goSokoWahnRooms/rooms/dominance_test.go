@@ -12,7 +12,7 @@ import (
 func TestReduceVariants202(t *testing.T) {
 	_, room := merge202Chamber(t)
 
-	result := reduceVariants(room, 100000, 0, nil)
+	result := reduceVariants(room, 100000, false, nil)
 	t.Logf("behalten (%d): %v", len(result.Kept), result.Kept)
 	t.Logf("gestrichen (%d): %v", len(result.Removed), result.Removed)
 	t.Logf("eliminierte Zustände (%d): %v", len(result.RemovedStates), result.RemovedStates)
@@ -55,7 +55,7 @@ func TestReduceVariantsFreshNetworks(t *testing.T) {
 			if !canReduceVariants(room) {
 				continue
 			}
-			result := reduceVariants(room, 100000, 0, nil)
+			result := reduceVariants(room, 100000, false, nil)
 			rooms++
 			variants += int(room.Variants.Count())
 			removed += len(result.Removed)

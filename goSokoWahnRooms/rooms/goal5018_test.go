@@ -55,8 +55,8 @@ func TestOptimizeRoomsDominance5018(t *testing.T) {
 	t.Logf("nach merge: %d states, %d varianten, %d portale",
 		room.States.Count(), room.Variants.Count(), len(room.Incoming))
 
-	// wie in der GUI: Optimize drücken, bis nichts mehr kommt (das
-	// Zeitbudget je Druck macht die Suche inkrementell)
+	// wie in der GUI: Optimize drücken, bis nichts mehr kommt (seit den
+	// Ernte-Runden erledigt schon der erste Druck den Fixpunkt)
 	start := time.Now()
 	total := uint64(0)
 	for round := 1; ; round++ {
@@ -78,13 +78,10 @@ func TestOptimizeRoomsDominance5018(t *testing.T) {
 	t.Logf("fixpunkt: %d entfernt, %d states, %d varianten",
 		total, room.States.Count(), room.Variants.Count())
 
-	// weiche Anker (der exakte Fixpunkt hängt vom Zeitbudget-Schnitt ab und
-	// kann je nach Rechnertempo minimal variieren; Referenzlauf 2026-08-18:
-	// 312 states, 325 varianten nach 5 Runden / 78s)
-	if room.Variants.Count() > 500 {
-		t.Errorf("kammer behält %d varianten, erwartet <= 500", room.Variants.Count())
-	}
-	if room.States.Count() > 400 {
-		t.Errorf("kammer behält %d states, erwartet <= 400", room.States.Count())
+	// exakte Anker: ohne Zeitbudget ist die Suche deterministisch (Ernte-
+	// Runden bei >50% bewiesen; Referenzlauf 2026-08-19: ~90s)
+	if room.States.Count() != 310 || room.Variants.Count() != 321 {
+		t.Errorf("kammer: %d states / %d varianten, want 310 / 321",
+			room.States.Count(), room.Variants.Count())
 	}
 }

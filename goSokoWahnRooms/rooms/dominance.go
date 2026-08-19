@@ -3,7 +3,6 @@ package rooms
 import (
 	"fmt"
 	"slices"
-	"time"
 )
 
 // Kandidaten-Finder der Dominanzsuche (M4b, siehe docs/konzept.md): findet
@@ -30,8 +29,9 @@ import (
 // gegen den vollen Graphen bewiesen und bleibt es. Weil jede behaltene
 // Variante irgendwann als Einzeltest durchfällt, ist das Ergebnis lokal
 // minimal: KEINE einzelne verbleibende Variante ist noch streichbar.
-// (Ausnahme: läuft das Zeitbudget ab, bleiben ungeprüfte Kandidaten
-// konservativ erhalten - das bis dahin Bewiesene ist trotzdem gültig.)
+// (Ausnahme: bricht der Nutzer per Stop ab, bleiben ungeprüfte Kandidaten
+// konservativ erhalten - das bis dahin Bewiesene ist trotzdem gültig und
+// wird angewandt; erneutes Optimize macht dort weiter.)
 //
 // Gestrichen wird in zwei Phasen:
 //   1. ganze ZUSTÄNDE (Einheit = alle Varianten, die den Zustand als
@@ -55,8 +55,8 @@ type ReduceResult struct {
 	Removed       []uint64 // gestrichene Varianten (bewiesen entbehrlich)
 	Undecided     []uint64 // konservativ behalten (Vergleichs-Limit erreicht)
 	RemovedStates []uint64 // in Phase 1 komplett eliminierte Zustände
-	TimedOut      bool     // Zeitbudget abgelaufen (Rest ungeprüft behalten)
 	Aborted       bool     // Nutzer-Abbruch (Rest ungeprüft behalten)
+	Harvested     bool     // Ernte-Abbruch: genug bewiesen, erst anwenden lohnt
 	Detail        string   // Beschreibung des Abschluss-Beweises
 }
 
@@ -71,46 +71,58 @@ type reducer struct {
 	full       *usageGraph
 	removed    map[uint64]bool
 	maxConfigs int
-	deadline   time.Time // Null-Wert = kein Budget
-	timedOut   bool
 	aborted    bool // Nutzer-Abbruch über den info-Callback
+	harvest    bool // Ernte-Kriterium aktiv (Runden-Betrieb von DominanceReduce)
+	harvested  bool // Ernte-Kriterium erreicht (siehe tryRemove)
 	info       ProgressFunc
 	tested     int
+	curBatch   int // Größe der gerade getesteten Gruppe (für die Statusmeldung)
 	throttle   progressThrottle
 	result     ReduceResult
 }
 
-func (r *reducer) expired() bool {
-	if !r.timedOut && !r.deadline.IsZero() && time.Now().After(r.deadline) {
-		r.timedOut = true
-	}
-	return r.timedOut || r.aborted
-}
-
 // meldet regelmäßig den Zwischenstand; false vom Callback = Nutzer-Stop
 // (bereits bewiesene Streichungen werden trotzdem angewandt)
-func (r *reducer) report() {
+func (r *reducer) report(suffix string) {
 	if r.info == nil || !r.throttle.due() {
 		return
 	}
-	if !r.info(fmt.Sprintf("dominance room %d: %d tests, %d variants removed (%d states)",
-		r.room.Index, r.tested, len(r.result.Removed), len(r.result.RemovedStates)), []*Room{r.room}) {
+	if !r.info(fmt.Sprintf("dominance room %d: test %d (gruppe %d), %d variants removed (%d states)%s",
+		r.room.Index, r.tested, r.curBatch, len(r.result.Removed), len(r.result.RemovedStates), suffix),
+		[]*Room{r.room}) {
 		r.aborted = true
 	}
+}
+
+// der Haken für lange Einzelvergleiche: Statusmeldung mit Situationszahl,
+// Abbruch bei Nutzer-Stop (der Vergleich endet dann als usageUndecided,
+// die Gruppe bleibt konservativ erhalten)
+func (r *reducer) compareTick(situations int) bool {
+	r.report(fmt.Sprintf(" - vergleich läuft, %d situationen", situations))
+	return !r.aborted
 }
 
 // testet, ob die Varianten-Gruppe komplett entbehrlich ist; bei Gleichheit
 // bleibt sie dauerhaft gestrichen (und wird gebucht), sonst rollt sie zurück
 func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 	r.tested++
-	r.report()
+	r.curBatch = len(batch)
+	r.report("")
 	for _, vid := range batch {
 		r.removed[vid] = true
 	}
 	candidate := buildUsageGraph(r.room, func(id uint64) bool { return !r.removed[id] })
-	verdict, _ := compareUsageGraphs(r.full, candidate, r.maxConfigs)
+	verdict, _ := compareUsageGraphs(r.full, candidate, r.maxConfigs, r.compareTick)
 	if verdict == usageEqual {
 		r.result.Removed = append(r.result.Removed, batch...)
+		// Ernte-Kriterium: ist über die Hälfte der Varianten als entbehrlich
+		// bewiesen, lohnt erst das ANWENDEN - auf dem geschrumpften Raum
+		// werden alle weiteren Vergleiche deutlich billiger (der Aufrufer
+		// wendet an und startet eine frische Runde). Ersetzt den früheren
+		// Nebeneffekt des 30s-Zeitbudgets, nur deterministisch.
+		if r.harvest && len(r.result.Removed)*2 > int(r.room.Variants.Count()) {
+			r.harvested = true
+		}
 		return verdict
 	}
 	for _, vid := range batch {
@@ -121,7 +133,7 @@ func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 
 // Gruppen-Test über Varianten (Phase 2)
 func (r *reducer) shrinkVariants(batch []uint64) {
-	if len(batch) == 0 || r.expired() {
+	if len(batch) == 0 || r.aborted || r.harvested {
 		return
 	}
 	verdict := r.tryRemove(batch)
@@ -157,7 +169,7 @@ func (r *reducer) touching(states []uint64) []uint64 {
 
 // Gruppen-Test über Zustände (Phase 1)
 func (r *reducer) shrinkStates(states []uint64) {
-	if len(states) == 0 || r.expired() {
+	if len(states) == 0 || r.aborted || r.harvested {
 		return
 	}
 	batch := r.touching(states)
@@ -180,11 +192,14 @@ func (r *reducer) shrinkStates(states []uint64) {
 // reduziert die Varianten-Menge eines Ein-Portal-Raums per Greedy-Elimination.
 // maxConfigs begrenzt jeden Einzelvergleich (Sicherheitsnetz gegen
 // divergierende Loop-Raten); unentscheidbare Kandidaten bleiben erhalten.
-// budget > 0 begrenzt die Gesamtzeit: bei Ablauf bleibt der ungeprüfte Rest
-// konservativ erhalten, das bis dahin Bewiesene ist gültig (TimedOut = true).
-// Der Raum selbst wird NICHT verändert - das Ergebnis beschreibt nur,
-// welche Varianten entbehrlich sind.
-func reduceVariants(room *Room, maxConfigs int, budget time.Duration, info ProgressFunc) ReduceResult {
+// Die Suche läuft bis zum Ende oder bis der info-Callback abbricht (Stop);
+// beim Stop bleibt der ungeprüfte Rest konservativ erhalten, das bis dahin
+// Bewiesene ist gültig (Aborted = true). harvest aktiviert das Ernte-
+// Kriterium für den Runden-Betrieb (Harvested = true, sobald über die
+// Hälfte der Varianten bewiesen entbehrlich ist - dann lohnt erst das
+// Anwenden, siehe DominanceReduce). Der Raum selbst wird NICHT verändert -
+// das Ergebnis beschreibt nur, welche Varianten entbehrlich sind.
+func reduceVariants(room *Room, maxConfigs int, harvest bool, info ProgressFunc) ReduceResult {
 	if !canReduceVariants(room) {
 		panic("reduceVariants: nur Ein-Portal-Räume ohne Startvarianten")
 	}
@@ -204,10 +219,8 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration, info Progr
 		full:       full,
 		removed:    map[uint64]bool{},
 		maxConfigs: maxConfigs,
+		harvest:    harvest,
 		info:       info,
-	}
-	if budget > 0 {
-		r.deadline = time.Now().Add(budget)
 	}
 
 	// Phase 1: ganze Zustände eliminieren (0 = gelöst und der Startzustand
@@ -230,8 +243,8 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration, info Progr
 	r.shrinkVariants(rest)
 
 	result := r.result
-	result.TimedOut = r.timedOut
 	result.Aborted = r.aborted
+	result.Harvested = r.harvested
 	slices.Sort(result.Removed)
 	slices.Sort(result.RemovedStates)
 	for vid := uint64(0); vid < room.Variants.Count(); vid++ {
@@ -243,7 +256,7 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration, info Progr
 	// Abschluss-Beweis der Gesamtmenge (redundant zur Induktion der
 	// Einzelschritte, aber billig und ein guter Wächter)
 	final := buildUsageGraph(room, func(id uint64) bool { return !r.removed[id] })
-	verdict, detail := compareUsageGraphs(r.full, final, maxConfigs)
+	verdict, detail := compareUsageGraphs(r.full, final, maxConfigs, r.compareTick)
 	if verdict == usageDiffers {
 		panic("reduceVariants: Abschluss-Beweis fehlgeschlagen: " + detail)
 	}
@@ -254,11 +267,6 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration, info Progr
 // Sicherheitslimit je Einzelvergleich der Dominanzsuche (Vergleichs-
 // Situationen; real sättigen die Räume nach wenigen hundert)
 const dominanceMaxConfigs = 100000
-
-// Zeitbudget der Dominanzsuche je Raum am Optimize-Button; bei Ablauf wird
-// das bis dahin Bewiesene angewandt (erneutes Drücken macht dort weiter -
-// die inkrementelle Endlos-Funktion aus dem Konzept, Kapitel M4b)
-const dominanceBudget = 30 * time.Second
 
 // DominanceReduce führt die Dominanzsuche auf einem Raum aus und entfernt
 // bewiesen entbehrliche Varianten samt dabei verwaisender Zustände. Nicht
@@ -272,22 +280,32 @@ func (n *Network) DominanceReduce(room *Room, info ProgressFunc) (removed uint64
 	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %d variants", room.Index, room.Variants.Count()), []*Room{room}) {
 		return 0, false
 	}
-	result := reduceVariants(room, dominanceMaxConfigs, dominanceBudget, info)
-	if len(result.Removed) == 0 {
-		return 0, !result.Aborted
-	}
-	if info != nil {
-		// reine Ergebnis-Meldung: bewiesene Streichungen werden auch nach
-		// einem Nutzer-Stop angewandt (Konzept M4b), Rückgabewert egal
-		info(fmt.Sprintf("dominance scan room %d: remove %d variants (%d states, timeout=%v)",
-			room.Index, len(result.Removed), len(result.RemovedStates), result.TimedOut), []*Room{room})
-	}
+	// Runden bis zum Fixpunkt: nach einer Ernte (über die Hälfte entbehrlich)
+	// wird angewandt und auf dem geschrumpften Raum frisch weitergesucht
+	for {
+		result := reduceVariants(room, dominanceMaxConfigs, true, info)
+		if len(result.Removed) == 0 {
+			return removed, !result.Aborted
+		}
+		if info != nil {
+			// reine Ergebnis-Meldung: bewiesene Streichungen werden auch nach
+			// einem Nutzer-Stop angewandt (Konzept M4b), Rückgabewert egal
+			info(fmt.Sprintf("dominance scan room %d: remove %d variants (%d states)",
+				room.Index, len(result.Removed), len(result.RemovedStates)), []*Room{room})
+		}
 
-	used := make([]bool, room.Variants.Count())
-	for _, vid := range result.Kept {
-		used[vid] = true
+		used := make([]bool, room.Variants.Count())
+		for _, vid := range result.Kept {
+			used[vid] = true
+		}
+		renewVariants(room, used)
+		removeUnusedStates(room)
+		removed += uint64(len(result.Removed))
+		if result.Aborted {
+			return removed, false
+		}
+		// auch nach einer regulär beendeten Runde weitersuchen: das Anwenden
+		// (renewVariants + removeUnusedStates-Kaskade) kann neue Streichungen
+		// freilegen - die Schleife endet erst, wenn eine Runde leer ausgeht
 	}
-	renewVariants(room, used)
-	removeUnusedStates(room)
-	return uint64(len(result.Removed)), !result.Aborted
 }
