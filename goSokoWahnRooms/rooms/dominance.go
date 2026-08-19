@@ -74,9 +74,9 @@ type reducer struct {
 	removed    map[uint64]bool
 	maxConfigs int
 	moveLimit  int64 // > 0: Nutzungen über diesem Moves-Budget sind irrelevant
-	aborted    bool // Nutzer-Abbruch über den info-Callback
-	harvest    bool // Ernte-Kriterium aktiv (Runden-Betrieb von DominanceReduce)
-	harvested  bool // Ernte-Kriterium erreicht (siehe tryRemove)
+	aborted    bool  // Nutzer-Abbruch über den info-Callback
+	harvest    bool  // Ernte-Kriterium aktiv (Runden-Betrieb von DominanceReduce)
+	harvested  bool  // Ernte-Kriterium erreicht (siehe tryRemove)
 	info       ProgressFunc
 	tested     int
 	curBatch   int // Größe der gerade getesteten Gruppe (für die Statusmeldung)

@@ -36,36 +36,51 @@ func (r *Room) computeMinMoves() uint64 {
 	if r.StartState == 0 {
 		return 0 // startet gelöst
 	}
-	stateCount := r.States.Count()
+	dist := r.stateDistances(r.StartState, false)
+	if dist[0] == minMovesInf {
+		return 0 // gelöster Zustand unerreichbar: konservativ 0
+	}
+	return dist[0] >> 32 // Moves-Anteil der billigsten Lösung
+}
 
-	// Kosten lexikographisch als gepackter Schlüssel (moves << 32 | pushes)
-	const inf = ^uint64(0)
+const minMovesInf = ^uint64(0)
+
+// Dijkstra über die Zustände des Raums: gepackte Kosten (moves << 32 | pushes)
+// von "from" zu allen Zuständen; reverse dreht die Kanten um (Distanz ZU
+// einem Zielzustand). Kanten: alle Varianten (inkl. Start- und End-Varianten,
+// Portal egal - Spieler-Verfügbarkeit über-approximiert) und alle Einschübe
+// (BoxSwaps, 0 Kosten). minMovesInf = unerreichbar.
+func (r *Room) stateDistances(from uint64, reverse bool) []uint64 {
+	stateCount := r.States.Count()
 	dist := make([]uint64, stateCount)
 	for i := range dist {
-		dist[i] = inf
+		dist[i] = minMovesInf
 	}
-	dist[r.StartState] = 0
+	dist[from] = 0
 
-	// Kanten je Zustand einsammeln: Varianten (inkl. Start- und End-Varianten)
-	// und Einschübe aller Portale
 	type edge struct {
 		to  uint64
 		key uint64
 	}
 	edges := make([][]edge, stateCount)
+	addEdge := func(a, b, key uint64) {
+		if reverse {
+			a, b = b, a
+		}
+		edges[a] = append(edges[a], edge{to: b, key: key})
+	}
 	for vid := uint64(0); vid < r.Variants.Count(); vid++ {
 		v := r.Variants.Get(vid)
-		edges[v.OldState] = append(edges[v.OldState],
-			edge{to: v.NewState, key: uint64(v.Moves)<<32 | uint64(v.Pushes)})
+		addEdge(v.OldState, v.NewState, uint64(v.Moves)<<32|uint64(v.Pushes))
 	}
 	for _, ip := range r.Incoming {
-		for from, to := range ip.BoxSwap {
-			edges[from] = append(edges[from], edge{to: to})
+		for f, t := range ip.BoxSwap {
+			addEdge(f, t, 0)
 		}
 	}
 
 	// kleiner binärer Heap über (Kosten, Zustand)
-	heapNodes := []uint64{r.StartState}
+	heapNodes := []uint64{from}
 	heapKeys := []uint64{0}
 	push := func(node, key uint64) {
 		heapNodes = append(heapNodes, node)
@@ -109,9 +124,6 @@ func (r *Room) computeMinMoves() uint64 {
 		if key > dist[node] {
 			continue // veralteter Heap-Eintrag
 		}
-		if node == 0 {
-			return key >> 32 // Moves-Anteil der billigsten Lösung
-		}
 		for _, e := range edges[node] {
 			if k := key + e.key; k < dist[e.to] {
 				dist[e.to] = k
@@ -119,7 +131,7 @@ func (r *Room) computeMinMoves() uint64 {
 			}
 		}
 	}
-	return 0 // gelöster Zustand unerreichbar: konservativ 0
+	return dist
 }
 
 // wärmt die MinMoves-Caches aller Räume vor. Wird am Ende jeder mutierenden

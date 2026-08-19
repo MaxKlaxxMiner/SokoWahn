@@ -410,6 +410,17 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   erhalten, TestOptimizeWithMoveLimit). ACHTUNG: ein zu kleines B wirft die
   Optimallösung weg - die Verantwortung liegt beim Eingebenden; der saubere
   Lieferant wird später M6 (verifizierte eingespielte Lösung).
+  Budget-Schnellscan (Max' Idee, 2026-08-19): wirkt im Gegensatz zur Dominanz
+  auf JEDEN Raum (auch Mehr-Portal/Startvarianten) - je Variante ist
+  fwd[OldState] + Kosten + bwd[NewState] (Vorwärts-/Rückwärts-Dijkstra über
+  die Zustände) eine sichere Untergrenze jeder Nutzung, die sie enthält;
+  liegt sie über Minimum + Slack, fliegt die Variante (Distanz-Korridor wie
+  Brutes Tiefenschranke; unerreichbare Varianten fallen gratis mit). Läuft
+  als Fixpunkt (Streichungen heben Minima, kleinerer Slack schärft die
+  anderen Räume) automatisch vor der Dominanz, wenn max moves gesetzt ist.
+  Verliert ein Raum dabei alle nötigen Varianten, wird die Schranke als
+  BEWIESEN unerreichbar gemeldet (das Netz ist dann absichtlich unlösbar
+  zurückgelassen - Level neu laden); TestBudgetScan/-ProvesUnreachable.
   Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
   (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln

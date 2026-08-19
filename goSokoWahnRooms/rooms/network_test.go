@@ -54,7 +54,9 @@ func checkRooms(t *testing.T, n *Network, wantStates, wantVariants []uint64) {
 // Handverifikation Mini-Level (Wpos: 0='@', 1='$', 2='.'):
 // Raum 0: nur Zustand "leer" (Ecke, nie Kiste), 1 Startvariante nach rechts.
 // Raum 1: Zustände leer/Kiste; Varianten: durchlaufen (von links), Push zurück nach
-//         links, End-Variante (Kiste auf Ziel, Spieler bleibt), durchlaufen (von rechts).
+//
+//	links, End-Variante (Kiste auf Ziel, Spieler bleibt), durchlaufen (von rechts).
+//
 // Raum 2: Zustände Kiste-auf-Ziel/leer, keine Varianten (Sackgassen-Ziel, nur BoxSwap).
 func TestNetworkMini(t *testing.T) {
 	n := buildNetwork(t, mapMini)
@@ -143,7 +145,7 @@ func TestFormatBig(t *testing.T) {
 		{"999", "999"},
 		{"1234567", "1.234.567"},
 		{"999999999999", "999.999.999.999"},
-		{"1234567890123", "1,235e12 (1.234.567.890.123)"}, // 5. Stelle rundet auf
+		{"1234567890123", "1,235e12 (1.234.567.890.123)"},  // 5. Stelle rundet auf
 		{"9999500000000", "1,0000e12 (9.999.500.000.000)"}, // Rundungs-Überlauf 9999 -> 10000 (wie C#-Original)
 	}
 	for _, tt := range tests {

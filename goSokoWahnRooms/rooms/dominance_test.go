@@ -128,9 +128,10 @@ func TestOptimizeWithMoveLimit(t *testing.T) {
 }
 
 // ein Limit unter dem bewiesenen Minimum muss als Fehler gemeldet werden
-// (statt still die Optimallösung wegzuwerfen); mit Slack 0 (Limit = Summe
-// der Minima) darf jeder Raum nur noch seine billigste Nutzung leisten -
-// die Kammer schrumpft dann unter die 7 Varianten des Normalfalls
+// (statt still die Optimallösung wegzuwerfen); eine Schranke über der
+// Minima-Summe, aber unter dem echten Optimum, wird vom Budget-Scan als
+// bewiesen unerreichbar entlarvt; die Dominanz mit Slack 0 behält nur die
+// billigsten Nutzungen (Kammer schrumpft unter die 7 des Normalfalls)
 func TestOptimizeMoveLimitTight(t *testing.T) {
 	n, room := merge202Chamber(t)
 
@@ -144,19 +145,73 @@ func TestOptimizeMoveLimitTight(t *testing.T) {
 	}
 	t.Logf("Minimum: Kammer %d, Netz gesamt %d", minRoom, minTotal)
 
-	// Limit unter dem Minimum: Fehler statt stiller Zerstörung
+	// Limit unter der Minima-Summe: sofortiger Fehler ohne Mutation
 	if _, err := n.OptimizeRooms([]uint32{room.Index}, minTotal-1, nil); err == nil {
 		t.Error("Limit unter dem Minimum wurde nicht als Fehler gemeldet")
 	}
 
-	// Slack 0: nur die billigsten Nutzungen überleben
-	removed, err := n.OptimizeRooms([]uint32{room.Index}, minTotal, nil)
-	if err != nil {
-		t.Fatal("optimize:", err)
+	// Dominanz direkt mit Slack 0 (Raum-Limit = Kammer-Minimum): nur die
+	// billigsten Nutzungen überleben
+	removed, ok := n.DominanceReduce(room, int64(minRoom), nil)
+	if !ok {
+		t.Fatal("dominance abgebrochen")
 	}
 	t.Logf("slack 0: %d entfernt -> %d states, %d varianten",
 		removed, room.States.Count(), room.Variants.Count())
 	if room.Variants.Count() >= 7 {
 		t.Errorf("Kammer behält %d Varianten, mit Slack 0 erwartet < 7", room.Variants.Count())
 	}
+	if err := n.Validate(true); err != nil {
+		t.Fatal("validate:", err)
+	}
+}
+
+// eine Schranke zwischen Minima-Summe und echtem Optimum: der Budget-Scan
+// muss die Unerreichbarkeit BEWEISEN (sauberer Fehler statt Validate-Crash)
+func TestBudgetScanProvesUnreachable(t *testing.T) {
+	n, _ := merge202Chamber(t)
+	minTotal := uint64(0)
+	for _, r := range n.Rooms {
+		minTotal += r.MinMoves()
+	}
+	// 202-Optimum ist 83; minTotal (deutlich darunter) als falsche Schranke
+	if _, err := n.OptimizeRooms([]uint32{0}, minTotal, nil); err == nil {
+		t.Errorf("falsche Schranke %d wurde nicht als unerreichbar entlarvt", minTotal)
+	} else {
+		t.Logf("bewiesen: %v", err)
+	}
+}
+
+// Budget-Schnellscan: streicht in JEDEM Raum (auch Mehr-Portal, wo die
+// Dominanz nicht greift) Varianten über dem Distanz-Korridor-Limit; mit
+// Limit = exaktem Optimum muss die Optimallösung überleben
+func TestBudgetScan(t *testing.T) {
+	// TwoBox frisch (Mehr-Portal-Räume!), Optimum 9 Züge
+	n := buildNetwork(t, mapTwoBox)
+	removed, ok, err := n.BudgetScan(9, nil)
+	if err != nil || !ok {
+		t.Fatalf("budget scan: removed=%d ok=%v err=%v", removed, ok, err)
+	}
+	if err := n.Validate(true); err != nil {
+		t.Fatal("validate:", err)
+	}
+	t.Logf("twobox budget 9: %d varianten entfernt", removed)
+
+	room := fullMerge(t, n)
+	minMoves, minPath := checkFullMerge(t, room)
+	if minMoves != 9 {
+		t.Errorf("optimum nach budget scan: %d moves (%q), want 9", minMoves, minPath)
+	}
+
+	// Wirkung am ungemergten 202er-Netz (nur Mehr-Portal-Räume) mit dem
+	// bekannten Optimum 83 als Schranke
+	n2 := buildNetwork(t, maps.Map202)
+	removed2, ok2, err2 := n2.BudgetScan(83, nil)
+	if err2 != nil || !ok2 {
+		t.Fatalf("budget scan 202: ok=%v err=%v", ok2, err2)
+	}
+	if err := n2.Validate(true); err != nil {
+		t.Fatal("validate 202:", err)
+	}
+	t.Logf("202 budget 83: %d varianten entfernt", removed2)
 }

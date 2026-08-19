@@ -319,12 +319,28 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 // ACHTUNG: ein zu kleines maxMoves würde die Optimallösung wegwerfen; die
 // Verantwortung für die Schranke liegt beim Aufrufer.
 func (n *Network) OptimizeRooms(indices []uint32, maxMoves uint64, info ProgressFunc) (removed uint64, err error) {
+	// Budget-Schnellscan über ALLE Räume (auch Mehr-Portal/Startvarianten,
+	// die die Dominanz noch nicht abdeckt): streicht Varianten, deren
+	// billigste denkbare Nutzung das Raum-Budget überschreitet
+	if maxMoves > 0 {
+		count, ok, scanErr := n.BudgetScan(maxMoves, info)
+		removed += count
+		if scanErr != nil || !ok {
+			if removed > 0 {
+				// die Scan-Diagnose ("Schranke bewiesen zu klein") hat
+				// Vorrang - dann DARF das Netz unlösbar zurückbleiben
+				if verr := n.Validate(true); verr != nil && scanErr == nil {
+					scanErr = fmt.Errorf("validate after budget scan: %w", verr)
+				}
+				n.warmMinMoves()
+			}
+			return removed, scanErr
+		}
+	}
+
 	// Budget-Zerlegung: Slack = Schranke minus Summe aller Raum-Minima
 	slack := int64(0)
 	if maxMoves > 0 {
-		if info != nil && !info(fmt.Sprintf("move budget: scanning %d rooms", len(n.Rooms)), nil) {
-			return 0, nil
-		}
 		total := uint64(0)
 		for _, room := range n.Rooms {
 			total += room.MinMoves()
