@@ -21,6 +21,10 @@ type Merger struct {
 	room2   *Room
 	NewRoom *Room
 
+	// > 0: Varianten über diesem Moves-Budget gar nicht erst erzeugen
+	// (siehe MergeRooms: min1 + min2 + Slack aus dem Max-Moves-Limit)
+	moveLimit uint32
+
 	mapOldIncoming []*Portal // neuer Portal-Index -> altes äußeres eingehendes Portal
 	mapPortal1     []uint32  // Incoming-Index Raum 1 -> neuer Portal-Index (NoPortal = inneres Portal)
 	mapPortal2     []uint32  // Incoming-Index Raum 2 -> neuer Portal-Index (NoPortal = inneres Portal)
@@ -343,6 +347,13 @@ func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
 		side1:   side1,
 		variant: v,
 	}
+	if limit := s.m.moveLimit; limit > 0 && t.moves > limit {
+		// über dem Moves-Budget: kann in keiner Lösung innerhalb der
+		// Schranke vorkommen - und alle Fortsetzungen (Kosten wachsen
+		// monoton) auch nicht. Der billigste Vertreter jeder Wirkung
+		// liegt unter dem Limit und überlebt den effectKey-Dedup normal.
+		return
+	}
 	if !s.m.resolveBoxes(&t, prev.boxes, v, side1) {
 		return // Variante ist im Verbund ungültig
 	}
@@ -578,10 +589,30 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 // info (optional) bekommt Fortschritts-Meldungen; liefert der Callback false,
 // wird abgebrochen (Rückgabe nil, nil) - das Netzwerk bleibt dann unverändert,
 // weil erst Schritt 4 die Verlinkungen anfasst.
-func (n *Network) MergeRooms(room1, room2 *Room, info ProgressFunc) (*Room, error) {
+// maxMoves > 0 ist eine VERIFIZIERTE obere Schranke der Gesamtlösung (siehe
+// OptimizeRooms): Verbund-Varianten, deren Kosten min1 + min2 + Slack
+// überschreiten, werden gar nicht erst erzeugt - das kappt die Varianten-
+// Explosion an der Wurzel (der nachgelagerte Budget-Scan mit Distanz-Korridor
+// bleibt schärfer, siehe BudgetScan).
+func (n *Network) MergeRooms(room1, room2 *Room, maxMoves uint64, info ProgressFunc) (*Room, error) {
 	m, err := NewMerger(n, room1, room2)
 	if err != nil {
 		return nil, err
+	}
+	if maxMoves > 0 {
+		total := uint64(0)
+		for _, room := range n.Rooms {
+			total += room.MinMoves()
+		}
+		if total > maxMoves {
+			return nil, fmt.Errorf("max moves %s liegt unter dem bewiesenen Minimum %s - Schranke unerreichbar",
+				tools.FormatInt(maxMoves), tools.FormatInt(total))
+		}
+		limit := room1.MinMoves() + room2.MinMoves() + (maxMoves - total)
+		if limit > uint64(^uint32(0)) {
+			limit = uint64(^uint32(0))
+		}
+		m.moveLimit = uint32(limit)
 	}
 	m.Step1MixStates()
 	m.Step2StartVariants()
@@ -610,7 +641,7 @@ func (n *Network) MergeRooms(room1, room2 *Room, info ProgressFunc) (*Room, erro
 // MergeSelection verschmilzt eine Raum-Auswahl: solange zwei ausgewählte Räume
 // direkt verbunden sind, wird (in Index-Reihenfolge) paarweise gemergt. Nicht
 // verbundene Reste bleiben stehen. Liefert die Anzahl der ausgeführten Merges.
-func (n *Network) MergeSelection(indices []uint32, info ProgressFunc) (int, error) {
+func (n *Network) MergeSelection(indices []uint32, maxMoves uint64, info ProgressFunc) (int, error) {
 	selected := map[*Room]bool{}
 	for _, idx := range indices {
 		if int(idx) >= len(n.Rooms) {
@@ -646,7 +677,7 @@ func (n *Network) MergeSelection(indices []uint32, info ProgressFunc) (int, erro
 		}
 		delete(selected, a)
 		delete(selected, b)
-		merged, err := n.MergeRooms(a, b, info)
+		merged, err := n.MergeRooms(a, b, maxMoves, info)
 		if err != nil {
 			return merges, err
 		}

@@ -327,7 +327,8 @@ func (s *Server) handleStates(w http.ResponseWriter, r *http.Request) {
 // Validate nach jedem Merge); Fortschritt und Ergebnis kommen über /api/progress
 func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Rooms []uint32 `json:"rooms"`
+		Rooms    []uint32 `json:"rooms"`
+		MaxMoves uint64   `json:"maxMoves"` // 0 = kein Limit (siehe handleOptimize)
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
@@ -343,7 +344,7 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 	}
 	started := s.runJob("merge...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
-		merges, err := n.MergeSelection(req.Rooms, info)
+		merges, err := n.MergeSelection(req.Rooms, req.MaxMoves, info)
 		if err != nil {
 			// Merge- oder Validate-Fehler: Zustand des Netzwerks ist verdächtig,
 			// der Fehler muss sichtbar werden (Konzept: Validate nach jedem Schritt)

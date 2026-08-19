@@ -71,7 +71,7 @@ func main() {
 	// 34,35,36,37,47,48,49 - als Indizes also jeweils minus 1.
 	if webInfo != nil && webInfo.ID == "202" {
 		startMerge := []uint32{11, 18, 24, 25, 26, 33, 34, 35, 36, 46, 47, 48}
-		if _, err := network.MergeSelection(startMerge, nil); err != nil {
+		if _, err := network.MergeSelection(startMerge, 0, nil); err != nil {
 			fmt.Println("merge error:", err)
 			os.Exit(1)
 		}

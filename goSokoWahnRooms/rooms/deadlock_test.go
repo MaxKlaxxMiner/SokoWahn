@@ -29,7 +29,7 @@ func TestMergeWithDeadlockScanVanilla(t *testing.T) {
 	for i := range indices {
 		indices[i] = uint32(i)
 	}
-	merges, err := n.MergeSelection(indices, info)
+	merges, err := n.MergeSelection(indices, 0, info)
 	if err != nil {
 		t.Fatal("merge:", err)
 	}
@@ -62,7 +62,7 @@ func TestOptimizeRoomsIdempotent(t *testing.T) {
 	for i := range indices {
 		indices[i] = uint32(i)
 	}
-	if _, err := n.MergeSelection(indices, nil); err != nil {
+	if _, err := n.MergeSelection(indices, 0, nil); err != nil {
 		t.Fatal("merge:", err)
 	}
 

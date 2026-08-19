@@ -421,6 +421,14 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Verliert ein Raum dabei alle nötigen Varianten, wird die Schranke als
   BEWIESEN unerreichbar gemeldet (das Netz ist dann absichtlich unlösbar
   zurückgelassen - Level neu laden); TestBudgetScan/-ProvesUnreachable.
+  Auch der MERGE beachtet das Budget (2026-08-20): die Merge-Suche erzeugt
+  Verbund-Varianten über min1 + min2 + Slack gar nicht erst (Kosten wachsen
+  monoton, der Cutoff in follow kappt ganze Fortsetzungs-Bäume; der billigste
+  Vertreter jeder Wirkung liegt unter dem Limit und überlebt den effectKey-
+  Dedup normal) - das kappt die Varianten-Explosion an der Wurzel, der
+  nachgelagerte Budget-Scan mit Distanz-Korridor bleibt schärfer
+  (TestMergeWithMoveLimit: TwoBox-Optimum überlebt Budget 9, 202er-Kammer
+  mit Budget 83 identisch zum ungebremsten Merge).
   Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
   (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln

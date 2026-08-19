@@ -22,7 +22,7 @@ import (
 func merge202Chamber(t *testing.T) (*Network, *Room) {
 	t.Helper()
 	n := buildNetwork(t, maps.Map202)
-	if _, err := n.MergeSelection([]uint32{11, 18, 24, 25, 26, 33, 34, 35, 36, 46, 47, 48}, nil); err != nil {
+	if _, err := n.MergeSelection([]uint32{11, 18, 24, 25, 26, 33, 34, 35, 36, 46, 47, 48}, 0, nil); err != nil {
 		t.Fatal("merge:", err)
 	}
 	for _, room := range n.Rooms {

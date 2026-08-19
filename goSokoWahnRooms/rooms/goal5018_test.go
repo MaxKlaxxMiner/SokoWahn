@@ -35,7 +35,7 @@ func merge5018GoalRoom(t *testing.T) (*Network, *Room) {
 	if len(selection) != 15 {
 		t.Fatalf("Ziel-Trakt-Selektion: %d Räume statt 15", len(selection))
 	}
-	if _, err := n.MergeSelection(selection, nil); err != nil {
+	if _, err := n.MergeSelection(selection, 0, nil); err != nil {
 		t.Fatal("merge:", err)
 	}
 	for _, room := range n.Rooms {

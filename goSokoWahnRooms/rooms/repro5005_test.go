@@ -50,13 +50,23 @@ func mergeLower5005(t *testing.T, includeBoxField, optimizeBetween bool) (*Netwo
 	for _, idx := range selection {
 		inSelection[n.Rooms[idx]] = true
 	}
+	// deterministische Paar-Wahl (kleinstes Varianten-Produkt, Iteration über
+	// n.Rooms): eine Map-Iteration wäre zufällig geordnet, manche Läufe
+	// explodierten dann in teuren Zwischen-Monstern (Zeiten 14s..374s)
 	for len(inSelection) > 1 {
 		var a, b *Room
-		bestPortals := 1 << 30
-		for r := range inSelection {
+		bestEffort := ^uint64(0)
+		for _, r := range n.Rooms {
+			if !inSelection[r] {
+				continue
+			}
 			for _, op := range r.Outgoing {
-				if inSelection[op.ToRoom] && len(r.Incoming) < bestPortals {
-					bestPortals, a, b = len(r.Incoming), r, op.ToRoom
+				if !inSelection[op.ToRoom] || op.ToRoom.Index < r.Index {
+					continue
+				}
+				effort := r.Variants.Count() * op.ToRoom.Variants.Count()
+				if effort < bestEffort {
+					bestEffort, a, b = effort, r, op.ToRoom
 				}
 			}
 		}
@@ -65,7 +75,7 @@ func mergeLower5005(t *testing.T, includeBoxField, optimizeBetween bool) (*Netwo
 		}
 		delete(inSelection, a)
 		delete(inSelection, b)
-		merged, err := n.MergeRooms(a, b, nil)
+		merged, err := n.MergeRooms(a, b, 0, nil)
 		if err != nil {
 			t.Fatal("merge:", err)
 		}
