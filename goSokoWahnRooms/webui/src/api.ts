@@ -9,6 +9,7 @@ export interface Summary {
   roomCount: number;
   stateCount: number;
   variantCount: number;
+  minMoves: number; // Summe der bewiesenen Pflicht-Minima aller Räume
   effort: string;
 }
 
@@ -40,6 +41,7 @@ export interface RoomSummary {
   variants: number;
   startState: number;
   startVariantCount: number;
+  minMoves: number; // bewiesene Untergrenze der Pflicht-Moves des Raums
 }
 
 export interface Span {

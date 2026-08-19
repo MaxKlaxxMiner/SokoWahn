@@ -13,6 +13,7 @@ const droppedID = uint64(math.MaxUint64)
 // Varianten auf, deren Zielzustand wegfällt. Läuft als Fixpunkt-Iteration:
 // jede Runde kann neue Waisen erzeugen (C#-Vorbild: OptimizeTools.RemoveUnusedStates).
 func removeUnusedStates(room *Room) {
+	room.invalidateMinMoves()
 	for removeUnusedStatesOnce(room) {
 	}
 }
@@ -77,6 +78,7 @@ func removeUnusedStatesOnce(room *Room) bool {
 // unangetastet (dafür danach removeUnusedStates aufrufen).
 // C#-Vorbild: OptimizeTools.RenewVariants
 func renewVariants(room *Room, used []bool) {
+	room.invalidateMinMoves()
 	oldVariants := room.Variants
 	variantMap := make([]uint64, oldVariants.Count())
 	newVariants := NewVariantList()

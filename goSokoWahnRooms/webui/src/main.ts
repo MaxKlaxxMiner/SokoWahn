@@ -110,15 +110,19 @@ async function handleSelection(selection: number[], active: number, fromList: bo
     variantsList.reset(0);
 
     // wie das Original: Effort der Raum-Auswahl = Produkt der Variantenzahlen
-    // (Räume ohne Varianten zählen nicht mit, wie im Netzwerk-Effort)
+    // (Räume ohne Varianten zählen nicht mit, wie im Netzwerk-Effort);
+    // dazu die Summe der bewiesenen Pflicht-Minima der Auswahl
     let product = 1n;
+    let minMoves = 0;
     for (const idx of selection) {
       const room = await roomDetail(idx);
       if (room.variants > 0) product *= BigInt(room.variants);
+      minMoves += room.minMoves;
     }
     if (gen !== selectionGen) return;
     const rooms = selection.length > 1 ? ` (${selection.length} Räume)` : '';
-    $('info').textContent = 'Effort: ' + product.toLocaleString('de-DE') + rooms;
+    $('info').textContent =
+      'Effort: ' + product.toLocaleString('de-DE') + rooms + ' - min moves: ' + fmt(minMoves);
   } catch (err) {
     showError(err);
   }
@@ -144,8 +148,11 @@ async function doMerge(): Promise<void> {
 async function doOptimize(): Promise<void> {
   const selection = canvas.getSelection();
   if (mergeBusy || selection.length < 1) return;
+  // Max-Moves-Budget (leer = kein Limit): verifizierte obere Schranke der
+  // Gesamtlösung, der Optimizer kappt Nutzungen über dem Raum-Budget
+  const maxMoves = Math.max(0, Number(($('maxMoves') as HTMLInputElement).value) || 0);
   try {
-    await postJSON<{ started: boolean }>('/api/optimize', { rooms: selection });
+    await postJSON<{ started: boolean }>('/api/optimize', { rooms: selection, maxMoves });
   } catch (err) {
     showError(err);
   }
@@ -240,18 +247,22 @@ async function reloadNetwork(): Promise<void> {
 }
 
 function updateStats(summary: Summary): void {
+  // Effort kompakt in e-Schreibweise (EffortString: "4,566e117 (4.565...)")
+  const effortShort = summary.effort.split(' ')[0];
   $('stats').innerHTML =
     `<span>R&auml;ume <b>${fmt(summary.roomCount)}</b></span>` +
     `<span>Zust&auml;nde <b>${fmt(summary.stateCount)}</b></span>` +
-    `<span>Varianten <b>${fmt(summary.variantCount)}</b></span>`;
+    `<span>Varianten <b>${fmt(summary.variantCount)}</b></span>` +
+    `<span>Min-Z&uuml;ge <b>${fmt(summary.minMoves)}</b></span>` +
+    `<span>Effort <b>${effortShort}</b></span>`;
 }
 
 // ---------- Zustandswahl -> Varianten-Sektionen aufbauen ----------
 
 function stateText(state: StateItem): string {
   if (state.id === 0) return 'State finish';
-  if (currentRoom && state.id === currentRoom.startState) return `State ${state.id} (start)`;
-  return `State ${state.id}`;
+  if (currentRoom && state.id === currentRoom.startState) return `State ${fmt(state.id)} (start)`;
+  return `State ${fmt(state.id)}`;
 }
 
 function selectState(state: StateItem): void {
@@ -300,7 +311,7 @@ function buildVariantSegments(room: RoomDetail, state: StateItem): Segment[] {
     staticSeg([{ text: `-- Portal ${portal.index + 1}${portal.dir}${portal.blockedBox ? ' - [BB] --' : ' --'}`, head: true }]);
     const swapTo = portal.boxSwap[String(state.id)];
     if (swapTo !== undefined) {
-      staticSeg([{ text: `Variant B (${portal.dir}) -> ${swapTo}`, boxSwap: { portal, newState: swapTo } }]);
+      staticSeg([{ text: `Variant B (${portal.dir}) -> ${fmt(swapTo)}`, boxSwap: { portal, newState: swapTo } }]);
     }
     const span = portal.variantSpans[String(state.id)];
     if (span && span.count > 0) {
@@ -326,8 +337,8 @@ function spanSegment(room: RoomDetail, start: number, count: number, entry: Port
         if (v.boxPortals.length > 0) {
           path += ' > ' + v.boxPortals.map(bi => `${bi + 1}${OPPOSITE[room.portalList[bi].dir]}`).join(',');
         }
-        const name = v.playerPortal < 0 ? 'End' : String(local + i + 1);
-        return { text: `Variant ${name} [${v.moves}/${v.pushes}] -> ${v.newState} (${path})`, variant: v, entry };
+        const name = v.playerPortal < 0 ? 'End' : fmt(local + i + 1);
+        return { text: `Variant ${name} [${fmt(v.moves)}/${fmt(v.pushes)}] -> ${fmt(v.newState)} (${path})`, variant: v, entry };
       });
     },
   };
@@ -384,7 +395,7 @@ async function selectVariant(row: VRow): Promise<void> {
   // (rooms/variantlist.go): der Eintritts-Schritt gehört zur Vorgänger-
   // Variante - bei Startvarianten (z.B. der Einzellösung nach einem
   // Voll-Merge) ist daher alles enthalten.
-  $('info').textContent = `Variant ${v.id}: ${v.moves} moves, ${v.pushes} pushes`;
+  $('info').textContent = `Variant ${fmt(v.id)}: ${fmt(v.moves)} moves, ${fmt(v.pushes)} pushes`;
 }
 
 // ---------- Aufbau ----------

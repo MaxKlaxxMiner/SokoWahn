@@ -7,6 +7,7 @@ import (
 
 	"goSokoWahnRooms/crc64"
 	"goSokoWahnRooms/soko"
+	"goSokoWahnRooms/tools"
 )
 
 // Merger verschmilzt zwei benachbarte Räume zu einem neuen Raum (M3).
@@ -207,7 +208,7 @@ func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 		// --- Varianten je kombiniertem Zustand ---
 		for state := uint64(0); state < newStateCount; state++ {
 			if info != nil && throttle.due() {
-				if !info(fmt.Sprintf("merge: portal %d/%d - state %d/%d - %d varianten", pi+1, len(m.NewRoom.Incoming), state, newStateCount, m.NewRoom.Variants.Count()), []*Room{m.room1, m.room2}) {
+				if !info(fmt.Sprintf("merge: portal %d/%d - state %s/%s - %s varianten", pi+1, len(m.NewRoom.Incoming), tools.FormatInt(state), tools.FormatInt(newStateCount), tools.FormatInt(m.NewRoom.Variants.Count())), []*Room{m.room1, m.room2}) {
 					return false
 				}
 			}
@@ -602,6 +603,7 @@ func (n *Network) MergeRooms(room1, room2 *Room, info ProgressFunc) (*Room, erro
 	if err := n.Validate(true); err != nil {
 		return nil, fmt.Errorf("validate after merge: %w", err)
 	}
+	n.warmMinMoves() // Caches vorwärmen (lesende API-Zugriffe bleiben race-frei)
 	return m.NewRoom, nil
 }
 

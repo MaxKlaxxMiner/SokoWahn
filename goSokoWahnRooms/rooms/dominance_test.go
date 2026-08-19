@@ -12,7 +12,7 @@ import (
 func TestReduceVariants202(t *testing.T) {
 	_, room := merge202Chamber(t)
 
-	result := reduceVariants(room, 100000, false, nil)
+	result := reduceVariants(room, 100000, 0, false, nil)
 	t.Logf("behalten (%d): %v", len(result.Kept), result.Kept)
 	t.Logf("gestrichen (%d): %v", len(result.Removed), result.Removed)
 	t.Logf("eliminierte Zustände (%d): %v", len(result.RemovedStates), result.RemovedStates)
@@ -55,7 +55,7 @@ func TestReduceVariantsFreshNetworks(t *testing.T) {
 			if !canReduceVariants(room) {
 				continue
 			}
-			result := reduceVariants(room, 100000, false, nil)
+			result := reduceVariants(room, 100000, 0, false, nil)
 			rooms++
 			variants += int(room.Variants.Count())
 			removed += len(result.Removed)
@@ -79,7 +79,7 @@ func TestOptimizeRoomsDominance202(t *testing.T) {
 	for i := range all {
 		all[i] = uint32(i)
 	}
-	removed, err := n.OptimizeRooms(all, nil)
+	removed, err := n.OptimizeRooms(all, 0, nil)
 	if err != nil {
 		t.Fatal("optimize:", err)
 	}
@@ -94,11 +94,69 @@ func TestOptimizeRoomsDominance202(t *testing.T) {
 	}
 
 	// zweiter Lauf: nichts mehr zu holen
-	removed, err = n.OptimizeRooms(all, nil)
+	removed, err = n.OptimizeRooms(all, 0, nil)
 	if err != nil {
 		t.Fatal("second optimize:", err)
 	}
 	if removed != 0 {
 		t.Errorf("second optimize removed %d, want 0", removed)
+	}
+}
+
+// Max-Moves-Budget (Max' Idee, 2026-08-19): eine verifizierte obere Schranke
+// der Gesamtlösung kappt Nutzungen über dem Raum-Budget (Minimum + Slack).
+// Korrektheit: mit Limit = exaktem Optimum muss die Optimallösung überleben
+func TestOptimizeWithMoveLimit(t *testing.T) {
+	// mapTwoBox: Optimum 9 Züge (Brute-verifiziert, TestMergeFullTwoBox)
+	n := buildNetwork(t, mapTwoBox)
+
+	all := make([]uint32, len(n.Rooms))
+	for i := range all {
+		all[i] = uint32(i)
+	}
+	removed, err := n.OptimizeRooms(all, 9, nil)
+	if err != nil {
+		t.Fatal("optimize:", err)
+	}
+	t.Logf("optimize mit maxMoves=9: %d entfernt", removed)
+
+	room := fullMerge(t, n)
+	minMoves, minPath := checkFullMerge(t, room)
+	if minMoves != 9 {
+		t.Errorf("optimum nach budget-optimize: %d moves (%q), want 9", minMoves, minPath)
+	}
+}
+
+// ein Limit unter dem bewiesenen Minimum muss als Fehler gemeldet werden
+// (statt still die Optimallösung wegzuwerfen); mit Slack 0 (Limit = Summe
+// der Minima) darf jeder Raum nur noch seine billigste Nutzung leisten -
+// die Kammer schrumpft dann unter die 7 Varianten des Normalfalls
+func TestOptimizeMoveLimitTight(t *testing.T) {
+	n, room := merge202Chamber(t)
+
+	minRoom := room.MinMoves()
+	if minRoom == 0 {
+		t.Fatal("Kammer ohne bewiesenes Minimum")
+	}
+	minTotal := uint64(0)
+	for _, r := range n.Rooms {
+		minTotal += r.MinMoves()
+	}
+	t.Logf("Minimum: Kammer %d, Netz gesamt %d", minRoom, minTotal)
+
+	// Limit unter dem Minimum: Fehler statt stiller Zerstörung
+	if _, err := n.OptimizeRooms([]uint32{room.Index}, minTotal-1, nil); err == nil {
+		t.Error("Limit unter dem Minimum wurde nicht als Fehler gemeldet")
+	}
+
+	// Slack 0: nur die billigsten Nutzungen überleben
+	removed, err := n.OptimizeRooms([]uint32{room.Index}, minTotal, nil)
+	if err != nil {
+		t.Fatal("optimize:", err)
+	}
+	t.Logf("slack 0: %d entfernt -> %d states, %d varianten",
+		removed, room.States.Count(), room.Variants.Count())
+	if room.Variants.Count() >= 7 {
+		t.Errorf("Kammer behält %d Varianten, mit Slack 0 erwartet < 7", room.Variants.Count())
 	}
 }

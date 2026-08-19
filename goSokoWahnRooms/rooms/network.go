@@ -105,5 +105,6 @@ func NewNetwork(f *soko.Field) (*Network, error) {
 		return nil, err
 	}
 
+	n.warmMinMoves() // Caches vorwärmen (lesende API-Zugriffe bleiben race-frei)
 	return n, nil
 }

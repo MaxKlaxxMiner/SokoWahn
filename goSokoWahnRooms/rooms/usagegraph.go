@@ -619,11 +619,16 @@ func usageNormalize(full, reduced usageConfig) usageCost {
 
 // vergleicht die Optimal-Kosten beider Graphen über ALLE Außenwörter.
 // Bei usageDiffers beschreibt detail das Gegenbeispiel (Wort + Kosten).
+// moveLimit > 0 kappt den Vergleich: Nutzungen, deren Moves das Limit
+// überschreiten, sind irrelevant (sie können in keiner Lösung innerhalb des
+// bewiesenen Gesamt-Budgets vorkommen) - Akzeptanzen darüber werden
+// ignoriert, Zweige mit Mindestkosten über dem Limit gekappt. Nebeneffekt:
+// divergierende Loop-Raten laufen ins Limit statt ins maxConfigs-Netz.
 // tick (optional) wird zeitgedrosselt mit der aktuellen Situationszahl
 // gerufen - für Statusmeldungen während LANGER Vergleiche (riesige Räume)
-// und als Abbruch: false beendet den Vergleich mit usageUndecided (Budget/
-// Stop; ohne den Haken wäre ein einzelner Riesen-Vergleich unabbrechbar).
-func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, tick func(situations int) bool) (usageVerdict, string) {
+// und als Abbruch: false beendet den Vergleich mit usageUndecided (Stop;
+// ohne den Haken wäre ein einzelner Riesen-Vergleich unabbrechbar).
+func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, moveLimit int64, tick func(situations int) bool) (usageVerdict, string) {
 	if full.start < 0 && reduced.start < 0 {
 		return usageEqual, "beide Räume ohne akzeptierende Nutzung"
 	}
@@ -669,6 +674,15 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, tick func(sit
 			{"!", fa.hasEnd, ra.hasEnd, fa.end, ra.end},
 			{"X!", fa.hasEndX, ra.hasEndX, fa.endX, ra.endX},
 		} {
+			if moveLimit > 0 {
+				// Akzeptanzen über dem Budget sind irrelevant (beidseitig)
+				if term.fh && term.fc.add(it.base).moves > moveLimit {
+					term.fh = false
+				}
+				if term.rh && term.rc.add(it.base).moves > moveLimit {
+					term.rh = false
+				}
+			}
 			switch {
 			case term.fh && !term.rh:
 				return usageDiffers, fmt.Sprintf("Wort %q: nur voll bedienbar (Kosten %s)",
@@ -697,6 +711,9 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, tick func(sit
 					it.word+string(label), side)
 			}
 			delta := usageNormalize(nextFull, nextReduced)
+			if moveLimit > 0 && it.base.add(delta).moves > moveLimit {
+				continue // alle Fortsetzungen kosten mindestens base - über Budget
+			}
 			var fp string
 			fp, buf = usageFingerprint(nextFull, nextReduced, buf)
 			if seen[fp] {

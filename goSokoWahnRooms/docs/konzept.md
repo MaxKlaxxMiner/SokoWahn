@@ -386,6 +386,30 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   schrumpft auf 310 Zustände / 321 Varianten - 99,25% der Varianten bewiesen
   entbehrlich, ohne Zeitbudget deterministisch und exakt verankert
   (TestOptimizeRoomsDominance5018, läuft nur ohne -short).
+  Max-Moves-Budget (Max' Idee, 2026-08-19): eine VERIFIZIERTE obere Schranke
+  der Gesamtlösung (z.B. die Länge einer bekannten Lösung, GUI-Eingabefeld
+  "max moves") macht die Dominanz schärfer und den Vergleich endlich. Die
+  Zerlegung: jeder Zug gehört genau einem Raum (Zähl-Konvention), also gilt
+  Nutzung(R) <= B - Summe der Pflicht-Minima aller anderen Räume. Das
+  Pflicht-Minimum je Raum (Room.MinMoves) gilt für JEDEN Raum, auch
+  Mehr-Portal und Startvarianten: ein Dijkstra über die Zustände, jede
+  Variante als Kante (Portal egal, Spieler-Verfügbarkeit über-approximiert),
+  Einschübe als 0-Kanten - beweisbar sichere Untergrenze der im Raum
+  anfallenden Züge (Ziel am Portal per Einschub ergibt korrekt 0). Der Wert
+  ist am Raum gecacht (invalidiert bei Strukturänderung, vorgewärmt nach
+  Init/Merge/Optimize für racefreie Lese-Zugriffe) und in der GUI beim
+  Anklicken sichtbar (Effort-Zeile: "min moves", Summe der Auswahl).
+  OptimizeRooms rechnet slack =
+  B - Summe der Minima (B unter der Summe = Fehler: Schranke bewiesen
+  unerreichbar) und kappt je Raum Nutzungen über Minimum + slack: Akzeptanzen
+  über dem Budget werden ignoriert, Zweige mit Mindestkosten darüber gekappt.
+  Nebeneffekte: divergierende Loop-Raten laufen ins Budget statt ins
+  maxConfigs-Netz (weniger "unentschieden"), und bei knappem Budget fallen
+  auch kostengleich unersetzbare, aber zu teure Varianten (202er-Kammer mit
+  Slack 0: 4 statt 7 Varianten, TestOptimizeMoveLimitTight; Optimum bleibt
+  erhalten, TestOptimizeWithMoveLimit). ACHTUNG: ein zu kleines B wirft die
+  Optimallösung weg - die Verantwortung liegt beim Eingebenden; der saubere
+  Lieferant wird später M6 (verifizierte eingespielte Lösung).
   Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
   (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln

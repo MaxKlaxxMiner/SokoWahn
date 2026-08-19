@@ -1,6 +1,10 @@
 package rooms
 
-import "fmt"
+import (
+	"fmt"
+
+	"goSokoWahnRooms/tools"
+)
 
 // Deadlock-Scan (M4): entfernt Varianten eines Raumes, die von der Startsituation
 // aus nie erreichbar sind (Vorwärts-Scan) oder nie zu einem lokalen Spielende
@@ -253,7 +257,7 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 	if removed == 0 {
 		return 0, true
 	}
-	if info != nil && !info(fmt.Sprintf("deadlock scan room %d: remove %d variants", room.Index, removed), []*Room{room}) {
+	if info != nil && !info(fmt.Sprintf("deadlock scan room %d: remove %s variants", room.Index, tools.FormatInt(removed)), []*Room{room}) {
 		return 0, false
 	}
 	renewVariants(room, used)
@@ -308,7 +312,32 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 // einer Raum-Auswahl aus und validiert danach das Netzwerk; liefert die Zahl
 // der entfernten Varianten. Reihenfolge: erst der billige Scan (räumt
 // Unerreichbares weg), dann die Dominanz auf dem Rest.
-func (n *Network) OptimizeRooms(indices []uint32, info ProgressFunc) (removed uint64, err error) {
+// maxMoves > 0 ist eine VERIFIZIERTE obere Schranke der Gesamtlösung (z.B.
+// die Länge einer bekannten Lösung): über die bewiesenen Pflicht-Minima
+// aller Räume (Room.MinMoves) entsteht ein Slack, und jeder Raum darf dann
+// höchstens Minimum + Slack kosten - teurere Nutzungen kappt die Dominanz.
+// ACHTUNG: ein zu kleines maxMoves würde die Optimallösung wegwerfen; die
+// Verantwortung für die Schranke liegt beim Aufrufer.
+func (n *Network) OptimizeRooms(indices []uint32, maxMoves uint64, info ProgressFunc) (removed uint64, err error) {
+	// Budget-Zerlegung: Slack = Schranke minus Summe aller Raum-Minima
+	slack := int64(0)
+	if maxMoves > 0 {
+		if info != nil && !info(fmt.Sprintf("move budget: scanning %d rooms", len(n.Rooms)), nil) {
+			return 0, nil
+		}
+		total := uint64(0)
+		for _, room := range n.Rooms {
+			total += room.MinMoves()
+		}
+		if total > maxMoves {
+			return 0, fmt.Errorf("max moves %s liegt unter dem bewiesenen Minimum %s - Schranke unerreichbar", tools.FormatInt(maxMoves), tools.FormatInt(total))
+		}
+		slack = int64(maxMoves - total)
+		if info != nil && !info(fmt.Sprintf("move budget: minimum %s, slack %s", tools.FormatInt(total), tools.FormatInt(slack)), nil) {
+			return 0, nil
+		}
+	}
+
 	for _, idx := range indices {
 		if int(idx) >= len(n.Rooms) {
 			return removed, fmt.Errorf("optimize: invalid room index %d", idx)
@@ -316,7 +345,11 @@ func (n *Network) OptimizeRooms(indices []uint32, info ProgressFunc) (removed ui
 		count, scanOK := n.DeadlockScan(n.Rooms[idx], info)
 		removed += count
 		if scanOK {
-			count, scanOK = n.DominanceReduce(n.Rooms[idx], info)
+			moveLimit := int64(0)
+			if maxMoves > 0 {
+				moveLimit = int64(n.Rooms[idx].MinMoves()) + slack
+			}
+			count, scanOK = n.DominanceReduce(n.Rooms[idx], moveLimit, info)
 			removed += count
 		}
 		if !scanOK {
@@ -328,5 +361,6 @@ func (n *Network) OptimizeRooms(indices []uint32, info ProgressFunc) (removed ui
 	if err := n.Validate(true); err != nil {
 		return removed, fmt.Errorf("validate after optimize: %w", err)
 	}
+	n.warmMinMoves() // Caches vorwärmen (lesende API-Zugriffe bleiben race-frei)
 	return removed, nil
 }

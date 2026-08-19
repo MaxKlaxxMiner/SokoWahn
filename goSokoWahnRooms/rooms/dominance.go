@@ -3,6 +3,8 @@ package rooms
 import (
 	"fmt"
 	"slices"
+
+	"goSokoWahnRooms/tools"
 )
 
 // Kandidaten-Finder der Dominanzsuche (M4b, siehe docs/konzept.md): findet
@@ -71,6 +73,7 @@ type reducer struct {
 	full       *usageGraph
 	removed    map[uint64]bool
 	maxConfigs int
+	moveLimit  int64 // > 0: Nutzungen über diesem Moves-Budget sind irrelevant
 	aborted    bool // Nutzer-Abbruch über den info-Callback
 	harvest    bool // Ernte-Kriterium aktiv (Runden-Betrieb von DominanceReduce)
 	harvested  bool // Ernte-Kriterium erreicht (siehe tryRemove)
@@ -87,8 +90,9 @@ func (r *reducer) report(suffix string) {
 	if r.info == nil || !r.throttle.due() {
 		return
 	}
-	if !r.info(fmt.Sprintf("dominance room %d: test %d (gruppe %d), %d variants removed (%d states)%s",
-		r.room.Index, r.tested, r.curBatch, len(r.result.Removed), len(r.result.RemovedStates), suffix),
+	if !r.info(fmt.Sprintf("dominance room %d: test %s (gruppe %s), %s variants removed (%s states)%s",
+		r.room.Index, tools.FormatInt(r.tested), tools.FormatInt(r.curBatch),
+		tools.FormatInt(len(r.result.Removed)), tools.FormatInt(len(r.result.RemovedStates)), suffix),
 		[]*Room{r.room}) {
 		r.aborted = true
 	}
@@ -98,7 +102,7 @@ func (r *reducer) report(suffix string) {
 // Abbruch bei Nutzer-Stop (der Vergleich endet dann als usageUndecided,
 // die Gruppe bleibt konservativ erhalten)
 func (r *reducer) compareTick(situations int) bool {
-	r.report(fmt.Sprintf(" - vergleich läuft, %d situationen", situations))
+	r.report(fmt.Sprintf(" - vergleich läuft, %s situationen", tools.FormatInt(situations)))
 	return !r.aborted
 }
 
@@ -112,7 +116,7 @@ func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 		r.removed[vid] = true
 	}
 	candidate := buildUsageGraph(r.room, func(id uint64) bool { return !r.removed[id] })
-	verdict, _ := compareUsageGraphs(r.full, candidate, r.maxConfigs, r.compareTick)
+	verdict, _ := compareUsageGraphs(r.full, candidate, r.maxConfigs, r.moveLimit, r.compareTick)
 	if verdict == usageEqual {
 		r.result.Removed = append(r.result.Removed, batch...)
 		// Ernte-Kriterium: ist über die Hälfte der Varianten als entbehrlich
@@ -199,7 +203,7 @@ func (r *reducer) shrinkStates(states []uint64) {
 // Hälfte der Varianten bewiesen entbehrlich ist - dann lohnt erst das
 // Anwenden, siehe DominanceReduce). Der Raum selbst wird NICHT verändert -
 // das Ergebnis beschreibt nur, welche Varianten entbehrlich sind.
-func reduceVariants(room *Room, maxConfigs int, harvest bool, info ProgressFunc) ReduceResult {
+func reduceVariants(room *Room, maxConfigs int, moveLimit int64, harvest bool, info ProgressFunc) ReduceResult {
 	if !canReduceVariants(room) {
 		panic("reduceVariants: nur Ein-Portal-Räume ohne Startvarianten")
 	}
@@ -219,6 +223,7 @@ func reduceVariants(room *Room, maxConfigs int, harvest bool, info ProgressFunc)
 		full:       full,
 		removed:    map[uint64]bool{},
 		maxConfigs: maxConfigs,
+		moveLimit:  moveLimit,
 		harvest:    harvest,
 		info:       info,
 	}
@@ -256,7 +261,7 @@ func reduceVariants(room *Room, maxConfigs int, harvest bool, info ProgressFunc)
 	// Abschluss-Beweis der Gesamtmenge (redundant zur Induktion der
 	// Einzelschritte, aber billig und ein guter Wächter)
 	final := buildUsageGraph(room, func(id uint64) bool { return !r.removed[id] })
-	verdict, detail := compareUsageGraphs(r.full, final, maxConfigs, r.compareTick)
+	verdict, detail := compareUsageGraphs(r.full, final, maxConfigs, moveLimit, r.compareTick)
 	if verdict == usageDiffers {
 		panic("reduceVariants: Abschluss-Beweis fehlgeschlagen: " + detail)
 	}
@@ -271,27 +276,29 @@ const dominanceMaxConfigs = 100000
 // DominanceReduce führt die Dominanzsuche auf einem Raum aus und entfernt
 // bewiesen entbehrliche Varianten samt dabei verwaisender Zustände. Nicht
 // anwendbare Räume (mehr als ein Portal, Startvarianten) bleiben unberührt.
+// moveLimit > 0 kappt Nutzungen über diesem Moves-Budget (siehe
+// OptimizeRooms: Raum-Minimum + Slack aus dem globalen Max-Moves-Limit).
 // info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab,
 // der Raum bleibt dann unverändert.
-func (n *Network) DominanceReduce(room *Room, info ProgressFunc) (removed uint64, ok bool) {
+func (n *Network) DominanceReduce(room *Room, moveLimit int64, info ProgressFunc) (removed uint64, ok bool) {
 	if !canReduceVariants(room) || room.Variants.Count() == 0 {
 		return 0, true
 	}
-	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %d variants", room.Index, room.Variants.Count()), []*Room{room}) {
+	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %s variants", room.Index, tools.FormatInt(room.Variants.Count())), []*Room{room}) {
 		return 0, false
 	}
 	// Runden bis zum Fixpunkt: nach einer Ernte (über die Hälfte entbehrlich)
 	// wird angewandt und auf dem geschrumpften Raum frisch weitergesucht
 	for {
-		result := reduceVariants(room, dominanceMaxConfigs, true, info)
+		result := reduceVariants(room, dominanceMaxConfigs, moveLimit, true, info)
 		if len(result.Removed) == 0 {
 			return removed, !result.Aborted
 		}
 		if info != nil {
 			// reine Ergebnis-Meldung: bewiesene Streichungen werden auch nach
 			// einem Nutzer-Stop angewandt (Konzept M4b), Rückgabewert egal
-			info(fmt.Sprintf("dominance scan room %d: remove %d variants (%d states)",
-				room.Index, len(result.Removed), len(result.RemovedStates)), []*Room{room})
+			info(fmt.Sprintf("dominance scan room %d: remove %s variants (%s states)",
+				room.Index, tools.FormatInt(len(result.Removed)), tools.FormatInt(len(result.RemovedStates))), []*Room{room})
 		}
 
 		used := make([]bool, room.Variants.Count())

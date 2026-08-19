@@ -23,6 +23,11 @@ type Room struct {
 
 	Variants          *VariantList
 	StartVariantCount uint64 // Startvarianten (nur > 0, wenn der Spieler in diesem Raum startet)
+
+	// Cache des Pflicht-Minimums (siehe minmoves.go); neue Räume starten
+	// unberechnet, Strukturänderungen invalidieren
+	minMoves      uint64
+	minMovesValid bool
 }
 
 func (r *Room) String() string {

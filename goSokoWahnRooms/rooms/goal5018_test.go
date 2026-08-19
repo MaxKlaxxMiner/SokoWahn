@@ -60,7 +60,7 @@ func TestOptimizeRoomsDominance5018(t *testing.T) {
 	start := time.Now()
 	total := uint64(0)
 	for round := 1; ; round++ {
-		removed, err := n.OptimizeRooms([]uint32{room.Index}, nil)
+		removed, err := n.OptimizeRooms([]uint32{room.Index}, 0, nil)
 		if err != nil {
 			t.Fatal("optimize:", err)
 		}

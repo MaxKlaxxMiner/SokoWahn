@@ -10,6 +10,7 @@ import (
 
 	"goSokoWahnRooms/rooms"
 	"goSokoWahnRooms/soko"
+	"goSokoWahnRooms/tools"
 )
 
 // ---------- JSON-Datentypen der API ----------
@@ -25,6 +26,7 @@ type summaryJSON struct {
 	RoomCount    int    `json:"roomCount"`
 	StateCount   uint64 `json:"stateCount"`
 	VariantCount uint64 `json:"variantCount"`
+	MinMoves     uint64 `json:"minMoves"` // Summe der bewiesenen Pflicht-Minima aller Räume
 	Effort       string `json:"effort"`
 }
 
@@ -56,6 +58,7 @@ type roomJSON struct {
 	Variants          uint64   `json:"variants"`
 	StartState        uint64   `json:"startState"`
 	StartVariantCount uint64   `json:"startVariantCount"`
+	MinMoves          uint64   `json:"minMoves"` // bewiesene Untergrenze der Pflicht-Moves
 }
 
 type roomDetailJSON struct {
@@ -172,6 +175,7 @@ func roomToJSON(room *rooms.Room) roomJSON {
 		Variants:          room.Variants.Count(),
 		StartState:        room.StartState,
 		StartVariantCount: room.StartVariantCount,
+		MinMoves:          room.MinMoves(),
 	}
 }
 
@@ -192,10 +196,11 @@ func (s *Server) validRooms(indices []uint32) bool {
 
 func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 	n, title := s.snapshot()
-	states, variants := uint64(0), uint64(0)
+	states, variants, minMoves := uint64(0), uint64(0), uint64(0)
 	for _, room := range n.Rooms {
 		states += room.States.Count()
 		variants += room.Variants.Count()
+		minMoves += room.MinMoves()
 	}
 	writeJSON(w, summaryJSON{
 		Title:        title,
@@ -206,6 +211,7 @@ func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 		RoomCount:    len(n.Rooms),
 		StateCount:   states,
 		VariantCount: variants,
+		MinMoves:     minMoves,
 		Effort:       n.EffortString(),
 	})
 }
@@ -343,7 +349,7 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 			// der Fehler muss sichtbar werden (Konzept: Validate nach jedem Schritt)
 			return "", err
 		}
-		return fmt.Sprintf("Merge: %d Merges, %d Räume übrig", merges, len(n.Rooms)), nil
+		return fmt.Sprintf("Merge: %d Merges, %s Räume übrig", merges, tools.FormatInt(len(n.Rooms))), nil
 	})
 	if !started {
 		writeError(w, http.StatusConflict, "es läuft bereits eine Rechnung")
@@ -357,7 +363,8 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 // Abbruch über /api/stop (bereits Bewiesenes bleibt angewandt)
 func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Rooms []uint32 `json:"rooms"`
+		Rooms    []uint32 `json:"rooms"`
+		MaxMoves uint64   `json:"maxMoves"` // 0 = kein Limit; sonst VERIFIZIERTE obere Schranke der Gesamtlösung
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
@@ -373,11 +380,11 @@ func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
 	}
 	started := s.runJob("optimize...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
-		removed, err := n.OptimizeRooms(req.Rooms, info)
+		removed, err := n.OptimizeRooms(req.Rooms, req.MaxMoves, info)
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("Optimize: %d Varianten entfernt", removed), nil
+		return fmt.Sprintf("Optimize: %s Varianten entfernt", tools.FormatInt(removed)), nil
 	})
 	if !started {
 		writeError(w, http.StatusConflict, "es läuft bereits eine Rechnung")

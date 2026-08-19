@@ -70,7 +70,7 @@ func mergeLower5005(t *testing.T, includeBoxField, optimizeBetween bool) (*Netwo
 			t.Fatal("merge:", err)
 		}
 		if optimizeBetween {
-			if _, err := n.OptimizeRooms([]uint32{merged.Index}, nil); err != nil {
+			if _, err := n.OptimizeRooms([]uint32{merged.Index}, 0, nil); err != nil {
 				t.Fatal("optimize:", err)
 			}
 		}
@@ -116,7 +116,7 @@ func TestRepro5005Case1(t *testing.T) {
 	}
 	dumpRoomStatus(t, "nach scan", room)
 
-	if _, ok := n.DominanceReduce(room, nil); !ok {
+	if _, ok := n.DominanceReduce(room, 0, nil); !ok {
 		t.Fatal("dominance abgebrochen")
 	}
 	dumpRoomStatus(t, "nach dominanz", room)
@@ -134,7 +134,7 @@ func TestRepro5005Case2(t *testing.T) {
 	}
 	n, room := mergeLower5005(t, true, true)
 	dumpRoomStatus(t, "nach merge", room)
-	if _, err := n.OptimizeRooms([]uint32{room.Index}, nil); err != nil {
+	if _, err := n.OptimizeRooms([]uint32{room.Index}, 0, nil); err != nil {
 		t.Fatal("optimize:", err)
 	}
 	dumpRoomStatus(t, "nach optimize", room)
@@ -152,7 +152,7 @@ func TestRepro5005Case1NoInterOptimize(t *testing.T) {
 	}
 	t.Logf("BoxSwap am StartState nach Merge: %v", hadSwap)
 
-	if _, ok := n.DominanceReduce(room, nil); !ok {
+	if _, ok := n.DominanceReduce(room, 0, nil); !ok {
 		t.Fatal("dominance abgebrochen")
 	}
 	dumpRoomStatus(t, "nach dominanz", room)
