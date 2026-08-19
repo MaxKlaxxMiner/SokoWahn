@@ -56,6 +56,7 @@ type ReduceResult struct {
 	Undecided     []uint64 // konservativ behalten (Vergleichs-Limit erreicht)
 	RemovedStates []uint64 // in Phase 1 komplett eliminierte Zustände
 	TimedOut      bool     // Zeitbudget abgelaufen (Rest ungeprüft behalten)
+	Aborted       bool     // Nutzer-Abbruch (Rest ungeprüft behalten)
 	Detail        string   // Beschreibung des Abschluss-Beweises
 }
 
@@ -72,6 +73,9 @@ type reducer struct {
 	maxConfigs int
 	deadline   time.Time // Null-Wert = kein Budget
 	timedOut   bool
+	aborted    bool // Nutzer-Abbruch über den info-Callback
+	info       ProgressFunc
+	tested     int
 	result     ReduceResult
 }
 
@@ -79,12 +83,26 @@ func (r *reducer) expired() bool {
 	if !r.timedOut && !r.deadline.IsZero() && time.Now().After(r.deadline) {
 		r.timedOut = true
 	}
-	return r.timedOut
+	return r.timedOut || r.aborted
+}
+
+// meldet regelmäßig den Zwischenstand; false vom Callback = Nutzer-Stop
+// (bereits bewiesene Streichungen werden trotzdem angewandt)
+func (r *reducer) report() {
+	if r.info == nil || r.tested&63 != 0 {
+		return
+	}
+	if !r.info(fmt.Sprintf("dominance room %d: %d tests, %d variants removed (%d states)",
+		r.room.Index, r.tested, len(r.result.Removed), len(r.result.RemovedStates)), []*Room{r.room}) {
+		r.aborted = true
+	}
 }
 
 // testet, ob die Varianten-Gruppe komplett entbehrlich ist; bei Gleichheit
 // bleibt sie dauerhaft gestrichen (und wird gebucht), sonst rollt sie zurück
 func (r *reducer) tryRemove(batch []uint64) usageVerdict {
+	r.tested++
+	r.report()
 	for _, vid := range batch {
 		r.removed[vid] = true
 	}
@@ -165,7 +183,7 @@ func (r *reducer) shrinkStates(states []uint64) {
 // konservativ erhalten, das bis dahin Bewiesene ist gültig (TimedOut = true).
 // Der Raum selbst wird NICHT verändert - das Ergebnis beschreibt nur,
 // welche Varianten entbehrlich sind.
-func reduceVariants(room *Room, maxConfigs int, budget time.Duration) ReduceResult {
+func reduceVariants(room *Room, maxConfigs int, budget time.Duration, info ProgressFunc) ReduceResult {
 	if !canReduceVariants(room) {
 		panic("reduceVariants: nur Ein-Portal-Räume ohne Startvarianten")
 	}
@@ -185,6 +203,7 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration) ReduceResu
 		full:       full,
 		removed:    map[uint64]bool{},
 		maxConfigs: maxConfigs,
+		info:       info,
 	}
 	if budget > 0 {
 		r.deadline = time.Now().Add(budget)
@@ -211,6 +230,7 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration) ReduceResu
 
 	result := r.result
 	result.TimedOut = r.timedOut
+	result.Aborted = r.aborted
 	slices.Sort(result.Removed)
 	slices.Sort(result.RemovedStates)
 	for vid := uint64(0); vid < room.Variants.Count(); vid++ {
@@ -244,20 +264,22 @@ const dominanceBudget = 30 * time.Second
 // anwendbare Räume (mehr als ein Portal, Startvarianten) bleiben unberührt.
 // info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab,
 // der Raum bleibt dann unverändert.
-func (n *Network) DominanceReduce(room *Room, info func(string) bool) (removed uint64, ok bool) {
+func (n *Network) DominanceReduce(room *Room, info ProgressFunc) (removed uint64, ok bool) {
 	if !canReduceVariants(room) || room.Variants.Count() == 0 {
 		return 0, true
 	}
-	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %d variants", room.Index, room.Variants.Count())) {
+	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %d variants", room.Index, room.Variants.Count()), []*Room{room}) {
 		return 0, false
 	}
-	result := reduceVariants(room, dominanceMaxConfigs, dominanceBudget)
+	result := reduceVariants(room, dominanceMaxConfigs, dominanceBudget, info)
 	if len(result.Removed) == 0 {
-		return 0, true
+		return 0, !result.Aborted
 	}
-	if info != nil && !info(fmt.Sprintf("dominance scan room %d: remove %d variants (%d states, timeout=%v)",
-		room.Index, len(result.Removed), len(result.RemovedStates), result.TimedOut)) {
-		return 0, false
+	if info != nil {
+		// reine Ergebnis-Meldung: bewiesene Streichungen werden auch nach
+		// einem Nutzer-Stop angewandt (Konzept M4b), Rückgabewert egal
+		info(fmt.Sprintf("dominance scan room %d: remove %d variants (%d states, timeout=%v)",
+			room.Index, len(result.Removed), len(result.RemovedStates), result.TimedOut), []*Room{room})
 	}
 
 	used := make([]bool, room.Variants.Count())
@@ -266,5 +288,5 @@ func (n *Network) DominanceReduce(room *Room, info func(string) bool) (removed u
 	}
 	renewVariants(room, used)
 	removeUnusedStates(room)
-	return uint64(len(result.Removed)), true
+	return uint64(len(result.Removed)), !result.Aborted
 }

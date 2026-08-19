@@ -134,47 +134,69 @@ function updateMergeButton(selection: number[]): void {
 async function doMerge(): Promise<void> {
   const selection = canvas.getSelection();
   if (mergeBusy || selection.length < 2) return;
-  mergeBusy = true;
-  const btn = $('mergeBtn') as HTMLButtonElement;
-  btn.disabled = true;
-  btn.textContent = 'merging…';
   try {
-    const result = await postJSON<{ merges: number; rooms: number }>('/api/merge', { rooms: selection });
-    await reloadNetwork();
-    showStatus(
-      result.merges > 0
-        ? `Merge fertig: ${result.merges} Merge(s), ${fmt(result.rooms)} Räume übrig`
-        : 'Merge: keine zwei ausgewählten Räume sind verbunden',
-    );
+    await postJSON<{ started: boolean }>('/api/merge', { rooms: selection });
   } catch (err) {
     showError(err);
   }
-  btn.textContent = 'Merge Rooms';
-  mergeBusy = false;
-  updateMergeButton(canvas.getSelection());
 }
 
 async function doOptimize(): Promise<void> {
   const selection = canvas.getSelection();
   if (mergeBusy || selection.length < 1) return;
-  mergeBusy = true;
-  const btn = $('optimizeBtn') as HTMLButtonElement;
-  btn.disabled = true;
-  btn.textContent = 'scanning…';
   try {
-    const result = await postJSON<{ removed: number }>('/api/optimize', { rooms: selection });
-    await reloadNetwork();
-    showStatus(
-      result.removed > 0
-        ? `Optimize fertig: ${fmt(result.removed)} Varianten entfernt`
-        : 'Optimize: nichts zu entfernen',
-    );
+    await postJSON<{ started: boolean }>('/api/optimize', { rooms: selection });
   } catch (err) {
     showError(err);
   }
-  btn.textContent = 'Optimize';
-  mergeBusy = false;
-  updateMergeButton(canvas.getSelection());
+}
+
+async function doStop(): Promise<void> {
+  try {
+    await postJSON<{ stopping: boolean }>('/api/stop', {});
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// Fortschritts-Stream des Servers: Status-Text und gelbe Markierung der
+// gerade bearbeiteten Räume, wie im alten C#-FormDebugger; nach dem Ende
+// eines Jobs wird das Netzwerk neu geladen
+function connectProgress(): void {
+  interface ProgressMsg {
+    seq: number;
+    busy: boolean;
+    text: string;
+    fields: number[];
+    result: string;
+    error: string;
+  }
+  let doneSeq = -1; // zuletzt behandeltes Abschluss-Event (dedupliziert Reconnects)
+  const source = new EventSource('/api/progress');
+  source.onmessage = ev => {
+    const p = JSON.parse(ev.data) as ProgressMsg;
+    const stopBtn = $('stopBtn') as HTMLButtonElement;
+    if (p.busy) {
+      mergeBusy = true;
+      stopBtn.disabled = false;
+      $('info').textContent = p.text;
+      canvas.setBusyFields(p.fields);
+      updateMergeButton(canvas.getSelection());
+      return;
+    }
+    stopBtn.disabled = true;
+    canvas.setBusyFields([]);
+    mergeBusy = false;
+    updateMergeButton(canvas.getSelection());
+    // Abschluss eines Jobs: auch blitzschnelle Jobs liefern genau ein
+    // Ergebnis-Event (Erkennung über die Sequenznummer, nicht über busy)
+    if ((p.result === '' && p.error === '') || p.seq === doneSeq) return;
+    doneSeq = p.seq;
+    void reloadNetwork().then(() => {
+      if (p.error) showError(new Error(p.error));
+      else if (p.result) showStatus(p.result);
+    });
+  };
 }
 
 async function doValidate(): Promise<void> {
@@ -388,7 +410,9 @@ async function boot(): Promise<void> {
 
   ($('mergeBtn') as HTMLButtonElement).addEventListener('click', () => void doMerge());
   ($('optimizeBtn') as HTMLButtonElement).addEventListener('click', () => void doOptimize());
+  ($('stopBtn') as HTMLButtonElement).addEventListener('click', () => void doStop());
   ($('validateBtn') as HTMLButtonElement).addEventListener('click', () => void doValidate());
+  connectProgress();
 
   statesList = new VirtualList<StateItem>(
     $('statesList'),

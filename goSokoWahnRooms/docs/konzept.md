@@ -273,8 +273,11 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   20 Zustände / 90 Varianten in der 202er-Kammer statt 10 / 25). Kleinere Abweichungen: Varianten
   werden einzeln statt Span-weise markiert (Doppelzähl-Bug im C#), Ziele-Check
   auch für End-Startvarianten, Aufgaben werden dedupliziert.
-  Referenz-Zahlen als Tests verankert: Vanilla erste 20 Räume (5 Scans entfernen
-  1176 Varianten, Effort 6,5e40 -> 7,8e30), Idempotenz (zweiter Scan findet 0)
+  Referenz-Zahlen als Tests verankert: Vanilla erste 20 Räume (Endergebnis
+  211 Zustände / 7867 Varianten, Effort 7,8e30; seit der effort-sortierten
+  Merge-Reihenfolge 2026-08-19 - wie das C#-Original: verbundenes Paar mit
+  kleinstem Varianten-Produkt zuerst - braucht der Weg nur noch 2 statt 5
+  Scan-Eingriffe), Idempotenz (zweiter Scan findet 0)
   und der Orakel-Vergleich der 202er-Kammer gegen die SokoWahnLib
   (rooms/oracle202_test.go, C#-Seite: SokoWahn/roomscli/ - kleines Konsolen-Tool,
   das dieselben Merges im Original ausführt und Zustände/Varianten dumpt;
@@ -389,8 +392,16 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   als inkrementelle Endlos-Funktion, die immer tiefer/komplexer weiterrechnet
   (Budget/Horizont wächst), bis der Nutzer per Stop-Button entscheidet, dass
   genug gerechnet ist; bis dahin gefundene überflüssige Varianten/Zustände sind
-  dann bereits entfernt. Das braucht den bei M3 zurückgestellten SSE-Livestatus
-  samt Abbruch.
+  dann bereits entfernt.
+  Livestatus + Stop ERLEDIGT (2026-08-19): rooms.ProgressFunc(text, rooms)
+  ersetzt die reinen Text-Callbacks - Merger (Step3, alle 4096 Zustände),
+  Deadlock-Scan und Dominanzsuche (alle 64 Gruppen-Tests) melden Schritt und
+  bearbeitete Räume. Merge/Optimize laufen als Hintergrund-Job unter der
+  Schreibsperre; /api/progress streamt den Status per SSE (eigener Mutex,
+  nicht hinter der Schreibsperre), die GUI zeigt den Text in der Effort-Zeile
+  und markiert die Felder der bearbeiteten Räume gelb (wie der alte
+  C#-FormDebugger). /api/stop bricht ab: Merge/Scan lassen den Raum
+  unverändert, die Dominanz wendet bereits Bewiesenes an.
 - **M5 - Automerge**: Aufwands-Schätzung + Kachel-Pattern wie im C#-FormDebugger,
   Abbruchkriterien, jederzeit stoppbar; Effort-Verlauf sichtbar.
 - **M6 - Path-Mapping** (neu, gab es im C# nicht; bewusst vor dem Solver):

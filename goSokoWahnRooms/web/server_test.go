@@ -1,6 +1,7 @@
 package web
 
 import (
+	"time"
 	"encoding/json"
 	"net/http/httptest"
 	"strings"
@@ -266,17 +267,35 @@ func post(t *testing.T, s *Server, path, body string, wantStatus int, out any) {
 	}
 }
 
+// wartet, bis der laufende Hintergrund-Job fertig ist, und liefert dessen
+// Abschluss-Meldung (Merge/Optimize laufen asynchron)
+func waitIdle(t *testing.T, s *Server) progressJSON {
+	t.Helper()
+	for deadline := time.Now().Add(30 * time.Second); ; {
+		state, _ := s.progress.snapshot()
+		if !state.Busy {
+			if state.Error != "" {
+				t.Fatalf("hintergrund-job fehlgeschlagen: %s", state.Error)
+			}
+			return state
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("hintergrund-job wird nicht fertig")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
 func TestMerge(t *testing.T) {
 	s := testServer(t)
 	var result struct {
-		Merges int `json:"merges"`
-		Rooms  int `json:"rooms"`
+		Started bool `json:"started"`
 	}
 
 	// Räume 1+2 verschmelzen (Kistenfeld + freies Feld)
 	post(t, s, "/api/merge", `{"rooms":[1,2]}`, 200, &result)
-	if result.Merges != 1 || result.Rooms != 3 {
-		t.Errorf("Merge-Ergebnis falsch: %+v", result)
+	if state := waitIdle(t, s); state.Result != "Merge: 1 Merges, 3 Räume übrig" {
+		t.Errorf("Merge-Ergebnis falsch: %+v", state)
 	}
 
 	// die Karte muss den neuen Raum zeigen (Felder 1 und 2 im selben Raum)
@@ -290,8 +309,8 @@ func TestMerge(t *testing.T) {
 
 	// nicht verbundene Auswahl: kein Merge, kein Fehler
 	post(t, s, "/api/merge", `{"rooms":[0,2]}`, 200, &result)
-	if result.Merges != 0 {
-		t.Errorf("unverbundene Auswahl darf nicht mergen: %+v", result)
+	if state := waitIdle(t, s); state.Result != "Merge: 0 Merges, 3 Räume übrig" {
+		t.Errorf("unverbundene Auswahl darf nicht mergen: %+v", state)
 	}
 
 	// Fehlerfälle
@@ -303,10 +322,11 @@ func TestMerge(t *testing.T) {
 func TestOptimize(t *testing.T) {
 	s := testServer(t)
 	var result struct {
-		Removed uint64 `json:"removed"`
+		Started bool `json:"started"`
 	}
 	// Scan über alle Räume des Mini-Levels: muss sauber durchlaufen
 	post(t, s, "/api/optimize", `{"rooms":[0,1,2,3]}`, 200, &result)
+	waitIdle(t, s)
 	get(t, s, "/api/summary", 200, nil)
 
 	// Fehlerfälle

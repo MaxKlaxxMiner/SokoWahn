@@ -9,13 +9,17 @@ import (
 
 // Regressionstest für Merge + Deadlock-Scan zusammen: die ersten 20 Räume des
 // Vanilla-Levels werden gemergt, der Scan im MergeRooms-Gating läuft mit.
-// Kennzahlen eingefroren am 2026-08-17, seit der Selbes-Portal-Regel: 5 Scans
-// entfernen zusammen 1176 Varianten, Effort sinkt von 6,5e40 auf 7,8e30.
+// Kennzahlen eingefroren am 2026-08-17, seit der Selbes-Portal-Regel: das
+// Endergebnis (18 Merges, 38 Räume, 211/7867, Effort 7,8e30) ist stabil.
+// Seit der effort-sortierten Merge-Reihenfolge (2026-08-19, wie das
+// C#-Original: kleinstes Varianten-Produkt zuerst) braucht der Weg dahin
+// nur noch 2 statt 5 Scan-Eingriffe - die bessere Reihenfolge erzeugt
+// weniger tote Zwischen-Varianten.
 func TestMergeWithDeadlockScanVanilla(t *testing.T) {
 	n := buildNetwork(t, maps.MapVanilla)
 
 	removedMsgs := 0
-	info := func(msg string) bool {
+	info := func(msg string, _ []*Room) bool {
 		if strings.Contains(msg, "remove") {
 			removedMsgs++
 		}
@@ -32,8 +36,8 @@ func TestMergeWithDeadlockScanVanilla(t *testing.T) {
 	if merges != 18 || len(n.Rooms) != 38 {
 		t.Errorf("merges: got %d (%d rooms), want 18 (38 rooms)", merges, len(n.Rooms))
 	}
-	if removedMsgs != 5 {
-		t.Errorf("scan removals: got %d messages, want 5", removedMsgs)
+	if removedMsgs != 2 {
+		t.Errorf("scan removals: got %d messages, want 2", removedMsgs)
 	}
 
 	states, variants := uint64(0), uint64(0)
@@ -85,7 +89,7 @@ func TestDeadlockScanAbort(t *testing.T) {
 	n := buildNetwork(t, mapTwoBox)
 	room := n.Rooms[1]
 	statesBefore, variantsBefore := room.States.Count(), room.Variants.Count()
-	if _, ok := n.DeadlockScan(room, func(string) bool { return false }); ok {
+	if _, ok := n.DeadlockScan(room, func(string, []*Room) bool { return false }); ok {
 		t.Error("scan not aborted")
 	}
 	if room.States.Count() != statesBefore || room.Variants.Count() != variantsBefore {

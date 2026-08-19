@@ -23,7 +23,7 @@ import "fmt"
 //
 // info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab,
 // der Raum bleibt dann unverändert (die Umbauten passieren erst ganz am Ende).
-func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint64, ok bool) {
+func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, ok bool) {
 	variantCount := room.Variants.Count()
 	if variantCount == 0 {
 		return 0, true
@@ -45,7 +45,7 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 
 	// ---------- Vorwärts-Scan: von der Startsituation erreichbare Varianten ----------
 	{
-		if info != nil && !info(fmt.Sprintf("deadlock scan room %d: forward", room.Index)) {
+		if info != nil && !info(fmt.Sprintf("deadlock scan room %d: forward", room.Index), []*Room{room}) {
 			return 0, false
 		}
 		// Zustände, die durch von außen reingeschobene Kisten entstehen können
@@ -145,7 +145,7 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 
 	// ---------- Rückwärts-Scan: Varianten, die zum lokalen Ende führen können ----------
 	{
-		if info != nil && !info(fmt.Sprintf("deadlock scan room %d: backward", room.Index)) {
+		if info != nil && !info(fmt.Sprintf("deadlock scan room %d: backward", room.Index), []*Room{room}) {
 			return 0, false
 		}
 		// Pull-Swaps: Umkehrung der BoxSwaps je Portal (Kiste wieder rausziehen)
@@ -253,7 +253,7 @@ func (n *Network) DeadlockScan(room *Room, info func(string) bool) (removed uint
 	if removed == 0 {
 		return 0, true
 	}
-	if info != nil && !info(fmt.Sprintf("deadlock scan room %d: remove %d variants", room.Index, removed)) {
+	if info != nil && !info(fmt.Sprintf("deadlock scan room %d: remove %d variants", room.Index, removed), []*Room{room}) {
 		return 0, false
 	}
 	renewVariants(room, used)
@@ -308,22 +308,23 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 // einer Raum-Auswahl aus und validiert danach das Netzwerk; liefert die Zahl
 // der entfernten Varianten. Reihenfolge: erst der billige Scan (räumt
 // Unerreichbares weg), dann die Dominanz auf dem Rest.
-func (n *Network) OptimizeRooms(indices []uint32, info func(string) bool) (removed uint64, err error) {
+func (n *Network) OptimizeRooms(indices []uint32, info ProgressFunc) (removed uint64, err error) {
 	for _, idx := range indices {
 		if int(idx) >= len(n.Rooms) {
 			return removed, fmt.Errorf("optimize: invalid room index %d", idx)
 		}
 		count, scanOK := n.DeadlockScan(n.Rooms[idx], info)
-		if !scanOK {
-			return removed, nil // abgebrochen, restliche Räume bleiben unangetastet
-		}
 		removed += count
-		count, scanOK = n.DominanceReduce(n.Rooms[idx], info)
-		if !scanOK {
-			return removed, nil
+		if scanOK {
+			count, scanOK = n.DominanceReduce(n.Rooms[idx], info)
+			removed += count
 		}
-		removed += count
+		if !scanOK {
+			break // abgebrochen: restliche Räume bleiben unangetastet
+		}
 	}
+	// auch nach einem Abbruch validieren - bereits angewandte Streichungen
+	// (Dominanz wendet Bewiesenes trotz Stop an) müssen konsistent sein
 	if err := n.Validate(true); err != nil {
 		return removed, fmt.Errorf("validate after optimize: %w", err)
 	}

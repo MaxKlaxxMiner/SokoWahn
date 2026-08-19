@@ -20,10 +20,11 @@ var staticFS embed.FS
 // Das Netzwerk ist austauschbar (SetNetwork), damit die GUI später neue
 // Levels laden kann, ohne den Server neu zu starten.
 type Server struct {
-	mu      sync.RWMutex
-	network *rooms.Network
-	title   string
-	mux     *http.ServeMux
+	mu       sync.RWMutex
+	network  *rooms.Network
+	title    string
+	mux      *http.ServeMux
+	progress progressState
 }
 
 func New(network *rooms.Network, title string) *Server {
@@ -37,8 +38,13 @@ func New(network *rooms.Network, title string) *Server {
 	s.mux.HandleFunc("GET /api/rooms/{index}", s.read(s.handleRoom))
 	s.mux.HandleFunc("GET /api/rooms/{index}/states", s.read(s.handleStates))
 	s.mux.HandleFunc("GET /api/rooms/{index}/variants", s.read(s.handleVariants))
-	s.mux.HandleFunc("POST /api/merge", s.write(s.handleMerge))
-	s.mux.HandleFunc("POST /api/optimize", s.write(s.handleOptimize))
+	// Merge/Optimize starten Hintergrund-Jobs (die Goroutine nimmt selbst die
+	// Schreibsperre); Progress/Stop laufen bewusst OHNE die Netzwerk-Sperren,
+	// damit sie während der Rechnung erreichbar bleiben
+	s.mux.HandleFunc("POST /api/merge", s.handleMerge)
+	s.mux.HandleFunc("POST /api/optimize", s.handleOptimize)
+	s.mux.HandleFunc("GET /api/progress", s.handleProgress)
+	s.mux.HandleFunc("POST /api/stop", s.handleStop)
 	s.mux.HandleFunc("POST /api/validate", s.read(s.handleValidate))
 
 	static, err := fs.Sub(staticFS, "static")

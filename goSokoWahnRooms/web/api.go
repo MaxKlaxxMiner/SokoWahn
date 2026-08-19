@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -174,6 +175,19 @@ func roomToJSON(room *rooms.Room) roomJSON {
 	}
 }
 
+// prüft Raum-Indizes synchron unter der Lesesperre (die Jobs selbst laufen
+// asynchron, aber offensichtliche Eingabefehler sollen sofort ein 400 geben)
+func (s *Server) validRooms(indices []uint32) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, idx := range indices {
+		if int(idx) >= len(s.network.Rooms) {
+			return false
+		}
+	}
+	return true
+}
+
 // ---------- Handler ----------
 
 func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
@@ -302,9 +316,9 @@ func (s *Server) handleStates(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, pageJSON{Total: total, Offset: offset, Items: items})
 }
 
-// verschmilzt die übergebene Raum-Auswahl (M3): solange zwei ausgewählte Räume
-// direkt verbunden sind, wird paarweise gemergt; läuft synchron unter der
-// Schreibsperre und validiert nach jedem Merge
+// verschmilzt die übergebene Raum-Auswahl (M3) als Hintergrund-Job: solange
+// zwei ausgewählte Räume direkt verbunden sind, wird paarweise gemergt (mit
+// Validate nach jedem Merge); Fortschritt und Ergebnis kommen über /api/progress
 func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Rooms []uint32 `json:"rooms"`
@@ -313,29 +327,34 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
 		return
 	}
-	n, _ := s.snapshot()
 	if len(req.Rooms) < 2 {
 		writeError(w, http.StatusBadRequest, "mindestens zwei Räume auswählen")
 		return
 	}
-	for _, idx := range req.Rooms {
-		if int(idx) >= len(n.Rooms) {
-			writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
-			return
-		}
-	}
-	merges, err := n.MergeSelection(req.Rooms, nil)
-	if err != nil {
-		// Merge- oder Validate-Fehler: Zustand des Netzwerks ist verdächtig,
-		// der Fehler muss sichtbar werden (Konzept: Validate nach jedem Schritt)
-		writeError(w, http.StatusInternalServerError, err.Error())
+	if !s.validRooms(req.Rooms) {
+		writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
 		return
 	}
-	writeJSON(w, map[string]any{"merges": merges, "rooms": len(n.Rooms)})
+	started := s.runJob("merge...", func(info rooms.ProgressFunc) (string, error) {
+		n, _ := s.snapshot()
+		merges, err := n.MergeSelection(req.Rooms, info)
+		if err != nil {
+			// Merge- oder Validate-Fehler: Zustand des Netzwerks ist verdächtig,
+			// der Fehler muss sichtbar werden (Konzept: Validate nach jedem Schritt)
+			return "", err
+		}
+		return fmt.Sprintf("Merge: %d Merges, %d Räume übrig", merges, len(n.Rooms)), nil
+	})
+	if !started {
+		writeError(w, http.StatusConflict, "es läuft bereits eine Rechnung")
+		return
+	}
+	writeJSON(w, map[string]any{"started": true})
 }
 
-// führt den Deadlock-Scan (M4) auf der übergebenen Raum-Auswahl aus;
-// läuft synchron unter der Schreibsperre und validiert danach
+// führt Deadlock-Scan (M4) und Dominanzsuche (M4b) auf der übergebenen
+// Raum-Auswahl als Hintergrund-Job aus; Fortschritt über /api/progress,
+// Abbruch über /api/stop (bereits Bewiesenes bleibt angewandt)
 func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Rooms []uint32 `json:"rooms"`
@@ -344,23 +363,27 @@ func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
 		return
 	}
-	n, _ := s.snapshot()
 	if len(req.Rooms) == 0 {
 		writeError(w, http.StatusBadRequest, "mindestens einen Raum auswählen")
 		return
 	}
-	for _, idx := range req.Rooms {
-		if int(idx) >= len(n.Rooms) {
-			writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
-			return
-		}
-	}
-	removed, err := n.OptimizeRooms(req.Rooms, nil)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	if !s.validRooms(req.Rooms) {
+		writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
 		return
 	}
-	writeJSON(w, map[string]any{"removed": removed})
+	started := s.runJob("optimize...", func(info rooms.ProgressFunc) (string, error) {
+		n, _ := s.snapshot()
+		removed, err := n.OptimizeRooms(req.Rooms, info)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Optimize: %d Varianten entfernt", removed), nil
+	})
+	if !started {
+		writeError(w, http.StatusConflict, "es läuft bereits eine Rechnung")
+		return
+	}
+	writeJSON(w, map[string]any{"started": true})
 }
 
 // prüft die Konsistenz des Netzwerks auf Anforderung (Validate-Button);

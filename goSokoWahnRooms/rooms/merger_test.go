@@ -175,7 +175,7 @@ func TestMergeOrderIndependence(t *testing.T) {
 func TestMergeAbort(t *testing.T) {
 	n := buildNetwork(t, mapTwoBox)
 	roomsBefore := len(n.Rooms)
-	merged, err := n.MergeRooms(n.Rooms[0], n.Rooms[1], func(string) bool { return false })
+	merged, err := n.MergeRooms(n.Rooms[0], n.Rooms[1], func(string, []*Room) bool { return false })
 	if err != nil {
 		t.Fatal("merge:", err)
 	}

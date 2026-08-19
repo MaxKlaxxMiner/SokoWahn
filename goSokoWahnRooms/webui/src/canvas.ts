@@ -61,6 +61,7 @@ export class FieldCanvas {
   private resizeObserver: ResizeObserver | null = null;
 
   private selection = new Set<number>(); // ausgewählte Räume (Einfüge-Reihenfolge bleibt erhalten)
+  private busyFields: number[] = []; // Wpos der gerade berechneten Räume (gelb)
   private active = -1; // aktiver Raum (zuletzt hinzugefügt) - die Listen folgen ihm
   private dragMode: 'add' | 'remove' | null = null; // laufende Maus-Geste
   private portals: Portal[] = []; // eingehende Portale des aktiven Raums
@@ -343,19 +344,20 @@ export class FieldCanvas {
       ctx.strokeRect((cell.x + 0.5 - GOAL_SIZE / 2) * c, (cell.y + 0.5 - GOAL_SIZE / 2) * c, GOAL_SIZE * c, GOAL_SIZE * c);
     }
 
-    // --- Raum-Konturen: alle dunkelblau, die Auswahl leuchtet, der aktive
-    // Raum obenauf (gelb, sobald ein Zustand/eine Variante gewählt ist) ---
+    // --- gelbe Markierung der gerade berechneten Räume (Fortschritts-Anzeige) ---
+    if (this.busyFields.length > 0) {
+      ctx.fillStyle = 'rgba(255, 220, 0, 0.35)';
+      for (const wpos of this.busyFields) {
+        const idx = this.wposToIdx(wpos);
+        ctx.fillRect((idx % f.width) * c, Math.floor(idx / f.width) * c, c, c);
+      }
+    }
+
+    // --- Basis-Konturen aller Räume (dunkelblau, unter den Figuren; die
+    // Auswahl-Konturen kommen NACH den Kisten, damit sie sichtbar bleiben) ---
     for (const [room, fields] of this.roomFields) {
       if (this.selection.has(room)) continue; // Auswahl kommt zuletzt (obenauf)
       this.drawChain(fields, COLOR_ROOM_BACK);
-    }
-    for (const room of this.selection) {
-      if (room === this.active) continue;
-      this.drawChain(this.roomFields.get(room) ?? [], COLOR_ROOM_SEL);
-    }
-    if (this.active >= 0) {
-      const color = this.stateBoxes !== null || this.variant ? COLOR_ROOM_STATE : COLOR_ROOM_ACTIVE;
-      this.drawChain(this.roomFields.get(this.active) ?? [], color);
     }
 
     // --- Kisten und Spieler (Startaufstellung, Zustand oder Animations-Schritt) ---
@@ -381,6 +383,17 @@ export class FieldCanvas {
 
     for (const idx of boxes) this.drawBox(idx);
     if (player >= 0) this.drawPlayer(player);
+
+    // --- Auswahl- und Aktiv-Konturen über den Figuren (der blaue Marker
+    // bleibt sichtbar, auch wenn eine Kiste auf einem Randfeld steht) ---
+    for (const room of this.selection) {
+      if (room === this.active) continue;
+      this.drawChain(this.roomFields.get(room) ?? [], COLOR_ROOM_SEL);
+    }
+    if (this.active >= 0) {
+      const color = this.stateBoxes !== null || this.variant ? COLOR_ROOM_STATE : COLOR_ROOM_ACTIVE;
+      this.drawChain(this.roomFields.get(this.active) ?? [], color);
+    }
 
     if (this.variant) {
       // bei gewählter Variante: grüne Ein-/Austritts-Markierungen und
@@ -428,6 +441,12 @@ export class FieldCanvas {
     ctx.strokeStyle = 'rgba(0,0,0,0.6)';
     ctx.lineWidth = 1;
     ctx.strokeRect(ex - s / 2, ey - s / 2, s, s);
+  }
+
+  // gelbe Fortschritts-Markierung setzen (Wpos-Liste der bearbeiteten Räume)
+  setBusyFields(fields: number[]): void {
+    this.busyFields = fields;
+    this.draw();
   }
 
   wposToIdx(wpos: number): number {

@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"fmt"
+	"math"
 	"slices"
 
 	"goSokoWahnRooms/crc64"
@@ -170,7 +171,7 @@ func (m *Merger) Step2StartVariants() {
 // kombinierter Zustand) läuft eine Best-Moves-Suche über beide Teilräume.
 // info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab
 // (das Netzwerk ist bis hier noch unverändert).
-func (m *Merger) Step3PortalVariants(info func(string) bool) bool {
+func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 	newStateCount := m.NewRoom.States.Count()
 	maxBoxes := int(m.NewRoom.MaxBoxes)
 
@@ -205,7 +206,7 @@ func (m *Merger) Step3PortalVariants(info func(string) bool) bool {
 		// --- Varianten je kombiniertem Zustand ---
 		for state := uint64(0); state < newStateCount; state++ {
 			if info != nil && state&4095 == 0 {
-				if !info(fmt.Sprintf("portal %d/%d - state %d/%d", pi+1, len(m.NewRoom.Incoming), state, newStateCount)) {
+				if !info(fmt.Sprintf("merge: portal %d/%d - state %d/%d - %d varianten", pi+1, len(m.NewRoom.Incoming), state, newStateCount, m.NewRoom.Variants.Count()), []*Room{m.room1, m.room2}) {
 					return false
 				}
 			}
@@ -332,12 +333,12 @@ func (t *mergeTask) cost() mergeCost {
 // Ergebnis auf, sofern es die beste bekannte Variante ihres Schlüssels ist
 func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
 	t := mergeTask{
-		state1: prev.state1,
-		state2: prev.state2,
-		moves:  prev.moves + v.Moves,
-		pushes: prev.pushes + v.Pushes,
-		path:   prev.path + v.Path,
-		side1:  side1,
+		state1:  prev.state1,
+		state2:  prev.state2,
+		moves:   prev.moves + v.Moves,
+		pushes:  prev.pushes + v.Pushes,
+		path:    prev.path + v.Path,
+		side1:   side1,
 		variant: v,
 	}
 	if !s.m.resolveBoxes(&t, prev.boxes, v, side1) {
@@ -575,7 +576,7 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 // info (optional) bekommt Fortschritts-Meldungen; liefert der Callback false,
 // wird abgebrochen (Rückgabe nil, nil) - das Netzwerk bleibt dann unverändert,
 // weil erst Schritt 4 die Verlinkungen anfasst.
-func (n *Network) MergeRooms(room1, room2 *Room, info func(string) bool) (*Room, error) {
+func (n *Network) MergeRooms(room1, room2 *Room, info ProgressFunc) (*Room, error) {
 	m, err := NewMerger(n, room1, room2)
 	if err != nil {
 		return nil, err
@@ -606,7 +607,7 @@ func (n *Network) MergeRooms(room1, room2 *Room, info func(string) bool) (*Room,
 // MergeSelection verschmilzt eine Raum-Auswahl: solange zwei ausgewählte Räume
 // direkt verbunden sind, wird (in Index-Reihenfolge) paarweise gemergt. Nicht
 // verbundene Reste bleiben stehen. Liefert die Anzahl der ausgeführten Merges.
-func (n *Network) MergeSelection(indices []uint32, info func(string) bool) (int, error) {
+func (n *Network) MergeSelection(indices []uint32, info ProgressFunc) (int, error) {
 	selected := map[*Room]bool{}
 	for _, idx := range indices {
 		if int(idx) >= len(n.Rooms) {
@@ -617,19 +618,24 @@ func (n *Network) MergeSelection(indices []uint32, info func(string) bool) (int,
 
 	merges := 0
 	for {
+		// wie das C#-Original: das verbundene Paar mit dem kleinsten Effort
+		// (Produkt der Variantenzahlen) zuerst - eine schlechte Reihenfolge
+		// lässt Zwischen-Räume explodieren, die der Auto-Scan nicht mehr
+		// einfangen kann (Gating). Gleichstand: kleinster Raum-Index gewinnt.
 		var a, b *Room
+		bestEffort := math.Inf(1)
 		for _, room := range n.Rooms {
 			if !selected[room] {
 				continue
 			}
 			for _, op := range room.Outgoing {
-				if selected[op.ToRoom] {
-					a, b = room, op.ToRoom
-					break
+				if !selected[op.ToRoom] || op.ToRoom.Index < room.Index {
+					continue // jedes Paar nur einmal betrachten
 				}
-			}
-			if a != nil {
-				break
+				effort := float64(room.Variants.Count()) * float64(op.ToRoom.Variants.Count())
+				if effort < bestEffort {
+					bestEffort, a, b = effort, room, op.ToRoom
+				}
 			}
 		}
 		if a == nil {
