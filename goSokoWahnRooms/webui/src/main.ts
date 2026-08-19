@@ -367,6 +367,10 @@ async function boot(): Promise<void> {
 
   canvas = new FieldCanvas($('field') as HTMLCanvasElement);
   canvas.onSelectionChange = (selection, active) => void handleSelection(selection, active, false);
+  // Feldnummer (Wpos, stabile Raum-Kennung) unterm Mauszeiger anzeigen
+  canvas.onHover = (wpos, room) => {
+    $('hoverInfo').innerHTML = wpos >= 0 ? `Feld ${wpos} - Room ${room + 1}` : '&nbsp;';
+  };
   canvas.setData(field, map.rooms);
 
   roomsList = new VirtualList<RoomSummary>(

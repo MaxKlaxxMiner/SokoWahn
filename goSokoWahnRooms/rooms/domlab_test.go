@@ -97,7 +97,9 @@ func enumerateUsages(room *Room, maxEvents int, allowed func(id uint64) bool) ma
 			nc.vars = append(slices.Clone(c.vars), id)
 			exported := len(v.BoxPortals) > 0
 			if exported {
-				nc.sig += "X" // exportlose Besuche bleiben außen unsichtbar
+				nc.sig += "X" // exportlose Besuche bleiben außen unsichtbar...
+			} else if len(c.sig) == 0 && len(c.vars) == 0 {
+				nc.sig += "B" // ...außer als ALLERERSTE Aktion (siehe usagegraph.go)
 			}
 			nc.lastVisit, nc.lastExported = true, exported
 			if v.PlayerPortal == NoPortal {

@@ -170,9 +170,19 @@ func reduceVariants(room *Room, maxConfigs int, budget time.Duration) ReduceResu
 		panic("reduceVariants: nur Ein-Portal-Räume ohne Startvarianten")
 	}
 
+	full := buildUsageGraph(room, nil)
+	if full.start < 0 {
+		// Der Raum hat im Nutzungs-Modell KEINE akzeptierende Nutzung (der
+		// gelöste Zustand ist unerreichbar). Der Vergleich würde dann jede
+		// Streichung als "kostengleich leer" durchwinken und den Raum
+		// komplett leeren - stattdessen: Finger weg und melden. Entweder ist
+		// das Level ab hier wirklich unlösbar, oder das Modell hat ein Loch;
+		// beides muss sichtbar bleiben statt stillschweigend aufgeräumt.
+		return ReduceResult{Detail: "keine akzeptierende Nutzung - Raum unangetastet (Level ab hier unlösbar?)"}
+	}
 	r := &reducer{
 		room:       room,
-		full:       buildUsageGraph(room, nil),
+		full:       full,
 		removed:    map[uint64]bool{},
 		maxConfigs: maxConfigs,
 	}

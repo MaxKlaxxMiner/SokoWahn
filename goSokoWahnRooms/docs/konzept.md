@@ -297,7 +297,22 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Export), ! (End-Besuch); exportlose Besuche sind außenweltlich TRANSPARENT
   (Theorem von Max: jedes Außen-Ereignis findet am Portal statt, ein exportloser
   Besuch endet wo er beginnt und ist dort kostenlos anhängbar - Bedienungen mit
-  verschieden vielen solchen Besuchen sind dieselbe Bedienung). Ergebnis für die
+  verschieden vielen solchen Besuchen sind dieselbe Bedienung).
+  WICHTIGE PRÄZISIERUNG (Bug-Repro Level 5005, 2026-08-19): die Transparenz
+  gilt NICHT für einen exportlosen Besuch als allererste Aktion einer Nutzung.
+  Das Theorem stützt sich darauf, dass der Spieler beim benachbarten sichtbaren
+  Ereignis ohnehin am Portal steht - vor dem allerersten Ereignis war er dort
+  aber nachweislich noch nie, und das erste Ereignis selbst kann die Zufahrt
+  versperren (5005: Kiste (2,10) muss als Erstes durch den Ein-Feld-Schacht in
+  den unteren Raum eingeschoben werden; ein Besuch VOR diesem Einschub ist
+  geometrisch unmöglich). Ein transparentes B an Position 0 ließ die Dominanz
+  "EXXX" durch die real unspielbare Reihenfolge "[B]EXXX" ersetzen - sie
+  entfernte den Einschub-Zweig des Start-Zustands, removeUnusedStates riss den
+  BoxSwap-Eintrag mit, das Level war tot. Fix: ein exportloser Besuch als
+  allererste Aktion ist das eigene sichtbare Zeichen "B"; alle späteren bleiben
+  transparent. Regressions-Tests: rooms/repro5005_test.go (Merge der Region
+  unterhalb Feld (2,12) mit/ohne Zwischen-Optimize; der Start-Einschub muss
+  die Dominanz überleben). Die 202er-Ergebnisse blieben unverändert. Ergebnis für die
   Kammer (Horizont 11 sichtbare Ereignisse): 5 essenzielle Varianten (rein-raus-
   Garage, parken-auf-26 + Kombi-Abschluss = der einmalige 2-Züge-Trick, direkt-
   ins-Ziel mit/ohne Spielende), 10 austauschbare (nur in Gleichstands-
@@ -417,4 +432,8 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
 5. Levelquellen: maps aus Brute plus Mini-Levels für Handverifikation;
    **levelcache mitbenutzen und Laden per URL erlauben** (game-sokoban.com wie
    in Brute). Für Rooms besonders geeignete Test-Level (IDs, nach Schwierigkeit,
-   leichteste zuerst): **202, 5018, 37708, 38013**.
+   leichteste zuerst): **202, 5018, 5005, 37708, 38013** (5005 nachträglich
+   eingereiht, 2026-08-19: Single-Portal-Kammern wie 5018, aber verschachtelt,
+   für Brute bislang unlösbar - der Ernstfall; Achtung, der Spieler startet
+   dort im Ziel-Trakt, dessen Startvarianten die Ein-Portal-Dominanz noch
+   nicht modelliert).

@@ -33,7 +33,7 @@ func main() {
 	noBrowser := flag.Bool("nobrowser", false, "Browser nicht automatisch öffnen")
 	flag.Parse()
 
-	sokoMap, title := maps.Map5018, "Level 5018: aenigma - soko 47" // aktuelles Arbeits-Level (202 weiter per Argument)
+	sokoMap, title := maps.Map5005, "Level 5005: aenigma - soko 18" // aktuelles Arbeits-Level (202/5018/37708 weiter per Argument)
 	var webInfo *weblevel.Info
 	if arg := flag.Arg(0); arg != "" {
 		if weblevel.IsWebInput(arg) {

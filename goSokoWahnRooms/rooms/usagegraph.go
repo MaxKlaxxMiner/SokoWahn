@@ -53,10 +53,26 @@ func (c usageCost) String() string {
 }
 
 const (
-	usageInvisible = byte(0)   // exportloser Besuch (B), außen unsichtbar
-	usageInsert    = byte('E') // Einschub durch die Außenwelt
-	usageExport    = byte('X') // Besuch mit Kisten-Export
+	usageInvisible  = byte(0)   // exportloser Besuch (B), außen unsichtbar
+	usageInsert     = byte('E') // Einschub durch die Außenwelt
+	usageExport     = byte('X') // Besuch mit Kisten-Export
+	usageFirstVisit = byte('B') // exportloser Besuch als ALLERERSTE Aktion (sichtbar!)
 )
+
+// Warum 'B' am Wortanfang sichtbar sein MUSS (Repro 5005, 2026-08-19): die
+// B-Transparenz (Max' Theorem) beruht darauf, dass der Spieler bei jedem
+// sichtbaren Ereignis ohnehin am Portal steht - ein exportloser Besuch ist
+// dort kostenlos anhängbar. VOR dem allerersten Ereignis war der Spieler
+// aber noch nie nachweislich am Portal, und das erste Ereignis selbst kann
+// die Zufahrt verändern: schiebt die Außenwelt als Erstes eine Kiste durch
+// einen Ein-Feld-Schacht herein (Level 5005, Säule zur unteren Struktur),
+// kann der Spieler den Raum unmöglich VOR diesem Einschub betreten. Ein
+// transparentes B an Position 0 erlaubt dem Vergleich, "EXXX" durch die
+// real unspielbare Reihenfolge "[B]EXXX" zu bedienen - die Dominanz hielt
+// dadurch den Einschub-Zweig des Start-Zustands für entbehrlich und machte
+// das Level tot. Als sichtbares Zeichen kodiert 'B' die Anforderung
+// "Außenwelt liefert den Spieler VOR allem anderen" ins Wort; alle
+// späteren B bleiben transparent.
 
 const usageNoVariant = ^uint64(0) // Einschub-Kanten benutzen keine Variante
 
@@ -397,19 +413,23 @@ func (g *usageGraph) closeAndPack(ws *usageWorkspace) usageConfig {
 	return result
 }
 
-// Start-Konfiguration (Epsilon-abgeschlossen)
-func (g *usageGraph) startConfig(ws *usageWorkspace) usageConfig {
-	ws.reset(len(g.nodes))
-	ws.relax(g.start, usageCost{})
-	return g.closeAndPack(ws)
+// Start-Konfiguration: NUR der Startknoten, bewusst OHNE Epsilon-Abschluss
+// (ein exportloser Besuch als allererste Aktion ist das sichtbare Zeichen
+// 'B', siehe oben - danach sind B-Besuche wieder transparent)
+func (g *usageGraph) startConfig() usageConfig {
+	return usageConfig{{node: g.start}}
 }
 
-// ein sichtbares Zeichen konsumieren, inklusive Epsilon-Abschluss danach
+// ein sichtbares Zeichen konsumieren, inklusive Epsilon-Abschluss danach;
+// usageFirstVisit ('B') ist nur als erstes Zeichen eines Wortes zulässig
 func (g *usageGraph) stepClose(src usageConfig, label byte, ws *usageWorkspace) usageConfig {
 	ws.reset(len(g.nodes))
 	edges := g.insEdges
-	if label == usageExport {
+	switch label {
+	case usageExport:
 		edges = g.expEdges
+	case usageFirstVisit:
+		edges = g.epsEdges
 	}
 	for _, entry := range src {
 		for _, e := range edges[entry.node] {
@@ -417,6 +437,14 @@ func (g *usageGraph) stepClose(src usageConfig, label byte, ws *usageWorkspace) 
 		}
 	}
 	return g.closeAndPack(ws)
+}
+
+// die zulässigen sichtbaren Zeichen an einer Wort-Position
+func usageLabels(first bool) []byte {
+	if first {
+		return []byte{usageInsert, usageExport, usageFirstVisit}
+	}
+	return []byte{usageInsert, usageExport}
 }
 
 // Akzeptanzkosten einer Konfiguration je Terminal-Art:
@@ -480,7 +508,7 @@ func (g *usageGraph) signatures(maxEvents int) map[string]usageCost {
 		cfg  usageConfig
 	}
 	ws := &usageWorkspace{}
-	queue := []item{{word: "", cfg: g.startConfig(ws)}}
+	queue := []item{{word: "", cfg: g.startConfig()}}
 
 	for len(queue) > 0 {
 		it := queue[0]
@@ -498,7 +526,7 @@ func (g *usageGraph) signatures(maxEvents int) map[string]usageCost {
 		if len(it.word) >= maxEvents {
 			continue
 		}
-		for _, label := range []byte{usageInsert, usageExport} {
+		for _, label := range usageLabels(it.word == "") {
 			next := g.stepClose(it.cfg, label, ws)
 			if len(next) == 0 {
 				continue
@@ -609,7 +637,7 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 	wsFull, wsReduced := &usageWorkspace{}, &usageWorkspace{}
 	var buf []byte
 	seen := map[string]bool{}
-	queue := []item{{full: full.startConfig(wsFull), reduced: reduced.startConfig(wsReduced)}}
+	queue := []item{{full: full.startConfig(), reduced: reduced.startConfig()}}
 	queue[0].base = usageNormalize(queue[0].full, queue[0].reduced)
 	fp, buf := usageFingerprint(queue[0].full, queue[0].reduced, buf)
 	seen[fp] = true
@@ -644,8 +672,8 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int) (usageVerdict
 			}
 		}
 
-		// Übergänge für beide sichtbaren Zeichen
-		for _, label := range []byte{usageInsert, usageExport} {
+		// Übergänge für die zulässigen sichtbaren Zeichen
+		for _, label := range usageLabels(it.word == "") {
 			nextFull := full.stepClose(it.full, label, wsFull)
 			nextReduced := reduced.stepClose(it.reduced, label, wsReduced)
 			if len(nextFull) == 0 && len(nextReduced) == 0 {

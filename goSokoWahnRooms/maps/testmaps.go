@@ -38,6 +38,56 @@ const Map5018 = `
       #############
 `
 
+// Level 5005 von game-sokoban.com (aenigma "soko 18", 628 Moves optimal) -
+// Single-Portal-Kammern wie bei 5018, aber als verschachtelte Kette; für
+// Brute bislang UNLÖSBAR (zu groß) - der Ernstfall für das Rooms-Konzept.
+// Achtung: der Spieler startet im Ziel-Trakt (das "+" oben links)
+const Map5005 = `
+####################
+#+.... #   #   #   #
+#...   $   $   $   #
+#...   #   #   #   #
+#.   ############$##
+#.  ##  #  #  ##   #
+##$##   $ $#$      #
+#   #   #  $  ##   #
+#   #####     ######
+#   #   ###$###
+##$## $ ##   #
+ # ##   ##   #
+ # #  ####   #
+ #     #######
+ # #     #
+ # ##$## #
+ #    #  #
+ #### # ##
+    #   #
+    #####
+`
+
+// Level 37708 von game-sokoban.com (ABHT 01 "level 46", 1605 Moves optimal) -
+// drittes Rooms-Test-Level: keine Kammer-Struktur mehr, sondern eine
+// diagonale Ziel-Treppe oben links (Kisten teils schon auf Zielen) und ein
+// dichtes Kisten-Feld darunter
+const Map37708 = `
+        ##########
+       ##   #    #
+      ##....$ #$ #
+     ##..*.#     #
+ #####..*.##  ####
+ #  #..*.#       #
+ # $#.*.#   #  # #
+ #  ##+###       #
+## $ $ $ #  #    #
+#  # $ $ # ###  ##
+#   $ $$ #  $    #
+#  #$# $ #       #
+##   $ # ####    #
+ ####  $ #  ######
+    #    #
+    ######
+`
+
 const MapVanilla = `
 		#####
 		#   #

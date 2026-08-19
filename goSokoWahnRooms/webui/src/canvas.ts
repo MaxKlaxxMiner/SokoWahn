@@ -75,6 +75,8 @@ export class FieldCanvas {
 
   // Auswahl geändert: aktuelle Auswahl (Einfüge-Reihenfolge) + aktiver Raum (-1 = keiner)
   onSelectionChange: ((selection: number[], active: number) => void) | null = null;
+  // Maus über einem Feld: (wpos, raumIndex), beide -1 = Wand/außerhalb
+  onHover: ((wpos: number, room: number) => void) | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -91,19 +93,27 @@ export class FieldCanvas {
     });
     canvas.addEventListener('mousemove', ev => {
       if (this.dragMode) this.applyDrag(this.roomAt(ev));
+      const wpos = this.wposAt(ev);
+      this.onHover?.(wpos, wpos >= 0 ? this.roomOf[wpos] : -1);
     });
+    canvas.addEventListener('mouseleave', () => this.onHover?.(-1, -1));
     window.addEventListener('mouseup', () => (this.dragMode = null));
     canvas.addEventListener('contextmenu', ev => ev.preventDefault());
   }
 
-  // Raum unter dem Mauszeiger (-1 = Wand/außerhalb)
-  private roomAt(ev: MouseEvent): number {
+  // Feld (Wpos) unter dem Mauszeiger (-1 = Wand/außerhalb)
+  private wposAt(ev: MouseEvent): number {
     if (!this.field || this.cell <= 0) return -1;
     const rect = this.canvas.getBoundingClientRect();
     const x = Math.floor((ev.clientX - rect.left - this.ox) / this.cell);
     const y = Math.floor((ev.clientY - rect.top - this.oy) / this.cell);
     if (x < 0 || y < 0 || x >= this.field.width || y >= this.field.height) return -1;
-    const wpos = this.gridWpos[y * this.field.width + x];
+    return this.gridWpos[y * this.field.width + x];
+  }
+
+  // Raum unter dem Mauszeiger (-1 = Wand/außerhalb)
+  private roomAt(ev: MouseEvent): number {
+    const wpos = this.wposAt(ev);
     return wpos >= 0 ? this.roomOf[wpos] : -1;
   }
 
