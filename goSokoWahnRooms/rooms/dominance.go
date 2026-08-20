@@ -104,6 +104,13 @@ func (r *reducer) compareTick(situations int) bool {
 	return !r.aborted
 }
 
+// der Haken für lange Graph-Aufbauten (Mehr-Portal-Monster: zig Millionen
+// Varianten je Kandidaten-Graph); Abbruch bei Nutzer-Stop
+func (r *reducer) graphTick(phase string, done, total uint64) bool {
+	r.report(fmt.Sprintf(" - %s %s/%s", phase, tools.FormatInt(done), tools.FormatInt(total)))
+	return !r.aborted
+}
+
 // testet, ob die Varianten-Gruppe komplett entbehrlich ist; bei Gleichheit
 // bleibt sie dauerhaft gestrichen (und wird gebucht), sonst rollt sie zurück
 func (r *reducer) tryRemove(batch []uint64) usageVerdict {
@@ -113,7 +120,14 @@ func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 	for _, vid := range batch {
 		r.removed[vid] = true
 	}
-	candidate := buildUsageGraph(r.room, r.alpha, func(id uint64) bool { return !r.removed[id] })
+	candidate := buildUsageGraph(r.room, r.alpha, func(id uint64) bool { return !r.removed[id] }, r.graphTick)
+	if candidate == nil {
+		// Nutzer-Stop mitten im Graph-Aufbau: Gruppe konservativ behalten
+		for _, vid := range batch {
+			delete(r.removed, vid)
+		}
+		return usageUndecided
+	}
 	verdict, _ := compareUsageGraphs(r.full, candidate, r.env, r.maxConfigs, r.moveLimit, r.compareTick)
 	if verdict == usageEqual {
 		r.result.Removed = append(r.result.Removed, batch...)
@@ -213,8 +227,32 @@ func (r *reducer) shrinkStates(states []uint64) {
 // Anwenden, siehe DominanceReduce). Der Raum selbst wird NICHT verändert -
 // das Ergebnis beschreibt nur, welche Varianten entbehrlich sind.
 func reduceVariants(room *Room, env *usageEnv, maxConfigs int, moveLimit int64, harvest bool, info ProgressFunc) ReduceResult {
-	alpha := newUsageAlphabet(room)
-	full := buildUsageGraph(room, alpha, nil)
+	// Aufbau von Alphabet und vollem Graphen mit Fortschritt/Stop: bei
+	// Mehr-Portal-Monstern (zig Millionen Varianten) dauert allein das
+	// Minuten und stand früher stumm und unabbrechbar (Max, 2026-08-20)
+	buildThrottle := &progressThrottle{}
+	buildAborted := false
+	buildTick := func(phase string, done, total uint64) bool {
+		if buildAborted {
+			return false
+		}
+		if info == nil || !buildThrottle.due() {
+			return true
+		}
+		if !info(fmt.Sprintf("dominance room %d: %s %s/%s", room.Index, phase,
+			tools.FormatInt(done), tools.FormatInt(total)), []*Room{room}) {
+			buildAborted = true
+		}
+		return !buildAborted
+	}
+	alpha := newUsageAlphabet(room, buildTick)
+	if alpha == nil {
+		return ReduceResult{Aborted: true, Detail: "abbruch beim alphabet-aufbau"}
+	}
+	full := buildUsageGraph(room, alpha, nil, buildTick)
+	if full == nil {
+		return ReduceResult{Aborted: true, Detail: "abbruch beim graph-aufbau"}
+	}
 	if full.start < 0 {
 		// Der Raum hat im Nutzungs-Modell KEINE akzeptierende Nutzung (der
 		// gelöste Zustand ist unerreichbar). Der Vergleich würde dann jede
@@ -281,8 +319,18 @@ func reduceVariants(room *Room, env *usageEnv, maxConfigs int, moveLimit int64, 
 	}
 
 	// Abschluss-Beweis der Gesamtmenge (redundant zur Induktion der
-	// Einzelschritte, aber billig und ein guter Wächter)
-	final := buildUsageGraph(room, alpha, func(id uint64) bool { return !r.removed[id] })
+	// Einzelschritte, aber billig und ein guter Wächter); nach einem
+	// Nutzer-Stop entfällt er - nicht noch einmal den vollen Graphen bauen
+	if r.aborted {
+		result.Detail = "abbruch - abschluss-beweis übersprungen"
+		return result
+	}
+	final := buildUsageGraph(room, alpha, func(id uint64) bool { return !r.removed[id] }, r.graphTick)
+	if final == nil {
+		result.Aborted = true
+		result.Detail = "abbruch - abschluss-beweis übersprungen"
+		return result
+	}
 	verdict, detail := compareUsageGraphs(r.full, final, env, maxConfigs, moveLimit, r.compareTick)
 	if verdict == usageDiffers {
 		panic("reduceVariants: Abschluss-Beweis fehlgeschlagen: " + detail)

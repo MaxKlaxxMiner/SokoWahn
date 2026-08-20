@@ -2,11 +2,26 @@ package rooms
 
 import (
 	"math/big"
+	"os"
 	"testing"
 
 	"goSokoWahnRooms/maps"
 	"goSokoWahnRooms/soko"
 )
+
+// skipAnker überspringt die Anker-Langläufer (5018-Dominanz, Repro-5005,
+// 202-Solver: zusammen ~2 Minuten), sofern sie nicht ausdrücklich angefordert
+// sind - der alltägliche "go test ./..." bleibt damit in Sekunden (Max,
+// 2026-08-20: "das nimmt langsam überhand"). Vor Commits, die das
+// Suchverhalten ändern, gehört der Anker-Lauf dazu:
+//
+//	SOKO_ANKER=1 go test ./...
+func skipAnker(t *testing.T) {
+	t.Helper()
+	if os.Getenv("SOKO_ANKER") == "" {
+		t.Skip("anker-langläufer nur mit SOKO_ANKER=1")
+	}
+}
 
 // Mini-Level: ein einzelner Schub nach rechts auf das Zielfeld löst das Level
 const mapMini = `

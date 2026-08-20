@@ -125,9 +125,7 @@ func TestSolveBudget(t *testing.T) {
 // Level 202 frisch (1-Feld-Räume, ganz ohne Mergen): Optimum 83 Züge
 // (aenigma "soko 03", siehe maps.Map202) - der Anker des Solvers (~20 s)
 func TestSolve202Fresh(t *testing.T) {
-	if testing.Short() {
-		t.Skip("volle 202er-suche im short-modus übersprungen")
-	}
+	skipAnker(t)
 	n := buildNetwork(t, maps.Map202)
 	sol := runSolver(t, n, 0)
 	checkSolution(t, n, sol, 83)

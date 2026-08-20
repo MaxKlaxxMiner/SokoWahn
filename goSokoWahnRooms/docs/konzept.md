@@ -555,6 +555,13 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
 
 ## 8. Tests ohne C#-Orakel
 
+Zwei Stufen (Max, 2026-08-20 - "das nimmt langsam überhand"): der alltägliche
+`go test ./...` läuft in Sekunden; die Anker-LANGLÄUFER (5018-Dominanz ~70 s,
+Repro-5005 ~40 s, 202-Solver ~20 s) laufen nur auf Anforderung und gehören
+vor jeden Commit, der das Suchverhalten ändert:
+
+    SOKO_ANKER=1 go test ./...
+
 - **Validate** als Invarianten-Test nach jedem Schritt (Init, Merge, Optimize).
 - **Mini-Levels mit handverifizierten Zahlen**: Zustände/Varianten je Raum nach
   Init sind bei 1-Feld-Räumen von Hand nachrechenbar; als Regressionstests verankern.

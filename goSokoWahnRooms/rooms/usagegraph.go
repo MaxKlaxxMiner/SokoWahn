@@ -171,8 +171,20 @@ func (a *usageAlphabet) join(word, name string) string {
 	return word + name
 }
 
-// baut die Symbol-Tabelle eines Raums (alle Varianten + alle Einschübe)
-func newUsageAlphabet(room *Room) *usageAlphabet {
+// Fortschritts-Haken der Aufbau-Phasen: Alphabet und Graph laufen über ALLE
+// Varianten eines Raums - bei Mehr-Portal-Monstern (zig Millionen Varianten)
+// dauert das Minuten und muss Status liefern und abbrechbar sein (Max'
+// Befund 2026-08-20: "dominance scan room 1: 30.524.857 variants" stand
+// ewig ohne Update und ohne Stop-Möglichkeit). false = Nutzer-Stop, der
+// Aufbau endet sofort mit nil-Ergebnis. Die Drosselung (100 ms) übernimmt
+// der Aufrufer; gerufen wird nur alle usageTickStep Schritte.
+type usageTick func(phase string, done, total uint64) bool
+
+const usageTickStep = 1 << 16
+
+// baut die Symbol-Tabelle eines Raums (alle Varianten + alle Einschübe);
+// tick (optional) meldet Fortschritt, nil bei Nutzer-Stop
+func newUsageAlphabet(room *Room, tick usageTick) *usageAlphabet {
 	a := &usageAlphabet{portals: len(room.Incoming), index: map[string]int32{}}
 	a.insertSym = make([]int32, len(room.Incoming))
 	for p := range room.Incoming {
@@ -191,6 +203,9 @@ func newUsageAlphabet(room *Room) *usageAlphabet {
 		}
 	}
 	for vid := uint64(0); vid < room.Variants.Count(); vid++ {
+		if tick != nil && vid%usageTickStep == 0 && !tick("alphabet", vid, room.Variants.Count()) {
+			return nil // Nutzer-Stop
+		}
 		v := room.Variants.Get(vid)
 		var exports []int
 		for _, bp := range v.BoxPortals {
@@ -296,10 +311,16 @@ func (g *usageGraph) buildSymbolIndex() {
 // nicht leer" im Vergleich immer "es gibt noch akzeptierende Fortsetzungen"
 // (über-approximiert: der Konnektivitäts-Filter des Vergleichs kann Zweige
 // zusätzlich sperren, das kostet höchstens Reduktionen, nie Korrektheit).
-func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) bool) *usageGraph {
+func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) bool, tick usageTick) *usageGraph {
 	if alpha == nil {
-		alpha = newUsageAlphabet(room)
+		alpha = newUsageAlphabet(room, tick)
+		if alpha == nil {
+			return nil // Nutzer-Stop beim Alphabet-Aufbau
+		}
 	}
+	// grobe Fortschritts-Skala: verarbeitete Varianten-Besuche (kann durch
+	// Sperr-Slots über die Gesamtzahl hinauslaufen - reine Anzeige)
+	var visited uint64
 	g := &usageGraph{room: room, alpha: alpha, index: map[usageNodeKey]int{}}
 	nodeID := func(key usageNodeKey) int {
 		if id, exists := g.index[key]; exists {
@@ -373,6 +394,10 @@ func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) b
 			}
 			span := ip.GetVariantSpan(key.state)
 			for vid := span.Start; vid < span.Start+span.Count; vid++ {
+				visited++
+				if tick != nil && visited%usageTickStep == 0 && !tick("graph", visited, room.Variants.Count()) {
+					return nil // Nutzer-Stop
+				}
 				if allowed != nil && !allowed(vid) {
 					continue
 				}
@@ -381,6 +406,11 @@ func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) b
 		}
 	}
 
+	// Aufräumen und Indizieren sind ebenfalls O(Knoten+Kanten) - vorher den
+	// Stop-Wunsch prüfen und die Phase sichtbar machen
+	if tick != nil && !tick("graph aufräumen", visited, room.Variants.Count()) {
+		return nil
+	}
 	g.pruneNonAccepting()
 	g.buildSymbolIndex()
 	return g

@@ -103,7 +103,7 @@ func dumpRoomStatus(t *testing.T, label string, room *Room) {
 		swaps = append(swaps, fmt.Sprintf("%d->%d", from, to))
 	}
 	sort.Strings(swaps)
-	g := buildUsageGraph(room, nil, nil)
+	g := buildUsageGraph(room, nil, nil, nil)
 	sigs := g.signatures(7)
 	var words []string
 	for sig := range sigs {
@@ -115,9 +115,7 @@ func dumpRoomStatus(t *testing.T, label string, room *Room) {
 }
 
 func TestRepro5005Case1(t *testing.T) {
-	if testing.Short() {
-		t.Skip("langer Lauf (5005-Regression)")
-	}
+	skipAnker(t)
 	n, room := mergeLower5005(t, false, true)
 	dumpRoomStatus(t, "nach merge", room)
 
@@ -139,9 +137,7 @@ func TestRepro5005Case1(t *testing.T) {
 }
 
 func TestRepro5005Case2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("langer Lauf (5005-Regression)")
-	}
+	skipAnker(t)
 	n, room := mergeLower5005(t, true, true)
 	dumpRoomStatus(t, "nach merge", room)
 	if _, err := n.OptimizeRooms([]uint32{room.Index}, 0, nil); err != nil {
@@ -154,6 +150,7 @@ func TestRepro5005Case2(t *testing.T) {
 // der Merger den Einschub am Start-Zustand korrekt, und killt ihn erst die
 // Dominanzsuche?
 func TestRepro5005Case1NoInterOptimize(t *testing.T) {
+	skipAnker(t)
 	n, room := mergeLower5005(t, false, false)
 	dumpRoomStatus(t, "nach merge (ohne zwischen-optimize)", room)
 	hadSwap := false

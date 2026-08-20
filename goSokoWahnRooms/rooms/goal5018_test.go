@@ -48,9 +48,7 @@ func merge5018GoalRoom(t *testing.T) (*Network, *Room) {
 }
 
 func TestOptimizeRoomsDominance5018(t *testing.T) {
-	if testing.Short() {
-		t.Skip("langer Lauf (Dominanzsuche am 5018er Ziel-Trakt)")
-	}
+	skipAnker(t)
 	n, room := merge5018GoalRoom(t)
 	t.Logf("nach merge: %d states, %d varianten, %d portale",
 		room.States.Count(), room.Variants.Count(), len(room.Incoming))

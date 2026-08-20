@@ -35,7 +35,7 @@ func crossCheck(t *testing.T, room *Room, allowed func(id uint64) bool, name str
 		}
 	}
 	graph := map[string]usageCost{}
-	for sig, cost := range buildUsageGraph(room, nil, allowed).signatures(labHorizon) {
+	for sig, cost := range buildUsageGraph(room, nil, allowed, nil).signatures(labHorizon) {
 		if visibleLen(sig) < labHorizon {
 			graph[sig] = cost
 		}
@@ -79,7 +79,7 @@ func TestUsageGraphLoops202(t *testing.T) {
 		{"voll", nil},
 		{"minimal", func(id uint64) bool { return lab202MinimalSet[id] }},
 	} {
-		g := buildUsageGraph(room, nil, tc.allowed)
+		g := buildUsageGraph(room, nil, tc.allowed, nil)
 		loops := g.enumerateLoops(1000)
 		t.Logf("%s: %d Knoten, %d Zyklen", tc.name, len(g.nodes), len(loops))
 
@@ -130,9 +130,9 @@ func TestUsageGraphLoops202(t *testing.T) {
 func TestUsageGraphMinimalProven(t *testing.T) {
 	_, room := merge202Chamber(t)
 
-	alpha := newUsageAlphabet(room)
-	full := buildUsageGraph(room, alpha, nil)
-	reduced := buildUsageGraph(room, alpha, func(id uint64) bool { return lab202MinimalSet[id] })
+	alpha := newUsageAlphabet(room, nil)
+	full := buildUsageGraph(room, alpha, nil, nil)
+	reduced := buildUsageGraph(room, alpha, func(id uint64) bool { return lab202MinimalSet[id] }, nil)
 
 	verdict, detail := compareUsageGraphs(full, reduced, nil, 100000, 0, nil)
 	t.Logf("voll (%d Knoten) vs minimal (%d Knoten): %v - %s",
@@ -146,13 +146,13 @@ func TestUsageGraphMinimalProven(t *testing.T) {
 // (v19) muss der Vergleich eine konkrete Differenz mit Gegenbeispiel finden
 func TestUsageGraphDetectsMissing(t *testing.T) {
 	_, room := merge202Chamber(t)
-	alpha := newUsageAlphabet(room)
-	full := buildUsageGraph(room, alpha, nil)
+	alpha := newUsageAlphabet(room, nil)
+	full := buildUsageGraph(room, alpha, nil, nil)
 
 	for _, drop := range []uint64{19, 20} {
 		reduced := buildUsageGraph(room, alpha, func(id uint64) bool {
 			return lab202MinimalSet[id] && id != drop
-		})
+		}, nil)
 		verdict, detail := compareUsageGraphs(full, reduced, nil, 100000, 0, nil)
 		t.Logf("ohne v%d: %v - %s", drop, verdict, detail)
 		if verdict != usageDiffers {
