@@ -25,6 +25,13 @@ type Merger struct {
 	// (siehe MergeRooms: min1 + min2 + Slack aus dem Max-Moves-Limit)
 	moveLimit uint32
 
+	// Fortschritts-Meldungen und Abbruch: alle heißen Schleifen (Zustands-
+	// Kreuzprodukt, BoxSwaps, jede Einzelsuche) ticken zeitgedrosselt über
+	// due()/report() - so bleibt auch ein Riesen-Merge sichtbar und stoppbar
+	info     ProgressFunc
+	throttle progressThrottle
+	aborted  bool
+
 	mapOldIncoming []*Portal // neuer Portal-Index -> altes äußeres eingehendes Portal
 	mapPortal1     []uint32  // Incoming-Index Raum 1 -> neuer Portal-Index (NoPortal = inneres Portal)
 	mapPortal2     []uint32  // Incoming-Index Raum 2 -> neuer Portal-Index (NoPortal = inneres Portal)
@@ -124,6 +131,21 @@ func NewMerger(n *Network, room1, room2 *Room) (*Merger, error) {
 	return m, nil
 }
 
+// due meldet, ob wieder eine Fortschritts-Meldung fällig ist (zeitgedrosselt);
+// der Aufrufer baut den Meldungs-Text nur dann und liefert ihn an report()
+func (m *Merger) due() bool {
+	return !m.aborted && m.info != nil && m.throttle.due()
+}
+
+// report übergibt den Arbeitsstand an die Oberfläche; false = Abbruch-Wunsch
+// (das aborted-Flag bleibt gesetzt, alle weiteren due()-Checks liefern false)
+func (m *Merger) report(text string) bool {
+	if !m.info(text, []*Room{m.room1, m.room2}) {
+		m.aborted = true
+	}
+	return !m.aborted
+}
+
 // vereinigt zwei aufsteigend sortierte, disjunkte Positionslisten
 func mergeSortedWpos(a, b []soko.Wpos) []soko.Wpos {
 	result := make([]soko.Wpos, 0, len(a)+len(b))
@@ -135,11 +157,16 @@ func mergeSortedWpos(a, b []soko.Wpos) []soko.Wpos {
 // Schritt 1: Zustands-Kreuzprodukt beider Räume aufbauen.
 // Die kombinierte ID ist rechenbar (s1*state1Mul+s2), damit bleibt Zustand 0
 // der gelöste Endzustand (0*mul+0 = 0) und der Startzustand direkt ableitbar.
-func (m *Merger) Step1MixStates() {
+// false = abgebrochen (Netzwerk unverändert).
+func (m *Merger) Step1MixStates() bool {
 	count1, count2 := m.room1.States.Count(), m.room2.States.Count()
 	for s1 := uint64(0); s1 < count1; s1++ {
 		boxes1 := m.room1.States.Get(s1)
 		for s2 := uint64(0); s2 < count2; s2++ {
+			if m.due() && !m.report(fmt.Sprintf("merge: zustands-kreuzprodukt %s/%s",
+				tools.FormatInt(s1*count2+s2), tools.FormatInt(count1*count2))) {
+				return false
+			}
 			id := m.NewRoom.States.Add(mergeSortedWpos(boxes1, m.room2.States.Get(s2)))
 			if id != s1*m.state1Mul+s2 {
 				panic("merge: state id mismatch")
@@ -147,13 +174,14 @@ func (m *Merger) Step1MixStates() {
 		}
 	}
 	m.NewRoom.StartState = m.room1.StartState*m.state1Mul + m.room2.StartState
+	return true
 }
 
 // Schritt 2: Startvarianten verschmelzen (nur wenn der Spieler in einem der
-// beiden Räume startet)
-func (m *Merger) Step2StartVariants() {
+// beiden Räume startet). false = abgebrochen (Netzwerk unverändert).
+func (m *Merger) Step2StartVariants() bool {
 	if m.room1.StartVariantCount == 0 && m.room2.StartVariantCount == 0 {
-		return
+		return true
 	}
 	if m.room1.StartVariantCount > 0 && m.room2.StartVariantCount > 0 {
 		panic("merge: both rooms have start variants")
@@ -164,22 +192,25 @@ func (m *Merger) Step2StartVariants() {
 	}
 
 	search := newMergeSearch(m)
+	search.label = "startvarianten"
 	for id := uint64(0); id < startRoom.StartVariantCount; id++ {
 		base := mergeTask{state1: m.room1.StartState, state2: m.room2.StartState}
 		search.follow(&base, startRoom.Variants.Get(id), side1)
 	}
 	search.run()
+	if m.aborted {
+		return false
+	}
 	search.emit(m.NewRoom.StartState, nil, false, nil)
+	return true
 }
 
 // Schritt 3: BoxSwaps und Varianten aller neuen Portale aufbauen. Je (Portal,
 // kombinierter Zustand) läuft eine Best-Moves-Suche über beide Teilräume.
-// info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab
-// (das Netzwerk ist bis hier noch unverändert).
-func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
+// Rückgabe false = abgebrochen (das Netzwerk ist bis hier noch unverändert).
+func (m *Merger) Step3PortalVariants() bool {
 	newStateCount := m.NewRoom.States.Count()
 	maxBoxes := int(m.NewRoom.MaxBoxes)
-	var throttle progressThrottle
 
 	for pi, newPortal := range m.NewRoom.Incoming {
 		old := m.mapOldIncoming[pi]
@@ -196,6 +227,10 @@ func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 				continue
 			}
 			for sOther := uint64(0); sOther < otherCount; sOther++ {
+				if m.due() && !m.report(fmt.Sprintf("merge: portal %d/%d - boxswaps %s/%s",
+					pi+1, len(m.NewRoom.Incoming), tools.FormatInt(sOwn), tools.FormatInt(ownCount))) {
+					return false
+				}
 				var from, to uint64
 				if toRoom1 {
 					from, to = sOwn*m.state1Mul+sOther, sOwnTo*m.state1Mul+sOther
@@ -211,10 +246,10 @@ func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 
 		// --- Varianten je kombiniertem Zustand ---
 		for state := uint64(0); state < newStateCount; state++ {
-			if info != nil && throttle.due() {
-				if !info(fmt.Sprintf("merge: portal %d/%d - state %s/%s - %s varianten", pi+1, len(m.NewRoom.Incoming), tools.FormatInt(state), tools.FormatInt(newStateCount), tools.FormatInt(m.NewRoom.Variants.Count())), []*Room{m.room1, m.room2}) {
-					return false
-				}
+			if m.due() && !m.report(fmt.Sprintf("merge: portal %d/%d - state %s/%s - %s varianten",
+				pi+1, len(m.NewRoom.Incoming), tools.FormatInt(state), tools.FormatInt(newStateCount),
+				tools.FormatInt(m.NewRoom.Variants.Count()))) {
+				return false
 			}
 			if m.NewRoom.States.BoxCount(state) > maxBoxes {
 				continue
@@ -229,11 +264,16 @@ func (m *Merger) Step3PortalVariants(info ProgressFunc) bool {
 				continue
 			}
 			search := newMergeSearch(m)
+			search.label = fmt.Sprintf("portal %d/%d - state %s/%s",
+				pi+1, len(m.NewRoom.Incoming), tools.FormatInt(state), tools.FormatInt(newStateCount))
 			for id := span.Start; id < span.Start+span.Count; id++ {
 				base := mergeTask{state1: s1, state2: s2}
 				search.follow(&base, old.ToRoom.Variants.Get(id), toRoom1)
 			}
 			search.run()
+			if m.aborted {
+				return false
+			}
 			search.emit(state, old, toRoom1, newPortal)
 		}
 	}
@@ -319,6 +359,7 @@ func (c mergeCost) better(other mergeCost) bool {
 
 type mergeSearch struct {
 	m     *Merger
+	label string               // Kontext für Fortschritts-Meldungen aus run()
 	best  map[uint64]mergeCost // Aufgaben-Schlüssel -> beste bekannte Kosten
 	tasks []mergeTask          // FIFO-Arbeitsliste (wächst beim Expandieren)
 
@@ -418,9 +459,15 @@ func (m *Merger) resolveBoxes(t *mergeTask, oldBoxes []uint32, v *VariantData, s
 
 // arbeitet die Aufgabenliste ab: Austritt durch ein inneres Portal expandiert in
 // den anderen Teilraum, Austritt durch ein äußeres Portal (oder Spielende) macht
-// die Aufgabe zur fertigen Variante
+// die Aufgabe zur fertigen Variante. Setzt bei Abbruch-Wunsch m.aborted und
+// kehrt vorzeitig zurück (der Aufrufer darf emit() dann nicht mehr rufen) -
+// eine einzelne Suche kann Millionen Aufgaben erzeugen und wäre sonst blind.
 func (s *mergeSearch) run() {
 	for i := 0; i < len(s.tasks); i++ {
+		if s.m.due() && !s.m.report(fmt.Sprintf("merge: %s - suche %s/%s aufgaben",
+			s.label, tools.FormatInt(i), tools.FormatInt(len(s.tasks)))) {
+			return
+		}
 		t := s.tasks[i] // Kopie: tasks kann beim Expandieren umziehen
 		if s.best[t.key()] != t.cost() {
 			continue // von einer besseren Variante überholt
@@ -599,6 +646,14 @@ func (n *Network) MergeRooms(room1, room2 *Room, maxMoves uint64, info ProgressF
 	if err != nil {
 		return nil, err
 	}
+	m.info = info
+	if info != nil {
+		// Sofort-Meldung mit der Größenordnung (das Kreuzprodukt entscheidet,
+		// ob der Merge überhaupt eine gute Idee ist)
+		m.report(fmt.Sprintf("merge: räume %s x %s zustände, %s x %s varianten",
+			tools.FormatInt(m.room1.States.Count()), tools.FormatInt(m.room2.States.Count()),
+			tools.FormatInt(m.room1.Variants.Count()), tools.FormatInt(m.room2.Variants.Count())))
+	}
 	if maxMoves > 0 {
 		total := uint64(0)
 		for _, room := range n.Rooms {
@@ -614,9 +669,7 @@ func (n *Network) MergeRooms(room1, room2 *Room, maxMoves uint64, info ProgressF
 		}
 		m.moveLimit = uint32(limit)
 	}
-	m.Step1MixStates()
-	m.Step2StartVariants()
-	if !m.Step3PortalVariants(info) {
+	if !m.Step1MixStates() || !m.Step2StartVariants() || !m.Step3PortalVariants() {
 		return nil, nil // abgebrochen, Netzwerk unverändert
 	}
 	m.Step4UpdatePortals()
