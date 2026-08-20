@@ -194,6 +194,10 @@ func (m *Merger) Step2StartVariants() bool {
 	search := newMergeSearch(m)
 	search.label = "startvarianten"
 	for id := uint64(0); id < startRoom.StartVariantCount; id++ {
+		if m.due() && !m.report(fmt.Sprintf("merge: startvarianten - vorbereiten %s/%s",
+			tools.FormatInt(id), tools.FormatInt(startRoom.StartVariantCount))) {
+			return false
+		}
 		base := mergeTask{state1: m.room1.StartState, state2: m.room2.StartState}
 		search.follow(&base, startRoom.Variants.Get(id), side1)
 	}
@@ -267,6 +271,10 @@ func (m *Merger) Step3PortalVariants() bool {
 			search.label = fmt.Sprintf("portal %d/%d - state %s/%s",
 				pi+1, len(m.NewRoom.Incoming), tools.FormatInt(state), tools.FormatInt(newStateCount))
 			for id := span.Start; id < span.Start+span.Count; id++ {
+				if m.due() && !m.report(fmt.Sprintf("merge: %s - vorbereiten %s/%s",
+					search.label, tools.FormatInt(id-span.Start), tools.FormatInt(span.Count))) {
+					return false
+				}
 				base := mergeTask{state1: s1, state2: s2}
 				search.follow(&base, old.ToRoom.Variants.Get(id), toRoom1)
 			}
@@ -462,10 +470,15 @@ func (m *Merger) resolveBoxes(t *mergeTask, oldBoxes []uint32, v *VariantData, s
 // die Aufgabe zur fertigen Variante. Setzt bei Abbruch-Wunsch m.aborted und
 // kehrt vorzeitig zurück (der Aufrufer darf emit() dann nicht mehr rufen) -
 // eine einzelne Suche kann Millionen Aufgaben erzeugen und wäre sonst blind.
+// Fortschritts-Anzeige: die Gesamtzahl wächst beim Expandieren mit, als
+// ehrliches Restmaß dient daher "offen" (sinkt es, konvergiert die Suche);
+// auch innerhalb einer Aufgabe wird getickt, weil ein einzelner Anschluss-Span
+// Millionen Varianten haben kann (sonst stünde die Anzeige minutenlang still).
 func (s *mergeSearch) run() {
 	for i := 0; i < len(s.tasks); i++ {
-		if s.m.due() && !s.m.report(fmt.Sprintf("merge: %s - suche %s/%s aufgaben",
-			s.label, tools.FormatInt(i), tools.FormatInt(len(s.tasks)))) {
+		if s.m.due() && !s.m.report(fmt.Sprintf("merge: %s - suche %s/%s aufgaben (offen %s)",
+			s.label, tools.FormatInt(i), tools.FormatInt(len(s.tasks)),
+			tools.FormatInt(len(s.tasks)-i))) {
 			return
 		}
 		t := s.tasks[i] // Kopie: tasks kann beim Expandieren umziehen
@@ -502,6 +515,11 @@ func (s *mergeSearch) run() {
 		// inneres Portal: im anderen Teilraum jede Anschluss-Variante verfolgen
 		span := roomCur.Outgoing[exit].GetVariantSpan(otherState)
 		for id := span.Start; id < span.Start+span.Count; id++ {
+			if s.m.due() && !s.m.report(fmt.Sprintf("merge: %s - suche %s/%s aufgaben (offen %s) - anschluss %s/%s",
+				s.label, tools.FormatInt(i), tools.FormatInt(len(s.tasks)), tools.FormatInt(len(s.tasks)-i),
+				tools.FormatInt(id-span.Start), tools.FormatInt(span.Count))) {
+				return
+			}
 			s.follow(&t, otherRoom.Variants.Get(id), otherSide1)
 		}
 	}
