@@ -373,9 +373,21 @@ func (n *Network) OptimizeRooms(indices []uint32, maxMoves uint64, info Progress
 		}
 	}
 	// auch nach einem Abbruch validieren - bereits angewandte Streichungen
-	// (Dominanz wendet Bewiesenes trotz Stop an) müssen konsistent sein
-	if err := n.Validate(true); err != nil {
-		return removed, fmt.Errorf("validate after optimize: %w", err)
+	// (Dominanz wendet Bewiesenes trotz Stop an) müssen konsistent sein.
+	// Ohne Budget-Scan sind nachweislich nur die Auswahl-Räume angefasst
+	// (gezielte Prüfung); der Scan dagegen ändert potenziell ALLE Räume
+	if maxMoves > 0 {
+		if err := n.Validate(true); err != nil {
+			return removed, fmt.Errorf("validate after optimize: %w", err)
+		}
+	} else {
+		touched := make([]*Room, 0, len(indices))
+		for _, idx := range indices {
+			touched = append(touched, n.Rooms[idx])
+		}
+		if err := n.ValidateRooms(touched...); err != nil {
+			return removed, fmt.Errorf("validate after optimize: %w", err)
+		}
 	}
 	n.warmMinMoves() // Caches vorwärmen (lesende API-Zugriffe bleiben race-frei)
 	return removed, nil

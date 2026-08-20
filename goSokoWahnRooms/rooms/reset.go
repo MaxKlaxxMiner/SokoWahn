@@ -177,7 +177,13 @@ func (n *Network) ResetRooms(indices []uint32, info ProgressFunc) (int, error) {
 	}
 	n.Rooms = newList
 
-	if err := n.Validate(true); err != nil {
+	// Struktur komplett, Varianten nur von den neuen 1-Feld-Räumen
+	// (die übrigen Räume sind unangetastet, siehe ValidateRooms)
+	created := make([]*Room, len(fields))
+	for i, pos := range fields {
+		created[i] = newRoomOf[pos]
+	}
+	if err := n.ValidateRooms(created...); err != nil {
 		return 0, fmt.Errorf("validate after reset: %w", err)
 	}
 	n.warmMinMoves() // Caches vorwärmen (lesende API-Zugriffe bleiben race-frei)

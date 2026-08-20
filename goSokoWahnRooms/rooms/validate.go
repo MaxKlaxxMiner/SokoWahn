@@ -117,6 +117,25 @@ func (n *Network) Validate(checkVariants bool) error {
 	return nil
 }
 
+// ValidateRooms prüft die komplette Netzwerk-Struktur (billig: Felder,
+// Portale, Verlinkungen) plus Zustände/Varianten NUR der übergebenen Räume.
+// Für Schritte, die andere Räume nachweislich nicht anfassen (Merge, Reset,
+// Optimize ohne Budget-Scan): das Voll-Validate nach jedem Schritt skalierte
+// sonst mit den Monster-Räumen des GANZEN Netzwerks - jeder Mini-Merge
+// zahlte Millionen fremder Varianten-Checks. Der Validate-Button der GUI
+// und Init/Snapshot-Load prüfen weiterhin alles.
+func (n *Network) ValidateRooms(rooms ...*Room) error {
+	if err := n.Validate(false); err != nil {
+		return err
+	}
+	for _, room := range rooms {
+		if err := validateRoomVariants(room); err != nil {
+			return fmt.Errorf("room %d: %w", room.Index, err)
+		}
+	}
+	return nil
+}
+
 // prüft Zustände, Varianten und deren Verzeichnisse eines einzelnen Raumes
 func validateRoomVariants(room *Room) error {
 	stateCount := room.States.Count()
@@ -133,6 +152,11 @@ func validateRoomVariants(room *Room) error {
 	usedStates[0] = true               // Endzustand zählt immer als benutzt
 	usedStates[room.StartState] = true // Startzustand ebenfalls
 
+	// Pfadlängen aller Ketten in EINEM Durchlauf (O(Knoten)) - ein Len-Walk
+	// je Variante wäre O(Varianten x Kettentiefe) und machte nach dem Merge
+	// eines Monster-Raums JEDEN weiteren Validate-Lauf teuer
+	pathLens := room.Paths.lens()
+
 	checkVariantData := func(id uint64) error {
 		v := room.Variants.Get(id)
 		if v.OldState >= stateCount || v.NewState >= stateCount {
@@ -148,8 +172,11 @@ func validateRoomVariants(room *Room) error {
 				return fmt.Errorf("variant %d references invalid box portal", id)
 			}
 		}
-		if pathLen := room.Paths.Len(v.Path); uint64(pathLen) != uint64(v.Moves) {
-			return fmt.Errorf("variant %d path length %d != moves %d", id, pathLen, v.Moves)
+		if int(v.Path) >= len(pathLens) {
+			return fmt.Errorf("variant %d references invalid path %d", id, v.Path)
+		}
+		if pathLens[v.Path] != v.Moves {
+			return fmt.Errorf("variant %d path length %d != moves %d", id, pathLens[v.Path], v.Moves)
 		}
 		return nil
 	}

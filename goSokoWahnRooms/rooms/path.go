@@ -114,6 +114,24 @@ func (ps *PathStore) Len(id PathID) int {
 	return total
 }
 
+// lens liefert die Zuglänge JEDES Knotens in einem einzigen Vorwärts-
+// Durchlauf (der Store ist append-only, Kinder haben immer kleinere IDs
+// als Eltern): O(Knoten) statt O(Ketten x Tiefe) - für Massen-Längenprüfungen
+// wie Validate oder das Eintragen der Merge-Ergebnisse
+func (ps *PathStore) lens() []uint32 {
+	lens := make([]uint32, len(ps.nodes))
+	lens[1], lens[2], lens[3], lens[4] = 1, 1, 1, 1 // Ein-Zug-Blätter
+	for i := 5; i < len(ps.nodes); i++ {
+		n := ps.nodes[i]
+		if n.b&pathLeafFlag != 0 {
+			lens[i] = n.b &^ pathLeafFlag
+		} else {
+			lens[i] = lens[n.a] + lens[n.b]
+		}
+	}
+	return lens
+}
+
 // appendCodes rekonstruiert die Züge einer Kette als 2-Bit-Codes (je Byte
 // ein Zug) - iterative Tiefensuche, a vor b
 func (ps *PathStore) appendCodes(id PathID, dst []byte) []byte {

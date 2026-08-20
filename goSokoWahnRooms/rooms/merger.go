@@ -133,15 +133,21 @@ func NewMerger(n *Network, room1, room2 *Room) (*Merger, error) {
 }
 
 // due meldet, ob wieder eine Fortschritts-Meldung fällig ist (zeitgedrosselt);
-// der Aufrufer baut den Meldungs-Text nur dann und liefert ihn an report()
+// der Aufrufer baut den Meldungs-Text nur dann und liefert ihn an report().
+// WICHTIG: bei gesetztem aborted liefert due() TRUE - dann gibt report()
+// sofort false zurück und die "if due() && !report()"-Wächter aller Schleifen
+// brechen ab. (Die alte Fassung lieferte bei aborted false; wurde das Flag
+// außerhalb eines Wächters gesetzt - etwa durch die Sofort-Meldung beim
+// Merge-Start, wenn der Stop-Wunsch noch vom VORIGEN Merge der Auswahl
+// stand -, feuerte nie wieder ein Wächter und der Merge lief stumm komplett
+// durch: der Stop-Button wirkte ignoriert.)
 func (m *Merger) due() bool {
-	return !m.aborted && m.info != nil && m.throttle.due()
+	return m.info != nil && (m.aborted || m.throttle.due())
 }
 
 // report übergibt den Arbeitsstand an die Oberfläche; false = Abbruch-Wunsch
-// (das aborted-Flag bleibt gesetzt, alle weiteren due()-Checks liefern false)
 func (m *Merger) report(text string) bool {
-	if !m.info(text, []*Room{m.room1, m.room2}) {
+	if !m.aborted && !m.info(text, []*Room{m.room1, m.room2}) {
 		m.aborted = true
 	}
 	return !m.aborted
@@ -207,7 +213,7 @@ func (m *Merger) Step2StartVariants() bool {
 		return false
 	}
 	search.emit(m.NewRoom.StartState, nil, false, nil)
-	return true
+	return !m.aborted // auch emit ist stoppbar (NewRoom wird dann verworfen)
 }
 
 // Schritt 3: BoxSwaps und Varianten aller neuen Portale aufbauen. Je (Portal,
@@ -284,6 +290,9 @@ func (m *Merger) Step3PortalVariants() bool {
 				return false
 			}
 			search.emit(state, old, toRoom1, newPortal)
+			if m.aborted {
+				return false // auch emit ist stoppbar (NewRoom wird dann verworfen)
+			}
 		}
 	}
 	return true
@@ -602,8 +611,22 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 		candidates = append(candidates, candidate{task: t, exit: exit, endState: endState})
 	}
 
+	// Fortschritt und Stop-Check auch beim Auswerten: bei Monster-Suchen
+	// laufen hier Millionen fertiger Aufgaben durch den Wirkungs-Dedup -
+	// ohne Ticks hinge der Stop-Wunsch bis zur nächsten Suche fest
+	finished := len(s.moveTasks) + len(s.pushTasks) + len(s.endTasks)
+	done := 0
+	tick := func() bool {
+		done++
+		return !s.m.due() || s.m.report(fmt.Sprintf("merge: %s - auswerten %s/%s",
+			s.label, tools.FormatInt(done), tools.FormatInt(finished)))
+	}
+
 	for _, idx := range s.moveTasks {
 		t := &s.tasks[idx]
+		if !tick() {
+			return
+		}
 		// sinnloser Rückweg: reiner Laufweg zurück durch das Eintritts-Portal
 		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index {
 			continue
@@ -612,6 +635,9 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 	}
 	for _, idx := range s.pushTasks {
 		t := &s.tasks[idx]
+		if !tick() {
+			return
+		}
 		endState := t.state1*s.m.state1Mul + t.state2
 		// sinnloser Rückweg mit folgenlosen Kistenverschiebungen
 		if entry != nil && t.side1 == entrySide1 && t.variant.PlayerPortal == entry.Index && endState == startState {
@@ -621,6 +647,9 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 	}
 	for _, idx := range s.endTasks {
 		t := &s.tasks[idx]
+		if !tick() {
+			return
+		}
 		if t.state1 != 0 || t.state2 != 0 {
 			panic("merge: end variant without solved state")
 		}
@@ -629,11 +658,13 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 
 	// Copy-Out: nur die Ketten der Überlebenden wandern in den Store des neuen
 	// Raums (memoisiert - geteilte Präfixe bleiben geteilt); die Arena mit
-	// allen toten Zwischenketten stirbt mit der Suche
+	// allen toten Zwischenketten stirbt mit der Suche. Der Längen-Check läuft
+	// über die Tabelle (ein Durchlauf) statt je Kandidat einen Ketten-Walk.
 	exportMemo := map[PathID]PathID{}
+	pathLens := s.arena.lens()
 	add := func(c candidate) {
 		t := c.task
-		if uint64(s.arena.Len(t.path)) != uint64(t.moves) {
+		if uint64(pathLens[t.path]) != uint64(t.moves) {
 			panic("merge: path length != moves")
 		}
 		id := s.m.NewRoom.Variants.Add(VariantData{
@@ -666,11 +697,18 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 			return 1
 		}
 	}
+	added := 0
 	for pass := 0; pass <= 2; pass++ {
 		for _, c := range candidates {
-			if group(c) == pass {
-				add(c)
+			if group(c) != pass {
+				continue
 			}
+			added++
+			if s.m.due() && !s.m.report(fmt.Sprintf("merge: %s - eintragen %s/%s",
+				s.label, tools.FormatInt(added), tools.FormatInt(len(candidates)))) {
+				return
+			}
+			add(c)
 		}
 	}
 }
@@ -695,10 +733,14 @@ func (n *Network) MergeRooms(room1, room2 *Room, maxMoves uint64, info ProgressF
 	m.info = info
 	if info != nil {
 		// Sofort-Meldung mit der Größenordnung (das Kreuzprodukt entscheidet,
-		// ob der Merge überhaupt eine gute Idee ist)
-		m.report(fmt.Sprintf("merge: räume %s x %s zustände, %s x %s varianten",
+		// ob der Merge überhaupt eine gute Idee ist); ein hier schon stehender
+		// Stop-Wunsch (z.B. aus der stummen Endphase des vorigen Merges der
+		// Auswahl) bricht sofort ab, bevor irgendetwas gerechnet wird
+		if !m.report(fmt.Sprintf("merge: räume %s x %s zustände, %s x %s varianten",
 			tools.FormatInt(m.room1.States.Count()), tools.FormatInt(m.room2.States.Count()),
-			tools.FormatInt(m.room1.Variants.Count()), tools.FormatInt(m.room2.Variants.Count())))
+			tools.FormatInt(m.room1.Variants.Count()), tools.FormatInt(m.room2.Variants.Count()))) {
+			return nil, nil
+		}
 	}
 	if maxMoves > 0 {
 		total := uint64(0)
@@ -730,7 +772,11 @@ func (n *Network) MergeRooms(room1, room2 *Room, maxMoves uint64, info ProgressF
 		n.DeadlockScan(m.NewRoom, info)
 	}
 
-	if err := n.Validate(true); err != nil {
+	// Struktur komplett, Varianten nur vom neuen Raum: die übrigen Räume hat
+	// der Merge nachweislich nicht angefasst (nur Portal-Verweise, die die
+	// Struktur-Prüfung abdeckt) - ein Voll-Validate machte sonst JEDEN Merge
+	// so teuer wie die Monster-Räume des Netzwerks
+	if err := n.ValidateRooms(m.NewRoom); err != nil {
 		return nil, fmt.Errorf("validate after merge: %w", err)
 	}
 	n.warmMinMoves() // Caches vorwärmen (lesende API-Zugriffe bleiben race-frei)

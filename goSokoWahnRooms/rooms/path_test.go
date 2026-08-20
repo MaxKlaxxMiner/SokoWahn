@@ -41,6 +41,20 @@ func TestPathStoreRoundtrip(t *testing.T) {
 	}
 }
 
+// die Massen-Längentabelle muss mit dem Einzel-Walk übereinstimmen
+func TestPathStoreLens(t *testing.T) {
+	ps := NewPathStore()
+	ids := []PathID{EmptyPath, PathOfDir('u'), ps.AddLURD("lurdl")}
+	ids = append(ids, ps.Concat(ids[1], ids[2]), ps.Concat(ids[2], ids[2]))
+	ids = append(ids, ps.Concat(ids[3], ids[4]))
+	lens := ps.lens()
+	for _, id := range ids {
+		if int(lens[id]) != ps.Len(id) {
+			t.Errorf("id %d: lens %d != Len %d", id, lens[id], ps.Len(id))
+		}
+	}
+}
+
 // Ein-Zug-Pfade sind vordefinierte IDs (1-4), in jedem Store identisch
 func TestPathStoreDirs(t *testing.T) {
 	ps := NewPathStore()
