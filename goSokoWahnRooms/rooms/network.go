@@ -33,6 +33,7 @@ func NewNetwork(f *soko.Field) (*Network, error) {
 			MaxBoxes: maxBoxes,
 			States:   NewStateList(),
 			Variants: NewVariantList(),
+			Paths:    NewPathStore(),
 		}
 		if f.IsGoal(pos) {
 			room.Goals = room.Fields

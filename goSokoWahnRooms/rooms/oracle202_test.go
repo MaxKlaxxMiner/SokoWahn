@@ -153,7 +153,7 @@ func TestDump202Chamber(t *testing.T) {
 			for id := span.Start; id < span.Start+span.Count; id++ {
 				v := room.Variants.Get(id)
 				t.Logf("  state %d variant %d: new=%d moves=%d pushes=%d boxPortals=%v exit=%d path=%q",
-					state, id, v.NewState, v.Moves, v.Pushes, v.BoxPortals, int32(v.PlayerPortal), v.Path.LURD())
+					state, id, v.NewState, v.Moves, v.Pushes, v.BoxPortals, int32(v.PlayerPortal), room.Paths.LURD(v.Path))
 			}
 			if to, exists := ip.BoxSwap[state]; exists {
 				t.Logf("  boxswap %d -> %d", state, to)

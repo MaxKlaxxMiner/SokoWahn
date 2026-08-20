@@ -498,7 +498,7 @@ func (s *Server) handleVariants(w http.ResponseWriter, r *http.Request) {
 			Pushes:       d.Pushes,
 			BoxPortals:   boxPortals,
 			PlayerPortal: playerPortal,
-			Path:         d.Path.LURD(),
+			Path:         room.Paths.LURD(d.Path),
 			Start:        id < room.StartVariantCount,
 		})
 	}

@@ -19,7 +19,7 @@ type VariantData struct {
 	BoxPortals   []uint32 // ausgehende Portale, wohin Kisten rausgeschoben wurden
 	PlayerPortal uint32   // ausgehendes Portal des Spielers (NoPortal = bleibt drin = Spielende)
 
-	Path Path // Laufweg 2-Bit-gepackt (siehe path.go), ohne den Eintritts-Schritt
+	Path PathID // Laufweg als ID in den PathStore des Raums (siehe path.go), ohne den Eintritts-Schritt
 }
 
 // Liste aller Varianten eines Raumes. Startvarianten (Spieler startet im Raum)

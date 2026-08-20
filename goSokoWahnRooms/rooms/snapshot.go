@@ -181,9 +181,14 @@ func (n *Network) WriteSnapshot(w io.Writer, info ProgressFunc) error {
 				sw.u32(b)
 			}
 			sw.u32(v.PlayerPortal)
-			sw.u32(uint32(len(v.Path)))
-			if sw.err == nil {
-				_, sw.err = sw.w.Write(v.Path)
+			// Zugfolge materialisiert (Zuganzahl + dichte 2-Bit-Codes): die
+			// Datei bleibt selbsttragend, und nur lebende Ketten werden
+			// geschrieben - der Snapshot-Roundtrip wirkt damit als
+			// Kompaktierung des PathStore (verwaiste Ketten bleiben zurück)
+			data, moves := room.Paths.ExportPacked(v.Path)
+			sw.u32(uint32(moves))
+			if sw.err == nil && len(data) > 0 {
+				_, sw.err = sw.w.Write(data)
 			}
 		}
 
@@ -287,7 +292,7 @@ func ReadSnapshot(field *soko.Field, scan *BoxScan, r io.Reader, info ProgressFu
 			!info(fmt.Sprintf("load: raum %d/%d", i+1, roomCount), nil) {
 			return nil, fmt.Errorf("load: abgebrochen")
 		}
-		room := &Room{Index: uint32(i), States: NewStateList(), Variants: NewVariantList()}
+		room := &Room{Index: uint32(i), States: NewStateList(), Variants: NewVariantList(), Paths: NewPathStore()}
 		room.Fields = sr.wposList(eof)
 		room.Goals = sr.wposList(eof)
 		room.StartBoxes = sr.wposList(eof)
@@ -333,9 +338,11 @@ func ReadSnapshot(field *soko.Field, scan *BoxScan, r io.Reader, info ProgressFu
 				}
 			}
 			v.PlayerPortal = sr.u32()
-			if pathLen := sr.u32(); sr.err == nil && pathLen > 0 {
-				v.Path = make(Path, pathLen)
-				_, sr.err = io.ReadFull(sr.r, v.Path)
+			if moves := sr.u32(); sr.err == nil && moves > 0 {
+				data := make([]byte, (moves+3)/4)
+				if _, sr.err = io.ReadFull(sr.r, data); sr.err == nil {
+					v.Path = room.Paths.AddPacked(data, int(moves))
+				}
 			}
 			if sr.err != nil {
 				return nil, sr.err

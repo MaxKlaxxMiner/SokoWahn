@@ -148,8 +148,8 @@ func validateRoomVariants(room *Room) error {
 				return fmt.Errorf("variant %d references invalid box portal", id)
 			}
 		}
-		if uint64(v.Path.Len()) != uint64(v.Moves) {
-			return fmt.Errorf("variant %d path length %d != moves %d", id, v.Path.Len(), v.Moves)
+		if pathLen := room.Paths.Len(v.Path); uint64(pathLen) != uint64(v.Moves) {
+			return fmt.Errorf("variant %d path length %d != moves %d", id, pathLen, v.Moves)
 		}
 		return nil
 	}

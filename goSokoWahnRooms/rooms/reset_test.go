@@ -25,9 +25,16 @@ func checkFreshEqual(t *testing.T, n, fresh *Network) {
 			t.Errorf("room %d variants: got %d/%d starts, want %d/%d starts",
 				i, room.Variants.Count(), room.StartVariantCount, want.Variants.Count(), want.StartVariantCount)
 		}
+		// Pfade über den Klartext vergleichen - die PathStore-IDs dürfen sich
+		// unterscheiden (z.B. nach einem Snapshot-Roundtrip)
+		variantText := func(r *Room, id uint64) string {
+			v := r.Variants.Get(id)
+			return fmt.Sprint(v.OldState, v.NewState, v.Moves, v.Pushes, v.BoxPortals,
+				v.PlayerPortal, r.Paths.LURD(v.Path))
+		}
 		for id := uint64(0); id < min(room.Variants.Count(), want.Variants.Count()); id++ {
-			if fmt.Sprint(*room.Variants.Get(id)) != fmt.Sprint(*want.Variants.Get(id)) {
-				t.Errorf("room %d variant %d: got %+v, want %+v", i, id, room.Variants.Get(id), want.Variants.Get(id))
+			if variantText(room, id) != variantText(want, id) {
+				t.Errorf("room %d variant %d: got %s, want %s", i, id, variantText(room, id), variantText(want, id))
 			}
 		}
 		if len(room.Incoming) != len(want.Incoming) {

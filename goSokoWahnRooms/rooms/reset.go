@@ -57,6 +57,7 @@ func (n *Network) ResetRooms(indices []uint32, info ProgressFunc) (int, error) {
 			MaxBoxes: maxBoxes,
 			States:   NewStateList(),
 			Variants: NewVariantList(),
+			Paths:    NewPathStore(),
 		}
 		if f.IsGoal(pos) {
 			room.Goals = room.Fields

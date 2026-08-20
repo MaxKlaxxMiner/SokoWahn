@@ -96,6 +96,7 @@ func NewMerger(n *Network, room1, room2 *Room) (*Merger, error) {
 		MaxBoxes:   room1.MaxBoxes,
 		States:     NewStateList(),
 		Variants:   NewVariantList(),
+		Paths:      NewPathStore(),
 	}
 
 	// neue eingehende Portale erstellen und Mappings befüllen
@@ -337,7 +338,7 @@ type mergeTask struct {
 	boxes          []uint32     // bisher rausgeschobene Kisten (neue Portal-Indizes, sortiert)
 	moves          uint32       // Laufschritte insgesamt
 	pushes         uint32       // Kistenverschiebungen insgesamt
-	path           Path         // zurückgelegter Pfad insgesamt (2-Bit-gepackt)
+	path           PathID       // zurückgelegter Pfad insgesamt (ID in die Arena der Suche)
 	side1          bool         // variant gehört zu Raum 1 (sonst Raum 2)
 	variant        *VariantData // zuletzt verarbeitete Variante
 }
@@ -371,13 +372,34 @@ type mergeSearch struct {
 	best  map[uint64]mergeCost // Aufgaben-Schlüssel -> beste bekannte Kosten
 	tasks []mergeTask          // FIFO-Arbeitsliste (wächst beim Expandieren)
 
+	// Pfad-Arena der Suche: jede Verkettung kostet einen 8-Byte-Knoten statt
+	// einer Präfix-Kopie; die Arena samt aller toten Zwischenketten fliegt
+	// nach emit (Copy-Out der Überlebenden in den neuen Raum) am Stück weg
+	arena      *PathStore
+	importMemo [2]map[PathID]PathID // Quell-Pfad (Raum 1/2) -> Arena-ID
+
 	moveTasks []int // fertige reine Laufwege (Indizes in tasks)
 	pushTasks []int // fertige Varianten mit Kistenverschiebungen
 	endTasks  []int // fertige End-Varianten (Spieler bleibt drin, alles gelöst)
 }
 
 func newMergeSearch(m *Merger) *mergeSearch {
-	return &mergeSearch{m: m, best: map[uint64]mergeCost{}}
+	return &mergeSearch{
+		m:          m,
+		best:       map[uint64]mergeCost{},
+		arena:      NewPathStore(),
+		importMemo: [2]map[PathID]PathID{{}, {}},
+	}
+}
+
+// holt den Pfad einer Quell-Variante in die Arena (memoisiert je Teilraum,
+// Sharing der Quell-Ketten bleibt erhalten)
+func (s *mergeSearch) importPath(v *VariantData, side1 bool) PathID {
+	src, memo := s.m.room1.Paths, s.importMemo[0]
+	if !side1 {
+		src, memo = s.m.room2.Paths, s.importMemo[1]
+	}
+	return s.arena.CopyFrom(src, v.Path, memo)
 }
 
 func (t *mergeTask) cost() mergeCost {
@@ -392,7 +414,6 @@ func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
 		state2:  prev.state2,
 		moves:   prev.moves + v.Moves,
 		pushes:  prev.pushes + v.Pushes,
-		path:    prev.path.Concat(v.Path),
 		side1:   side1,
 		variant: v,
 	}
@@ -411,6 +432,9 @@ func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
 		return // eine bessere (oder gleich gute) Variante ist bereits bekannt
 	}
 	s.best[k] = t.cost()
+	// Pfad-Knoten erst jetzt anlegen: verworfene Kandidaten (Budget-Cutoff,
+	// ungültige Kisten, Dedup) hinterlassen so keinen Müll in der Arena
+	t.path = s.arena.Concat(prev.path, s.importPath(v, side1))
 	s.tasks = append(s.tasks, t)
 }
 
@@ -603,9 +627,13 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 		consider(t, NoPortal, 0)
 	}
 
+	// Copy-Out: nur die Ketten der Überlebenden wandern in den Store des neuen
+	// Raums (memoisiert - geteilte Präfixe bleiben geteilt); die Arena mit
+	// allen toten Zwischenketten stirbt mit der Suche
+	exportMemo := map[PathID]PathID{}
 	add := func(c candidate) {
 		t := c.task
-		if uint64(t.path.Len()) != uint64(t.moves) {
+		if uint64(s.arena.Len(t.path)) != uint64(t.moves) {
 			panic("merge: path length != moves")
 		}
 		id := s.m.NewRoom.Variants.Add(VariantData{
@@ -615,7 +643,7 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 			Pushes:       t.pushes,
 			BoxPortals:   t.boxes,
 			PlayerPortal: c.exit,
-			Path:         t.path,
+			Path:         s.m.NewRoom.Paths.CopyFrom(s.arena, t.path, exportMemo),
 		})
 		if newPortal != nil {
 			newPortal.AddVariant(startState, id)
