@@ -36,7 +36,8 @@ type snapshotJSON struct {
 	Size   int64  `json:"size"`   // Dateigröße in Bytes
 }
 
-// GET /api/snapshots: alle Snapshots des aktuellen Levels, älteste zuerst
+// GET /api/snapshots: alle Snapshots des aktuellen Levels, neueste zuerst
+// (wie ein Mail-Postfach; die Zeitstempel-Namen sortieren chronologisch)
 func (s *Server) handleSnapshots(w http.ResponseWriter, r *http.Request) {
 	n, _ := s.snapshot()
 	prefix := snapshotPrefix(n)
@@ -66,7 +67,7 @@ func (s *Server) handleSnapshots(w http.ResponseWriter, r *http.Request) {
 		}
 		items = append(items, snapshotJSON{Name: name, Effort: effort, Size: fi.Size()})
 	}
-	sort.Slice(items, func(a, b int) bool { return items[a].Name < items[b].Name })
+	sort.Slice(items, func(a, b int) bool { return items[a].Name > items[b].Name })
 	writeJSON(w, map[string]any{"items": items})
 }
 
