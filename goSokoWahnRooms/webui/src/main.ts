@@ -52,6 +52,10 @@ let networkEffort = ''; // Effort des ganzen Netzwerks (Anzeige ohne Auswahl)
 let levelSeq = -1; // Level-Wechsel-Zähler des Servers (Strg+V kann das Feld ersetzen)
 let clearSelection = false; // nach einem Reset (Entf) die Auswahl nicht wiederherstellen
 let mergeBusy = false;
+let solveRunning = false; // Solver-Sitzung aktiv (Panel ersetzt die linken Listen)
+let solveAuto = false; // Auto-Modus der Sitzung (Anzeige folgt dem Server-Status)
+let solveBulk = 10000; // Bulkgröße der b-Taste (+/- = mal/geteilt 10, bis hinunter zu 1)
+let solutionPath = ''; // LURD der gemerkten Lösung (Pfeiltasten steppen, c = kopieren)
 let selectionGen = 0; // entwertet überholte Auswahl-Berechnungen (Drag erzeugt viele)
 const roomCache = new Map<number, RoomDetail>(); // Raum-Details je Index (bis zum nächsten Merge)
 
@@ -134,6 +138,7 @@ async function handleSelection(selection: number[], active: number, fromList: bo
 function updateMergeButton(selection: number[]): void {
   ($('mergeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 2;
   ($('optimizeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 1;
+  ($('solveBtn') as HTMLButtonElement).disabled = mergeBusy;
   updateSnapshotButtons();
 }
 
@@ -180,7 +185,87 @@ async function doPaste(text: string): Promise<void> {
   }
 }
 
-// ---------- Snapshots (Buttons unter "Solver...") ----------
+// ---------- Solver (M7): Panel ersetzt die linken Listen ----------
+
+// blendet das Solver-Panel ein/aus (es nimmt den Platz von Räume- und
+// States/Variants-Spalte ein - kein neues Fenster, wie mit Max besprochen)
+function showSolverPanel(open: boolean): void {
+  ($('solverCol') as HTMLElement).hidden = !open;
+  ($('roomsCol') as HTMLElement).hidden = open;
+  ($('midCol') as HTMLElement).hidden = open;
+}
+
+function solverPanelOpen(): boolean {
+  return !($('solverCol') as HTMLElement).hidden;
+}
+
+// Tasten-Hinweise unterm Panel (Steuerung wie in brute)
+function renderSolverHint(): void {
+  $('solverHint').textContent = solveRunning
+    ? `b = bulk (${fmt(solveBulk)})   a = auto an/aus   +/- = bulkgröße   Stop = abbrechen`
+    : solutionPath
+      ? 'Pfeiltasten = Lösung steppen   c = LURD kopieren   Esc = schließen'
+      : 'Esc = schließen';
+}
+
+// startet eine Solver-Sitzung (pausiert); max moves wirkt als hartes Budget
+async function doSolve(): Promise<void> {
+  if (mergeBusy) return;
+  const maxMoves = Math.max(0, Number(($('maxMoves') as HTMLInputElement).value) || 0);
+  try {
+    await postJSON<{ started: boolean }>('/api/solve', { maxMoves });
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function sendSolveCmd(cmd: { bulk?: number; auto?: boolean }): Promise<void> {
+  try {
+    await postJSON<{ ok: boolean }>('/api/solve/cmd', cmd);
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// holt die gemerkte Lösung des Levels (nach einer Solver-Sitzung) und lädt
+// sie angehalten aufs Spielfeld; setzt max moves auf die Zuglänge
+async function loadSolution(): Promise<void> {
+  interface SolutionMsg {
+    solution: { moves: number; pushes: number; path: string; complete: boolean } | null;
+  }
+  try {
+    const res = await getJSON<SolutionMsg>('/api/solution');
+    if (res.solution) {
+      solutionPath = res.solution.path;
+      ($('maxMoves') as HTMLInputElement).value = String(res.solution.moves);
+      showSolutionPreview();
+    }
+    renderSolverHint();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// Lösung angehalten anzeigen: gleiche Taststeuerung wie bei den Varianten
+// (Pfeiltasten springen je Kistenschub, Home/End an Anfang/Ende)
+function showSolutionPreview(): void {
+  if (!solutionPath) return;
+  let player = canvas.wposToIdx(field.player);
+  const boxes = field.boxes.map(w => canvas.wposToIdx(w));
+  const frames: AnimFrame[] = [{ player, boxes: [...boxes] }];
+  const delta: Record<string, number> = { l: -1, r: 1, u: -field.width, d: field.width };
+  for (const step of solutionPath) {
+    player += delta[step];
+    const pushed = boxes.indexOf(player);
+    if (pushed >= 0) boxes[pushed] += delta[step];
+    frames.push({ player, boxes: [...boxes] });
+  }
+  canvas.showVariant({ entry: null, exit: null, path: solutionPath, boxPortals: [], ends: true, frames }, true);
+  $('info').textContent =
+    `Lösung: ${fmt(solutionPath.length)} Züge - Pfeiltasten steppen je Kistenschub, c = LURD kopieren`;
+}
+
+// ---------- Snapshots (Buttons unter "Solve") ----------
 
 // ein Snapshot des aktuellen Levels (vom Backend in temp/room-snapshots verwaltet)
 interface SnapshotItem {
@@ -269,6 +354,7 @@ function connectProgress(): void {
   interface ProgressMsg {
     seq: number;
     busy: boolean;
+    kind: string;
     text: string;
     fields: number[];
     result: string;
@@ -282,7 +368,19 @@ function connectProgress(): void {
     if (p.busy) {
       mergeBusy = true;
       stopBtn.disabled = false;
-      $('info').textContent = p.text;
+      if (p.kind === 'solve') {
+        // Solver-Sitzung: Status (Tiefenzeilen) ins Panel, Modus aus Zeile 1
+        solveRunning = true;
+        const lines = p.text.split('\n');
+        solveAuto = lines[0] === '[auto]';
+        showSolverPanel(true);
+        $('solverLog').textContent = lines.slice(1).join('\n');
+        $('info').textContent = (lines[1] ?? 'solve...') + (solveAuto ? ' [auto]' : ' [pause]');
+        renderSolverHint();
+      } else {
+        if (solverPanelOpen()) showSolverPanel(false); // z.B. Level-Wechsel per Strg+V
+        $('info').textContent = p.text;
+      }
       canvas.setBusyFields(p.fields);
       updateMergeButton(canvas.getSelection());
       return;
@@ -290,13 +388,18 @@ function connectProgress(): void {
     stopBtn.disabled = true;
     canvas.setBusyFields([]);
     mergeBusy = false;
+    if (solveRunning) {
+      solveRunning = false;
+      renderSolverHint();
+    }
     updateMergeButton(canvas.getSelection());
     // Abschluss eines Jobs: auch blitzschnelle Jobs liefern genau ein
     // Ergebnis-Event (Erkennung über die Sequenznummer, nicht über busy)
     if ((p.result === '' && p.error === '') || p.seq === doneSeq) return;
     doneSeq = p.seq;
     void loadSnapshots(); // z.B. nach "Speichern" die Liste nachziehen
-    void reloadNetwork().then(() => {
+    void reloadNetwork().then(async () => {
+      if (p.kind === 'solve') await loadSolution(); // Lösung steppbar laden + max moves
       if (p.error) showError(new Error(p.error));
       else if (p.result) showStatus(p.result);
     });
@@ -566,6 +669,42 @@ async function boot(): Promise<void> {
   // Neu-Anklicken einer Variante spielt wieder die normale Animation ab.
   window.addEventListener('keydown', ev => {
     if (ev.target instanceof HTMLInputElement) return; // z.B. max-moves-Feld
+    // Solver-Steuerung wie in brute: b = Bulk, a/Leertaste = Auto an/aus,
+    // +/- = Bulkgröße mal/geteilt 10 (bis hinunter zu 1 = Einzelschritt)
+    if (solveRunning) {
+      switch (ev.key) {
+        case 'b':
+          ev.preventDefault();
+          void sendSolveCmd({ bulk: solveBulk });
+          return;
+        case 'a':
+        case ' ':
+          ev.preventDefault();
+          void sendSolveCmd({ auto: !solveAuto });
+          return;
+        case '+':
+          ev.preventDefault();
+          solveBulk *= 10;
+          renderSolverHint();
+          return;
+        case '-':
+          ev.preventDefault();
+          if (solveBulk >= 10) solveBulk /= 10;
+          renderSolverHint();
+          return;
+      }
+    }
+    if (ev.key === 'Escape' && !solveRunning && solverPanelOpen()) {
+      showSolverPanel(false); // zurück zu den Listen
+      return;
+    }
+    if (ev.key === 'c' && !solveRunning && solverPanelOpen() && solutionPath) {
+      void navigator.clipboard
+        .writeText(solutionPath)
+        .then(() => showStatus(`Lösung (${fmt(solutionPath.length)} Züge) als LURD kopiert`))
+        .catch(showError);
+      return;
+    }
     if (ev.key === 'Delete') {
       void doReset(); // gemergte Räume der Auswahl zurücksetzen
       return;
@@ -586,6 +725,7 @@ async function boot(): Promise<void> {
   ($('optimizeBtn') as HTMLButtonElement).addEventListener('click', () => void doOptimize());
   ($('stopBtn') as HTMLButtonElement).addEventListener('click', () => void doStop());
   ($('validateBtn') as HTMLButtonElement).addEventListener('click', () => void doValidate());
+  ($('solveBtn') as HTMLButtonElement).addEventListener('click', () => void doSolve());
   ($('snapSaveBtn') as HTMLButtonElement).addEventListener('click', () => void doSnapshotSave());
   ($('snapLoadBtn') as HTMLButtonElement).addEventListener('click', () => void doSnapshotLoad());
   ($('snapDeleteBtn') as HTMLButtonElement).addEventListener('click', () => void doSnapshotDelete());

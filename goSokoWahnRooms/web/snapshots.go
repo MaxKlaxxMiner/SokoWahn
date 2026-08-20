@@ -74,7 +74,7 @@ func (s *Server) handleSnapshots(w http.ResponseWriter, r *http.Request) {
 // POST /api/snapshots: aktuellen Netzwerk-Stand als neuen Snapshot speichern
 // (Hintergrund-Job wie Merge - der Stand bleibt während des Schreibens stabil)
 func (s *Server) handleSnapshotSave(w http.ResponseWriter, r *http.Request) {
-	started := s.runJob("save...", func(info rooms.ProgressFunc) (string, error) {
+	started := s.runJob("snapshot", "save...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
 		if err := os.MkdirAll(snapshotDir, 0o755); err != nil {
 			return "", err
@@ -122,7 +122,7 @@ func (s *Server) handleSnapshotLoad(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	started := s.runJob("load...", func(info rooms.ProgressFunc) (string, error) {
+	started := s.runJob("snapshot", "load...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
 		file, err := os.Open(filepath.Join(snapshotDir, name))
 		if err != nil {

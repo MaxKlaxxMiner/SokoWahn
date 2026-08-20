@@ -21,6 +21,7 @@ type progressState struct {
 	seq    uint64 // wächst bei jeder Änderung
 	busy   bool
 	stop   bool     // Stop angefordert (der nächste Callback bricht ab)
+	kind   string   // Art des Jobs ("merge", "solve", ...) - bleibt bis zum nächsten Job stehen
 	text   string   // aktueller Arbeitsschritt
 	fields []uint32 // Wpos der gerade bearbeiteten Räume
 	result string   // Abschluss-Meldung des letzten Laufs
@@ -30,6 +31,7 @@ type progressState struct {
 type progressJSON struct {
 	Seq    uint64   `json:"seq"` // Änderungs-Zähler (das Frontend dedupliziert darüber)
 	Busy   bool     `json:"busy"`
+	Kind   string   `json:"kind"` // die GUI zeigt z.B. beim Solver ein eigenes Panel
 	Text   string   `json:"text"`
 	Fields []uint32 `json:"fields"`
 	Result string   `json:"result"`
@@ -43,19 +45,27 @@ func (p *progressState) snapshot() (progressJSON, uint64) {
 	if fields == nil {
 		fields = []uint32{}
 	}
-	return progressJSON{Seq: p.seq, Busy: p.busy, Text: p.text, Fields: fields, Result: p.result, Error: p.errMsg}, p.seq
+	return progressJSON{Seq: p.seq, Busy: p.busy, Kind: p.kind, Text: p.text, Fields: fields, Result: p.result, Error: p.errMsg}, p.seq
 }
 
 // startet einen Lauf; false = es läuft schon einer
-func (p *progressState) begin(text string) bool {
+func (p *progressState) begin(kind, text string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.busy {
 		return false
 	}
-	p.busy, p.stop, p.text, p.fields, p.result, p.errMsg = true, false, text, nil, "", ""
+	p.busy, p.stop, p.kind, p.text, p.fields, p.result, p.errMsg = true, false, kind, text, nil, "", ""
 	p.seq++
 	return true
+}
+
+// liefert den aktuellen Stop-Wunsch (für Jobs, die nicht über den
+// report-Callback laufen, z.B. die Warteschleife der Solver-Sitzung)
+func (p *progressState) stopRequested() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.stop
 }
 
 func (p *progressState) finish(result string, err error) {
@@ -97,9 +107,9 @@ func (p *progressState) report(text string, active []*rooms.Room) bool {
 }
 
 // führt eine lange Rechnung im Hintergrund unter der Schreibsperre aus;
-// job liefert die Abschluss-Meldung
-func (s *Server) runJob(title string, job func(info rooms.ProgressFunc) (string, error)) bool {
-	if !s.progress.begin(title) {
+// job liefert die Abschluss-Meldung, kind kennzeichnet die Job-Art für die GUI
+func (s *Server) runJob(kind, title string, job func(info rooms.ProgressFunc) (string, error)) bool {
+	if !s.progress.begin(kind, title) {
 		return false
 	}
 	go func() {

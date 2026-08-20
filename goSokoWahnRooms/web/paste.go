@@ -80,7 +80,7 @@ func (s *Server) pasteSolution(w http.ResponseWriter, text string) {
 // Level laden (Web/Nummer oder Levelnotation) als Hintergrund-Job: erst nach
 // fehlerfreiem Aufbau wird das Netzwerk getauscht, sonst bleibt alles stehen
 func (s *Server) pasteLevel(w http.ResponseWriter, input string, isWeb bool) {
-	started := s.runJob("load level...", func(info rooms.ProgressFunc) (string, error) {
+	started := s.runJob("paste", "load level...", func(info rooms.ProgressFunc) (string, error) {
 		sokoMap, title := input, "Level aus der Zwischenablage"
 		bestMoves := 0
 		if isWeb {

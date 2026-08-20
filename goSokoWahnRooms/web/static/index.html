@@ -13,6 +13,11 @@
   <span id="stats"></span>
 </header>
 <main>
+  <section id="solverCol" hidden>
+    <div class="listHead">-- Solver --</div>
+    <div id="solverLog"></div>
+    <div id="solverHint" class="dim"></div>
+  </section>
   <section id="roomsCol">
     <div id="roomsList"></div>
   </section>
@@ -36,7 +41,7 @@
     <input id="maxMoves" type="number" min="1" placeholder="max moves" title="verifizierte obere Schranke der Gesamtlösung (z.B. Länge einer bekannten Lösung) - der Optimizer kappt Nutzungen über dem Budget; ACHTUNG: ein zu kleiner Wert wirft die Optimallösung weg">
     <button disabled title="folgt später">Filter</button>
     <button id="validateBtn" title="Konsistenz des Netzwerks prüfen">Validate</button>
-    <button disabled title="folgt später">Solver...</button>
+    <button id="solveBtn" title="Level per Brute-Force auf dem Rooms-Netzwerk lösen (Vorwärtssuche über die Varianten; max moves wirkt als hartes Budget). Steuerung wie in brute: b = Bulk-Schritte, a = Auto an/aus, +/- = Bulkgröße; die Lösung ist danach per Pfeiltasten durchsteppbar">Solve</button>
     <button id="snapSaveBtn" title="aktuellen Netzwerk-Stand als Snapshot speichern (temp/room-snapshots)">Speichern</button>
     <button id="snapLoadBtn" disabled title="gewählten Snapshot laden (ersetzt das aktuelle Netzwerk)">Laden</button>
     <button id="snapDeleteBtn" disabled title="gewählten Snapshot löschen">Löschen</button>

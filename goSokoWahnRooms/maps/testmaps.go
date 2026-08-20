@@ -1,5 +1,21 @@
 package maps
 
+// Level 200 von game-sokoban.com (aenigma "soko 01", 78 Moves optimal) -
+// von Max als Solver-Referenz vorgeschlagen: super einfach, muss sich ganz
+// ohne Mergen lösen lassen
+const Map200 = `
+      ###
+      #.#
+  #####.#####
+ ##         ##
+##  # # # #  ##
+#  ##     ##  #
+# ##  # #  ## #
+#     $@$     #
+####  ###  ####
+   #### ####
+`
+
 // Level 202 von game-sokoban.com (aenigma "soko 03", 83 Moves optimal) -
 // Standard-Level der Debug-GUI, wie im C#-Original (FormDebugger.FieldTest4)
 const Map202 = `

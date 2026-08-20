@@ -256,8 +256,10 @@ export class FieldCanvas {
   }
 
   // Varianten-Vorschau: Laufweg-Linie/Pfeile plus Animation der Schritte;
-  // jede (Neu-)Auswahl spielt wieder normal ab und beendet die Taststeuerung
-  showVariant(preview: VariantPreview): void {
+  // jede (Neu-)Auswahl spielt wieder normal ab und beendet die Taststeuerung.
+  // paused = keine Animation, angehalten am Anfang (Solver-Lösung: die
+  // Pfeiltasten steppen sofort je Kistenschub, wie die Lösungsanzeige in brute)
+  showVariant(preview: VariantPreview, paused = false): void {
     this.stopAnimation();
     this.variant = preview;
     this.playerHidden = false;
@@ -270,11 +272,15 @@ export class FieldCanvas {
     }
     if (this.stops[this.stops.length - 1] !== frames.length - 1) this.stops.push(frames.length - 1);
     if (frames.length > 0) {
-      this.animTick = 0;
-      this.animTimer = setInterval(() => {
-        this.animTick++;
-        this.draw();
-      }, ANIM_DELAY);
+      if (paused) {
+        this.stopIndex = 0;
+      } else {
+        this.animTick = 0;
+        this.animTimer = setInterval(() => {
+          this.animTick++;
+          this.draw();
+        }, ANIM_DELAY);
+      }
     }
     this.draw();
   }

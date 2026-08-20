@@ -520,8 +520,37 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   bestehende LURD-Lösung einspielen und anhand der Räume auf deren Varianten
   abbilden. Existiert die geforderte (ggf. ineffizientere) Variante im Raum nicht
   mehr, wird sie durch eine passende bekannte Alternative ersetzt.
-- **M7+ (später)**: Solver auf dem Netzwerk, Optimizer, Lösungshilfe,
-  ProfileFilter-Ideen (Merge-Simulation, Nachbarraum-Scans).
+- **M7 - Solver** ERLEDIGT (2026-08-20, vorgezogen vor M5/M6):
+  Brute-Force-Vorwärtssuche auf dem Netzwerk (rooms/solver.go, C#-Vorbild
+  RoomSolver + brute-Technik). Aufgabe = Zustand je Raum + Spieler (Raum +
+  eingehendes Portal) + Pfad-ID; Aufgaben-Listen je Zugtiefe, Hash-Dedup;
+  je Aufgabe werden reine Lauf-Varianten transitiv expandiert, Push-Varianten
+  erzeugen Folge-Aufgaben (BoxSwaps in die Nachbarräume). Gelöst = alle Räume
+  in Zustand 0, Spieler bleibt drin; gesucht wird bis das Optimum BEWIESEN ist
+  (Tiefe erreicht die beste Lösung). Gegenüber dem C#: echter LURD-Laufweg
+  über einen Solver-eigenen PathStore-DAG (jede Lösung wird gegen das
+  Spielfeld verifiziert) und Untergrenzen-Pruning - je Raum liefert der
+  Zustands-Dijkstra (minmoves.go, rückwärts) die bewiesene Schranke
+  "Zustand -> gelöst", die Summe kappt gegen Budget/beste Lösung.
+  Performance-Lehren (profiliert am frischen 202er, 67s -> 21s): Hash-Dedup
+  beim ERZEUGEN statt beim Abholen (sonst >80% Duplikate in den Listen),
+  Laufwege lazy erst für akzeptierte Aufgaben materialisieren (vorher 301 Mio.
+  PathStore-Knoten = 2,4 GB, jetzt 16 Mio.), Deltas statt O(Räume) je
+  Push-Kandidat (XOR-Zustands-Hash), Lauf-Dedup über Per-Raum-Arrays mit
+  Generationszähler statt Map. Anker: 200 frisch 78 Züge (~10 ms), 202
+  frisch 83 Züge (~20 s), Vanilla teil-gemergt 230 Züge / 97 Pushes (~50 s,
+  Brute-Optimum bewiesen ohne Voll-Merge).
+  Bedienung wie brute (Max, 2026-08-20): Sitzung startet PAUSIERT als
+  Hintergrund-Job unter der LESE-Sperre (GUI bleibt bedienbar, Mutationen
+  sperrt der Busy-Status); Tasten b = Bulk-Schritte, a/Leertaste = Auto,
+  +/- = Bulkgröße x10, Stop-Button bricht ab (beste bisherige Lösung zählt).
+  Das Solver-Panel ersetzt währenddessen die beiden linken Listen-Spalten
+  (kein neues Fenster) und zeigt Tiefenzeilen wie brute. Die Lösung wird am
+  Server gemerkt (überlebt Merges, nicht den Level-Wechsel), setzt max moves
+  und ist per Pfeiltasten je Kistenschub durchsteppbar (c = LURD kopieren).
+- **Später**: Optimizer bestehender Lösungen, Lösungshilfe, ProfileFilter-Ideen
+  (Merge-Simulation, Nachbarraum-Scans); M5 (Automerge) und M6 (Path-Mapping)
+  siehe oben, beide noch offen.
 
 ## 8. Tests ohne C#-Orakel
 

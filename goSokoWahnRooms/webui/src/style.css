@@ -82,6 +82,43 @@ main {
   flex-direction: column;
 }
 
+/* Solver-Panel: ersetzt während einer Solver-Sitzung die beiden linken
+   Listen-Spalten (gleiche Gesamtbreite); Status-Text mit Tiefenzeilen wie
+   in brute, unten die Tasten-Hinweise */
+#solverCol {
+  width: 453px; /* roomsCol + midCol + Spalten-Lücke */
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* display:flex überstimmt sonst das hidden-Attribut beim Panel-Wechsel */
+#solverCol[hidden],
+#roomsCol[hidden],
+#midCol[hidden] {
+  display: none;
+}
+
+#solverLog {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--list-bg);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  white-space: pre;
+}
+
+#solverHint {
+  background: var(--list-bg);
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 3px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 #midCol {
   width: 300px;
   flex-shrink: 0;

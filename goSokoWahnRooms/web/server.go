@@ -25,8 +25,14 @@ type Server struct {
 	title     string
 	bestMoves int    // bekannter Züge-Rekord des Levels (0 = unbekannt), füllt das max-moves-Feld
 	levelSeq  uint64 // wächst bei jedem Level-Wechsel - die GUI erkennt daran den Feld-Austausch
+	solution  *solutionJSON // Lösung des letzten Solver-Laufs (überlebt Merges, nicht den Level-Wechsel)
 	mux       *http.ServeMux
 	progress  progressState
+
+	// Steuer-Kanal der laufenden Solver-Sitzung (nil = keine); eigener Mutex,
+	// damit Kommandos nicht hinter den Netzwerk-Sperren warten
+	solveMu  sync.Mutex
+	solveCmd chan solveCommand
 }
 
 func New(network *rooms.Network, title string) *Server {
@@ -55,6 +61,11 @@ func New(network *rooms.Network, title string) *Server {
 	s.mux.HandleFunc("POST /api/snapshots", s.handleSnapshotSave)
 	s.mux.HandleFunc("POST /api/snapshots/load", s.handleSnapshotLoad)
 	s.mux.HandleFunc("POST /api/snapshots/delete", s.handleSnapshotDelete)
+	// Solver-Sitzung (M7): Start als Hintergrund-Job unter der Lesesperre,
+	// Steuerung (Bulk/Auto) und Lösungs-Abfrage wie in brute
+	s.mux.HandleFunc("POST /api/solve", s.handleSolve)
+	s.mux.HandleFunc("POST /api/solve/cmd", s.handleSolveCmd)
+	s.mux.HandleFunc("GET /api/solution", s.read(s.handleSolution))
 	s.mux.HandleFunc("GET /api/progress", s.handleProgress)
 	s.mux.HandleFunc("POST /api/stop", s.handleStop)
 	s.mux.HandleFunc("POST /api/validate", s.read(s.handleValidate))
@@ -92,6 +103,7 @@ func (s *Server) swapNetwork(network *rooms.Network, title string, bestMoves int
 	s.network = network
 	s.title = title
 	s.bestMoves = bestMoves
+	s.solution = nil // die Lösung gehört zum alten Level
 	s.levelSeq++
 }
 

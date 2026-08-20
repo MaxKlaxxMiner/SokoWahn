@@ -346,7 +346,7 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
 		return
 	}
-	started := s.runJob("merge...", func(info rooms.ProgressFunc) (string, error) {
+	started := s.runJob("merge", "merge...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
 		merges, err := n.MergeSelection(req.Rooms, req.MaxMoves, info)
 		if err != nil {
@@ -383,7 +383,7 @@ func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
 		return
 	}
-	started := s.runJob("reset...", func(info rooms.ProgressFunc) (string, error) {
+	started := s.runJob("reset", "reset...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
 		count, err := n.ResetRooms(req.Rooms, info)
 		if err != nil {
@@ -421,7 +421,7 @@ func (s *Server) handleOptimize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
 		return
 	}
-	started := s.runJob("optimize...", func(info rooms.ProgressFunc) (string, error) {
+	started := s.runJob("optimize", "optimize...", func(info rooms.ProgressFunc) (string, error) {
 		n, _ := s.snapshot()
 		removed, err := n.OptimizeRooms(req.Rooms, req.MaxMoves, info)
 		if err != nil {

@@ -1,0 +1,16 @@
+      ###
+      #.#
+  #####.#####
+ ##         ##
+##  # # # #  ##
+#  ##     ##  #
+# ##  # #  ## #
+#     $@$     #
+####  ###  ####
+   #### ####
+
+url: http://www.game-sokoban.com/index.php?mode=level&lid=200
+catalog: aenigma
+name: soko 01
+number: 1/50
+bestmoves: 78
