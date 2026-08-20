@@ -50,6 +50,7 @@ let currentState: StateItem | null = null;
 let variantsFetch: ((offset: number, limit: number) => Promise<Page<VRow>>) | null = null;
 let networkEffort = ''; // Effort des ganzen Netzwerks (Anzeige ohne Auswahl)
 let levelSeq = -1; // Level-Wechsel-Zähler des Servers (Strg+V kann das Feld ersetzen)
+let clearSelection = false; // nach einem Reset (Entf) die Auswahl nicht wiederherstellen
 let mergeBusy = false;
 let selectionGen = 0; // entwertet überholte Auswahl-Berechnungen (Drag erzeugt viele)
 const roomCache = new Map<number, RoomDetail>(); // Raum-Details je Index (bis zum nächsten Merge)
@@ -245,6 +246,9 @@ async function doReset(): Promise<void> {
   if (mergeBusy || selection.length < 1) return;
   try {
     await postJSON<{ started: boolean }>('/api/reset', { rooms: selection });
+    // die zurückgesetzten Räume nach dem Reload NICHT wieder selektieren -
+    // sonst bliebe je gelöschtem Raum ein 1-Feld-Raum markiert stehen
+    clearSelection = true;
   } catch (err) {
     showError(err);
   }
@@ -339,7 +343,12 @@ async function reloadNetwork(): Promise<void> {
   variantsList.reset(0);
   $('info').textContent = 'Effort: ' + summary.effort;
 
-  if (levelChanged) return; // neues Level: alte Auswahl-Felder sind bedeutungslos
+  if (levelChanged || clearSelection) {
+    // neues Level bzw. Reset: alte Auswahl nicht wiederherstellen
+    clearSelection = false;
+    updateMergeButton([]);
+    return;
+  }
 
   // Auswahl wiederherstellen: alte Felder -> neue Raum-Indizes (nach einem
   // Merge fallen mehrere alte Räume auf denselben neuen zusammen)
