@@ -4,7 +4,8 @@
 // Varianten als Animation (300 ms je Schritt, Schleife). Das Feld passt sich
 // wie das Original immer pixelgenau der Fenstergröße an (2% Rand, zentriert) -
 // kein Zoom, kein Scrollen. Ergänzungen gegenüber dem Original:
-// Portal-Pfeile des gewählten Raums und eine dezente Laufweg-Linie.
+// Portal-Pfeile des gewählten Raums, eine dezente Laufweg-Linie und eine
+// Taststeuerung der Variante (links/rechts je Kistenschub, wie in brute).
 
 import { Field, Portal } from './api';
 
@@ -70,6 +71,8 @@ export class FieldCanvas {
   private variant: VariantPreview | null = null;
   private animTick = 0;
   private animTimer: ReturnType<typeof setInterval> | null = null;
+  private stops: number[] = []; // Halte-Frames der Taststeuerung (Start, jeder Kistenschub, Ende)
+  private stopIndex = -1; // aktueller Halt (-1 = Animation läuft, Taststeuerung inaktiv)
 
   private floorPattern: CanvasPattern | null = null;
   private wallPattern: CanvasPattern | null = null;
@@ -240,6 +243,7 @@ export class FieldCanvas {
     this.playerHidden = false;
     this.stopAnimation();
     this.variant = null;
+    this.stopIndex = -1;
   }
 
   // Kisten-Vorschau eines Zustands: nur dessen Kisten, Spieler versteckt (wie C#)
@@ -251,12 +255,21 @@ export class FieldCanvas {
     this.draw();
   }
 
-  // Varianten-Vorschau: Laufweg-Linie/Pfeile plus Animation der Schritte
+  // Varianten-Vorschau: Laufweg-Linie/Pfeile plus Animation der Schritte;
+  // jede (Neu-)Auswahl spielt wieder normal ab und beendet die Taststeuerung
   showVariant(preview: VariantPreview): void {
     this.stopAnimation();
     this.variant = preview;
     this.playerHidden = false;
-    if (preview.frames.length > 0) {
+    this.stopIndex = -1;
+    // Halte-Punkte der Taststeuerung: Start, jeder Frame mit Kistenschub, Ende
+    this.stops = [0];
+    const frames = preview.frames;
+    for (let i = 1; i < frames.length; i++) {
+      if (frames[i].boxes.some((b, j) => b !== frames[i - 1].boxes[j])) this.stops.push(i);
+    }
+    if (this.stops[this.stops.length - 1] !== frames.length - 1) this.stops.push(frames.length - 1);
+    if (frames.length > 0) {
       this.animTick = 0;
       this.animTimer = setInterval(() => {
         this.animTick++;
@@ -264,6 +277,27 @@ export class FieldCanvas {
       }, ANIM_DELAY);
     }
     this.draw();
+  }
+
+  // Taststeuerung wie die Lösungsanzeige in brute: der erste Tastendruck stoppt
+  // die Animation und zeigt den Anfang der Variante, danach springen links/rechts
+  // von Kistenschub zu Kistenschub (Home/End an Anfang/Ende). Liefert die
+  // aktuelle Position (Züge) oder null, wenn keine Variante gewählt ist.
+  stepVariant(key: 'left' | 'right' | 'home' | 'end'): { frame: number; total: number } | null {
+    if (!this.variant || this.variant.frames.length === 0) return null;
+    if (this.stopIndex < 0) {
+      this.stopAnimation();
+      this.stopIndex = key === 'end' ? this.stops.length - 1 : 0;
+    } else {
+      switch (key) {
+        case 'left': this.stopIndex = Math.max(0, this.stopIndex - 1); break;
+        case 'right': this.stopIndex = Math.min(this.stops.length - 1, this.stopIndex + 1); break;
+        case 'home': this.stopIndex = 0; break;
+        case 'end': this.stopIndex = this.stops.length - 1; break;
+      }
+    }
+    this.draw();
+    return { frame: this.stops[this.stopIndex], total: this.variant.frames.length - 1 };
   }
 
   private stopAnimation(): void {
@@ -379,9 +413,15 @@ export class FieldCanvas {
     let player: number;
     if (this.variant && this.variant.frames.length > 0) {
       const frames = this.variant.frames;
-      // wie das Original: letzten Schritt kurz stehen lassen, dann von vorn
-      const tick = this.animTick % (frames.length + 2);
-      const frame = frames[Math.min(tick, frames.length - 1)];
+      let frame: AnimFrame;
+      if (this.stopIndex >= 0) {
+        // Taststeuerung aktiv: angehaltener Halte-Frame statt Animation
+        frame = frames[this.stops[this.stopIndex]];
+      } else {
+        // wie das Original: letzten Schritt kurz stehen lassen, dann von vorn
+        const tick = this.animTick % (frames.length + 2);
+        frame = frames[Math.min(tick, frames.length - 1)];
+      }
       boxes = frame.boxes;
       player = frame.player;
     } else if (this.stateBoxes !== null) {

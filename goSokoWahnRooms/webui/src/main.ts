@@ -3,7 +3,8 @@
 // Spielfeld rechts mit Effort-Zeile, Aktions-Buttons am Rand (folgen ab M3).
 // Die Varianten-Liste ist zustandsgetrieben und in Sektionen gegliedert
 // (-- Starts --, -- Portal 1r --, ...) wie im Original; Varianten werden
-// als Animation abgespielt. Read-only (M2).
+// als Animation abgespielt, per Cursortasten lässt sich die Animation anhalten
+// und je Kistenschub durchsteppen (wie die Lösungsanzeige in brute).
 
 import './style.css';
 import {
@@ -431,6 +432,24 @@ async function boot(): Promise<void> {
     void handleSelection([room.index], room.index, true);
   };
   roomsList.reset(summary.roomCount);
+
+  // Taststeuerung der Varianten-Animation (wie die Lösungsanzeige in brute):
+  // der erste Druck stoppt die Animation am Anfang der Variante, danach springen
+  // links/rechts von Kistenschub zu Kistenschub, Home/End an Anfang/Ende.
+  // Neu-Anklicken einer Variante spielt wieder die normale Animation ab.
+  window.addEventListener('keydown', ev => {
+    if (ev.target instanceof HTMLInputElement) return; // z.B. max-moves-Feld
+    const keys: Record<string, 'left' | 'right' | 'home' | 'end'> = {
+      ArrowLeft: 'left', ArrowRight: 'right', Home: 'home', End: 'end',
+    };
+    const key = keys[ev.key];
+    if (!key) return;
+    const pos = canvas.stepVariant(key);
+    if (!pos) return;
+    ev.preventDefault();
+    $('info').textContent = `Variante angehalten: Zug ${fmt(pos.frame)}/${fmt(pos.total)}` +
+      ' - links/rechts = Kistenschübe, Klick auf die Variante = Animation';
+  });
 
   ($('mergeBtn') as HTMLButtonElement).addEventListener('click', () => void doMerge());
   ($('optimizeBtn') as HTMLButtonElement).addEventListener('click', () => void doOptimize());
