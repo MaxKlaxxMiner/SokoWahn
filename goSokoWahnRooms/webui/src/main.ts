@@ -260,7 +260,9 @@ function showSolutionPreview(): void {
     if (pushed >= 0) boxes[pushed] += delta[step];
     frames.push({ player, boxes: [...boxes] });
   }
-  canvas.showVariant({ entry: null, exit: null, path: solutionPath, boxPortals: [], ends: true, frames }, true);
+  // hidePath: die Laufweg-Linie einer kompletten Lösung würde das ganze
+  // Level zumalen - die Figuren-Stellung je Halte-Punkt reicht
+  canvas.showVariant({ entry: null, exit: null, path: solutionPath, boxPortals: [], ends: true, hidePath: true, frames }, true);
   $('info').textContent =
     `Lösung: ${fmt(solutionPath.length)} Züge - Pfeiltasten steppen je Kistenschub, c = LURD kopieren`;
 }
@@ -397,6 +399,13 @@ function connectProgress(): void {
     // Ergebnis-Event (Erkennung über die Sequenznummer, nicht über busy)
     if ((p.result === '' && p.error === '') || p.seq === doneSeq) return;
     doneSeq = p.seq;
+    if (p.kind === 'solve' && solverPanelOpen()) {
+      // das Ergebnis auch im Panel zeigen: der SSE-Stream tastet nur den
+      // jeweils letzten Stand ab - endet eine Sitzung innerhalb eines Bulks,
+      // wird der "fertig"-Status vom Abschluss-Event verschluckt und die
+      // Tiefenzeilen blieben sonst scheinbar unverändert stehen
+      $('solverLog').textContent += '\n\n' + (p.error ? 'Fehler: ' + p.error : p.result);
+    }
     void loadSnapshots(); // z.B. nach "Speichern" die Liste nachziehen
     void reloadNetwork().then(async () => {
       if (p.kind === 'solve') await loadSolution(); // Lösung steppbar laden + max moves

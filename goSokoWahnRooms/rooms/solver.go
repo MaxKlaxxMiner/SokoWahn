@@ -95,8 +95,6 @@ type Solver struct {
 	skipped   uint64 // veraltete Aufgaben (bessere Kopie wurde schon verarbeitet)
 	created   uint64 // eingetragene Aufgaben gesamt
 
-	curRoom *Room // Raum der zuletzt verarbeiteten Aufgabe (gelbe Markierung)
-
 	best    *Solution
 	done    bool
 	doneMsg string
@@ -204,31 +202,55 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 	}
 
 	// Start-Aufgaben: Spieler startet im Startraum, alle Startvarianten
-	s.curRoom = startRoom
 	s.baseHash, s.baseRemain, s.baseNonZero = statesHash, lower, nonZero
 	s.resolveTask(0, states, EmptyPath, startRoom, NoPortal)
 	return s, nil
 }
 
-// Step verarbeitet bis zu maxTasks Aufgaben und liefert true, wenn die
-// Suche beendet ist (Optimum bewiesen, Budget ausgeschöpft oder Fehler)
+// Step verarbeitet bis zu maxTasks Aufgaben, aber höchstens die AKTUELLE
+// Tiefenzeile (wie im C#-Original und in brute: ein Bulk endet an der
+// Tiefengrenze - so bleibt das Abarbeiten in der GUI zeilenweise sichtbar).
+// Liefert true, wenn die Suche beendet ist (Optimum bewiesen, Budget
+// ausgeschöpft oder Fehler).
 func (s *Solver) Step(maxTasks int) bool {
-	for maxTasks > 0 && !s.done {
-		// aktuelle Tiefe abgearbeitet? -> Bucket freigeben, nächste Tiefe
-		for s.depth < len(s.buckets) && s.offset >= len(s.buckets[s.depth]) {
-			s.buckets[s.depth] = nil
+	if s.done {
+		return true
+	}
+	// zur nächsten nicht-leeren Tiefe vorrücken (Buckets freigeben)
+	for s.depth < len(s.buckets) && s.offset >= len(s.buckets[s.depth]) {
+		s.buckets[s.depth] = nil
+		s.depth++
+		s.offset = 0
+	}
+	if s.depth >= len(s.buckets) ||
+		(s.best != nil && uint32(s.depth) >= s.best.Moves) {
+		s.finish()
+		return true
+	}
+
+	// die aktuelle Tiefenzeile abarbeiten (neue Aufgaben landen immer in
+	// höheren Tiefen - jede Push-Variante kostet mindestens einen Zug)
+	bucket := s.buckets[s.depth]
+	for maxTasks > 0 && !s.done && s.offset < len(bucket) {
+		task := bucket[s.offset : s.offset+s.taskSize]
+		s.offset += s.taskSize
+		s.processTask(task)
+		maxTasks--
+	}
+
+	// Zeile komplett? Tiefe sofort weiterschalten, damit Status-Anzeige und
+	// Fertig-Erkennung nicht einen Bulk hinterherhinken
+	if !s.done && s.offset >= len(bucket) {
+		s.buckets[s.depth] = nil
+		s.depth++
+		s.offset = 0
+		for s.depth < len(s.buckets) && len(s.buckets[s.depth]) == 0 {
 			s.depth++
-			s.offset = 0
 		}
 		if s.depth >= len(s.buckets) ||
 			(s.best != nil && uint32(s.depth) >= s.best.Moves) {
 			s.finish()
-			return true
 		}
-		task := s.buckets[s.depth][s.offset : s.offset+s.taskSize]
-		s.offset += s.taskSize
-		s.processTask(task)
-		maxTasks--
 	}
 	return s.done
 }
@@ -253,7 +275,6 @@ func (s *Solver) finish() {
 func (s *Solver) Done() bool          { return s.done }
 func (s *Solver) Err() error          { return s.err }
 func (s *Solver) Solution() *Solution { return s.best }
-func (s *Solver) CurrentRoom() *Room  { return s.curRoom }
 
 // ResultText liefert die Abschluss-Beschreibung (erst nach Done gültig)
 func (s *Solver) ResultText() string { return s.doneMsg }
@@ -347,7 +368,6 @@ func (s *Solver) processTask(task []uint64) {
 	s.baseHash, s.baseRemain, s.baseNonZero = statesHash, remainSum, nonZero
 
 	room := s.rooms[roomPortal>>32]
-	s.curRoom = room
 	s.processed++
 	s.resolveTask(uint32(s.depth), states, PathID(task[len(s.rooms)+1]), room, uint32(roomPortal))
 }
@@ -609,8 +629,8 @@ func (s *Solver) Status() string {
 		if d == s.depth {
 			count -= s.offset
 		}
-		if count == 0 && d != s.depth {
-			continue // leere Tiefen nicht listen
+		if count == 0 {
+			continue // leere Tiefen nicht listen (auch nicht die aktuelle)
 		}
 		fmt.Fprintf(&b, "\n[%4d] %s", d, tools.FormatInt(count/s.taskSize))
 	}

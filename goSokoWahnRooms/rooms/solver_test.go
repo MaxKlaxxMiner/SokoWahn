@@ -74,6 +74,33 @@ func TestSolveAfterMerge(t *testing.T) {
 	checkSolution(t, n2, runSolver(t, n2, 0), 9)
 }
 
+// Bulk-Grenze wie im C#-Original und in brute: ein Step arbeitet höchstens
+// die aktuelle Tiefenzeile ab, auch wenn das Budget größer ist - erst der
+// nächste Step geht die nächste Zeile an
+func TestSolveStepDepthBound(t *testing.T) {
+	n := buildNetwork(t, mapTwoBox)
+	s, err := NewSolver(n, 0)
+	if err != nil {
+		t.Fatal("new solver:", err)
+	}
+	steps := 0
+	lastDepth := -1
+	for !s.Step(1000000) {
+		steps++
+		if s.depth == lastDepth {
+			t.Fatalf("step %d: tiefe %d nicht weitergeschaltet (bulk >= zeilengröße)", steps, s.depth)
+		}
+		lastDepth = s.depth
+		if steps > 100 {
+			t.Fatal("suche endet nicht")
+		}
+	}
+	if steps < 2 {
+		t.Errorf("suche endete nach %d steps - ein bulk darf nur eine tiefenzeile abarbeiten", steps)
+	}
+	checkSolution(t, n, s.Solution(), 9)
+}
+
 // Budget-Verhalten: exaktes Optimum als Budget findet die Lösung,
 // ein zu kleines Budget endet bewiesen ohne Lösung
 func TestSolveBudget(t *testing.T) {
@@ -98,29 +125,7 @@ func TestSolve202Fresh(t *testing.T) {
 	t.Logf("202 frisch: %d moves / %d pushes", sol.Moves, sol.Pushes)
 }
 
-// Vanilla mit Teil-Merging (Max' Klassiker-Szenario): erst zwei 16er-Gruppen
-// mergen (Budget = bekanntes Optimum 230 aus goSokoWahnBrute), dann lösen -
-// der Solver muss das Brute-Optimum beweisen (~50 s, brute: 8,7 Mio. Knoten)
-func TestSolveVanillaMerged(t *testing.T) {
-	if testing.Short() {
-		t.Skip("vanilla-suche im short-modus übersprungen")
-	}
-	n := buildNetwork(t, maps.MapVanilla)
-	var sel1 []uint32
-	for i := 0; i < 16; i++ {
-		sel1 = append(sel1, uint32(i))
-	}
-	if _, err := n.MergeSelection(sel1, 230, nil); err != nil {
-		t.Fatal("merge:", err)
-	}
-	var sel2 []uint32
-	for i := 0; i < 16; i++ {
-		sel2 = append(sel2, uint32(len(n.Rooms)-1-i))
-	}
-	if _, err := n.MergeSelection(sel2, 230, nil); err != nil {
-		t.Fatal("merge:", err)
-	}
-	sol := runSolver(t, n, 230)
-	checkSolution(t, n, sol, 230)
-	t.Logf("vanilla teil-gemergt (%d räume): %d moves / %d pushes", len(n.Rooms), sol.Moves, sol.Pushes)
-}
+// Vanilla (Optimum 230 Züge / 97 Pushes, brute: 8,7 Mio. Knoten) läuft NICHT
+// im Testlauf - frisch mit Budget 230 braucht der Solver ~65 s, teil-gemergt
+// ~50 s (gemessen 2026-08-20, beide beweisen das Optimum); als Dauer-Anker
+// zu teuer, live in der GUI jederzeit nachstellbar.

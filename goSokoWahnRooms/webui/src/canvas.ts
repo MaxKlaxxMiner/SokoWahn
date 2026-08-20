@@ -44,6 +44,7 @@ export interface VariantPreview {
   path: string; // Laufweg inkl. Eintritts-Schritt (bei Portal-Varianten vorangestellt)
   boxPortals: Portal[]; // eingehende Portale, über deren Gegenrichtung Kisten rausgehen
   ends: boolean; // true = Spieler bleibt drin = Spielende
+  hidePath?: boolean; // Laufweg-Linie nicht zeichnen (Solver-Lösung: würde das ganze Level zumalen)
   frames: AnimFrame[]; // Animations-Schritte
 }
 
@@ -439,7 +440,7 @@ export class FieldCanvas {
     }
 
     // --- Laufweg-Linie der Variante (dezent unter den Figuren) ---
-    if (this.variant) this.drawVariantPath(this.variant);
+    if (this.variant && !this.variant.hidePath) this.drawVariantPath(this.variant);
 
     for (const idx of boxes) this.drawBox(idx);
     if (player >= 0) this.drawPlayer(player);

@@ -23,8 +23,8 @@ type Server struct {
 	mu        sync.RWMutex
 	network   *rooms.Network
 	title     string
-	bestMoves int    // bekannter Züge-Rekord des Levels (0 = unbekannt), füllt das max-moves-Feld
-	levelSeq  uint64 // wächst bei jedem Level-Wechsel - die GUI erkennt daran den Feld-Austausch
+	bestMoves int           // bekannter Züge-Rekord des Levels (0 = unbekannt), füllt das max-moves-Feld
+	levelSeq  uint64        // wächst bei jedem Level-Wechsel - die GUI erkennt daran den Feld-Austausch
 	solution  *solutionJSON // Lösung des letzten Solver-Laufs (überlebt Merges, nicht den Level-Wechsel)
 	mux       *http.ServeMux
 	progress  progressState

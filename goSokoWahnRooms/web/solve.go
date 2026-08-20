@@ -114,11 +114,9 @@ func (s *Server) solveJob(maxMoves uint32, cmd chan solveCommand) {
 		if auto {
 			mode = "auto"
 		}
-		var active []*rooms.Room
-		if room := solver.CurrentRoom(); room != nil {
-			active = append(active, room)
-		}
-		s.progress.report(fmt.Sprintf("[%s]\n%s", mode, solver.Status()), active)
+		// keine Raum-Markierung (nil): der Raum der zuletzt verarbeiteten
+		// Aufgabe ist praktisch zufällig - gelbes Geflacker ohne Aussage
+		s.progress.report(fmt.Sprintf("[%s]\n%s", mode, solver.Status()), nil)
 	}
 
 	aborted := false
