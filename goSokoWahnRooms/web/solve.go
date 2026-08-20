@@ -16,15 +16,20 @@ import (
 // brute: die Sitzung startet PAUSIERT, Kommandos (Bulk-Schritte, Auto an/aus)
 // kommen über /api/solve/cmd, der Stop-Button beendet die Sitzung.
 
-// Aufgaben je Auto-Häppchen: klein genug, dass Kommandos und Status-Updates
-// zwischendurch drankommen, groß genug, dass der Schleifen-Overhead untergeht
-const solveAutoChunk = 4096
+// Auto-Häppchen, solange die GUI keine Bulkgröße gemeldet hat
+// (gleicher Wert wie der GUI-Default der Bulkgröße)
+const solveAutoChunk = 100
 
-// ein Steuer-Kommando der GUI ({bulk: n}, {auto: true/false} oder {stop: true})
+// ein Steuer-Kommando der GUI ({bulk: n}, {auto: true/false} oder {stop: true});
+// bulkSize stellt nur die Häppchengröße der Automatik um (wie in brute läuft
+// auch die Automatik in Bulk-Schritten), ohne selbst einen Schritt auszulösen;
+// dir wählt die Suchrichtung (Tasten 1/2/3: DirForward/DirBackward/DirAuto)
 type solveCommand struct {
-	Bulk int   `json:"bulk"`
-	Auto *bool `json:"auto"`
-	Stop bool  `json:"stop"` // Sitzung beenden (Esc in der GUI; nicht der Stop-Button)
+	Bulk     int   `json:"bulk"`
+	BulkSize int   `json:"bulkSize"`
+	Auto     *bool `json:"auto"`
+	Dir      *int  `json:"dir"`
+	Stop     bool  `json:"stop"` // Sitzung beenden (Esc in der GUI; nicht der Stop-Button)
 }
 
 // die gemerkte Lösung des letzten erfolgreichen Solver-Laufs
@@ -121,6 +126,7 @@ func (s *Server) solveJob(maxMoves uint32, cmd chan solveCommand) {
 	}
 
 	aborted := false
+	chunk := solveAutoChunk // Auto-Häppchen; die GUI meldet ihre Bulkgröße per bulkSize
 	report(true)
 loop:
 	for !solver.Done() {
@@ -131,11 +137,20 @@ loop:
 			break
 		}
 		if auto {
+			// Takt der Automatik: EIN Bulk-Schritt je Anzeige-Tick (100 ms,
+			// die Abtastrate des SSE-Kanals) - jedes sichtbare Update zeigt
+			// damit genau einen Bulk; das Tempo steuert die Bulkgröße
 			select {
 			case c := <-cmd:
 				if c.Stop {
 					aborted = true
 					break loop
+				}
+				if c.BulkSize > 0 {
+					chunk = c.BulkSize
+				}
+				if c.Dir != nil && *c.Dir >= 0 && *c.Dir <= 2 {
+					solver.SetDirMode(rooms.DirMode(*c.Dir))
 				}
 				if c.Auto != nil {
 					auto = *c.Auto
@@ -144,10 +159,10 @@ loop:
 					report(true)
 					continue
 				}
-			default:
+			case <-time.After(100 * time.Millisecond):
 			}
-			solver.Step(solveAutoChunk)
-			report(false)
+			solver.Step(chunk)
+			report(true)
 		} else {
 			// pausiert: auf Kommandos warten, zwischendurch den Stop-Wunsch prüfen
 			select {
@@ -155,6 +170,12 @@ loop:
 				if c.Stop {
 					aborted = true
 					break loop
+				}
+				if c.BulkSize > 0 {
+					chunk = c.BulkSize
+				}
+				if c.Dir != nil && *c.Dir >= 0 && *c.Dir <= 2 {
+					solver.SetDirMode(rooms.DirMode(*c.Dir))
 				}
 				if c.Auto != nil {
 					auto = *c.Auto

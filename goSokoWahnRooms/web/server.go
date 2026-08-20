@@ -74,7 +74,14 @@ func New(network *rooms.Network, title string) *Server {
 	if err != nil {
 		panic(err) // kann nur bei kaputtem embed passieren
 	}
-	s.mux.Handle("GET /", http.FileServerFS(static))
+	// eingebettete Dateien haben keinen Zeitstempel (kein Last-Modified/ETag),
+	// der Browser cacht das JS-Bundle sonst heuristisch über Rebuilds hinweg -
+	// no-cache erzwingt frisches Laden (lokale Debug-GUI, Dateien sind winzig)
+	staticSrv := http.FileServerFS(static)
+	s.mux.Handle("GET /", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		staticSrv.ServeHTTP(w, r)
+	}))
 
 	return s
 }

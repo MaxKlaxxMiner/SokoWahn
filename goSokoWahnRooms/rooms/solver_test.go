@@ -84,8 +84,8 @@ func TestSolveAfterMerge(t *testing.T) {
 }
 
 // Bulk-Grenze wie im C#-Original und in brute: ein Step arbeitet höchstens
-// die aktuelle Tiefenzeile ab, auch wenn das Budget größer ist - erst der
-// nächste Step geht die nächste Zeile an
+// die aktuelle Tiefenzeile EINER Front ab, auch wenn das Budget größer ist -
+// erst der nächste Step geht die nächste Zeile an
 func TestSolveStepDepthBound(t *testing.T) {
 	n := buildNetwork(t, mapTwoBox)
 	s, err := NewSolver(n, 0)
@@ -93,13 +93,14 @@ func TestSolveStepDepthBound(t *testing.T) {
 		t.Fatal("new solver:", err)
 	}
 	steps := 0
-	lastDepth := -1
+	lastFwd, lastBwd := -1, -1
 	for !s.Step(1000000) {
 		steps++
-		if s.depth == lastDepth {
-			t.Fatalf("step %d: tiefe %d nicht weitergeschaltet (bulk >= zeilengröße)", steps, s.depth)
+		if s.fwd.depth == lastFwd && s.bwd.depth == lastBwd {
+			t.Fatalf("step %d: tiefe %d+%d nicht weitergeschaltet (bulk >= zeilengröße)",
+				steps, s.fwd.depth, s.bwd.depth)
 		}
-		lastDepth = s.depth
+		lastFwd, lastBwd = s.fwd.depth, s.bwd.depth
 		if steps > 100 {
 			t.Fatal("suche endet nicht")
 		}
@@ -108,6 +109,62 @@ func TestSolveStepDepthBound(t *testing.T) {
 		t.Errorf("suche endete nach %d steps - ein bulk darf nur eine tiefenzeile abarbeiten", steps)
 	}
 	checkSolution(t, n, s.Solution(), 9)
+}
+
+// Richtungsvorgaben wie in brute (Tasten 1/2/3): reine Vorwärts-, reine
+// Rückwärts- und automatische Suche müssen dasselbe bewiesene Optimum
+// liefern; Schein-Treffen (Hash-Kollisionen) dürfen auf den kleinen
+// Levels nicht auftreten
+func TestSolveDirModes(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		m     string
+		moves uint32
+	}{
+		{"twobox", mapTwoBox, 9},
+		{"200", maps.Map200, 78},
+	} {
+		for mode, modeName := range map[DirMode]string{
+			DirForward: "vorwärts", DirBackward: "rückwärts", DirAuto: "auto",
+		} {
+			n := buildNetwork(t, tc.m)
+			s, err := NewSolver(n, 0)
+			if err != nil {
+				t.Fatal("new solver:", err)
+			}
+			s.SetDirMode(mode)
+			for !s.Step(100000) {
+			}
+			if err := s.Err(); err != nil {
+				t.Fatalf("%s %s: %v", tc.name, modeName, err)
+			}
+			checkSolution(t, n, s.Solution(), tc.moves)
+			if s.collisions != 0 {
+				t.Errorf("%s %s: %d hash-kollisionen", tc.name, modeName, s.collisions)
+			}
+			t.Logf("%s %s: %d moves, tiefe %d+%d, verarbeitet %d+%d",
+				tc.name, modeName, s.Solution().Moves, s.fwd.depth, s.bwd.depth,
+				s.fwd.processed, s.bwd.processed)
+		}
+	}
+}
+
+// Budget-Beweis auch rückwärts: ein zu kleines Budget endet in jeder
+// Richtung bewiesen ohne Lösung
+func TestSolveBudgetBackward(t *testing.T) {
+	for _, mode := range []DirMode{DirBackward, DirAuto} {
+		n := buildNetwork(t, mapTwoBox)
+		s, err := NewSolver(n, 8)
+		if err != nil {
+			t.Fatal("new solver:", err)
+		}
+		s.SetDirMode(mode)
+		for !s.Step(100000) {
+		}
+		if sol := s.Solution(); sol != nil {
+			t.Errorf("mode %d, budget 8: unerwartete lösung %d moves (%q)", mode, sol.Moves, sol.Path)
+		}
+	}
 }
 
 // Budget-Verhalten: exaktes Optimum als Budget findet die Lösung,
@@ -123,7 +180,8 @@ func TestSolveBudget(t *testing.T) {
 }
 
 // Level 202 frisch (1-Feld-Räume, ganz ohne Mergen): Optimum 83 Züge
-// (aenigma "soko 03", siehe maps.Map202) - der Anker des Solvers (~20 s)
+// (aenigma "soko 03", siehe maps.Map202) - der Anker des Solvers
+// (bidirektionale Automatik ~6 s; rein vorwärts waren es ~21 s)
 func TestSolve202Fresh(t *testing.T) {
 	skipAnker(t)
 	n := buildNetwork(t, maps.Map202)
@@ -133,6 +191,7 @@ func TestSolve202Fresh(t *testing.T) {
 }
 
 // Vanilla (Optimum 230 Züge / 97 Pushes, brute: 8,7 Mio. Knoten) läuft NICHT
-// im Testlauf - frisch mit Budget 230 braucht der Solver ~65 s, teil-gemergt
-// ~50 s (gemessen 2026-08-20, beide beweisen das Optimum); als Dauer-Anker
-// zu teuer, live in der GUI jederzeit nachstellbar.
+// im Testlauf - frisch OHNE Budget beweist die bidirektionale Automatik das
+// Optimum in ~50 s (12,7 Mio. Hash-Einträge, 0 Kollisionen; rein vorwärts
+// mit Budget 230 waren es ~65 s, rein rückwärts ~122 s); als Dauer-Anker
+// zu teuer, live in der GUI jederzeit nachstellbar (gemessen 2026-08-20).

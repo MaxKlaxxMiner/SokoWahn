@@ -55,7 +55,7 @@ let mergeBusy = false;
 let solveRunning = false; // Solver-Sitzung aktiv (Panel ersetzt die linken Listen)
 let solveClosing = false; // Esc gedrückt: Sitzung endet, nachlaufende Events öffnen das Panel nicht neu
 let solveAuto = false; // Auto-Modus der Sitzung (Anzeige folgt dem Server-Status)
-let solveBulk = 10000; // Bulkgröße der b-Taste (+/- = mal/geteilt 10, bis hinunter zu 1)
+let solveBulk = 100; // Bulkgröße von b-Taste und Auto-Takt (+/- = mal/geteilt 10, bis hinunter zu 1)
 let solutionPath = ''; // LURD der gemerkten Lösung (Pfeiltasten steppen, c = kopieren)
 let selectionGen = 0; // entwertet überholte Auswahl-Berechnungen (Drag erzeugt viele)
 const roomCache = new Map<number, RoomDetail>(); // Raum-Details je Index (bis zum nächsten Merge)
@@ -210,7 +210,7 @@ function solverPanelOpen(): boolean {
 // Tasten-Hinweise unterm Panel (Steuerung wie in brute)
 function renderSolverHint(): void {
   $('solverHint').textContent = solveRunning
-    ? `b = bulk (${fmt(solveBulk)})   a = auto an/aus   +/- = bulkgröße   Esc = beenden`
+    ? `b = bulk (${fmt(solveBulk)})   a = auto an/aus   +/- = bulkgröße   1/2/3 = vor/rück/auto   Esc = beenden`
     : solutionPath
       ? 'Pfeiltasten = Lösung steppen   c = LURD kopieren   Esc = schließen'
       : 'Esc = schließen';
@@ -227,7 +227,7 @@ async function doSolve(): Promise<void> {
   }
 }
 
-async function sendSolveCmd(cmd: { bulk?: number; auto?: boolean; stop?: boolean }): Promise<void> {
+async function sendSolveCmd(cmd: { bulk?: number; bulkSize?: number; auto?: boolean; dir?: number; stop?: boolean }): Promise<void> {
   try {
     await postJSON<{ ok: boolean }>('/api/solve/cmd', cmd);
   } catch (err) {
@@ -703,17 +703,35 @@ async function boot(): Promise<void> {
         case 'a':
         case ' ':
           ev.preventDefault();
-          void sendSolveCmd({ auto: !solveAuto });
+          // die Bulkgröße mitschicken: die Automatik läuft wie in brute in
+          // Bulk-Häppchen (Anzeige bleibt trotzdem auf 100 ms gedrosselt)
+          void sendSolveCmd({ auto: !solveAuto, bulkSize: solveBulk });
           return;
         case '+':
           ev.preventDefault();
           solveBulk *= 10;
+          void sendSolveCmd({ bulkSize: solveBulk });
           renderSolverHint();
           return;
         case '-':
           ev.preventDefault();
           if (solveBulk >= 10) solveBulk /= 10;
+          void sendSolveCmd({ bulkSize: solveBulk });
           renderSolverHint();
+          return;
+        // Suchrichtung wie in brute: 1 = nur vorwärts, 2 = nur rückwärts,
+        // 3 = Automatik (Effizienz-Verhältnis); Werte = rooms.DirMode
+        case '1':
+          ev.preventDefault();
+          void sendSolveCmd({ dir: 1 });
+          return;
+        case '2':
+          ev.preventDefault();
+          void sendSolveCmd({ dir: 2 });
+          return;
+        case '3':
+          ev.preventDefault();
+          void sendSolveCmd({ dir: 0 });
           return;
       }
     }

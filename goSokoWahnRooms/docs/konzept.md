@@ -177,8 +177,9 @@ wirkungsgleicher End-Varianten aus verschiedenen Teilraum-Seiten.
   als späterer Aufsatz eingeplant: Meta-Daten je Raum plus komplexere Scans unter
   Einbeziehung der Nachbarräume - z.B. einen Merge nur "simulieren", um überflüssige/
   doppelte Varianten zu filtern, ohne wirklich mergen zu müssen.
-- **Solver/Rückwärtssuche** kommen später als Aufsatz; die Datenstrukturen
-  (Pfade, BoxSwap in beide Richtungen denkbar) verbauen das nicht.
+- **Solver/Rückwärtssuche**: beide inzwischen da (M7) - die Datenstrukturen
+  haben das wie erhofft nicht verbaut (BoxSwap und Varianten-Verzeichnis
+  ließen sich invertieren, die Pfade verketten in beide Richtungen).
 - Der **Single-Box-Scan** (welche Einzelkisten-Schübe sind überhaupt möglich)
   wird übernommen - er filtert schon beim Init Zustände, Varianten und setzt
   `BlockedBox`. Umsetzung über `soko` (Feld-Klon mit einer Kiste, Rückwärtsscan
@@ -538,17 +539,50 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   PathStore-Knoten = 2,4 GB, jetzt 16 Mio.), Deltas statt O(Räume) je
   Push-Kandidat (XOR-Zustands-Hash), Lauf-Dedup über Per-Raum-Arrays mit
   Generationszähler statt Map. Test-Anker: 200 frisch 78 Züge (~10 ms), 202
-  frisch 83 Züge (~20 s). Vanilla nur als Messwert (zu teuer für den
-  Testlauf): 230 Züge / 97 Pushes bewiesen, frisch mit Budget 230 in ~65 s,
-  teil-gemergt ~50 s - das Brute-Optimum fällt ohne Voll-Merge.
+  frisch 83 Züge. Vanilla nur als Messwert (zu teuer für den Testlauf),
+  siehe unten - das Brute-Optimum fällt ohne Voll-Merge.
   Bedienung wie brute (Max, 2026-08-20): Sitzung startet PAUSIERT als
   Hintergrund-Job unter der LESE-Sperre (GUI bleibt bedienbar, Mutationen
-  sperrt der Busy-Status); Tasten b = Bulk-Schritte, a/Leertaste = Auto,
-  +/- = Bulkgröße x10, Stop-Button bricht ab (beste bisherige Lösung zählt).
+  sperrt der Busy-Status); Tasten b = Bulk-Schritte, a/Leertaste = Auto
+  (EIN Bulk je Anzeige-Tick von 100 ms - jedes Update zeigt genau einen
+  Bulk-Schritt, das Tempo steuert die Bulkgröße; Default 100), +/- = Bulkgröße x10,
+  1/2/3 = Suchrichtung, Stop-Button bricht ab (beste bisherige Lösung zählt).
   Das Solver-Panel ersetzt währenddessen die beiden linken Listen-Spalten
   (kein neues Fenster) und zeigt Tiefenzeilen wie brute. Die Lösung wird am
   Server gemerkt (überlebt Merges, nicht den Level-Wechsel), setzt max moves
   und ist per Pfeiltasten je Kistenschub durchsteppbar (c = LURD kopieren).
+  **Rückwärtssuche/bidirektional** (2026-08-20, Technik aus brute, Indizes
+  nach C#-RoomReverse-Idee): dieselben Vorwärts-Varianten werden rückwärts
+  benutzt (rooms/solverback.go) - je Raum ein invertiertes Varianten-
+  Verzeichnis (Austrittsportal, NewState) samt Eintrittsportal je Variante
+  und invertierte BoxSwaps ("Kiste zurückziehen", mehrdeutige Umkehrungen
+  verzweigen). Eine Rückwärts-Aufgabe hat EXAKT die Vorwärts-Normalform
+  (Zustände + Eintrittsportal), trägt aber den RESTWEG bis zum gelösten
+  Level; Saat = End-Varianten mit gelöstem Endzustand, zurückgerollt.
+  Fronten-Treffen per Hash-Lookup in der Gegentabelle (der Hash speichert
+  je Stellung Tiefe + Pfad-ID), jede Kandidatin wird gegen das Spielfeld
+  verifiziert - scheitert das, war es eine 64-Bit-Kollision und sie wird
+  gezählt verworfen (brutes verifyMeet). Untergrenzen rückwärts spiegelbildlich
+  über stateDistances(StartState, vorwärts) = "Start -> Zustand". BEWIESEN ist
+  das Optimum, wenn die Tiefensumme das Limit übersteigt oder eine Front
+  erschöpft ist (Startvarianten deckt immer die Vorwärts-Saat ab - brutes
+  Lehre: die Rückwärtsfront kann die rohe Startstellung nie treffen, wohl
+  aber deren Push-Nachfolger; darum ist auch die reine Rückwärtssuche
+  vollständig). Richtungs-Automatik wie brute: einmal je Gesamttiefe das
+  Effizienz-Verhältnis "erreichte Tiefe je Hash-Eintrag" (Kreuzmultiplikation),
+  manuell per SetDirMode (GUI 1/2/3). Messwerte (2026-08-20): 202 frisch
+  bidirektional ~6 s statt ~21 s rein vorwärts (Anker läuft mit Automatik);
+  Vanilla frisch OHNE Budget bidirektional 50 s / 12,7 Mio. Hash-Einträge
+  (vorher ~65 s rein vorwärts MIT Budget 230), rein rückwärts 122 s / 27,5
+  Mio. (rückwärts streut auf dem Rooms-Modell breiter als vorwärts - jeder
+  Laufketten-Eintrittspunkt wird eine Aufgabe, nicht nur jeder Push).
+  Beifang der verifizierten Treffen: der alte FNV-Zustands-Hash (crc64-
+  Paket) kollidierte am Vanilla zigtausendfach zwischen VERSCHIEDENEN
+  Stellungen (für kleine Zustands-IDs sind FNV-Werte hochkorreliert, die
+  XOR-Differenzen löschen sich über mehrere Räume systematisch aus) - die
+  Vorwärts-Dedup hätte damit still Stellungen verschmelzen können; seit dem
+  SplitMix64-Zobrist-Mix (stateMix/taskKey) laufen 202 und Vanilla mit
+  0 Kollisionen.
 - **Später**: Optimizer bestehender Lösungen, Lösungshilfe, ProfileFilter-Ideen
   (Merge-Simulation, Nachbarraum-Scans); M5 (Automerge) und M6 (Path-Mapping)
   siehe oben, beide noch offen.
@@ -557,7 +591,7 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
 
 Zwei Stufen (Max, 2026-08-20 - "das nimmt langsam überhand"): der alltägliche
 `go test ./...` läuft in Sekunden; die Anker-LANGLÄUFER (5018-Dominanz ~70 s,
-Repro-5005 ~40 s, 202-Solver ~20 s) laufen nur auf Anforderung und gehören
+Repro-5005 ~40 s, 202-Solver ~6 s) laufen nur auf Anforderung und gehören
 vor jeden Commit, der das Suchverhalten ändert:
 
     SOKO_ANKER=1 go test ./...

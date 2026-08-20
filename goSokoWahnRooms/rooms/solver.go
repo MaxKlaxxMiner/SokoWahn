@@ -4,40 +4,58 @@ import (
 	"fmt"
 	"strings"
 
-	"goSokoWahnRooms/crc64"
 	"goSokoWahnRooms/soko"
 	"goSokoWahnRooms/tools"
 )
 
-// Solver: Brute-Force-Vorwärtssuche auf dem Rooms-Netzwerk (C#-Vorbild
-// RoomSolver, Technik wie goSokoWahnBrute): Aufgaben-Listen je Zugtiefe
-// plus Hash-Dedup. Eine Aufgabe = Zustand je Raum + Spieler (Raum und
-// eingehendes Portal) + Pfad-ID in den Solver-eigenen PathStore (damit
-// liefert die Suche den echten LURD-Laufweg - das C# hat das nie fertig
-// bekommen). Je Aufgabe werden erst alle reinen Lauf-Varianten transitiv
-// expandiert (Dedup je Raum+Variante, billigste Ankunft gewinnt), jede
-// Push-Variante erzeugt eine neue Aufgabe bei ihrer Gesamt-Zugtiefe.
-// Gelöst = alle Räume in Zustand 0 und der Spieler bleibt drin.
+// Solver: bidirektionale Brute-Force-Suche auf dem Rooms-Netzwerk (C#-Vorbild
+// RoomSolver war rein vorwärts, die Rückwärts-/Bidirektional-Technik kommt
+// aus goSokoWahnBrute): Aufgaben-Listen je Zugtiefe plus Hash-Dedup, in
+// BEIDEN Richtungen mit derselben Aufgaben-Normalform. Eine Aufgabe = Zustand
+// je Raum + Spieler (Raum und eingehendes Portal) + Pfad-ID in den Solver-
+// eigenen PathStore. Vorwärts bedeutet die Aufgabe "so weit bin ich gekommen"
+// (Pfad = Laufweg vom Start hierher), rückwärts "von hier aus kenne ich den
+// Rest" (Pfad = Laufweg von hier bis zum gelösten Level). Weil beide Fronten
+// dieselben Schlüssel benutzen, erkennt ein Hash-Lookup in der Gegentabelle
+// das Fronten-Treffen: Gesamtlösung = Vorwärtstiefe + Rückwärtstiefe, Pfad =
+// Vorwärtspfad + Rückwärtspfad. Jeder Treffer wird gegen das echte Spielfeld
+// verifiziert - scheitert das, war es eine 64-Bit-Hash-Kollision und der
+// Kandidat wird verworfen (wie brutes verifyMeet).
 //
-// Die Tiefen werden aufsteigend abgearbeitet - die erste gefundene Lösung
-// ist eine Kandidatin, BEWIESEN move-optimal ist sie erst, wenn die
-// Abarbeitungs-Tiefe ihre Zugzahl erreicht (dann endet die Suche).
+// Vorwärts expandiert eine Aufgabe wie das C#-ResolveTask: erst alle reinen
+// Lauf-Varianten transitiv sammeln (Dedup je Raum+Variante, billigste Ankunft
+// gewinnt), jede erreichte Push-Variante erzeugt eine neue Aufgabe. Rückwärts
+// läuft dasselbe spiegelbildlich (siehe solverback.go): Push-Varianten werden
+// über ein invertiertes Varianten-Verzeichnis (Austrittsportal, NewState)
+// rückgängig gemacht (Kisten-Einschübe per invertiertem BoxSwap zurückziehen),
+// dann liefert eine Rückwärts-Laufkette alle Eintrittspunkte, von denen aus
+// die Variante erreichbar war - jeder ist eine Vorgänger-Aufgabe.
+//
+// Die Tiefen werden je Front aufsteigend abgearbeitet - BEWIESEN move-optimal
+// ist die beste Lösung, sobald Vorwärts- plus Rückwärts-Abarbeitungstiefe das
+// Limit übersteigt (jede unentdeckte Lösung müsste an irgendeiner Push-Grenze
+// in eine schon verarbeitete Vorwärts- und eine schon erzeugte Rückwärts-
+// Aufgabe zerfallen) - oder wenn eine Front erschöpft ist (dann ist ihr
+// Zustandsraum innerhalb des Limits vollständig aufgezählt).
+//
+// Die Richtung wählt wie in brute eine Automatik einmal je Gesamttiefe: das
+// Effizienz-Verhältnis "erreichte Tiefe je Hash-Eintrag" (Kreuzmultiplikation),
+// manuell übersteuerbar per SetDirMode (GUI-Tasten 1/2/3).
 //
 // Pruning, das das C# nicht hatte: je Raum liefert der Zustands-Dijkstra
-// (siehe minmoves.go, rückwärts) die bewiesene Untergrenze "Zustand ->
-// gelöst"; die Summe über alle Räume ist eine zulässige Restkosten-
-// Schranke gegen das Budget (max moves bzw. beste bekannte Lösung minus 1),
-// Aufgaben darüber entstehen gar nicht erst.
+// (minmoves.go) die bewiesene Untergrenze "Zustand -> gelöst" (vorwärts) bzw.
+// "Start -> Zustand" (rückwärts); die Summe über alle Räume ist eine zulässige
+// Restkosten-Schranke gegen das Budget (max moves bzw. beste bekannte Lösung
+// minus 1), Aufgaben darüber entstehen gar nicht erst.
 //
 // Speicher-/Tempo-Design (profiliert am frischen 202er): der Hash prüft
 // schon beim ERZEUGEN einer Aufgabe (nicht erst beim Abholen), sonst
-// bestehen die Tiefenlisten zu >80% aus Duplikaten; Hash, Heuristik und
-// Gelöst-Zähler werden per Delta aus der Basis-Aufgabe fortgeschrieben
-// (O(geänderte Räume) statt O(alle Räume) je Push-Kandidat, der XOR-Hash
-// über die Raum-Zustände macht das möglich); Laufwege werden erst beim
-// Eintragen einer akzeptierten Aufgabe materialisiert (die Lauf-Expansion
-// merkt sich nur Vorgänger-Indizes - abgelehnte Ketten kosten keine
-// PathStore-Knoten).
+// bestehen die Tiefenlisten zu >80% aus Duplikaten; Hash und Heuristik
+// werden per Delta aus der Basis-Aufgabe fortgeschrieben (O(geänderte Räume)
+// statt O(alle Räume) je Kandidat, der XOR-Hash über die Raum-Zustände macht
+// das möglich); Laufwege werden erst beim Eintragen einer akzeptierten
+// Aufgabe materialisiert (die Lauf-Expansion merkt sich nur Vorgänger-
+// Indizes - abgelehnte Ketten kosten keine PathStore-Knoten).
 //
 // Der Solver ist ein schrittbarer Zustandsautomat: Step(n) verarbeitet
 // bis zu n Aufgaben, die Interaktivität (Bulk/Auto/Stop wie in brute)
@@ -52,27 +70,78 @@ type Solution struct {
 	Path   string
 }
 
+// manuelle Richtungsvorgabe (übersteuert die Automatik, GUI-Tasten 1/2/3)
+type DirMode int
+
+const (
+	DirAuto     DirMode = iota // Effizienz-Verhältnis: erreichte Tiefe je Hash-Eintrag
+	DirForward                 // nur vorwärts
+	DirBackward                // nur rückwärts
+)
+
 // Budget-Sentinel: kein Move-Limit gesetzt
 const solveNoBudget = ^uint32(0)
 
-// Untergrenzen-Sentinel: gelöster Zustand von hier aus unerreichbar
+// Untergrenzen-Sentinel: Zielzustand der Richtung von hier aus unerreichbar
 const remainInf = ^uint32(0)
 
-// ein Glied der Lauf-Expansion: Variante samt Ankunftskosten; der Laufweg
-// entsteht erst bei Bedarf über die Vorgänger-Kette (path/pathSet memoisieren)
+// ein Glied der Lauf-Expansion: Variante samt Laufkosten; der Laufweg
+// entsteht erst bei Bedarf über die Vorgänger-Kette (path/pathSet memoisieren).
+// Vorwärts zählt moves von der Basis-Aufgabe bis zum EINTRITT in die Variante,
+// rückwärts von deren Eintritt bis zurück zur Basis-Aufgabe (inkl. der Variante)
 type chainStep struct {
-	moves   uint32 // Moves von der Basis-Aufgabe bis zum Eintritt in die Variante
-	parent  int32  // Vorgänger-Glied (-1 = Wurzel: Basis-Pfad der Aufgabe)
+	moves   uint32
+	parent  int32 // Vorgänger-Glied (-1 = Wurzel: Basis-Pfad der Aufgabe)
 	room    *Room
 	variant uint64
-	path    PathID // memoisiert: Laufweg vom Spielstart bis zum Eintritt
+	path    PathID
 	pathSet bool
 }
 
-// eine Zustandsänderung einer Push-Variante (Kisten-Einschub oder eigener Raum)
+// eine Zustandsänderung (Kisten-Einschub bzw. dessen Rücknahme oder eigener Raum)
 type stateChange struct {
 	idx   uint32
 	state uint64
+}
+
+// eine Suchfront (vorwärts bzw. rückwärts): Aufgaben-Listen je Zugtiefe,
+// flach kodiert (je Aufgabe len(rooms) Zustände + (RaumIndex<<32|PortalIndex)
+// + PathID), dazu der Dedup-Hash und die Untergrenzen ihrer Richtung
+type solveFront struct {
+	buckets [][]uint64
+	hash    map[uint64]uint64 // Aufgaben-Schlüssel -> Tiefe<<32 | PathID (beste bekannte Kopie)
+	remain  [][]uint32        // je Raum: Moves-Untergrenze bis zum Ziel der Richtung (remainInf = nie)
+
+	depth     int // aktuelle Abarbeitungs-Tiefe
+	offset    int // Verarbeitungsposition im aktuellen Bucket (in uint64)
+	processed uint64
+	skipped   uint64 // veraltete Aufgaben (bessere Kopie wurde schon verarbeitet)
+	created   uint64
+}
+
+// gepackter Hash-Eintrag einer Front: beste bekannte Tiefe + zugehöriger Pfad
+func packRef(depth uint32, path PathID) uint64 { return uint64(depth)<<32 | uint64(path) }
+
+// rückt die Abarbeitung über leere/fertige Tiefen vor (Buckets freigeben)
+func (f *solveFront) skipEmpty() {
+	for f.depth < len(f.buckets) && f.offset >= len(f.buckets[f.depth]) {
+		f.buckets[f.depth] = nil
+		f.depth++
+		f.offset = 0
+	}
+}
+
+// Front erschöpft: alle erzeugten Aufgaben sind verarbeitet
+func (f *solveFront) exhausted() bool { return f.depth >= len(f.buckets) }
+
+// hängt eine neue Aufgabe an ihre Ziel-Tiefe an
+func (f *solveFront) enqueue(moves uint32, states []uint64, roomPortal uint64, path PathID) {
+	for int(moves) >= len(f.buckets) {
+		f.buckets = append(f.buckets, nil)
+	}
+	bucket := append(f.buckets[moves], states...)
+	f.buckets[moves] = append(append(bucket, roomPortal), uint64(path))
+	f.created++
 }
 
 type Solver struct {
@@ -80,32 +149,29 @@ type Solver struct {
 	rooms  []*Room
 	budget uint32 // hartes Move-Limit (inklusive), solveNoBudget = keins
 
-	remain [][]uint32 // je Raum: Moves-Untergrenze Zustand -> gelöst (remainInf = nie)
-	paths  *PathStore // Laufwege aller Aufgaben (wächst nur, Sharing über Concat)
+	paths *PathStore // Laufwege aller Aufgaben (wächst nur, Sharing über Concat)
 
-	// Aufgaben-Listen je Gesamt-Zugtiefe, flach kodiert:
-	// je Aufgabe len(rooms) Zustände + (RaumIndex<<32|PortalIndex) + PathID
 	taskSize int
-	buckets  [][]uint64
-	hash     map[uint64]uint32 // Aufgaben-Schlüssel -> beste bekannte Zugtiefe
+	fwd, bwd solveFront
+	rev      []roomReverse // je Raum die Rückwärts-Verzeichnisse (siehe solverback.go)
 
-	depth     int    // aktuelle Abarbeitungs-Tiefe
-	offset    int    // Verarbeitungsposition im aktuellen Bucket (in uint64)
-	processed uint64 // verarbeitete Aufgaben gesamt
-	skipped   uint64 // veraltete Aufgaben (bessere Kopie wurde schon verarbeitet)
-	created   uint64 // eingetragene Aufgaben gesamt
+	// Richtungswahl: Automatik einmal je Gesamttiefe, manuell übersteuerbar
+	dirMode    DirMode
+	dirDepth   int // Gesamttiefe der letzten Automatik-Entscheidung (-1 = noch keine)
+	dirForward bool
 
-	best    *Solution
-	done    bool
-	doneMsg string
-	err     error
+	best       *Solution
+	collisions uint64 // verworfene Schein-Treffen (64-Bit-Hash-Kollisionen)
+	done       bool
+	doneMsg    string
+	err        error
 
 	// Basis-Werte der gerade expandierten Aufgabe (einmal O(Räume), die
-	// Push-Kandidaten schreiben sie per Delta fort)
-	basePath    PathID
-	baseHash    uint64 // XOR der stateMix aller Räume
-	baseRemain  uint64 // Summe der Untergrenzen (endlich, sonst wäre die Aufgabe nie entstanden)
-	baseNonZero int    // Anzahl ungelöster Räume
+	// Kandidaten schreiben sie per Delta fort)
+	basePath   PathID
+	baseHash   uint64 // XOR der stateMix aller Räume
+	baseRemain uint64 // Summe der Untergrenzen der aktiven Richtung
+	baseNonZero int   // Anzahl ungelöster Räume (nur vorwärts genutzt)
 
 	// Dedup der Lauf-Expansion: je Raum und Variante die billigste Ankunft
 	// der AKTUELLEN Aufgabe (gen<<32|moves; der Generationszähler erspart
@@ -121,7 +187,9 @@ type Solver struct {
 }
 
 // NewSolver initialisiert die Suche auf dem aktuellen Netzwerk-Stand
-// (maxMoves > 0 = hartes Budget) und trägt die Start-Aufgaben ein
+// (maxMoves > 0 = hartes Budget) und trägt die Start-Aufgaben beider
+// Richtungen ein (rückwärts zuerst, damit die Vorwärts-Saat Blitz-Treffen
+// über den Gegen-Hash sofort erkennt)
 func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 	var startRoom *Room
 	for _, room := range n.Rooms {
@@ -142,9 +210,11 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 		budget:     solveNoBudget,
 		paths:      NewPathStore(),
 		taskSize:   len(n.Rooms) + 2,
-		hash:       map[uint64]uint32{},
+		dirDepth:   -1,
 		importMemo: map[*PathStore]map[PathID]PathID{},
 	}
+	s.fwd.hash = map[uint64]uint64{}
+	s.bwd.hash = map[uint64]uint64{}
 	s.visited = make([][]uint64, len(s.rooms))
 	for i, room := range s.rooms {
 		s.visited[i] = make([]uint64, room.Variants.Count())
@@ -153,15 +223,13 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 		s.budget = maxMoves
 	}
 
-	// Untergrenzen "Zustand -> gelöst" je Raum (Moves-Anteil des Dijkstra)
-	s.remain = make([][]uint32, len(s.rooms))
+	// Untergrenzen je Raum und Richtung (Moves-Anteil des Zustands-Dijkstra):
+	// vorwärts "Zustand -> gelöst", rückwärts "Start -> Zustand"
+	s.fwd.remain = make([][]uint32, len(s.rooms))
+	s.bwd.remain = make([][]uint32, len(s.rooms))
 	for i, room := range s.rooms {
-		dist := room.stateDistances(0, true)
-		remain := make([]uint32, len(dist))
-		for id, d := range dist {
-			remain[id] = uint32(d >> 32) // minMovesInf wird dabei zu remainInf
-		}
-		s.remain[i] = remain
+		s.fwd.remain[i] = movesOf(room.stateDistances(0, true))
+		s.bwd.remain[i] = movesOf(room.stateDistances(room.StartState, false))
 	}
 
 	states := make([]uint64, len(s.rooms))
@@ -176,7 +244,7 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 			solved = false
 			nonZero++
 		}
-		if r := s.remain[i][room.StartState]; r == remainInf {
+		if r := s.fwd.remain[i][room.StartState]; r == remainInf {
 			infeasible = true
 		} else {
 			lower += uint64(r)
@@ -201,70 +269,132 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 		return s, nil
 	}
 
-	// Start-Aufgaben: Spieler startet im Startraum, alle Startvarianten
+	// Rückwärts-Verzeichnisse und Rückwärts-Saat (alle End-Varianten mit
+	// gelöstem Endzustand, zurückgerollt auf ihre Vor-Stellungen)
+	s.buildReverse()
+	s.seedBackward()
+
+	// Vorwärts-Saat: Spieler startet im Startraum, alle Startvarianten
+	s.basePath = EmptyPath
 	s.baseHash, s.baseRemain, s.baseNonZero = statesHash, lower, nonZero
 	s.resolveTask(0, states, EmptyPath, startRoom, NoPortal)
 
-	// Steht das Ergebnis schon nach den Startvarianten fest (z.B. nach einem
-	// Voll-Merge: nur noch End-Varianten, keine offenen Aufgaben), schließt
-	// Step(0) die Suche sofort ab - die GUI kann die Lösung direkt anbieten,
-	// ohne dass erst ein Bulk das "fertig" feststellen muss
+	// Steht das Ergebnis schon nach der Saat fest (z.B. nach einem Voll-Merge:
+	// nur noch End-Varianten, keine offenen Aufgaben), schließt Step(0) die
+	// Suche sofort ab - die GUI kann die Lösung direkt anbieten
 	s.Step(0)
 	return s, nil
 }
 
-// Step verarbeitet bis zu maxTasks Aufgaben, aber höchstens die AKTUELLE
-// Tiefenzeile (wie im C#-Original und in brute: ein Bulk endet an der
-// Tiefengrenze - so bleibt das Abarbeiten in der GUI zeilenweise sichtbar).
-// Liefert true, wenn die Suche beendet ist (Optimum bewiesen, Budget
-// ausgeschöpft oder Fehler).
+// Moves-Anteil einer Dijkstra-Distanztabelle (minMovesInf wird zu remainInf)
+func movesOf(dist []uint64) []uint32 {
+	remain := make([]uint32, len(dist))
+	for id, d := range dist {
+		remain[id] = uint32(d >> 32)
+	}
+	return remain
+}
+
+// SetDirMode stellt die Richtungsvorgabe um (wirkt ab dem nächsten Step)
+func (s *Solver) SetDirMode(mode DirMode) { s.dirMode = mode }
+func (s *Solver) DirMode() DirMode        { return s.dirMode }
+
+// Step verarbeitet bis zu maxTasks Aufgaben der gewählten Richtung, aber
+// höchstens deren AKTUELLE Tiefenzeile (wie im C#-Original und in brute:
+// ein Bulk endet an der Tiefengrenze - so bleibt das Abarbeiten in der GUI
+// zeilenweise sichtbar). Liefert true, wenn die Suche beendet ist
+// (Optimum bewiesen, Budget ausgeschöpft oder Fehler).
 func (s *Solver) Step(maxTasks int) bool {
 	if s.done {
 		return true
 	}
-	// zur nächsten nicht-leeren Tiefe vorrücken (Buckets freigeben)
-	for s.depth < len(s.buckets) && s.offset >= len(s.buckets[s.depth]) {
-		s.buckets[s.depth] = nil
-		s.depth++
-		s.offset = 0
-	}
-	if s.depth >= len(s.buckets) ||
-		(s.best != nil && uint32(s.depth) >= s.best.Moves) {
-		s.finish()
+	s.fwd.skipEmpty()
+	s.bwd.skipEmpty()
+	if s.checkFinished() {
 		return true
 	}
 
-	// die aktuelle Tiefenzeile abarbeiten (neue Aufgaben landen immer in
-	// höheren Tiefen - jede Push-Variante kostet mindestens einen Zug)
-	bucket := s.buckets[s.depth]
-	for maxTasks > 0 && !s.done && s.offset < len(bucket) {
-		task := bucket[s.offset : s.offset+s.taskSize]
-		s.offset += s.taskSize
-		s.processTask(task)
+	// die aktuelle Tiefenzeile der gewählten Front abarbeiten (neue Aufgaben
+	// landen immer in höheren Tiefen - jede Push-Variante kostet mindestens
+	// einen Zug)
+	forward := s.chooseDirection()
+	f := &s.fwd
+	if !forward {
+		f = &s.bwd
+	}
+	bucket := f.buckets[f.depth]
+	for maxTasks > 0 && !s.done && f.offset < len(bucket) {
+		task := bucket[f.offset : f.offset+s.taskSize]
+		f.offset += s.taskSize
+		if forward {
+			s.processTask(task)
+		} else {
+			s.processTaskBackward(task)
+		}
 		maxTasks--
 	}
 
 	// Zeile komplett? Tiefe sofort weiterschalten, damit Status-Anzeige und
 	// Fertig-Erkennung nicht einen Bulk hinterherhinken
-	if !s.done && s.offset >= len(bucket) {
-		s.buckets[s.depth] = nil
-		s.depth++
-		s.offset = 0
-		for s.depth < len(s.buckets) && len(s.buckets[s.depth]) == 0 {
-			s.depth++
-		}
-		if s.depth >= len(s.buckets) ||
-			(s.best != nil && uint32(s.depth) >= s.best.Moves) {
-			s.finish()
-		}
+	if !s.done && f.offset >= len(bucket) {
+		f.buckets[f.depth] = nil
+		f.depth++
+		f.offset = 0
+		f.skipEmpty()
+		s.checkFinished()
 	}
 	return s.done
+}
+
+// prüft die Abbruchbedingungen: eine Front erschöpft (ihr Zustandsraum ist
+// innerhalb des Limits vollständig aufgezählt - Treffen wären beim Erzeugen
+// der jeweils späteren Kopie erkannt worden) oder die Tiefensumme übersteigt
+// das Limit (jede unentdeckte Lösung <= Limit zerfällt an einer Push-Grenze
+// in eine Vorwärts-Aufgabe unterhalb der Vorwärtstiefe und eine Rückwärts-
+// Aufgabe unterhalb der Rückwärtstiefe - beide wären erzeugt, die spätere
+// hätte das Treffen gemeldet)
+func (s *Solver) checkFinished() bool {
+	if s.fwd.exhausted() || s.bwd.exhausted() ||
+		uint64(s.fwd.depth)+uint64(s.bwd.depth) > s.limit() {
+		s.finish()
+	}
+	return s.done
+}
+
+// wählt die Richtung des nächsten Bulks: erschöpfte Fronten scheiden aus,
+// manuelle Vorgabe gewinnt, sonst entscheidet die Automatik einmal je
+// Gesamttiefe (brutes Effizienz-Verhältnis: vertieft wird die Richtung, die
+// bisher pro Hash-Eintrag die meisten Züge erreicht hat; Vergleich per
+// Kreuzmultiplikation, Anlauf-Kriterium: kleinere Tabelle zuerst)
+func (s *Solver) chooseDirection() bool {
+	if s.bwd.exhausted() {
+		return true
+	}
+	if s.fwd.exhausted() {
+		return false
+	}
+	switch s.dirMode {
+	case DirForward:
+		return true
+	case DirBackward:
+		return false
+	}
+	if sum := s.fwd.depth + s.bwd.depth; sum != s.dirDepth {
+		s.dirDepth = sum
+		fd, bd := int64(s.fwd.depth), int64(s.bwd.depth)
+		if fd == 0 || bd == 0 {
+			s.dirForward = len(s.fwd.hash) < len(s.bwd.hash)
+		} else {
+			s.dirForward = fd*int64(len(s.bwd.hash)) >= bd*int64(len(s.fwd.hash))
+		}
+	}
+	return s.dirForward
 }
 
 // beendet die Suche und formuliert das Ergebnis
 func (s *Solver) finish() {
 	s.done = true
-	s.buckets = nil
+	s.fwd.buckets, s.bwd.buckets = nil, nil
 	switch {
 	case s.err != nil:
 		s.doneMsg = s.err.Error()
@@ -300,16 +430,35 @@ func (s *Solver) limit() uint64 {
 	return limit
 }
 
+// SplitMix64-Finalizer: volle Lawinenwirkung über alle 64 Bit. Der frühere
+// FNV-Mix (crc64-Paket) war hier eine ECHTE Falle: für kleine Zustands-IDs
+// liefert FNV hochkorrelierte Werte ((A_i ^ s) * M² - arithmetische
+// Progressionen mit derselben Konstante), deren XOR-Differenzen sich über
+// mehrere Räume systematisch auslöschen - am Vanilla kollidierten zigtausend
+// VERSCHIEDENE Stellungen auf denselben Schlüssel (aufgeflogen durch die
+// verifizierten Fronten-Treffen; die Hash-Dedup hätte still Stellungen
+// verschmolzen). Ein Zobrist-XOR-Schema braucht unabhängig-zufällige Werte
+// je (Raum, Zustand) - genau das liefert der Mixer.
+func mix64(x uint64) uint64 {
+	x ^= x >> 30
+	x *= 0xbf58476d1ce4e5b9
+	x ^= x >> 27
+	x *= 0x94d049bb133111eb
+	x ^= x >> 31
+	return x
+}
+
 // Hash-Beitrag eines Raum-Zustands (XOR aller Räume = Aufgaben-Hash;
 // XOR macht den Hash beim Zustandswechsel eines Raums fortschreibbar)
 func stateMix(roomIndex uint32, state uint64) uint64 {
-	return uint64(crc64.Start.UpdateUInt32(roomIndex).UpdateUInt64(state))
+	return mix64(mix64(uint64(roomIndex)+0x9e3779b97f4a7c15) ^ state)
 }
 
 // Aufgaben-Schlüssel aus Zustands-Hash und Spieler-Position; wie in brute
-// wird das 64-Bit-Hashing ohne Kollisionsbehandlung akzeptiert
+// wird das 64-Bit-Hashing ohne Kollisionsbehandlung akzeptiert (Treffen
+// werden verifiziert, die Dedup vertraut dem Schlüssel)
 func taskKey(statesHash, roomPortal uint64) uint64 {
-	return uint64(crc64.Value(statesHash).UpdateUInt64(roomPortal))
+	return mix64(statesHash ^ mix64(roomPortal+0x9e3779b97f4a7c15))
 }
 
 // importiert den Laufweg einer Raum-Variante in den Solver-Store
@@ -341,18 +490,9 @@ func (s *Solver) stepPath(list []chainStep, i int32) PathID {
 	return prefix
 }
 
-// hängt eine neue Aufgabe an ihre Ziel-Tiefe an
-func (s *Solver) enqueue(moves uint32, states []uint64, roomPortal uint64, path PathID) {
-	for int(moves) >= len(s.buckets) {
-		s.buckets = append(s.buckets, nil)
-	}
-	bucket := append(s.buckets[moves], states...)
-	s.buckets[moves] = append(append(bucket, roomPortal), uint64(path))
-	s.created++
-}
-
-// verarbeitet eine Aufgabe: Veraltet-Check (eine billigere Kopie derselben
-// Stellung wurde bereits verarbeitet), Basis-Werte aufbauen, expandieren
+// verarbeitet eine Vorwärts-Aufgabe: Veraltet-Check (eine billigere Kopie
+// derselben Stellung wurde bereits verarbeitet), Basis-Werte aufbauen,
+// expandieren
 func (s *Solver) processTask(task []uint64) {
 	states := task[:len(s.rooms)]
 	roomPortal := task[len(s.rooms)]
@@ -362,37 +502,30 @@ func (s *Solver) processTask(task []uint64) {
 	nonZero := 0
 	for i, state := range states {
 		statesHash ^= stateMix(uint32(i), state)
-		remainSum += uint64(s.remain[i][state])
+		remainSum += uint64(s.fwd.remain[i][state])
 		if state != 0 {
 			nonZero++
 		}
 	}
-	if s.hash[taskKey(statesHash, roomPortal)] < uint32(s.depth) {
-		s.skipped++ // eine billigere Kopie wurde bereits eingetragen/verarbeitet
+	if s.fwd.hash[taskKey(statesHash, roomPortal)]>>32 < uint64(s.fwd.depth) {
+		s.fwd.skipped++ // eine billigere Kopie wurde bereits eingetragen/verarbeitet
 		return
 	}
 	s.baseHash, s.baseRemain, s.baseNonZero = statesHash, remainSum, nonZero
 
 	room := s.rooms[roomPortal>>32]
-	s.processed++
-	s.resolveTask(uint32(s.depth), states, PathID(task[len(s.rooms)+1]), room, uint32(roomPortal))
+	s.fwd.processed++
+	s.resolveTask(uint32(s.fwd.depth), states, PathID(task[len(s.rooms)+1]), room, uint32(roomPortal))
 }
 
-// expandiert eine Aufgabe (C#-Vorbild ResolveTask): erst alle über reine
-// Lauf-Varianten erreichbaren Varianten sammeln (Dedup je Raum+Variante,
+// expandiert eine Vorwärts-Aufgabe (C#-Vorbild ResolveTask): erst alle über
+// reine Lauf-Varianten erreichbaren Varianten sammeln (Dedup je Raum+Variante,
 // billigste Ankunft gewinnt), dann jede erreichte Push-Variante anwenden.
 // portalIdx == NoPortal expandiert die Startvarianten des Startraums.
 func (s *Solver) resolveTask(d uint32, states []uint64, base PathID, room *Room, portalIdx uint32) {
 	s.basePath = base
 	list := s.chainList[:0]
-	s.gen++
-	if s.gen == 0 { // Generationszähler übergelaufen: einmal echt leeren
-		for _, v := range s.visited {
-			clear(v)
-		}
-		s.gen = 1
-	}
-	gen := uint64(s.gen) << 32
+	gen := s.nextGen()
 
 	span := Span{Start: 0, Count: room.StartVariantCount}
 	if portalIdx != NoPortal {
@@ -440,6 +573,19 @@ func (s *Solver) resolveTask(d uint32, states []uint64, base PathID, room *Room,
 		}
 	}
 	s.chainList = list[:0] // Puffer (samt Wachstum) behalten
+}
+
+// schaltet den Generationszähler der Lauf-Dedups weiter (Überlauf: einmal
+// echt leeren) und liefert den Generations-Stempel
+func (s *Solver) nextGen() uint64 {
+	s.gen++
+	if s.gen == 0 {
+		for _, v := range s.visited {
+			clear(v)
+		}
+		s.gen = 1
+	}
+	return uint64(s.gen) << 32
 }
 
 // wendet eine Push-Variante an: Kisten in die Nachbarräume schieben,
@@ -497,11 +643,11 @@ func (s *Solver) emitPush(d uint32, states []uint64, list []chainStep, i int32) 
 		if old == now {
 			continue
 		}
-		rNew := s.remain[idx][now]
+		rNew := s.fwd.remain[idx][now]
 		if rNew == remainInf {
 			return // von hier aus beweisbar unlösbar
 		}
-		remainSum += int64(rNew) - int64(s.remain[idx][old])
+		remainSum += int64(rNew) - int64(s.fwd.remain[idx][old])
 		newHash ^= stateMix(idx, old) ^ stateMix(idx, now)
 		if old != 0 {
 			nonZero--
@@ -554,23 +700,45 @@ func (s *Solver) emitPush(d uint32, states []uint64, list []chainStep, i int32) 
 	// beim Abholen (processTask)
 	roomPortal := uint64(toRoom.Index)<<32 | uint64(op.Index)
 	k := taskKey(newHash, roomPortal)
-	if old, ok := s.hash[k]; ok && uint64(old) <= endMoves {
+	if old, ok := s.fwd.hash[k]; ok && old>>32 <= endMoves {
 		return
 	}
-	s.hash[k] = uint32(endMoves)
 
 	// erst jetzt wird es teuer: Laufweg materialisieren, Zustände kopieren
 	path := s.paths.Concat(s.stepPath(list, i), s.importPath(st.room, v.Path))
+	s.fwd.hash[k] = packRef(uint32(endMoves), path)
 	newStates := append(s.stateBuf[:0], states...)
 	for _, ch := range changes {
 		newStates[ch.idx] = ch.state
 	}
 	s.stateBuf = newStates
-	s.enqueue(uint32(endMoves), newStates, roomPortal, path)
+	// Fronten-Treffen: kennt die Rückwärtsfront dieselbe Stellung, ergibt
+	// Vorwärts- plus Rückwärtsweg eine Lösungs-Kandidatin
+	if ref, ok := s.bwd.hash[k]; ok {
+		s.tryMeet(path, PathID(ref), endMoves+ref>>32)
+	}
+	s.fwd.enqueue(uint32(endMoves), newStates, roomPortal, path)
 }
 
-// trägt eine gefundene Lösung ein - verifiziert gegen das echte Spielfeld
-// (schlägt das fehl, ist es ein Solver-Bug und die Suche endet mit Fehler)
+// prüft eine Treff-Kandidatin der beiden Fronten: der zusammengesetzte Weg
+// wird gegen das echte Spielfeld verifiziert - scheitert das, war es eine
+// 64-Bit-Hash-Kollision (Schein-Treffen) und die Kandidatin wird verworfen
+func (s *Solver) tryMeet(fwdPath, bwdPath PathID, total uint64) {
+	if (s.best != nil && total >= uint64(s.best.Moves)) || total > uint64(s.budget) {
+		return
+	}
+	lurd := s.paths.LURD(s.paths.Concat(fwdPath, bwdPath))
+	if err := s.n.Field.CheckSolution(lurd); err != nil {
+		s.collisions++
+		return
+	}
+	s.best = &Solution{Moves: uint32(total), Pushes: countPushes(s.n.Field, lurd), Path: lurd}
+}
+
+// trägt eine direkt gefundene Lösung ein - verifiziert gegen das echte
+// Spielfeld (schlägt das fehl, ist es ein Solver-Bug und die Suche endet
+// mit Fehler; anders als bei Treff-Kandidatinnen steckt hier keine
+// Gegen-Hash-Kollision als harmlose Erklärung dahinter)
 func (s *Solver) recordSolution(moves uint32, path PathID) {
 	lurd := s.paths.LURD(path)
 	if err := s.n.Field.CheckSolution(lurd); err != nil {
@@ -601,44 +769,89 @@ func countPushes(f *soko.Field, lurd string) uint32 {
 	return pushes
 }
 
-// Status liefert den Live-Zustand als mehrzeiligen Text: Kopfzeile,
-// beste Lösung und je Zugtiefe die offenen Aufgaben (wie brutes Tiefenzeilen)
+// Status liefert den Live-Zustand als mehrzeiligen Text: Kopfzeile, beste
+// Lösung und je Front die offenen Aufgaben je Zugtiefe (zwei Spalten wie
+// brutes TUI; die manuell fixierte Richtung ist markiert)
 func (s *Solver) Status() string {
 	var b strings.Builder
 	if s.done {
 		b.WriteString("solve: fertig - ")
 		b.WriteString(s.doneMsg)
 		fmt.Fprintf(&b, "\nverarbeitet %s aufgaben (%s veraltet), hash %s",
-			tools.FormatInt(s.processed), tools.FormatInt(s.skipped), tools.FormatInt(len(s.hash)))
+			tools.FormatInt(s.fwd.processed+s.bwd.processed),
+			tools.FormatInt(s.fwd.skipped+s.bwd.skipped),
+			tools.FormatInt(len(s.fwd.hash)+len(s.bwd.hash)))
+		if s.collisions > 0 {
+			fmt.Fprintf(&b, "\nhash-kollisionen verworfen: %s", tools.FormatInt(s.collisions))
+		}
 		return b.String()
 	}
 
-	var open uint64
-	for d := s.depth; d < len(s.buckets); d++ {
-		open += uint64(len(s.buckets[d]))
-	}
-	open = (open - uint64(s.offset)) / uint64(s.taskSize)
 	limitStr := "-"
 	if limit := s.limit(); limit != uint64(solveNoBudget) {
 		limitStr = tools.FormatInt(limit)
 	}
-	fmt.Fprintf(&b, "solve: tiefe %s / limit %s - offen %s - hash %s - verarbeitet %s",
-		tools.FormatInt(s.depth), limitStr, tools.FormatInt(open),
-		tools.FormatInt(len(s.hash)), tools.FormatInt(s.processed))
+	fmt.Fprintf(&b, "solve: tiefe %s (%s+%s) / limit %s",
+		tools.FormatInt(s.fwd.depth+s.bwd.depth),
+		tools.FormatInt(s.fwd.depth), tools.FormatInt(s.bwd.depth), limitStr)
+	fmt.Fprintf(&b, "\nhash %s - offen %s+%s",
+		tools.FormatInt(len(s.fwd.hash)+len(s.bwd.hash)),
+		tools.FormatInt(s.openTasks(&s.fwd)), tools.FormatInt(s.openTasks(&s.bwd)))
 	if s.best != nil {
-		fmt.Fprintf(&b, "\nbeste lösung: %s züge / %s pushes",
-			tools.FormatInt(s.best.Moves), tools.FormatInt(s.best.Pushes))
+		rest := int(s.best.Moves) - s.fwd.depth - s.bwd.depth
+		fmt.Fprintf(&b, "\nbeste lösung: %s züge / %s pushes (rest-beweis %s)",
+			tools.FormatInt(s.best.Moves), tools.FormatInt(s.best.Pushes), tools.FormatInt(max(rest, 0)))
+	}
+	if s.collisions > 0 {
+		fmt.Fprintf(&b, "\nhash-kollisionen verworfen: %s", tools.FormatInt(s.collisions))
 	}
 	b.WriteString("\n")
-	for d := s.depth; d < len(s.buckets); d++ {
-		count := len(s.buckets[d])
-		if d == s.depth {
-			count -= s.offset
+
+	// zwei Tiefenspalten nebeneinander (leere Tiefen nicht listen)
+	fwdTitle, bwdTitle := "vorwärts", "rückwärts"
+	switch s.dirMode {
+	case DirForward:
+		fwdTitle += " [fix]"
+	case DirBackward:
+		bwdTitle += " [fix]"
+	}
+	left := frontRows(fwdTitle, &s.fwd, s.taskSize)
+	right := frontRows(bwdTitle, &s.bwd, s.taskSize)
+	const colWidth = 22
+	for i := 0; i < len(left) || i < len(right); i++ {
+		var l, r string
+		if i < len(left) {
+			l = left[i]
+		}
+		if i < len(right) {
+			r = right[i]
+		}
+		b.WriteString("\n" + l + strings.Repeat(" ", max(colWidth-len([]rune(l)), 1)) + r)
+	}
+	return strings.TrimRight(b.String(), " \n")
+}
+
+// offene (noch nicht verarbeitete) Aufgaben einer Front
+func (s *Solver) openTasks(f *solveFront) uint64 {
+	var open uint64
+	for d := f.depth; d < len(f.buckets); d++ {
+		open += uint64(len(f.buckets[d]))
+	}
+	return (open - uint64(f.offset)) / uint64(s.taskSize)
+}
+
+// Tiefenzeilen einer Front (Titel + "[tiefe] anzahl" je nicht-leerer Tiefe)
+func frontRows(title string, f *solveFront, taskSize int) []string {
+	rows := []string{title}
+	for d := f.depth; d < len(f.buckets); d++ {
+		count := len(f.buckets[d])
+		if d == f.depth {
+			count -= f.offset
 		}
 		if count == 0 {
-			continue // leere Tiefen nicht listen (auch nicht die aktuelle)
+			continue
 		}
-		fmt.Fprintf(&b, "\n[%4d] %s", d, tools.FormatInt(count/s.taskSize))
+		rows = append(rows, fmt.Sprintf("[%4d] %s", d, tools.FormatInt(count/taskSize)))
 	}
-	return b.String()
+	return rows
 }
