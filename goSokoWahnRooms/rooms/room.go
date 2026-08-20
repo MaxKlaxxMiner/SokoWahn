@@ -100,7 +100,7 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 				Moves:        1,
 				Pushes:       0,
 				PlayerPortal: uint32(i),
-				Path:         string(rune(r.Outgoing[i].Dir)),
+				Path:         PathFromLURD(string(rune(r.Outgoing[i].Dir))),
 			})
 			r.StartVariantCount++
 		}
@@ -166,7 +166,7 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 					Moves:        1,
 					Pushes:       0,
 					PlayerPortal: uint32(oIdx),
-					Path:         string(rune(r.Outgoing[oIdx].Dir)),
+					Path:         PathFromLURD(string(rune(r.Outgoing[oIdx].Dir))),
 				})
 				ip.AddVariant(0, id)
 			}
@@ -192,7 +192,7 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 						Pushes:       1,
 						BoxPortals:   []uint32{uint32(boxPortal)},
 						PlayerPortal: uint32(oIdx),
-						Path:         string(rune(r.Outgoing[oIdx].Dir)),
+						Path:         PathFromLURD(string(rune(r.Outgoing[oIdx].Dir))),
 					})
 					ip.AddVariant(1, id)
 				}
@@ -208,7 +208,7 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 					Pushes:       1,
 					BoxPortals:   []uint32{uint32(boxPortal)},
 					PlayerPortal: NoPortal,
-					Path:         "",
+					Path:         nil,
 				})
 				ip.AddVariant(1, id)
 			}
@@ -231,7 +231,7 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 						Pushes:       1,
 						BoxPortals:   []uint32{uint32(boxPortal)},
 						PlayerPortal: uint32(oIdx),
-						Path:         string(rune(r.Outgoing[oIdx].Dir)),
+						Path:         PathFromLURD(string(rune(r.Outgoing[oIdx].Dir))),
 					})
 					ip.AddVariant(0, id)
 				}
@@ -252,7 +252,7 @@ func (r *Room) initVariants(f *soko.Field, scan *BoxScan) {
 						Moves:        1,
 						Pushes:       0,
 						PlayerPortal: uint32(oIdx),
-						Path:         string(rune(r.Outgoing[oIdx].Dir)),
+						Path:         PathFromLURD(string(rune(r.Outgoing[oIdx].Dir))),
 					})
 					ip.AddVariant(1, id)
 				}

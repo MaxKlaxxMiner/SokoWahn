@@ -74,7 +74,7 @@ func checkFullMerge(t *testing.T, room *Room) (minMoves uint32, minPath string) 
 			t.Fatalf("variant %d is no end variant: portal %d, new state %d", id, v.PlayerPortal, v.NewState)
 		}
 		if v.Moves < minMoves {
-			minMoves, minPath = v.Moves, v.Path
+			minMoves, minPath = v.Moves, v.Path.LURD()
 		}
 	}
 	return minMoves, minPath

@@ -19,7 +19,7 @@ import (
 // deterministisch neu über die Feld->Raum-Zuordnung und die Feld-Paare.
 
 const snapshotMagic = "ROOMSNP1"
-const snapshotVersion = uint32(1)
+const snapshotVersion = uint32(1) // Zugfolgen 2-Bit-gepackt (Path, siehe path.go)
 
 // ---------- gepufferte Schreib-/Lese-Hilfen (sammeln den ersten Fehler) ----------
 
@@ -181,7 +181,10 @@ func (n *Network) WriteSnapshot(w io.Writer, info ProgressFunc) error {
 				sw.u32(b)
 			}
 			sw.u32(v.PlayerPortal)
-			sw.str(v.Path)
+			sw.u32(uint32(len(v.Path)))
+			if sw.err == nil {
+				_, sw.err = sw.w.Write(v.Path)
+			}
 		}
 
 		// eingehende Portale: Verzeichnisse mit sortierten Schlüsseln
@@ -330,7 +333,10 @@ func ReadSnapshot(field *soko.Field, scan *BoxScan, r io.Reader, info ProgressFu
 				}
 			}
 			v.PlayerPortal = sr.u32()
-			v.Path = sr.str()
+			if pathLen := sr.u32(); sr.err == nil && pathLen > 0 {
+				v.Path = make(Path, pathLen)
+				_, sr.err = io.ReadFull(sr.r, v.Path)
+			}
 			if sr.err != nil {
 				return nil, sr.err
 			}

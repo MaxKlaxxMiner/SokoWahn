@@ -337,7 +337,7 @@ type mergeTask struct {
 	boxes          []uint32     // bisher rausgeschobene Kisten (neue Portal-Indizes, sortiert)
 	moves          uint32       // Laufschritte insgesamt
 	pushes         uint32       // Kistenverschiebungen insgesamt
-	path           string       // zurückgelegter Pfad insgesamt
+	path           Path         // zurückgelegter Pfad insgesamt (2-Bit-gepackt)
 	side1          bool         // variant gehört zu Raum 1 (sonst Raum 2)
 	variant        *VariantData // zuletzt verarbeitete Variante
 }
@@ -392,7 +392,7 @@ func (s *mergeSearch) follow(prev *mergeTask, v *VariantData, side1 bool) {
 		state2:  prev.state2,
 		moves:   prev.moves + v.Moves,
 		pushes:  prev.pushes + v.Pushes,
-		path:    prev.path + v.Path,
+		path:    prev.path.Concat(v.Path),
 		side1:   side1,
 		variant: v,
 	}
@@ -605,7 +605,7 @@ func (s *mergeSearch) emit(startState uint64, entry *Portal, entrySide1 bool, ne
 
 	add := func(c candidate) {
 		t := c.task
-		if uint64(len(t.path)) != uint64(t.moves) {
+		if uint64(t.path.Len()) != uint64(t.moves) {
 			panic("merge: path length != moves")
 		}
 		id := s.m.NewRoom.Variants.Add(VariantData{
