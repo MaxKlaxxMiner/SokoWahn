@@ -125,6 +125,13 @@ main {
   cursor: default;
 }
 
+/* Snapshot-Liste unter den Speichern/Laden/Löschen-Buttons: zweizeilige
+   Einträge (Effort in e-Schreibweise, Dateigröße dezent darunter) */
+#snapList {
+  flex: 1;
+  min-height: 60px;
+}
+
 /* ---------- Listen (ListBox-Optik) ---------- */
 
 #roomsList,

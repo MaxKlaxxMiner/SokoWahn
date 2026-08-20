@@ -44,6 +44,12 @@ func New(network *rooms.Network, title string) *Server {
 	s.mux.HandleFunc("POST /api/merge", s.handleMerge)
 	s.mux.HandleFunc("POST /api/optimize", s.handleOptimize)
 	s.mux.HandleFunc("POST /api/reset", s.handleReset)
+	// Snapshots: Liste liest nur Datei-Header (Lesesperre reicht), Save/Load
+	// laufen als Hintergrund-Jobs, Delete ist eine reine Datei-Operation
+	s.mux.HandleFunc("GET /api/snapshots", s.read(s.handleSnapshots))
+	s.mux.HandleFunc("POST /api/snapshots", s.handleSnapshotSave)
+	s.mux.HandleFunc("POST /api/snapshots/load", s.handleSnapshotLoad)
+	s.mux.HandleFunc("POST /api/snapshots/delete", s.handleSnapshotDelete)
 	s.mux.HandleFunc("GET /api/progress", s.handleProgress)
 	s.mux.HandleFunc("POST /api/stop", s.handleStop)
 	s.mux.HandleFunc("POST /api/validate", s.read(s.handleValidate))

@@ -132,6 +132,7 @@ async function handleSelection(selection: number[], active: number, fromList: bo
 function updateMergeButton(selection: number[]): void {
   ($('mergeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 2;
   ($('optimizeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 1;
+  updateSnapshotButtons();
 }
 
 // ---------- Aktionen (M3) ----------
@@ -154,6 +155,65 @@ async function doOptimize(): Promise<void> {
   const maxMoves = Math.max(0, Number(($('maxMoves') as HTMLInputElement).value) || 0);
   try {
     await postJSON<{ started: boolean }>('/api/optimize', { rooms: selection, maxMoves });
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// ---------- Snapshots (Buttons unter "Solver...") ----------
+
+// ein Snapshot des aktuellen Levels (vom Backend in temp/room-snapshots verwaltet)
+interface SnapshotItem {
+  name: string;
+  effort: string; // Effort-String zum Speicherzeitpunkt
+  size: number; // Dateigröße in Bytes
+}
+
+let snapshots: SnapshotItem[] = [];
+let selectedSnapshot: SnapshotItem | null = null;
+let snapshotsList: VirtualList<SnapshotItem>;
+
+function updateSnapshotButtons(): void {
+  ($('snapSaveBtn') as HTMLButtonElement).disabled = mergeBusy;
+  ($('snapLoadBtn') as HTMLButtonElement).disabled = mergeBusy || !selectedSnapshot;
+  ($('snapDeleteBtn') as HTMLButtonElement).disabled = mergeBusy || !selectedSnapshot;
+}
+
+async function loadSnapshots(): Promise<void> {
+  try {
+    const res = await getJSON<{ items: SnapshotItem[] }>('/api/snapshots');
+    snapshots = res.items;
+    selectedSnapshot = null;
+    updateSnapshotButtons();
+    snapshotsList.reset(snapshots.length);
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function doSnapshotSave(): Promise<void> {
+  if (mergeBusy) return;
+  try {
+    await postJSON<{ started: boolean }>('/api/snapshots', {});
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function doSnapshotLoad(): Promise<void> {
+  if (mergeBusy || !selectedSnapshot) return;
+  try {
+    await postJSON<{ started: boolean }>('/api/snapshots/load', { name: selectedSnapshot.name });
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function doSnapshotDelete(): Promise<void> {
+  if (!selectedSnapshot) return;
+  try {
+    await postJSON<{ ok: boolean }>('/api/snapshots/delete', { name: selectedSnapshot.name });
+    await loadSnapshots();
   } catch (err) {
     showError(err);
   }
@@ -212,6 +272,7 @@ function connectProgress(): void {
     // Ergebnis-Event (Erkennung über die Sequenznummer, nicht über busy)
     if ((p.result === '' && p.error === '') || p.seq === doneSeq) return;
     doneSeq = p.seq;
+    void loadSnapshots(); // z.B. nach "Speichern" die Liste nachziehen
     void reloadNetwork().then(() => {
       if (p.error) showError(new Error(p.error));
       else if (p.result) showStatus(p.result);
@@ -471,6 +532,27 @@ async function boot(): Promise<void> {
   ($('optimizeBtn') as HTMLButtonElement).addEventListener('click', () => void doOptimize());
   ($('stopBtn') as HTMLButtonElement).addEventListener('click', () => void doStop());
   ($('validateBtn') as HTMLButtonElement).addEventListener('click', () => void doValidate());
+  ($('snapSaveBtn') as HTMLButtonElement).addEventListener('click', () => void doSnapshotSave());
+  ($('snapLoadBtn') as HTMLButtonElement).addEventListener('click', () => void doSnapshotLoad());
+  ($('snapDeleteBtn') as HTMLButtonElement).addEventListener('click', () => void doSnapshotDelete());
+
+  // Snapshot-Liste: zweizeilig (Effort in e-Schreibweise, Dateigröße darunter),
+  // die Daten kommen komplett aus loadSnapshots (kein Paging nötig)
+  snapshotsList = new VirtualList<SnapshotItem>(
+    $('snapList'),
+    38,
+    snap => {
+      const mb = (snap.size / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+      return `${snap.effort.split(' ')[0]}<br><span class="dim">${mb} MB</span>`;
+    },
+    (offset, limit) => Promise.resolve({ total: snapshots.length, offset, items: snapshots.slice(offset, offset + limit) }),
+  );
+  snapshotsList.onSelect = snap => {
+    selectedSnapshot = snap;
+    updateSnapshotButtons();
+  };
+  void loadSnapshots();
+
   connectProgress();
 
   statesList = new VirtualList<StateItem>(
