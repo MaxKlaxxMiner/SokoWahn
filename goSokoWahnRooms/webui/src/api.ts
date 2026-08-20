@@ -11,6 +11,8 @@ export interface Summary {
   variantCount: number;
   minMoves: number; // Summe der bewiesenen Pflicht-Minima aller Räume
   effort: string;
+  bestMoves: number; // bekannter Züge-Rekord (0 = unbekannt), füllt das max-moves-Feld
+  levelSeq: number; // wächst bei jedem Level-Wechsel (dann Feld + Titel neu laden)
 }
 
 export interface WalkCell {

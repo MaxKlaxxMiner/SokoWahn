@@ -28,6 +28,8 @@ type summaryJSON struct {
 	VariantCount uint64 `json:"variantCount"`
 	MinMoves     uint64 `json:"minMoves"` // Summe der bewiesenen Pflicht-Minima aller Räume
 	Effort       string `json:"effort"`
+	BestMoves    int    `json:"bestMoves"` // bekannter Züge-Rekord (0 = unbekannt), füllt das max-moves-Feld
+	LevelSeq     uint64 `json:"levelSeq"`  // wächst bei jedem Level-Wechsel (GUI lädt dann Feld + Titel neu)
 }
 
 type fieldJSON struct {
@@ -213,6 +215,8 @@ func (s *Server) handleSummary(w http.ResponseWriter, r *http.Request) {
 		VariantCount: variants,
 		MinMoves:     minMoves,
 		Effort:       n.EffortString(),
+		BestMoves:    s.bestMoves,
+		LevelSeq:     s.levelSeq,
 	})
 }
 

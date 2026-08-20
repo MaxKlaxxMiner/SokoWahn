@@ -120,7 +120,11 @@ func main() {
 	if !*noBrowser {
 		openBrowser(url)
 	}
-	if err := http.Serve(listener, web.New(network, title)); err != nil {
+	server := web.New(network, title)
+	if webInfo != nil && webInfo.BestMoves > 0 {
+		server.SetBestMoves(webInfo.BestMoves) // füllt das max-moves-Feld der GUI vor
+	}
+	if err := http.Serve(listener, server); err != nil {
 		fmt.Println("server error:", err)
 		os.Exit(1)
 	}

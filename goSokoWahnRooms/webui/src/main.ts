@@ -49,6 +49,7 @@ let currentRoom: RoomDetail | null = null;
 let currentState: StateItem | null = null;
 let variantsFetch: ((offset: number, limit: number) => Promise<Page<VRow>>) | null = null;
 let networkEffort = ''; // Effort des ganzen Netzwerks (Anzeige ohne Auswahl)
+let levelSeq = -1; // Level-Wechsel-Zähler des Servers (Strg+V kann das Feld ersetzen)
 let mergeBusy = false;
 let selectionGen = 0; // entwertet überholte Auswahl-Berechnungen (Drag erzeugt viele)
 const roomCache = new Map<number, RoomDetail>(); // Raum-Details je Index (bis zum nächsten Merge)
@@ -155,6 +156,24 @@ async function doOptimize(): Promise<void> {
   const maxMoves = Math.max(0, Number(($('maxMoves') as HTMLInputElement).value) || 0);
   try {
     await postJSON<{ started: boolean }>('/api/optimize', { rooms: selection, maxMoves });
+  } catch (err) {
+    showError(err);
+  }
+}
+
+// ---------- universelles Strg+V (wie in brute) ----------
+
+// Der Server klassifiziert den Text: Level-Nummer/URL oder Levelnotation
+// ersetzen das Spielfeld (Hintergrund-Job, Reload kommt über den Progress-
+// Stream); eine LURD-Zugfolge wird als Lösung geprüft und setzt bei Erfolg
+// das max-moves-Feld auf die Zuglänge.
+async function doPaste(text: string): Promise<void> {
+  try {
+    const res = await postJSON<{ kind: string; moves?: number }>('/api/paste', { text });
+    if (res.kind === 'solution' && res.moves !== undefined) {
+      ($('maxMoves') as HTMLInputElement).value = String(res.moves);
+      showStatus(`Lösung passt: ${fmt(res.moves)} Züge - max moves gesetzt`);
+    }
   } catch (err) {
     showError(err);
   }
@@ -290,14 +309,24 @@ async function doValidate(): Promise<void> {
 }
 
 // holt Kennzahlen und Raum-Karte neu (nach Merge) - das Feld selbst bleibt
-// gleich. Die Auswahl überlebt den Reload: je Raum dient ein Feld (Wpos) als
-// stabile Kennung, gemergte Räume bleiben also selektiert (der nächste
-// Arbeitsschritt betrifft meist genau sie)
+// meist gleich. Die Auswahl überlebt den Reload: je Raum dient ein Feld (Wpos)
+// als stabile Kennung, gemergte Räume bleiben also selektiert (der nächste
+// Arbeitsschritt betrifft meist genau sie). Hat sich das LEVEL geändert
+// (Strg+V mit URL/Nummer/Levelnotation), werden auch Feld, Titel und das
+// max-moves-Feld (bekannter Rekord) neu gesetzt; die Auswahl verfällt dann.
 async function reloadNetwork(): Promise<void> {
   const keep = canvas.getSelectionWpos();
   roomCache.clear();
   const summary = await getJSON<Summary>('/api/summary');
   const map = await getJSON<{ rooms: number[] }>('/api/map');
+  const levelChanged = summary.levelSeq !== levelSeq;
+  if (levelChanged) {
+    levelSeq = summary.levelSeq;
+    field = await getJSON<Field>('/api/field');
+    document.title = 'Rooms - ' + summary.title;
+    $('title').textContent = summary.title;
+    ($('maxMoves') as HTMLInputElement).value = summary.bestMoves > 0 ? String(summary.bestMoves) : '';
+  }
   networkEffort = summary.effort;
   updateStats(summary);
   canvas.setData(field, map.rooms); // setzt auch die Auswahl zurück
@@ -309,6 +338,8 @@ async function reloadNetwork(): Promise<void> {
   statesList.reset(0);
   variantsList.reset(0);
   $('info').textContent = 'Effort: ' + summary.effort;
+
+  if (levelChanged) return; // neues Level: alte Auswahl-Felder sind bedeutungslos
 
   // Auswahl wiederherstellen: alte Felder -> neue Raum-Indizes (nach einem
   // Merge fallen mehrere alte Räume auf denselben neuen zusammen)
@@ -481,6 +512,10 @@ async function boot(): Promise<void> {
 
   document.title = 'Rooms - ' + summary.title;
   $('title').textContent = summary.title;
+  levelSeq = summary.levelSeq;
+  if (summary.bestMoves > 0) {
+    ($('maxMoves') as HTMLInputElement).value = String(summary.bestMoves); // bekannter Rekord
+  }
   networkEffort = summary.effort;
   updateStats(summary);
   $('info').textContent = 'Effort: ' + summary.effort;
@@ -505,6 +540,16 @@ async function boot(): Promise<void> {
     void handleSelection([room.index], room.index, true);
   };
   roomsList.reset(summary.roomCount);
+
+  // universelles Strg+V: Level-URL/-Nummer, Levelnotation oder LURD-Lösung
+  // (Einfügen in Eingabefelder wie max moves bleibt normales Einfügen)
+  window.addEventListener('paste', ev => {
+    if (ev.target instanceof HTMLInputElement) return;
+    const text = ev.clipboardData?.getData('text') ?? '';
+    if (!text.trim()) return;
+    ev.preventDefault();
+    void doPaste(text);
+  });
 
   // Taststeuerung der Varianten-Animation (wie die Lösungsanzeige in brute):
   // der erste Druck stoppt die Animation am Anfang der Variante, danach springen

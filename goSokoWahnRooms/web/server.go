@@ -20,11 +20,13 @@ var staticFS embed.FS
 // Das Netzwerk ist austauschbar (SetNetwork), damit die GUI später neue
 // Levels laden kann, ohne den Server neu zu starten.
 type Server struct {
-	mu       sync.RWMutex
-	network  *rooms.Network
-	title    string
-	mux      *http.ServeMux
-	progress progressState
+	mu        sync.RWMutex
+	network   *rooms.Network
+	title     string
+	bestMoves int    // bekannter Züge-Rekord des Levels (0 = unbekannt), füllt das max-moves-Feld
+	levelSeq  uint64 // wächst bei jedem Level-Wechsel - die GUI erkennt daran den Feld-Austausch
+	mux       *http.ServeMux
+	progress  progressState
 }
 
 func New(network *rooms.Network, title string) *Server {
@@ -44,6 +46,9 @@ func New(network *rooms.Network, title string) *Server {
 	s.mux.HandleFunc("POST /api/merge", s.handleMerge)
 	s.mux.HandleFunc("POST /api/optimize", s.handleOptimize)
 	s.mux.HandleFunc("POST /api/reset", s.handleReset)
+	// universelles Strg+V (Level-URL/-Nummer, Levelnotation oder LURD-Lösung);
+	// nimmt die Sperren selbst (Level-Laden läuft als Hintergrund-Job)
+	s.mux.HandleFunc("POST /api/paste", s.handlePaste)
 	// Snapshots: Liste liest nur Datei-Header (Lesesperre reicht), Save/Load
 	// laufen als Hintergrund-Jobs, Delete ist eine reine Datei-Operation
 	s.mux.HandleFunc("GET /api/snapshots", s.read(s.handleSnapshots))
@@ -71,8 +76,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) SetNetwork(network *rooms.Network, title string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.swapNetwork(network, title, 0)
+}
+
+// SetBestMoves setzt den bekannten Züge-Rekord des aktuellen Levels
+// (z.B. beim Start mit einem Web-Level, siehe main.go)
+func (s *Server) SetBestMoves(moves int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.bestMoves = moves
+}
+
+// ersetzt das Netzwerk samt Metadaten; der Aufrufer hält die Schreibsperre
+func (s *Server) swapNetwork(network *rooms.Network, title string, bestMoves int) {
 	s.network = network
 	s.title = title
+	s.bestMoves = bestMoves
+	s.levelSeq++
 }
 
 // kapselt einen Handler unter der Lesesperre: das Netzwerk bleibt für die ganze
