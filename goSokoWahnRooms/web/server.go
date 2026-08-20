@@ -43,6 +43,7 @@ func New(network *rooms.Network, title string) *Server {
 	// damit sie während der Rechnung erreichbar bleiben
 	s.mux.HandleFunc("POST /api/merge", s.handleMerge)
 	s.mux.HandleFunc("POST /api/optimize", s.handleOptimize)
+	s.mux.HandleFunc("POST /api/reset", s.handleReset)
 	s.mux.HandleFunc("GET /api/progress", s.handleProgress)
 	s.mux.HandleFunc("POST /api/stop", s.handleStop)
 	s.mux.HandleFunc("POST /api/validate", s.read(s.handleValidate))

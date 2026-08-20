@@ -159,6 +159,18 @@ async function doOptimize(): Promise<void> {
   }
 }
 
+// Entf-Taste: gemergte Räume der Auswahl auf ihre Ein-Feld-Start-Räume
+// zurücksetzen (Fehlgriff beim Mergen), ohne das ganze Level neu zu laden
+async function doReset(): Promise<void> {
+  const selection = canvas.getSelection();
+  if (mergeBusy || selection.length < 1) return;
+  try {
+    await postJSON<{ started: boolean }>('/api/reset', { rooms: selection });
+  } catch (err) {
+    showError(err);
+  }
+}
+
 async function doStop(): Promise<void> {
   try {
     await postJSON<{ stopping: boolean }>('/api/stop', {});
@@ -439,6 +451,10 @@ async function boot(): Promise<void> {
   // Neu-Anklicken einer Variante spielt wieder die normale Animation ab.
   window.addEventListener('keydown', ev => {
     if (ev.target instanceof HTMLInputElement) return; // z.B. max-moves-Feld
+    if (ev.key === 'Delete') {
+      void doReset(); // gemergte Räume der Auswahl zurücksetzen
+      return;
+    }
     const keys: Record<string, 'left' | 'right' | 'home' | 'end'> = {
       ArrowLeft: 'left', ArrowRight: 'right', Home: 'home', End: 'end',
     };

@@ -359,6 +359,44 @@ func (s *Server) handleMerge(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"started": true})
 }
 
+// setzt gemergte Räume der Auswahl auf ihre Ein-Feld-Start-Räume zurück
+// (Entf-Taste in der GUI): wie frisch initialisiert, Nachbarn samt ihrer
+// Optimierungen bleiben unberührt - für Fehlgriffe beim Mergen, ohne das
+// ganze Level neu laden zu müssen
+func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Rooms []uint32 `json:"rooms"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "ungültige Anfrage: "+err.Error())
+		return
+	}
+	if len(req.Rooms) == 0 {
+		writeError(w, http.StatusBadRequest, "mindestens einen Raum auswählen")
+		return
+	}
+	if !s.validRooms(req.Rooms) {
+		writeError(w, http.StatusBadRequest, "unbekannter Raum-Index")
+		return
+	}
+	started := s.runJob("reset...", func(info rooms.ProgressFunc) (string, error) {
+		n, _ := s.snapshot()
+		count, err := n.ResetRooms(req.Rooms, info)
+		if err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return "Reset: keine gemergten Räume in der Auswahl", nil
+		}
+		return fmt.Sprintf("Reset: %d Räume zurückgesetzt, jetzt %s Räume", count, tools.FormatInt(len(n.Rooms))), nil
+	})
+	if !started {
+		writeError(w, http.StatusConflict, "es läuft bereits eine Rechnung")
+		return
+	}
+	writeJSON(w, map[string]any{"started": true})
+}
+
 // führt Deadlock-Scan (M4) und Dominanzsuche (M4b) auf der übergebenen
 // Raum-Auswahl als Hintergrund-Job aus; Fortschritt über /api/progress,
 // Abbruch über /api/stop (bereits Bewiesenes bleibt angewandt)
