@@ -103,7 +103,7 @@ func dumpRoomStatus(t *testing.T, label string, room *Room) {
 		swaps = append(swaps, fmt.Sprintf("%d->%d", from, to))
 	}
 	sort.Strings(swaps)
-	g := buildUsageGraph(room, nil)
+	g := buildUsageGraph(room, nil, nil)
 	sigs := g.signatures(7)
 	var words []string
 	for sig := range sigs {

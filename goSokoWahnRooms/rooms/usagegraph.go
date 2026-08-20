@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-// Graph-Sicht auf die Nutzungen eines Ein-Portal-Raums (M4b, siehe docs/konzept.md).
+// Graph-Sicht auf die Nutzungen eines Raums (M4b, siehe docs/konzept.md).
 //
 // Das Dominanz-Labor (domlab_test.go) enumeriert Nutzungs-Ketten nur bis zu
 // einem festen Horizont - das liefert Evidenz, aber keinen Beweis, weil eine
@@ -16,21 +16,39 @@ import (
 // darin. Damit wird die Frage "bleibt eine reduzierte Varianten-Menge für ALLE
 // Außenwörter kostengleich?" endlich entscheidbar (compareUsageGraphs).
 //
-// Modell (identisch zum Labor):
-//   - Knoten = (Raum-Zustand, blocked). blocked = der letzte Schritt war ein
-//     exportloser Besuch; die bewiesene Selbes-Portal-Regel verbietet dann den
-//     direkt nächsten Besuch (fusionierbar = dominiert), Einschub geht immer.
-//   - Kanten = Ereignisse mit Kosten (moves, pushes; lexikographisch):
-//       'E' = Einschub durch die Außenwelt (BoxSwap, kostenlos für den Raum)
-//       'X' = Besuch mit Kisten-Export
-//        0  = exportloser Besuch (B): außen UNSICHTBAR (B-Transparenz-Theorem,
-//             Max 2026-08-18) - im Automaten eine Epsilon-Kante
-//   - End-Kanten = End-Varianten (Spieler bleibt drin, Zustand 0): Terminal
-//     "!" bzw. "X!" (mit Kisten-Export beim letzten Besuch)
-//   - Akzeptanz = die Kammer wird im Zustand 0 hinterlassen (Wort ohne "!")
-//     oder eine End-Kante wird genommen (Wort mit "!").
-// Das Außenwort einer Nutzung ist die Folge ihrer sichtbaren Ereignisse -
-// exakt die Signatur des Labors.
+// Seit der Mehr-Portal-Erweiterung (2026-08-20) gilt das Modell für JEDEN
+// Raum - beliebig viele Portale, auch Startvarianten. Die Zeichen des
+// Außenworts (Symbole) tragen ihre Portale:
+//   - 'E' Einschub durch Portal p (BoxSwap, kostenlos für den Raum)
+//   - 'V' Besuch: Eintritts-Portal, Export-Portale in Schub-Reihenfolge,
+//     Austritts-Portal (-1 = Spieler bleibt drin = End-Variante, Terminal).
+//     Die Export-SEQUENZ ist sichtbar inklusive Anzahl - bei mehreren
+//     Portalen ist die Verteilung der Kisten auf die Portale außen relevant.
+//   - 'S' Start-Besuch (nur bei Räumen mit Startvarianten): der Spieler
+//     startet im Raum, jedes Wort beginnt zwingend mit einem S-Zeichen -
+//     solange er drin ist, kann draußen nichts passieren (er ist der einzige
+//     Akteur).
+// Die Spieler-Position nach jedem Zeichen ist damit WORTBESTIMMT (das
+// Austritts-Portal steht im Zeichen). Daraus folgen die B-Regeln strukturell:
+//   - Epsilon-Transparenz: ein exportloser Selbst-Besuch B(q,q) ist nur
+//     DIREKT NACH einem Ereignis mit Spieler-Endposition q unsichtbar - dort
+//     steht der Spieler nachweislich, und der Durchgang ist nachweislich
+//     frei (nach Austritt: er kam gerade durch; nach Einschub E@q: die Kiste
+//     ist drin und im Zustand verbucht). VOR einem Ereignis gibt es keine
+//     Transparenz - vor einem Einschub kann die noch draußen liegende Kiste
+//     die Zufahrt versperren (die 5005-Lektion, siehe docs/konzept.md).
+//   - Sichtbares B: dasselbe Symbol V(q,[],q) ist als eigenes Zeichen
+//     zulässig, wenn der Spieler laut Wort NICHT bei q steht ("Außenwelt
+//     liefert den Spieler bei q an"). Ein-Portal-Spezialfall: nur an
+//     Position 0 möglich = exakt die frühere Erste-Aktion-Regel.
+// Akzeptanz = die Kammer wird im Zustand 0 hinterlassen (Spieler draußen)
+// oder ein Terminal-Zeichen wird genommen.
+//
+// Spieler-Konnektivität (Max' Idee, 2026-08-20, usageenv.go): die Außenwelt
+// zerfällt je Raum in statische Komponenten; ein Ereignis an Portal q ist
+// nur legal, wenn q in der Komponente der aktuellen Spieler-Position liegt.
+// Illegale Wörter fallen aus der Anforderungsmenge - reiner Filter, die
+// Korrektheit hängt nicht an ihm.
 
 // Kostenpaar (moves, pushes), lexikographisch verglichen; als int64, weil
 // Konfigurations-Offsets nach der Normalisierung negative pushes haben können
@@ -52,95 +70,237 @@ func (c usageCost) String() string {
 	return fmt.Sprintf("%d/%d", c.moves, c.pushes)
 }
 
+const usageNoVariant = ^uint64(0) // Einschub-Kanten benutzen keine Variante
+
+// ---------------------------------------------------------------------------
+// Symbole: die Zeichen-Klassen des Außen-Alphabets
+
 const (
-	usageInvisible  = byte(0)   // exportloser Besuch (B), außen unsichtbar
-	usageInsert     = byte('E') // Einschub durch die Außenwelt
-	usageExport     = byte('X') // Besuch mit Kisten-Export
-	usageFirstVisit = byte('B') // exportloser Besuch als ALLERERSTE Aktion (sichtbar!)
+	usageKindInsert = byte('E') // Einschub durch die Außenwelt
+	usageKindVisit  = byte('V') // Besuch (Eintritt, Exporte, Austritt)
+	usageKindStart  = byte('S') // Start-Besuch (Spieler startet im Raum)
 )
 
-// Warum 'B' am Wortanfang sichtbar sein MUSS (Repro 5005, 2026-08-19): die
-// B-Transparenz (Max' Theorem) beruht darauf, dass der Spieler bei jedem
-// sichtbaren Ereignis ohnehin am Portal steht - ein exportloser Besuch ist
-// dort kostenlos anhängbar. VOR dem allerersten Ereignis war der Spieler
-// aber noch nie nachweislich am Portal, und das erste Ereignis selbst kann
-// die Zufahrt verändern: schiebt die Außenwelt als Erstes eine Kiste durch
-// einen Ein-Feld-Schacht herein (Level 5005, Säule zur unteren Struktur),
-// kann der Spieler den Raum unmöglich VOR diesem Einschub betreten. Ein
-// transparentes B an Position 0 erlaubt dem Vergleich, "EXXX" durch die
-// real unspielbare Reihenfolge "[B]EXXX" zu bedienen - die Dominanz hielt
-// dadurch den Einschub-Zweig des Start-Zustands für entbehrlich und machte
-// das Level tot. Als sichtbares Zeichen kodiert 'B' die Anforderung
-// "Außenwelt liefert den Spieler VOR allem anderen" ins Wort; alle
-// späteren B bleiben transparent.
+type usageSymbolData struct {
+	kind    byte
+	entry   int   // Portal-Slot des Eintritts/Einschubs (-1 bei 'S')
+	exit    int   // Slot des Spieler-Austritts (-1 = bleibt drin = Terminal)
+	exports []int // Slots der exportierten Kisten in Schub-Reihenfolge
+	eps     bool  // exportloser Selbst-Besuch (Kandidat für Epsilon-Transparenz)
+	name    string
+}
 
-const usageNoVariant = ^uint64(0) // Einschub-Kanten benutzen keine Variante
+// Interning-Tabelle der Symbole eines Raums plus die vorberechneten
+// Zuordnungen (Symbol je Variante / je Einschub-Portal) - wird einmal pro
+// Raum(-Stand) gebaut und von allen Graphen (voll wie reduziert) GETEILT,
+// damit die Symbol-IDs im Vergleich übereinstimmen und der tausendfache
+// Graphenbau der Dominanzsuche keine String-Arbeit mehr leistet.
+type usageAlphabet struct {
+	portals    int
+	index      map[string]int32
+	list       []usageSymbolData
+	variantSym []int32 // Symbol je Varianten-ID des Raums
+	insertSym  []int32 // Symbol je Portal-Slot (Einschub E@p)
+}
+
+func (a *usageAlphabet) intern(kind byte, entry, exit int, exports []int) int32 {
+	key := fmt.Sprintf("%c|%d|%d|%v", kind, entry, exit, exports)
+	if id, exists := a.index[key]; exists {
+		return id
+	}
+	d := usageSymbolData{kind: kind, entry: entry, exit: exit, exports: exports}
+	d.eps = kind == usageKindVisit && entry == exit && len(exports) == 0
+	d.name = a.symbolName(d)
+	id := int32(len(a.list))
+	a.index[key] = id
+	a.list = append(a.list, d)
+	return id
+}
+
+// Anzeige-Name eines Symbols; bei Ein-Portal-Räumen exakt die historische
+// Kurzschrift (E, X, B, !, X!) - darauf sind Labor-Kreuzcheck und Log-Anker
+// geeicht, Mehr-Portal-Räume bekommen die ausführliche Schreibweise
+func (a *usageAlphabet) symbolName(d usageSymbolData) string {
+	if a.portals == 1 {
+		switch {
+		case d.kind == usageKindInsert:
+			return "E"
+		case d.eps:
+			return "B"
+		}
+		name := ""
+		if d.kind == usageKindStart {
+			name = "S"
+		}
+		if k := len(d.exports); k == 1 {
+			name += "X"
+		} else if k > 1 {
+			name += fmt.Sprintf("X%d", k)
+		}
+		if d.exit < 0 {
+			name += "!"
+		}
+		return name
+	}
+	exports := ""
+	if len(d.exports) > 0 {
+		exports = fmt.Sprintf("%v", d.exports)
+	}
+	switch {
+	case d.kind == usageKindInsert:
+		return fmt.Sprintf("E%d", d.entry)
+	case d.kind == usageKindStart:
+		if d.exit < 0 {
+			return fmt.Sprintf("S%s>!", exports)
+		}
+		return fmt.Sprintf("S%s>%d", exports, d.exit)
+	case d.eps:
+		return fmt.Sprintf("B%d", d.entry)
+	case d.exit < 0:
+		return fmt.Sprintf("%d%s>!", d.entry, exports)
+	}
+	return fmt.Sprintf("%d%s>%d", d.entry, exports, d.exit)
+}
+
+// hängt ein Zeichen an ein Außenwort an (Ein-Portal klebt wie früher,
+// Mehr-Portal trennt mit Leerzeichen)
+func (a *usageAlphabet) join(word, name string) string {
+	if a.portals > 1 && word != "" {
+		return word + " " + name
+	}
+	return word + name
+}
+
+// baut die Symbol-Tabelle eines Raums (alle Varianten + alle Einschübe)
+func newUsageAlphabet(room *Room) *usageAlphabet {
+	a := &usageAlphabet{portals: len(room.Incoming), index: map[string]int32{}}
+	a.insertSym = make([]int32, len(room.Incoming))
+	for p := range room.Incoming {
+		a.insertSym[p] = a.intern(usageKindInsert, p, p, nil)
+	}
+	a.variantSym = make([]int32, room.Variants.Count())
+	entryOf := make([]int, room.Variants.Count())
+	for i := range entryOf {
+		entryOf[i] = -1 // Startvarianten haben kein Eintritts-Portal
+	}
+	for p, ip := range room.Incoming {
+		for _, span := range ip.VariantSpans {
+			for vid := span.Start; vid < span.Start+span.Count; vid++ {
+				entryOf[vid] = p
+			}
+		}
+	}
+	for vid := uint64(0); vid < room.Variants.Count(); vid++ {
+		v := room.Variants.Get(vid)
+		var exports []int
+		for _, bp := range v.BoxPortals {
+			exports = append(exports, int(bp))
+		}
+		kind := usageKindVisit
+		if vid < room.StartVariantCount {
+			kind = usageKindStart
+		}
+		exit := -1
+		if v.PlayerPortal != NoPortal {
+			exit = int(v.PlayerPortal)
+		}
+		a.variantSym[vid] = a.intern(kind, entryOf[vid], exit, exports)
+	}
+	return a
+}
+
+// ---------------------------------------------------------------------------
+// Der Graph
+
+const usageUnblocked = int16(-1)
 
 type usageNodeKey struct {
 	state   uint64
-	blocked bool
+	blocked int16 // gesperrter Eintritts-Slot (Selbes-Portal-Regel), -1 = frei
 }
 
 type usageEdge struct {
 	to      int
-	label   byte // usageInsert / usageExport / usageInvisible
+	symbol  int32
 	cost    usageCost
 	variant uint64 // benutzte Variante (usageNoVariant bei Einschub)
 }
 
 type usageEnd struct {
-	label   string // "!" oder "X!"
+	symbol  int32 // Terminal-Symbol (exit -1)
 	cost    usageCost
 	variant uint64
 }
 
 type usageGraph struct {
 	room  *Room
+	alpha *usageAlphabet
 	nodes []usageNodeKey
 	index map[usageNodeKey]int
 	edges [][]usageEdge
 	ends  [][]usageEnd
 	start int // -1 = der Raum hat keine einzige akzeptierende Nutzung
 
-	// Kanten nach Label vorsortiert (für die heiße Konfigurations-Rechnung)
-	epsEdges [][]usageEdge // exportlose Besuche (unsichtbar)
-	insEdges [][]usageEdge // Einschübe 'E'
-	expEdges [][]usageEdge // Export-Besuche 'X'
+	// Vorsortierung für die heiße Konfigurations-Rechnung
+	bySym    [][][]usageEdge // Symbol -> Kanten je Knoten (nil-Zeilen erlaubt)
+	epsEdges [][]usageEdge   // Epsilon-Kandidaten (exportlose Selbst-Besuche) je Knoten
+	outSyms  [][]int32       // je Knoten: Symbole der ausgehenden Kanten (sortiert, unique)
+	termSyms []int32         // alle Terminal-Symbole des Graphen (sortiert, unique)
 }
 
-// leitet die Label-sortierten Kanten-Listen aus edges ab (nach dem Pruning)
-func (g *usageGraph) buildLabelIndex() {
+// leitet die vorsortierten Zugriffs-Strukturen aus edges/ends ab (nach Pruning)
+func (g *usageGraph) buildSymbolIndex() {
 	n := len(g.nodes)
+	symCount := len(g.alpha.list)
+	g.bySym = make([][][]usageEdge, symCount)
 	g.epsEdges = make([][]usageEdge, n)
-	g.insEdges = make([][]usageEdge, n)
-	g.expEdges = make([][]usageEdge, n)
+	g.outSyms = make([][]int32, n)
 	for id := range g.nodes {
+		var syms []int32
 		for _, e := range g.edges[id] {
-			switch e.label {
-			case usageInvisible:
+			if g.bySym[e.symbol] == nil {
+				g.bySym[e.symbol] = make([][]usageEdge, n)
+			}
+			g.bySym[e.symbol][id] = append(g.bySym[e.symbol][id], e)
+			if g.alpha.list[e.symbol].eps {
 				g.epsEdges[id] = append(g.epsEdges[id], e)
-			case usageInsert:
-				g.insEdges[id] = append(g.insEdges[id], e)
-			default:
-				g.expEdges[id] = append(g.expEdges[id], e)
+			}
+			syms = append(syms, e.symbol)
+		}
+		sort.Slice(syms, func(i, j int) bool { return syms[i] < syms[j] })
+		g.outSyms[id] = syms[:0]
+		prev := int32(-1)
+		for _, s := range syms {
+			if s != prev {
+				g.outSyms[id] = append(g.outSyms[id], s)
+				prev = s
 			}
 		}
 	}
+	seen := map[int32]bool{}
+	for id := range g.nodes {
+		for _, end := range g.ends[id] {
+			if !seen[end.symbol] {
+				seen[end.symbol] = true
+				g.termSyms = append(g.termSyms, end.symbol)
+			}
+		}
+	}
+	sort.Slice(g.termSyms, func(i, j int) bool { return g.termSyms[i] < g.termSyms[j] })
 }
 
-// baut den Nutzungs-Graphen eines Ein-Portal-Raums; allowed (optional)
-// schränkt die nutzbaren Varianten ein (nil = alle). Startvarianten werden
-// wie im Labor ignoriert (der Spieler kommt von außen). Knoten, von denen
-// keine Akzeptanz mehr erreichbar ist, werden entfernt - dadurch bedeutet
-// "Konfiguration nicht leer" im Vergleich immer "es gibt noch akzeptierende
-// Fortsetzungen".
-func buildUsageGraph(room *Room, allowed func(id uint64) bool) *usageGraph {
-	if len(room.Incoming) != 1 {
-		panic(fmt.Sprintf("buildUsageGraph: Raum hat %d Portale, unterstützt ist genau 1", len(room.Incoming)))
+// baut den Nutzungs-Graphen eines Raums; alpha (optional) ist die geteilte
+// Symbol-Tabelle (nil = eigene bauen), allowed (optional) schränkt die
+// nutzbaren Varianten ein (nil = alle). Knoten, von denen keine Akzeptanz
+// mehr erreichbar ist, werden entfernt - dadurch bedeutet "Konfiguration
+// nicht leer" im Vergleich immer "es gibt noch akzeptierende Fortsetzungen"
+// (über-approximiert: der Konnektivitäts-Filter des Vergleichs kann Zweige
+// zusätzlich sperren, das kostet höchstens Reduktionen, nie Korrektheit).
+func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) bool) *usageGraph {
+	if alpha == nil {
+		alpha = newUsageAlphabet(room)
 	}
-	ip := room.Incoming[0]
-
-	g := &usageGraph{room: room, index: map[usageNodeKey]int{}}
+	g := &usageGraph{room: room, alpha: alpha, index: map[usageNodeKey]int{}}
 	nodeID := func(key usageNodeKey) int {
 		if id, exists := g.index[key]; exists {
 			return id
@@ -153,7 +313,7 @@ func buildUsageGraph(room *Room, allowed func(id uint64) bool) *usageGraph {
 		return id
 	}
 
-	startKey := usageNodeKey{state: room.StartState}
+	startKey := usageNodeKey{state: room.StartState, blocked: usageUnblocked}
 	g.start = nodeID(startKey)
 	for queue := []usageNodeKey{startKey}; len(queue) > 0; queue = queue[1:] {
 		key := queue[0]
@@ -165,46 +325,64 @@ func buildUsageGraph(room *Room, allowed func(id uint64) bool) *usageGraph {
 			e.to = nodeID(to)
 			g.edges[id] = append(g.edges[id], e)
 		}
-
-		// Einschub durch die Außenwelt (löst die Besuchs-Sperre)
-		if next, exists := ip.BoxSwap[key.state]; exists {
-			addEdge(usageNodeKey{state: next},
-				usageEdge{label: usageInsert, variant: usageNoVariant})
-		}
-
-		// Besuche (Selbes-Portal-Regel: nach exportlosem Besuch gesperrt)
-		if key.blocked {
-			continue
-		}
-		span := ip.GetVariantSpan(key.state)
-		for vid := span.Start; vid < span.Start+span.Count; vid++ {
-			if allowed != nil && !allowed(vid) {
-				continue
-			}
+		useVariant := func(vid uint64) {
 			v := room.Variants.Get(vid)
 			cost := usageCost{int64(v.Moves), int64(v.Pushes)}
-			exported := len(v.BoxPortals) > 0
+			sym := alpha.variantSym[vid]
 			if v.PlayerPortal == NoPortal {
 				if v.NewState == 0 { // Spielende nur im gelösten Zustand
-					label := "!"
-					if exported {
-						label = "X!"
-					}
-					g.ends[id] = append(g.ends[id], usageEnd{label: label, cost: cost, variant: vid})
+					g.ends[id] = append(g.ends[id], usageEnd{symbol: sym, cost: cost, variant: vid})
 				}
+				return
+			}
+			// Selbes-Portal-Sperre: ein exportloser Besuch sperrt den direkt
+			// nächsten Eintritt an seinem Austritts-Portal (fusionierbar =
+			// dominiert); Exporte lösen (die Außenwelt hat dazwischen zu tun),
+			// nach Startvarianten keine Sperre (Fusions-Beweis nicht geführt)
+			blocked := usageUnblocked
+			if alpha.list[sym].kind == usageKindVisit && len(v.BoxPortals) == 0 {
+				blocked = int16(v.PlayerPortal)
+			}
+			addEdge(usageNodeKey{state: v.NewState, blocked: blocked},
+				usageEdge{symbol: sym, cost: cost, variant: vid})
+		}
+
+		// Startvarianten (nur an unblockierten Knoten angeboten; genutzt
+		// werden sie im Vergleich ohnehin nur als allererstes Zeichen)
+		if key.blocked == usageUnblocked {
+			for vid := uint64(0); vid < room.StartVariantCount; vid++ {
+				if allowed != nil && !allowed(vid) {
+					continue
+				}
+				if room.Variants.Get(vid).OldState != key.state {
+					continue
+				}
+				useVariant(vid)
+			}
+		}
+
+		for p, ip := range room.Incoming {
+			// Einschub durch die Außenwelt (löst die Besuchs-Sperre)
+			if next, exists := ip.BoxSwap[key.state]; exists {
+				addEdge(usageNodeKey{state: next, blocked: usageUnblocked},
+					usageEdge{symbol: alpha.insertSym[p], variant: usageNoVariant})
+			}
+			// Besuche über dieses Portal (Selbes-Portal-Sperre beachten)
+			if key.blocked == int16(p) {
 				continue
 			}
-			label := usageInvisible
-			if exported {
-				label = usageExport
+			span := ip.GetVariantSpan(key.state)
+			for vid := span.Start; vid < span.Start+span.Count; vid++ {
+				if allowed != nil && !allowed(vid) {
+					continue
+				}
+				useVariant(vid)
 			}
-			addEdge(usageNodeKey{state: v.NewState, blocked: !exported},
-				usageEdge{label: label, cost: cost, variant: vid})
 		}
 	}
 
 	g.pruneNonAccepting()
-	g.buildLabelIndex()
+	g.buildSymbolIndex()
 	return g
 }
 
@@ -271,8 +449,12 @@ func (g *usageGraph) pruneNonAccepting() {
 func (g *usageGraph) nodeName(id int) string {
 	key := g.nodes[id]
 	name := fmt.Sprintf("s%d", key.state)
-	if key.blocked {
-		name += "*" // Besuchs-Sperre aktiv (Selbes-Portal-Regel)
+	if key.blocked >= 0 {
+		if g.alpha.portals == 1 {
+			name += "*" // Besuchs-Sperre aktiv (Selbes-Portal-Regel)
+		} else {
+			name += fmt.Sprintf("*%d", key.blocked)
+		}
 	}
 	return name
 }
@@ -281,17 +463,17 @@ func (g *usageGraph) nodeName(id int) string {
 // Zyklen (die "Loops" aus Max' Präfix + N x Loop + Abschluss-Struktur)
 
 type usageLoop struct {
-	word     string // sichtbares Außenwort des Zyklus (z.B. "EX")
+	word     string // Außenwort des Zyklus aus Symbol-Namen (z.B. "EX")
 	cost     usageCost
 	nodes    []int    // Knoten in Durchlauf-Reihenfolge (erster = kleinster Index)
 	variants []uint64 // benutzte Varianten (ohne Einschübe)
 }
 
 // enumeriert alle einfachen Zyklen (vereinfachter Johnson: nur Zyklen, deren
-// kleinster Knoten der Anker ist). Die Graphen sind winzig (Zustände x 2),
-// maxLoops ist nur ein Sicherheitsnetz. Reine Epsilon-Zyklen kann es nicht
-// geben (ein B-Besuch sperrt den nächsten Besuch, entsperrt wird nur durch
-// einen sichtbaren Einschub) - wird per Panic abgesichert.
+// kleinster Knoten der Anker ist). Die Graphen sind winzig (Zustände x
+// Sperr-Slots), maxLoops ist nur ein Sicherheitsnetz. Anders als früher
+// erscheinen auch B-Besuche im Wort (ob sie transparent sind, hängt jetzt
+// von der Wort-Position ab - für die Anschauung sind sie sichtbar).
 func (g *usageGraph) enumerateLoops(maxLoops int) []usageLoop {
 	var loops []usageLoop
 	var nodePath []int
@@ -310,15 +492,10 @@ func (g *usageGraph) enumerateLoops(maxLoops int) []usageLoop {
 					loop := usageLoop{nodes: append([]int{anchor}, nodePath...)}
 					for _, edge := range append(append([]usageEdge{}, edgePath...), e) {
 						loop.cost = loop.cost.add(edge.cost)
-						if edge.label != usageInvisible {
-							loop.word += string(edge.label)
-						}
+						loop.word = g.alpha.join(loop.word, g.alpha.list[edge.symbol].name)
 						if edge.variant != usageNoVariant {
 							loop.variants = append(loop.variants, edge.variant)
 						}
-					}
-					if loop.word == "" {
-						panic("usageGraph: unsichtbarer Zyklus gefunden (darf es nicht geben)")
 					}
 					loops = append(loops, loop)
 					continue
@@ -360,7 +537,7 @@ type usageWorkspace struct {
 	cost    []usageCost
 	version []uint32
 	current uint32
-	active  []int // erreichte Knoten (kann Duplikate nach Verbesserungen enthalten)
+	active  []int // erreichte Knoten
 }
 
 func (ws *usageWorkspace) reset(n int) {
@@ -374,30 +551,40 @@ func (ws *usageWorkspace) reset(n int) {
 }
 
 // nimmt einen Kandidaten auf, wenn er billiger ist als das bisher Bekannte
-func (ws *usageWorkspace) relax(node int, c usageCost) (improved, isNew bool) {
+func (ws *usageWorkspace) relax(node int, c usageCost) {
 	if ws.version[node] != ws.current {
 		ws.version[node] = ws.current
 		ws.cost[node] = c
 		ws.active = append(ws.active, node)
-		return true, true
+		return
 	}
 	if c.less(ws.cost[node]) {
 		ws.cost[node] = c
-		return true, false
 	}
-	return false, false
 }
 
-// Epsilon-Abschluss über die Worklist (exportlose Besuche sind außen
-// unsichtbar, eine Nutzung kann beliebig viele einstreuen; Kosten sind
-// positiv und Epsilon-Zyklen gibt es nicht) und Verdichtung des Ergebnisses
-func (g *usageGraph) closeAndPack(ws *usageWorkspace) usageConfig {
-	for i := 0; i < len(ws.active); i++ {
+// ein sichtbares Zeichen konsumieren, inklusive Epsilon-Abschluss danach.
+// Der Abschluss ist EINSCHRITTIG: ein Epsilon-B(q,q) direkt nach einem
+// Ereignis mit Endposition q sperrt selbst das Portal q - ein zweites B dort
+// wäre die verbotene Fusion, entsprechende Kanten existieren gar nicht.
+func (g *usageGraph) stepClose(src usageConfig, sym int32, ws *usageWorkspace) usageConfig {
+	ws.reset(len(g.nodes))
+	if int(sym) < len(g.bySym) && g.bySym[sym] != nil {
+		perNode := g.bySym[sym]
+		for _, entry := range src {
+			for _, e := range perNode[entry.node] {
+				ws.relax(e.to, entry.cost.add(e.cost))
+			}
+		}
+	}
+	exit := g.alpha.list[sym].exit
+	base := len(ws.active)
+	for i := 0; i < base; i++ {
 		node := ws.active[i]
 		cost := ws.cost[node]
 		for _, e := range g.epsEdges[node] {
-			if improved, isNew := ws.relax(e.to, cost.add(e.cost)); improved && !isNew {
-				ws.active = append(ws.active, e.to) // mit besseren Kosten erneut expandieren
+			if g.alpha.list[e.symbol].entry == exit {
+				ws.relax(e.to, cost.add(e.cost))
 			}
 		}
 	}
@@ -414,71 +601,77 @@ func (g *usageGraph) closeAndPack(ws *usageWorkspace) usageConfig {
 }
 
 // Start-Konfiguration: NUR der Startknoten, bewusst OHNE Epsilon-Abschluss
-// (ein exportloser Besuch als allererste Aktion ist das sichtbare Zeichen
-// 'B', siehe oben - danach sind B-Besuche wieder transparent)
+// (vor dem ersten Ereignis steht der Spieler an keinem Portal - ein
+// exportloser Besuch dort ist das sichtbare Zeichen B)
 func (g *usageGraph) startConfig() usageConfig {
 	return usageConfig{{node: g.start}}
 }
 
-// ein sichtbares Zeichen konsumieren, inklusive Epsilon-Abschluss danach;
-// usageFirstVisit ('B') ist nur als erstes Zeichen eines Wortes zulässig
-func (g *usageGraph) stepClose(src usageConfig, label byte, ws *usageWorkspace) usageConfig {
-	ws.reset(len(g.nodes))
-	edges := g.insEdges
-	switch label {
-	case usageExport:
-		edges = g.expEdges
-	case usageFirstVisit:
-		edges = g.epsEdges
+// ---------------------------------------------------------------------------
+// Wort-Zustand des Vergleichs: die Spieler-Position (wortbestimmt)
+
+const (
+	usagePosInRoom = -2 // Spieler steht noch im Raum (vor dem S-Zeichen)
+	usagePosStart  = -1 // Spieler auf dem globalen Startfeld (draußen)
+)
+
+// prüft, ob ein Symbol an der aktuellen Spieler-Position zulässig ist
+// (env optional: Spieler-Konnektivität, nil = kein Filter)
+func usageSymbolLegal(alpha *usageAlphabet, env *usageEnv, sym int32, pos int) bool {
+	s := &alpha.list[sym]
+	if pos == usagePosInRoom {
+		return s.kind == usageKindStart
 	}
-	for _, entry := range src {
-		for _, e := range edges[entry.node] {
-			ws.relax(e.to, entry.cost.add(e.cost))
-		}
+	if s.kind == usageKindStart {
+		return false
 	}
-	return g.closeAndPack(ws)
+	if env != nil && env.compAt(pos) != env.portalComp[s.entry] {
+		return false // Portal von der Spieler-Position aus nicht erreichbar
+	}
+	if s.eps && pos == s.entry {
+		return false // dort wäre der Besuch transparent (kanonisch weglassen)
+	}
+	return true
 }
 
-// die zulässigen sichtbaren Zeichen an einer Wort-Position
-func usageLabels(first bool) []byte {
-	if first {
-		return []byte{usageInsert, usageExport, usageFirstVisit}
+// Akzeptanzkosten einer Konfiguration: buf sammelt die Minima je
+// Terminal-Symbol (dichte Arrays über die Symbol-IDs), Rückgabe ist die
+// Out-Akzeptanz (Kammer im Zustand 0 hinterlassen, Spieler draußen)
+type usageAcceptBuf struct {
+	has  []bool
+	cost []usageCost
+}
+
+func (b *usageAcceptBuf) reset(n int) {
+	if len(b.has) < n {
+		b.has = make([]bool, n)
+		b.cost = make([]usageCost, n)
 	}
-	return []byte{usageInsert, usageExport}
+	for i := 0; i < n; i++ {
+		b.has[i] = false
+	}
 }
 
-// Akzeptanzkosten einer Konfiguration je Terminal-Art:
-//
-//	""   = Kammer im Zustand 0 hinterlassen, Spieler draußen
-//	"!"  = End-Variante ohne Export, "X!" = End-Variante mit Export
-type usageAccept struct {
-	out, end, endX          usageCost
-	hasOut, hasEnd, hasEndX bool
-}
-
-func (g *usageGraph) accept(c usageConfig) usageAccept {
-	var a usageAccept
+func (g *usageGraph) acceptInto(c usageConfig, buf *usageAcceptBuf) (out usageCost, hasOut bool) {
+	buf.reset(len(g.alpha.list))
 	for _, entry := range c {
-		if g.nodes[entry.node].state == 0 && (!a.hasOut || entry.cost.less(a.out)) {
-			a.out, a.hasOut = entry.cost, true
+		if g.nodes[entry.node].state == 0 && (!hasOut || entry.cost.less(out)) {
+			out, hasOut = entry.cost, true
 		}
-		if g.nodes[entry.node].blocked {
-			continue // End-Variante ist ein Besuch (Selbes-Portal-Regel)
-		}
+		blocked := g.nodes[entry.node].blocked
 		for _, end := range g.ends[entry.node] {
+			// Selbes-Portal-Sperre: End-Besuche am gesperrten Portal sind tabu
+			// (Start-End-Varianten haben entry -1 und sind nie gesperrt)
+			if e := g.alpha.list[end.symbol].entry; e >= 0 && int16(e) == blocked {
+				continue
+			}
 			cost := entry.cost.add(end.cost)
-			if end.label == "!" {
-				if !a.hasEnd || cost.less(a.end) {
-					a.end, a.hasEnd = cost, true
-				}
-			} else {
-				if !a.hasEndX || cost.less(a.endX) {
-					a.endX, a.hasEndX = cost, true
-				}
+			if !buf.has[end.symbol] || cost.less(buf.cost[end.symbol]) {
+				buf.has[end.symbol], buf.cost[end.symbol] = true, cost
 			}
 		}
 	}
-	return a
+	return out, hasOut
 }
 
 // Anmerkung zur Out-Akzeptanz: das nackte Startwort "" würde bei
@@ -489,7 +682,7 @@ func (g *usageGraph) accept(c usageConfig) usageAccept {
 
 // ---------------------------------------------------------------------------
 // Signatur-Enumeration bis fester Ereigniszahl (Kreuzvalidierung gegen das
-// Labor: muss exakt enumerateUsages entsprechen)
+// Labor: muss bei Ein-Portal-Räumen exakt enumerateUsages entsprechen)
 
 func (g *usageGraph) signatures(maxEvents int) map[string]usageCost {
 	result := map[string]usageCost{}
@@ -504,34 +697,60 @@ func (g *usageGraph) signatures(maxEvents int) map[string]usageCost {
 	}
 
 	type item struct {
-		word string
-		cfg  usageConfig
+		word  string
+		depth int
+		pos   int
+		cfg   usageConfig
 	}
 	ws := &usageWorkspace{}
-	queue := []item{{word: "", cfg: g.startConfig()}}
+	buf := &usageAcceptBuf{}
+	startPos := usagePosStart
+	if g.room.StartVariantCount > 0 {
+		startPos = usagePosInRoom
+	}
+	queue := []item{{pos: startPos, cfg: g.startConfig()}}
 
 	for len(queue) > 0 {
 		it := queue[0]
 		queue = queue[1:]
-		a := g.accept(it.cfg)
-		if a.hasOut && !(it.word == "" && a.out == (usageCost{})) {
-			takeMin(it.word, a.out) // nacktes Startwort zählt nicht als Nutzung
+		out, hasOut := g.acceptInto(it.cfg, buf)
+		if hasOut && it.pos != usagePosInRoom && !(it.depth == 0 && out == (usageCost{})) {
+			takeMin(it.word, out) // nacktes Startwort zählt nicht als Nutzung
 		}
-		if a.hasEnd {
-			takeMin(it.word+"!", a.end)
+		for _, sym := range g.termSyms {
+			if buf.has[sym] && usageSymbolLegal(g.alpha, nil, sym, it.pos) {
+				takeMin(g.alpha.join(it.word, g.alpha.list[sym].name), buf.cost[sym])
+			}
 		}
-		if a.hasEndX {
-			takeMin(it.word+"X!", a.endX)
-		}
-		if len(it.word) >= maxEvents {
+		if it.depth >= maxEvents {
 			continue
 		}
-		for _, label := range usageLabels(it.word == "") {
-			next := g.stepClose(it.cfg, label, ws)
+		// Symbole der Konfiguration einsammeln (unique über die Knoten)
+		var syms []int32
+		seen := map[int32]bool{}
+		for _, entry := range it.cfg {
+			for _, sym := range g.outSyms[entry.node] {
+				if !seen[sym] {
+					seen[sym] = true
+					syms = append(syms, sym)
+				}
+			}
+		}
+		sort.Slice(syms, func(i, j int) bool { return syms[i] < syms[j] })
+		for _, sym := range syms {
+			if !usageSymbolLegal(g.alpha, nil, sym, it.pos) {
+				continue
+			}
+			next := g.stepClose(it.cfg, sym, ws)
 			if len(next) == 0 {
 				continue
 			}
-			queue = append(queue, item{word: it.word + string(label), cfg: next})
+			queue = append(queue, item{
+				word:  g.alpha.join(it.word, g.alpha.list[sym].name),
+				depth: it.depth + 1,
+				pos:   g.alpha.list[sym].exit,
+				cfg:   next,
+			})
 		}
 	}
 	return result
@@ -543,11 +762,12 @@ func (g *usageGraph) signatures(maxEvents int) map[string]usageCost {
 // Normalisierung und Memoisierung:
 //
 //   - Beide Automaten lesen dasselbe Wort; verglichen werden nur die
-//     Akzeptanzkosten je Terminal-Art.
+//     Akzeptanzkosten je Terminal-Symbol.
 //   - Von jedem Konfigurations-Paar wird das gemeinsame Kosten-Minimum
 //     abgezogen (Normalisierung). Die normalisierte Form beschreibt die
 //     Vergleichs-SITUATION vollständig: jede Fortsetzung hängt nur noch
-//     von den relativen Offsets ab, nicht von der absoluten Vergangenheit.
+//     von den relativen Offsets und der Spieler-Position ab, nicht von der
+//     absoluten Vergangenheit.
 //   - Wiederholt sich eine normalisierte Situation, ist alles Weitere dort
 //     eine exakte Wiederholung - der Zweig ist abgehandelt. Das ist Max'
 //     Loop-Idee auf Vergleichs-Ebene: die Wiederholung der Situation IST der
@@ -580,9 +800,11 @@ func (v usageVerdict) String() string {
 }
 
 // Fingerprint einer normalisierten Vergleichs-Situation (binär, in einen
-// wiederverwendeten Buffer)
-func usageFingerprint(full, reduced usageConfig, buf []byte) (string, []byte) {
+// wiederverwendeten Buffer); die Spieler-Position gehört dazu (sie bestimmt
+// die legalen Fortsetzungen)
+func usageFingerprint(pos int, full, reduced usageConfig, buf []byte) (string, []byte) {
 	buf = buf[:0]
+	buf = binary.AppendVarint(buf, int64(pos))
 	writeSide := func(c usageConfig) {
 		for _, entry := range c {
 			buf = binary.AppendVarint(buf, int64(entry.node))
@@ -617,7 +839,10 @@ func usageNormalize(full, reduced usageConfig) usageCost {
 	return min
 }
 
-// vergleicht die Optimal-Kosten beider Graphen über ALLE Außenwörter.
+// vergleicht die Optimal-Kosten beider Graphen über ALLE legalen Außenwörter.
+// Beide Graphen müssen dieselbe Symbol-Tabelle teilen (gleiche IDs).
+// env (optional) filtert Wörter über die Spieler-Konnektivität (usageenv.go);
+// nil = kein Filter (konservativ: mehr Wörter, nie unsound).
 // Bei usageDiffers beschreibt detail das Gegenbeispiel (Wort + Kosten).
 // moveLimit > 0 kappt den Vergleich: Nutzungen, deren Moves das Limit
 // überschreiten, sind irrelevant (sie können in keiner Lösung innerhalb des
@@ -628,28 +853,57 @@ func usageNormalize(full, reduced usageConfig) usageCost {
 // gerufen - für Statusmeldungen während LANGER Vergleiche (riesige Räume)
 // und als Abbruch: false beendet den Vergleich mit usageUndecided (Stop;
 // ohne den Haken wäre ein einzelner Riesen-Vergleich unabbrechbar).
-func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, moveLimit int64, tick func(situations int) bool) (usageVerdict, string) {
+func compareUsageGraphs(full, reduced *usageGraph, env *usageEnv, maxConfigs int, moveLimit int64, tick func(situations int) bool) (usageVerdict, string) {
+	if full.alpha != reduced.alpha {
+		panic("compareUsageGraphs: Graphen teilen die Symbol-Tabelle nicht")
+	}
 	if full.start < 0 && reduced.start < 0 {
 		return usageEqual, "beide Räume ohne akzeptierende Nutzung"
 	}
 	if full.start < 0 || reduced.start < 0 {
 		return usageDiffers, "nur eine Seite hat akzeptierende Nutzungen"
 	}
+	alpha := full.alpha
 
 	type item struct {
 		word    string
+		pos     int
 		base    usageCost // Summe der abnormalisierten Minima (für Meldungen)
 		full    usageConfig
 		reduced usageConfig
 	}
 
+	// Vereinigung der Terminal-Symbole beider Seiten (einmalig)
+	var termSyms []int32
+	{
+		seen := map[int32]bool{}
+		for _, list := range [][]int32{full.termSyms, reduced.termSyms} {
+			for _, sym := range list {
+				if !seen[sym] {
+					seen[sym] = true
+					termSyms = append(termSyms, sym)
+				}
+			}
+		}
+		sort.Slice(termSyms, func(i, j int) bool { return termSyms[i] < termSyms[j] })
+	}
+
 	wsFull, wsReduced := &usageWorkspace{}, &usageWorkspace{}
+	bufFull, bufReduced := &usageAcceptBuf{}, &usageAcceptBuf{}
+	symMark := make([]uint32, len(alpha.list))
+	symCur := uint32(0)
+	var symList []int32
 	var throttle progressThrottle
 	var buf []byte
 	seen := map[string]bool{}
-	queue := []item{{full: full.startConfig(), reduced: reduced.startConfig()}}
+
+	startPos := usagePosStart
+	if full.room.StartVariantCount > 0 {
+		startPos = usagePosInRoom
+	}
+	queue := []item{{pos: startPos, full: full.startConfig(), reduced: reduced.startConfig()}}
 	queue[0].base = usageNormalize(queue[0].full, queue[0].reduced)
-	fp, buf := usageFingerprint(queue[0].full, queue[0].reduced, buf)
+	fp, buf := usageFingerprint(queue[0].pos, queue[0].full, queue[0].reduced, buf)
 	seen[fp] = true
 
 	for len(queue) > 0 {
@@ -663,42 +917,74 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, moveLimit int
 		// Akzeptanzen vergleichen (reduced ist bei uns eine Teilmenge der
 		// Kanten, kann also nie billiger sein - geprüft wird trotzdem
 		// symmetrisch, der Vergleich ist allgemein)
-		fa := full.accept(it.full)
-		ra := reduced.accept(it.reduced)
-		for _, term := range [3]struct {
-			label  string
-			fh, rh bool
-			fc, rc usageCost
-		}{
-			{"", fa.hasOut, ra.hasOut, fa.out, ra.out},
-			{"!", fa.hasEnd, ra.hasEnd, fa.end, ra.end},
-			{"X!", fa.hasEndX, ra.hasEndX, fa.endX, ra.endX},
-		} {
+		fOut, fHasOut := full.acceptInto(it.full, bufFull)
+		rOut, rHasOut := reduced.acceptInto(it.reduced, bufReduced)
+		if it.pos == usagePosInRoom {
+			fHasOut, rHasOut = false, false // Spieler steht noch im Raum
+		}
+		check := func(label string, fh, rh bool, fc, rc usageCost) (usageVerdict, string) {
+			word := it.word
+			if label != "" {
+				word = alpha.join(word, label)
+			}
 			if moveLimit > 0 {
 				// Akzeptanzen über dem Budget sind irrelevant (beidseitig)
-				if term.fh && term.fc.add(it.base).moves > moveLimit {
-					term.fh = false
+				if fh && fc.add(it.base).moves > moveLimit {
+					fh = false
 				}
-				if term.rh && term.rc.add(it.base).moves > moveLimit {
-					term.rh = false
+				if rh && rc.add(it.base).moves > moveLimit {
+					rh = false
 				}
 			}
 			switch {
-			case term.fh && !term.rh:
+			case fh && !rh:
 				return usageDiffers, fmt.Sprintf("Wort %q: nur voll bedienbar (Kosten %s)",
-					it.word+term.label, term.fc.add(it.base))
-			case !term.fh && term.rh:
-				return usageDiffers, fmt.Sprintf("Wort %q: nur reduziert bedienbar", it.word+term.label)
-			case term.fh && term.fc != term.rc:
+					word, fc.add(it.base))
+			case !fh && rh:
+				return usageDiffers, fmt.Sprintf("Wort %q: nur reduziert bedienbar", word)
+			case fh && fc != rc:
 				return usageDiffers, fmt.Sprintf("Wort %q: reduziert %s statt %s",
-					it.word+term.label, term.rc.add(it.base), term.fc.add(it.base))
+					word, rc.add(it.base), fc.add(it.base))
+			}
+			return usageEqual, ""
+		}
+		if v, detail := check("", fHasOut, rHasOut, fOut, rOut); v != usageEqual {
+			return v, detail
+		}
+		for _, sym := range termSyms {
+			if !usageSymbolLegal(alpha, env, sym, it.pos) {
+				continue // Wort außen nicht spielbar - muss nicht bedient werden
+			}
+			if v, detail := check(alpha.list[sym].name,
+				bufFull.has[sym], bufReduced.has[sym], bufFull.cost[sym], bufReduced.cost[sym]); v != usageEqual {
+				return v, detail
 			}
 		}
 
-		// Übergänge für die zulässigen sichtbaren Zeichen
-		for _, label := range usageLabels(it.word == "") {
-			nextFull := full.stepClose(it.full, label, wsFull)
-			nextReduced := reduced.stepClose(it.reduced, label, wsReduced)
+		// Übergangs-Symbole: Vereinigung beider Konfigurationen
+		symCur++
+		symList = symList[:0]
+		for _, side := range [2]struct {
+			g   *usageGraph
+			cfg usageConfig
+		}{{full, it.full}, {reduced, it.reduced}} {
+			for _, entry := range side.cfg {
+				for _, sym := range side.g.outSyms[entry.node] {
+					if symMark[sym] != symCur {
+						symMark[sym] = symCur
+						symList = append(symList, sym)
+					}
+				}
+			}
+		}
+		sort.Slice(symList, func(i, j int) bool { return symList[i] < symList[j] })
+
+		for _, sym := range symList {
+			if !usageSymbolLegal(alpha, env, sym, it.pos) {
+				continue
+			}
+			nextFull := full.stepClose(it.full, sym, wsFull)
+			nextReduced := reduced.stepClose(it.reduced, sym, wsReduced)
 			if len(nextFull) == 0 && len(nextReduced) == 0 {
 				continue // Zweig tot (dank Pruning: keine akzeptierende Fortsetzung)
 			}
@@ -708,14 +994,15 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, moveLimit int
 					side = "reduziert"
 				}
 				return usageDiffers, fmt.Sprintf("ab Wort %q: nur %s fortsetzbar",
-					it.word+string(label), side)
+					alpha.join(it.word, alpha.list[sym].name), side)
 			}
 			delta := usageNormalize(nextFull, nextReduced)
 			if moveLimit > 0 && it.base.add(delta).moves > moveLimit {
 				continue // alle Fortsetzungen kosten mindestens base - über Budget
 			}
+			nextPos := alpha.list[sym].exit
 			var fp string
-			fp, buf = usageFingerprint(nextFull, nextReduced, buf)
+			fp, buf = usageFingerprint(nextPos, nextFull, nextReduced, buf)
 			if seen[fp] {
 				continue // Situation bekannt: jede Fortsetzung wiederholt sich
 			}
@@ -724,7 +1011,8 @@ func compareUsageGraphs(full, reduced *usageGraph, maxConfigs int, moveLimit int
 				return usageUndecided, fmt.Sprintf("mehr als %d Vergleichs-Situationen", maxConfigs)
 			}
 			queue = append(queue, item{
-				word:    it.word + string(label),
+				word:    alpha.join(it.word, alpha.list[sym].name),
+				pos:     nextPos,
 				base:    it.base.add(delta),
 				full:    nextFull,
 				reduced: nextReduced,

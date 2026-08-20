@@ -12,7 +12,7 @@ import (
 func TestReduceVariants202(t *testing.T) {
 	_, room := merge202Chamber(t)
 
-	result := reduceVariants(room, 100000, 0, false, nil)
+	result := reduceVariants(room, nil, 100000, 0, false, nil)
 	t.Logf("behalten (%d): %v", len(result.Kept), result.Kept)
 	t.Logf("gestrichen (%d): %v", len(result.Removed), result.Removed)
 	t.Logf("eliminierte Zustände (%d): %v", len(result.RemovedStates), result.RemovedStates)
@@ -38,9 +38,9 @@ func TestReduceVariants202(t *testing.T) {
 	}
 }
 
-// Der Finder über alle geeigneten Räume eines frisch initialisierten
-// Netzwerks (Ein-Portal-Räume ohne Startvarianten = Sackgassen): zeigt, wie
-// viel die Dominanzsuche schon ohne Merges hergibt
+// Der Finder über ALLE Räume eines frisch initialisierten Netzwerks (seit
+// der Mehr-Portal-Signatur auch Mehr-Portal- und Startvarianten-Räume):
+// zeigt, wie viel die Dominanzsuche schon ohne Merges hergibt
 func TestReduceVariantsFreshNetworks(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -52,10 +52,10 @@ func TestReduceVariantsFreshNetworks(t *testing.T) {
 		n := buildNetwork(t, tc.level)
 		rooms, variants, removed := 0, 0, 0
 		for _, room := range n.Rooms {
-			if !canReduceVariants(room) {
+			if room.Variants.Count() == 0 {
 				continue
 			}
-			result := reduceVariants(room, 100000, 0, false, nil)
+			result := reduceVariants(room, n.usageEnv(room), 100000, 0, false, nil)
 			rooms++
 			variants += int(room.Variants.Count())
 			removed += len(result.Removed)
@@ -64,8 +64,47 @@ func TestReduceVariantsFreshNetworks(t *testing.T) {
 					tc.name, room.Index, result.Undecided)
 			}
 		}
-		t.Logf("%s: %d Ein-Portal-Räume, %d/%d Varianten entbehrlich",
+		t.Logf("%s: %d Räume, %d/%d Varianten entbehrlich",
 			tc.name, rooms, removed, variants)
+	}
+}
+
+// End-to-End-Soundness der Mehr-Portal-Dominanz (2026-08-20): erst wird
+// JEDER Raum des frischen Netzwerks dominanz-reduziert (inklusive
+// Mehr-Portal- und Startvarianten-Räume - vor der Mehr-Portal-Signatur
+// wurden die übersprungen), dann alles zu einem Raum gemergt. Das Optimum
+// muss dem Brute-Orakel entsprechen - die Dominanz darf also keine für die
+// Optimallösung nötige Variante gestrichen haben.
+func TestDominanceThenFullMerge(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		level string
+		moves uint32
+	}{
+		{"mini", mapMini, 1},
+		{"twopush", mapTwoPush, 2},
+		{"twobox", mapTwoBox, 9},
+	} {
+		n := buildNetwork(t, tc.level)
+		removed := uint64(0)
+		for _, room := range n.Rooms {
+			count, ok := n.DominanceReduce(room, 0, nil)
+			if !ok {
+				t.Fatalf("%s: dominance raum %d abgebrochen", tc.name, room.Index)
+			}
+			removed += count
+		}
+		if err := n.Validate(true); err != nil {
+			t.Fatalf("%s: validate nach dominanz: %v", tc.name, err)
+		}
+		room := fullMerge(t, n)
+		moves, path := checkFullMerge(t, room)
+		if moves != tc.moves {
+			t.Errorf("%s: optimum nach dominanz %d moves (%q), want %d",
+				tc.name, moves, path, tc.moves)
+		}
+		t.Logf("%s: %d varianten dominanz-entfernt, optimum %d moves (%q)",
+			tc.name, removed, moves, path)
 	}
 }
 

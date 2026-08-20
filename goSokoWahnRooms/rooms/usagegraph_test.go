@@ -35,7 +35,7 @@ func crossCheck(t *testing.T, room *Room, allowed func(id uint64) bool, name str
 		}
 	}
 	graph := map[string]usageCost{}
-	for sig, cost := range buildUsageGraph(room, allowed).signatures(labHorizon) {
+	for sig, cost := range buildUsageGraph(room, nil, allowed).signatures(labHorizon) {
 		if visibleLen(sig) < labHorizon {
 			graph[sig] = cost
 		}
@@ -79,7 +79,7 @@ func TestUsageGraphLoops202(t *testing.T) {
 		{"voll", nil},
 		{"minimal", func(id uint64) bool { return lab202MinimalSet[id] }},
 	} {
-		g := buildUsageGraph(room, tc.allowed)
+		g := buildUsageGraph(room, nil, tc.allowed)
 		loops := g.enumerateLoops(1000)
 		t.Logf("%s: %d Knoten, %d Zyklen", tc.name, len(g.nodes), len(loops))
 
@@ -103,12 +103,19 @@ func TestUsageGraphLoops202(t *testing.T) {
 		// Grundinvarianten: Zyklen existieren (Garagen-Loops), und ALLE
 		// tragen dieselbe Garagen-Rate 9 moves / 5 pushes je Einschub+Export-
 		// Paar (Max' Loop-These: "alle Garagen-Loops kosten 9") - im vollen
-		// wie im minimalen Graphen
+		// wie im minimalen Graphen. Seit der Mehr-Portal-Signatur erscheinen
+		// auch B-Besuche im Zyklus-Wort - gezählt werden die E (jedes Paar
+		// hat genau einen Einschub).
 		if len(loops) == 0 {
 			t.Errorf("%s: keine Zyklen gefunden (Garagen-Loop fehlt)", tc.name)
 		}
 		for _, loop := range loops {
-			perLoop := int64(len(loop.word) / 2) // Zyklen bestehen aus E+X-Paaren
+			perLoop := int64(0)
+			for _, c := range loop.word {
+				if c == 'E' {
+					perLoop++
+				}
+			}
 			if loop.cost.moves != 9*perLoop || loop.cost.pushes != 5*perLoop {
 				t.Errorf("%s: Zyklus %s kostet %s statt Garagen-Rate 9/5 je E+X", tc.name, loop.word, loop.cost)
 			}
@@ -123,10 +130,11 @@ func TestUsageGraphLoops202(t *testing.T) {
 func TestUsageGraphMinimalProven(t *testing.T) {
 	_, room := merge202Chamber(t)
 
-	full := buildUsageGraph(room, nil)
-	reduced := buildUsageGraph(room, func(id uint64) bool { return lab202MinimalSet[id] })
+	alpha := newUsageAlphabet(room)
+	full := buildUsageGraph(room, alpha, nil)
+	reduced := buildUsageGraph(room, alpha, func(id uint64) bool { return lab202MinimalSet[id] })
 
-	verdict, detail := compareUsageGraphs(full, reduced, 100000, 0, nil)
+	verdict, detail := compareUsageGraphs(full, reduced, nil, 100000, 0, nil)
 	t.Logf("voll (%d Knoten) vs minimal (%d Knoten): %v - %s",
 		len(full.nodes), len(reduced.nodes), verdict, detail)
 	if verdict != usageEqual {
@@ -138,13 +146,14 @@ func TestUsageGraphMinimalProven(t *testing.T) {
 // (v19) muss der Vergleich eine konkrete Differenz mit Gegenbeispiel finden
 func TestUsageGraphDetectsMissing(t *testing.T) {
 	_, room := merge202Chamber(t)
-	full := buildUsageGraph(room, nil)
+	alpha := newUsageAlphabet(room)
+	full := buildUsageGraph(room, alpha, nil)
 
 	for _, drop := range []uint64{19, 20} {
-		reduced := buildUsageGraph(room, func(id uint64) bool {
+		reduced := buildUsageGraph(room, alpha, func(id uint64) bool {
 			return lab202MinimalSet[id] && id != drop
 		})
-		verdict, detail := compareUsageGraphs(full, reduced, 100000, 0, nil)
+		verdict, detail := compareUsageGraphs(full, reduced, nil, 100000, 0, nil)
 		t.Logf("ohne v%d: %v - %s", drop, verdict, detail)
 		if verdict != usageDiffers {
 			t.Errorf("ohne v%d: Differenz nicht erkannt (%v - %s)", drop, verdict, detail)

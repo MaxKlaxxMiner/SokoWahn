@@ -8,9 +8,10 @@ import (
 )
 
 // Kandidaten-Finder der Dominanzsuche (M4b, siehe docs/konzept.md): findet
-// für einen Ein-Portal-Raum automatisch eine reduzierte Varianten-Menge,
-// die ALLE Außenwörter kostengleich bedient (bewiesen über
-// compareUsageGraphs, keine Horizont-Evidenz).
+// für einen Raum (seit der Mehr-Portal-Signatur 2026-08-20: JEDEN Raum,
+// auch Mehr-Portal und Startvarianten) automatisch eine reduzierte
+// Varianten-Menge, die ALLE legalen Außenwörter kostengleich bedient
+// (bewiesen über compareUsageGraphs, keine Horizont-Evidenz).
 //
 // Verfahren: Greedy-Elimination per Gruppen-Test (divide & conquer). Eine
 // Gruppe wird probeweise komplett gestrichen; bleibt der Vergleich gegen den
@@ -62,14 +63,11 @@ type ReduceResult struct {
 	Detail        string   // Beschreibung des Abschluss-Beweises
 }
 
-// prüft, ob der Finder auf diesen Raum anwendbar ist
-func canReduceVariants(room *Room) bool {
-	return len(room.Incoming) == 1 && room.StartVariantCount == 0
-}
-
 // Arbeitszustand einer laufenden Reduktion
 type reducer struct {
 	room       *Room
+	alpha      *usageAlphabet
+	env        *usageEnv
 	full       *usageGraph
 	removed    map[uint64]bool
 	maxConfigs int
@@ -115,8 +113,8 @@ func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 	for _, vid := range batch {
 		r.removed[vid] = true
 	}
-	candidate := buildUsageGraph(r.room, func(id uint64) bool { return !r.removed[id] })
-	verdict, _ := compareUsageGraphs(r.full, candidate, r.maxConfigs, r.moveLimit, r.compareTick)
+	candidate := buildUsageGraph(r.room, r.alpha, func(id uint64) bool { return !r.removed[id] })
+	verdict, _ := compareUsageGraphs(r.full, candidate, r.env, r.maxConfigs, r.moveLimit, r.compareTick)
 	if verdict == usageEqual {
 		r.result.Removed = append(r.result.Removed, batch...)
 		// Ernte-Kriterium: ist über die Hälfte der Varianten als entbehrlich
@@ -144,11 +142,17 @@ func (r *reducer) shrinkVariants(batch []uint64) {
 	if verdict == usageEqual {
 		return
 	}
-	if len(batch) == 1 {
-		if verdict == usageUndecided {
-			r.result.Undecided = append(r.result.Undecided, batch[0])
-		}
+	if verdict == usageUndecided {
+		// NICHT teilen: die Teil-Gruppen erben den explodierenden
+		// Situationsraum fast sicher, jede weitere Teilung kostet einen
+		// vollen maxConfigs-Lauf ohne Aussicht (Mehr-Portal-Zwischenräume
+		// der 5005-Repro: Tausende Einzeltests je ~100k Situationen).
+		// Die ganze Gruppe bleibt konservativ erhalten.
+		r.result.Undecided = append(r.result.Undecided, batch...)
 		return
+	}
+	if len(batch) == 1 {
+		return // Differenz bewiesen: die Variante ist nötig
 	}
 	mid := len(batch) / 2
 	r.shrinkVariants(batch[:mid])
@@ -185,6 +189,9 @@ func (r *reducer) shrinkStates(states []uint64) {
 		r.result.RemovedStates = append(r.result.RemovedStates, states...)
 		return
 	}
+	if verdict == usageUndecided {
+		return // nicht teilen (siehe shrinkVariants); Phase 2 prüft den Rest
+	}
 	if len(states) == 1 {
 		return // Zustand bleibt; seine Varianten prüft Phase 2 einzeln
 	}
@@ -193,7 +200,9 @@ func (r *reducer) shrinkStates(states []uint64) {
 	r.shrinkStates(states[mid:])
 }
 
-// reduziert die Varianten-Menge eines Ein-Portal-Raums per Greedy-Elimination.
+// reduziert die Varianten-Menge eines Raums per Greedy-Elimination.
+// env (optional, siehe usageenv.go) filtert außen unspielbare Wörter über
+// die Spieler-Konnektivität; nil = kein Filter (konservativ).
 // maxConfigs begrenzt jeden Einzelvergleich (Sicherheitsnetz gegen
 // divergierende Loop-Raten); unentscheidbare Kandidaten bleiben erhalten.
 // Die Suche läuft bis zum Ende oder bis der info-Callback abbricht (Stop);
@@ -203,12 +212,9 @@ func (r *reducer) shrinkStates(states []uint64) {
 // Hälfte der Varianten bewiesen entbehrlich ist - dann lohnt erst das
 // Anwenden, siehe DominanceReduce). Der Raum selbst wird NICHT verändert -
 // das Ergebnis beschreibt nur, welche Varianten entbehrlich sind.
-func reduceVariants(room *Room, maxConfigs int, moveLimit int64, harvest bool, info ProgressFunc) ReduceResult {
-	if !canReduceVariants(room) {
-		panic("reduceVariants: nur Ein-Portal-Räume ohne Startvarianten")
-	}
-
-	full := buildUsageGraph(room, nil)
+func reduceVariants(room *Room, env *usageEnv, maxConfigs int, moveLimit int64, harvest bool, info ProgressFunc) ReduceResult {
+	alpha := newUsageAlphabet(room)
+	full := buildUsageGraph(room, alpha, nil)
 	if full.start < 0 {
 		// Der Raum hat im Nutzungs-Modell KEINE akzeptierende Nutzung (der
 		// gelöste Zustand ist unerreichbar). Der Vergleich würde dann jede
@@ -220,12 +226,28 @@ func reduceVariants(room *Room, maxConfigs int, moveLimit int64, harvest bool, i
 	}
 	r := &reducer{
 		room:       room,
+		alpha:      alpha,
+		env:        env,
 		full:       full,
 		removed:    map[uint64]bool{},
 		maxConfigs: maxConfigs,
 		moveLimit:  moveLimit,
 		harvest:    harvest,
 		info:       info,
+	}
+
+	// Selbst-Sättigungs-Probe: sättigt nicht einmal der Vergleich des vollen
+	// Graphen mit sich selbst innerhalb des Limits, ist der Nutzungsraum zu
+	// vielfältig für JEDEN Kandidaten-Vergleich (Mehr-Portal-Monster: Raum 118
+	// der 5005-Repro sättigt selbst nach 1 Mio Situationen nicht, 659 Symbole)
+	// - jeder Einzeltest würde nur das maxConfigs-Netz abklappern. Der Raum
+	// wird konservativ übersprungen; ein max-moves-Budget kappt die
+	// Wortvielfalt und öffnet das Tor wieder.
+	if verdict, _ := compareUsageGraphs(full, full, env, maxConfigs, moveLimit, r.compareTick); verdict != usageEqual {
+		return ReduceResult{
+			Aborted: r.aborted, // Nutzer-Stop während der Probe durchreichen
+			Detail:  "Nutzungsraum sättigt nicht - Raum übersprungen (max moves setzen kappt die Wortvielfalt)",
+		}
 	}
 
 	// Phase 1: ganze Zustände eliminieren (0 = gelöst und der Startzustand
@@ -260,8 +282,8 @@ func reduceVariants(room *Room, maxConfigs int, moveLimit int64, harvest bool, i
 
 	// Abschluss-Beweis der Gesamtmenge (redundant zur Induktion der
 	// Einzelschritte, aber billig und ein guter Wächter)
-	final := buildUsageGraph(room, func(id uint64) bool { return !r.removed[id] })
-	verdict, detail := compareUsageGraphs(r.full, final, maxConfigs, moveLimit, r.compareTick)
+	final := buildUsageGraph(room, alpha, func(id uint64) bool { return !r.removed[id] })
+	verdict, detail := compareUsageGraphs(r.full, final, env, maxConfigs, moveLimit, r.compareTick)
 	if verdict == usageDiffers {
 		panic("reduceVariants: Abschluss-Beweis fehlgeschlagen: " + detail)
 	}
@@ -274,23 +296,26 @@ func reduceVariants(room *Room, maxConfigs int, moveLimit int64, harvest bool, i
 const dominanceMaxConfigs = 100000
 
 // DominanceReduce führt die Dominanzsuche auf einem Raum aus und entfernt
-// bewiesen entbehrliche Varianten samt dabei verwaisender Zustände. Nicht
-// anwendbare Räume (mehr als ein Portal, Startvarianten) bleiben unberührt.
-// moveLimit > 0 kappt Nutzungen über diesem Moves-Budget (siehe
-// OptimizeRooms: Raum-Minimum + Slack aus dem globalen Max-Moves-Limit).
-// info (optional) bekommt Fortschritts-Meldungen; Rückgabe false bricht ab,
-// der Raum bleibt dann unverändert.
+// bewiesen entbehrliche Varianten samt dabei verwaisender Zustände - seit
+// der Mehr-Portal-Signatur (2026-08-20) für JEDEN Raum, auch Mehr-Portal
+// und Startvarianten. moveLimit > 0 kappt Nutzungen über diesem
+// Moves-Budget (siehe OptimizeRooms: Raum-Minimum + Slack aus dem globalen
+// Max-Moves-Limit). info (optional) bekommt Fortschritts-Meldungen;
+// Rückgabe false bricht ab, der Raum bleibt dann unverändert.
 func (n *Network) DominanceReduce(room *Room, moveLimit int64, info ProgressFunc) (removed uint64, ok bool) {
-	if !canReduceVariants(room) || room.Variants.Count() == 0 {
+	if room.Variants.Count() == 0 {
 		return 0, true
 	}
 	if info != nil && !info(fmt.Sprintf("dominance scan room %d: %s variants", room.Index, tools.FormatInt(room.Variants.Count())), []*Room{room}) {
 		return 0, false
 	}
+	// Spieler-Konnektivität der Außenwelt (bleibt über die Runden stabil -
+	// Felder und Portale des Raums ändern sich beim Anwenden nicht)
+	env := n.usageEnv(room)
 	// Runden bis zum Fixpunkt: nach einer Ernte (über die Hälfte entbehrlich)
 	// wird angewandt und auf dem geschrumpften Raum frisch weitergesucht
 	for {
-		result := reduceVariants(room, dominanceMaxConfigs, moveLimit, true, info)
+		result := reduceVariants(room, env, dominanceMaxConfigs, moveLimit, true, info)
 		if len(result.Removed) == 0 {
 			return removed, !result.Aborted
 		}

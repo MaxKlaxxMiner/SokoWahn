@@ -357,7 +357,8 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   die "richtigen" und hält Gleichstands-Familien am Leben), das Zwei-Phasen-
   Greedy trifft exakt die Handrechnung: 7 Varianten {1,3,5,6,17,19,20} auf
   5 Zuständen, jede Streichung einzeln bewiesen (TestReduceVariants202).
-  Anwendbar auf Ein-Portal-Räume ohne Startvarianten.
+  Anwendbar war das zunächst nur auf Ein-Portal-Räume ohne Startvarianten
+  (aufgehoben durch die Mehr-Portal-Signatur, siehe unten).
   Eingebaut in den Optimize-Button (2026-08-18): OptimizeRooms fährt je Raum
   erst den billigen Deadlock-Scan, dann DominanceReduce (Finder + echtes
   Entfernen über renewVariants/removeUnusedStates, danach Validate). Die
@@ -429,8 +430,74 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   nachgelagerte Budget-Scan mit Distanz-Korridor bleibt schärfer
   (TestMergeWithMoveLimit: TwoBox-Optimum überlebt Budget 9, 202er-Kammer
   mit Budget 83 identisch zum ungebremsten Merge).
-  Offene Punkte: Mehr-Portal-Räume brauchen eine reichere Signatur
-  (Ereignisse tragen ihr Portal, Transparenz nur bei Eintritt == Austritt).
+  Mehr-Portal-Signatur + Startvarianten (Konzept mit Max abgestimmt
+  2026-08-20): die Dominanzsuche erfasst damit ALLE Räume. Das Alphabet wird
+  portal-annotiert:
+    - Einschub "E@p" (Kiste kommt durch Portal p rein, BoxSwap des Portals).
+    - Besuch als Tupel (Eintritts-Portal, Export-Portale in Schub-Reihenfolge,
+      Austritts-Portal). Die Export-SEQUENZ ist sichtbar inkl. Anzahl - eine
+      Verschärfung gegenüber dem Ein-Portal-'X' (das die Anzahl nicht trug;
+      dort rettete die Kisten-Bilanz die Korrektheit: jede Akzeptanz endet im
+      Zustand 0, die Gesamt-Exportzahl ist damit wortbestimmt - bei mehreren
+      Portalen ist aber die VERTEILUNG auf die Portale außen relevant).
+    - Start-Besuch "S" (Startvarianten-Erweiterung): bei Räumen mit
+      Startvarianten beginnt jedes Wort zwingend mit einem S-Zeichen
+      (Exporte + Austritts-Portal bzw. End-Variante "S!") - der Spieler ist
+      der einzige Akteur, solange er im Raum steht, kann draußen nichts
+      passieren. Nach dem S-Austritt läuft das normale Spiel; die nackte
+      Out-Akzeptanz (Zustand 0 hinterlassen) gilt erst nach dem S.
+  Weil jedes Zeichen sein Austritts-Portal trägt, ist die Spieler-Position
+  nach jedem Ereignis WORTBESTIMMT. Daraus folgen die beiden B-Regeln
+  strukturell (statt als Sonderregeln):
+    - Epsilon-Transparenz: ein exportloser Selbst-Besuch B(q,q) ist nur
+      DIREKT NACH einem Ereignis mit Spieler-Endposition q unsichtbar - dort
+      steht der Spieler nachweislich, und der Durchgang ist nachweislich frei
+      (nach Austritt: er kam gerade durch; nach Einschub E@q: die Kiste ist
+      jetzt drin und im Zustand verbucht). VOR einem Ereignis gibt es keine
+      Transparenz - vor einem Einschub kann die noch draußen liegende Kiste
+      die Zufahrt versperren (die 5005-Lektion, jetzt strukturell). Der
+      Epsilon-Abschluss ist einschrittig (das B sperrt sein Portal).
+    - Sichtbares B: V(q,[],q) ist als eigenes Zeichen zulässig, wenn der
+      Spieler laut Wort NICHT bei q steht (Anforderung "Außenwelt liefert
+      den Spieler bei q an" - nötig für die Vollständigkeit: eine echte
+      Nutzung darf zwischendurch anderswo einen exportlosen Besuch machen).
+      Ein-Portal-Spezialfall: nur an Position 0 möglich = exakt die
+      bisherige Erste-Aktion-Regel, die Anker bleiben.
+  Selbes-Portal-Sperre portal-genau: nach einem exportlosen Besuch mit
+  Austritt bei p ist nur der direkt nächste EINTRITT bei p gesperrt
+  (fusionierbar); Knoten = (Zustand, gesperrtes Portal), jeder Einschub und
+  jeder andere Besuch löst. Nach Startvarianten KEINE Sperre (der
+  Fusions-Beweis ist für Startvarianten nicht geführt - konservativ).
+  Spieler-Konnektivität (Max' Idee, 2026-08-20): die Außenwelt zerfällt je
+  Raum in statische Komponenten (Zusammenhang der begehbaren Felder OHNE die
+  Raum-Felder; nur Wände zählen, fremde Raum-Felder optimistisch frei -
+  Nichtzusammenhang ist damit BEWIESEN, Zusammenhang nur angenommen =
+  konservativ). Ein Ereignis an Portal q ist nur legal, wenn q in der
+  Komponente der aktuellen Spieler-Position liegt (Anfang: Komponente des
+  Spieler-Startfelds); die Seite wechseln kann der Spieler nur durch
+  sichtbare Durchgangs-Besuche. Illegale Wörter fallen aus der
+  Anforderungsmenge -> mehr Reduktion. Der Filter ist REINE Optimierung, die
+  Korrektheit hängt nicht an ihm (sie kommt aus den portal-annotierten
+  Zeichen). Kisten-Konnektivität bewusst NICHT einbezogen (fremde Kisten,
+  zustandsabhängige Flüsse - notierte Ausbaustufe).
+  Der Vergleich (compareUsageGraphs) bleibt strukturell gleich: die
+  Spieler-Position läuft als Wort-Zustand mit (im Fingerprint), statt fester
+  Labels iteriert die Suche über die an der Situation legalen
+  Zeichen-Klassen (Symbole, geteilte Interning-Tabelle zwischen voll und
+  reduziert).
+  Kosten-Steuerung (Lehre aus der 5005-Repro, 2026-08-20): bei
+  Mehr-Portal-Monstern sättigt der Vergleich oft gar nicht (Raum 118 der
+  Repro: 22 Felder, 7 Portale, 8990 Varianten, 659 Symbole - selbst der
+  Vergleich des vollen Graphen MIT SICH SELBST sättigt nach 1 Mio
+  Situationen nicht), jeder Einzeltest klappert dann nur das maxConfigs-Netz
+  ab und die Greedy-Suche verbrennt Minuten. Zwei deterministische Bremsen:
+  (1) Selbst-Sättigungs-Probe als Eingangstor von reduceVariants - sättigt
+  voll-gegen-voll nicht innerhalb des Limits, wird der Raum mit Meldung
+  übersprungen (ein max-moves-Budget kappt die Wortvielfalt und öffnet das
+  Tor wieder); (2) unentschiedene GRUPPEN werden nicht mehr geteilt (die
+  Teil-Gruppen erben den explodierenden Situationsraum fast sicher - vorher
+  liefen Tausende Einzeltests je ~100k Situationen), sondern konservativ
+  komplett behalten.
   Arbeitsteilung in der GUI (Max, 2026-08-18): die schnellen, bewiesenen Regeln
   (Deadlock-Scan) laufen wie bisher automatisch bei jedem Merge mit; die
   Dominanzsuche hängt am Optimize-Button und darf aufs Ganze gehen - angedacht
