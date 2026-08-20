@@ -53,6 +53,7 @@ let levelSeq = -1; // Level-Wechsel-Zähler des Servers (Strg+V kann das Feld er
 let clearSelection = false; // nach einem Reset (Entf) die Auswahl nicht wiederherstellen
 let mergeBusy = false;
 let solveRunning = false; // Solver-Sitzung aktiv (Panel ersetzt die linken Listen)
+let solveClosing = false; // Esc gedrückt: Sitzung endet, nachlaufende Events öffnen das Panel nicht neu
 let solveAuto = false; // Auto-Modus der Sitzung (Anzeige folgt dem Server-Status)
 let solveBulk = 10000; // Bulkgröße der b-Taste (+/- = mal/geteilt 10, bis hinunter zu 1)
 let solutionPath = ''; // LURD der gemerkten Lösung (Pfeiltasten steppen, c = kopieren)
@@ -193,6 +194,13 @@ function showSolverPanel(open: boolean): void {
   ($('solverCol') as HTMLElement).hidden = !open;
   ($('roomsCol') as HTMLElement).hidden = open;
   ($('midCol') as HTMLElement).hidden = open;
+  if (!open) {
+    // wieder eingeblendete Listen neu rendern: solange sie display:none
+    // waren, hat ein reset() nur die Overscan-Zeilen erzeugt (Höhe 0)
+    roomsList?.refresh();
+    statesList?.refresh();
+    variantsList?.refresh();
+  }
 }
 
 function solverPanelOpen(): boolean {
@@ -202,7 +210,7 @@ function solverPanelOpen(): boolean {
 // Tasten-Hinweise unterm Panel (Steuerung wie in brute)
 function renderSolverHint(): void {
   $('solverHint').textContent = solveRunning
-    ? `b = bulk (${fmt(solveBulk)})   a = auto an/aus   +/- = bulkgröße   Stop = abbrechen`
+    ? `b = bulk (${fmt(solveBulk)})   a = auto an/aus   +/- = bulkgröße   Esc = beenden`
     : solutionPath
       ? 'Pfeiltasten = Lösung steppen   c = LURD kopieren   Esc = schließen'
       : 'Esc = schließen';
@@ -219,10 +227,11 @@ async function doSolve(): Promise<void> {
   }
 }
 
-async function sendSolveCmd(cmd: { bulk?: number; auto?: boolean }): Promise<void> {
+async function sendSolveCmd(cmd: { bulk?: number; auto?: boolean; stop?: boolean }): Promise<void> {
   try {
     await postJSON<{ ok: boolean }>('/api/solve/cmd', cmd);
   } catch (err) {
+    if (cmd.stop) return; // Esc auf einer gerade beendeten Sitzung: kein Fehler wert
     showError(err);
   }
 }
@@ -369,16 +378,20 @@ function connectProgress(): void {
     const stopBtn = $('stopBtn') as HTMLButtonElement;
     if (p.busy) {
       mergeBusy = true;
-      stopBtn.disabled = false;
+      // der Stop-Button gehört zu Merge/Optimize (hartes Abbrechen);
+      // die Solver-Sitzung endet stattdessen per Esc
+      stopBtn.disabled = p.kind === 'solve';
       if (p.kind === 'solve') {
         // Solver-Sitzung: Status (Tiefenzeilen) ins Panel, Modus aus Zeile 1
         solveRunning = true;
-        const lines = p.text.split('\n');
-        solveAuto = lines[0] === '[auto]';
-        showSolverPanel(true);
-        $('solverLog').textContent = lines.slice(1).join('\n');
-        $('info').textContent = (lines[1] ?? 'solve...') + (solveAuto ? ' [auto]' : ' [pause]');
-        renderSolverHint();
+        if (!solveClosing) {
+          const lines = p.text.split('\n');
+          solveAuto = lines[0] === '[auto]';
+          showSolverPanel(true);
+          $('solverLog').textContent = lines.slice(1).join('\n');
+          $('info').textContent = (lines[1] ?? 'solve...') + (solveAuto ? ' [auto]' : ' [pause]');
+          renderSolverHint();
+        }
       } else {
         if (solverPanelOpen()) showSolverPanel(false); // z.B. Level-Wechsel per Strg+V
         $('info').textContent = p.text;
@@ -392,6 +405,7 @@ function connectProgress(): void {
     mergeBusy = false;
     if (solveRunning) {
       solveRunning = false;
+      solveClosing = false;
       renderSolverHint();
     }
     updateMergeButton(canvas.getSelection());
@@ -703,7 +717,13 @@ async function boot(): Promise<void> {
           return;
       }
     }
-    if (ev.key === 'Escape' && !solveRunning && solverPanelOpen()) {
+    if (ev.key === 'Escape' && solverPanelOpen()) {
+      if (solveRunning) {
+        // Esc beendet die Sitzung (der Stop-Button gehört zu Merge/Optimize);
+        // eine bis dahin gefundene Lösung bleibt erhalten
+        solveClosing = true;
+        void sendSolveCmd({ stop: true });
+      }
       showSolverPanel(false); // zurück zu den Listen
       return;
     }

@@ -204,6 +204,12 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 	// Start-Aufgaben: Spieler startet im Startraum, alle Startvarianten
 	s.baseHash, s.baseRemain, s.baseNonZero = statesHash, lower, nonZero
 	s.resolveTask(0, states, EmptyPath, startRoom, NoPortal)
+
+	// Steht das Ergebnis schon nach den Startvarianten fest (z.B. nach einem
+	// Voll-Merge: nur noch End-Varianten, keine offenen Aufgaben), schließt
+	// Step(0) die Suche sofort ab - die GUI kann die Lösung direkt anbieten,
+	// ohne dass erst ein Bulk das "fertig" feststellen muss
+	s.Step(0)
 	return s, nil
 }
 

@@ -68,10 +68,19 @@ func TestSolveAfterMerge(t *testing.T) {
 	}
 	checkSolution(t, n, runSolver(t, n, 0), 9)
 
-	// Voll-Merge: die Lösung steckt komplett in den Startvarianten
+	// Voll-Merge: die Lösung steckt komplett in den Startvarianten - die
+	// Suche ist damit schon bei der Initialisierung entschieden (die GUI
+	// bietet die Lösung sofort an, ohne ersten Bulk)
 	n2 := buildNetwork(t, mapTwoBox)
 	fullMerge(t, n2)
-	checkSolution(t, n2, runSolver(t, n2, 0), 9)
+	s, err := NewSolver(n2, 0)
+	if err != nil {
+		t.Fatal("new solver:", err)
+	}
+	if !s.Done() {
+		t.Error("voll-merge: suche nicht sofort entschieden")
+	}
+	checkSolution(t, n2, s.Solution(), 9)
 }
 
 // Bulk-Grenze wie im C#-Original und in brute: ein Step arbeitet höchstens

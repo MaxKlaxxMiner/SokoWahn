@@ -47,6 +47,13 @@ export class VirtualList<T> {
     });
   }
 
+  // rendert den Sichtbereich neu - nötig, nachdem der Container wieder
+  // eingeblendet wurde (mit display:none ist clientHeight 0, ein reset()
+  // in dem Zustand rendert sonst nur die Overscan-Zeilen)
+  refresh(): void {
+    this.render();
+  }
+
   // leert die Liste und setzt die neue Gesamtzahl (Daten kommen lazy beim Rendern)
   reset(total: number): void {
     this.generation++;

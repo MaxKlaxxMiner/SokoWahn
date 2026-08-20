@@ -64,9 +64,9 @@ func TestSolveSessionBulk(t *testing.T) {
 		t.Fatalf("solve per bulk: result=%q err=%q", result, errMsg)
 	}
 
-	// Stop beendet auch eine pausierte Sitzung
+	// das Stop-Kommando (Esc in der GUI) beendet auch eine pausierte Sitzung
 	post(t, s, "/api/solve", `{"maxMoves":0}`, 200, nil)
-	post(t, s, "/api/stop", `{}`, 200, nil)
+	post(t, s, "/api/solve/cmd", `{"stop":true}`, 200, nil)
 	if result, errMsg := waitJob(t, s); errMsg != "" || result == "" {
 		t.Fatalf("solve-stop: result=%q err=%q", result, errMsg)
 	}

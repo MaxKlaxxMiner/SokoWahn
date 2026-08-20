@@ -20,10 +20,11 @@ import (
 // zwischendurch drankommen, groß genug, dass der Schleifen-Overhead untergeht
 const solveAutoChunk = 4096
 
-// ein Steuer-Kommando der GUI ({bulk: n} oder {auto: true/false})
+// ein Steuer-Kommando der GUI ({bulk: n}, {auto: true/false} oder {stop: true})
 type solveCommand struct {
 	Bulk int   `json:"bulk"`
 	Auto *bool `json:"auto"`
+	Stop bool  `json:"stop"` // Sitzung beenden (Esc in der GUI; nicht der Stop-Button)
 }
 
 // die gemerkte Lösung des letzten erfolgreichen Solver-Laufs
@@ -121,7 +122,10 @@ func (s *Server) solveJob(maxMoves uint32, cmd chan solveCommand) {
 
 	aborted := false
 	report(true)
+loop:
 	for !solver.Done() {
+		// /api/stop als Notbremse (der Stop-Button der GUI ist beim Solven
+		// deaktiviert - die Sitzung endet regulär per Esc = Stop-Kommando)
 		if s.progress.stopRequested() {
 			aborted = true
 			break
@@ -129,6 +133,10 @@ func (s *Server) solveJob(maxMoves uint32, cmd chan solveCommand) {
 		if auto {
 			select {
 			case c := <-cmd:
+				if c.Stop {
+					aborted = true
+					break loop
+				}
 				if c.Auto != nil {
 					auto = *c.Auto
 				}
@@ -144,6 +152,10 @@ func (s *Server) solveJob(maxMoves uint32, cmd chan solveCommand) {
 			// pausiert: auf Kommandos warten, zwischendurch den Stop-Wunsch prüfen
 			select {
 			case c := <-cmd:
+				if c.Stop {
+					aborted = true
+					break loop
+				}
 				if c.Auto != nil {
 					auto = *c.Auto
 				}
@@ -176,10 +188,10 @@ func (s *Server) solveJob(maxMoves uint32, cmd chan solveCommand) {
 	case solver.Err() != nil:
 		s.progress.finish("", solver.Err())
 	case aborted && sol != nil:
-		s.progress.finish(fmt.Sprintf("Solve abgebrochen - beste Lösung bisher: %s Züge / %s Pushes",
+		s.progress.finish(fmt.Sprintf("Solve beendet - beste Lösung bisher: %s Züge / %s Pushes",
 			tools.FormatInt(sol.Moves), tools.FormatInt(sol.Pushes)), nil)
 	case aborted:
-		s.progress.finish("Solve abgebrochen (keine Lösung gefunden)", nil)
+		s.progress.finish("Solve beendet (keine Lösung gefunden)", nil)
 	default:
 		s.progress.finish("Solve: "+solver.ResultText(), nil)
 	}
