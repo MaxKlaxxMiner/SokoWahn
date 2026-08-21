@@ -90,7 +90,6 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 		}
 		seen := map[fwdTask]bool{}
 		var stack []fwdTask
-		var steps uint64 // besuchte Varianten (nur Fortschritts-Anzeige)
 		visit := func(t fwdTask) {
 			if !seen[t] {
 				seen[t] = true
@@ -117,6 +116,31 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 				blockSame:  enterPortal == v.PlayerPortal && len(v.BoxPortals) == 0,
 				state:      v.NewState,
 			})
+		}
+
+		// verarbeitet einen Varianten-Span in Tick-Blöcken: der Tick-Check
+		// läuft je Block statt je Variante und bleibt damit aus der Hotloop
+		// draußen (Max' Hinweis 2026-08-21); false = Nutzer-Stop
+		var steps uint64 // besuchte Varianten (nur Fortschritts-Anzeige)
+		nextTick := uint64(deadlockTickStep)
+		markSpan := func(span Span, entry uint32) bool {
+			for id, end := span.Start, span.Start+span.Count; id < end; {
+				chunk := end - id
+				if remain := nextTick - steps; chunk > remain {
+					chunk = remain
+				}
+				for stop := id + chunk; id < stop; id++ {
+					mark(id, entry)
+				}
+				steps += chunk
+				if steps >= nextTick {
+					nextTick += deadlockTickStep
+					if !tick("forward", steps) {
+						return false
+					}
+				}
+			}
+			return true
 		}
 
 		if room.StartVariantCount > 0 {
@@ -151,12 +175,8 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 				if ip.Index == task.exitPortal && task.blockSame {
 					continue
 				}
-				span := ip.GetVariantSpan(task.state)
-				for id := span.Start; id < span.Start+span.Count; id++ {
-					if steps++; steps%deadlockTickStep == 0 && !tick("forward", steps) {
-						return 0, false
-					}
-					mark(id, ip.Index)
+				if !markSpan(ip.GetVariantSpan(task.state), ip.Index) {
+					return 0, false
 				}
 			}
 
@@ -164,12 +184,8 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 			// verändert, hier ist jedes Portal erlaubt
 			for _, s := range maskStates[task.state] {
 				for _, ip := range room.Incoming {
-					span := ip.GetVariantSpan(s)
-					for id := span.Start; id < span.Start+span.Count; id++ {
-						if steps++; steps%deadlockTickStep == 0 && !tick("forward", steps) {
-							return 0, false
-						}
-						mark(id, ip.Index)
+					if !markSpan(ip.GetVariantSpan(s), ip.Index) {
+						return 0, false
 					}
 				}
 			}
@@ -223,15 +239,28 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 			slot := revSlot(v.PlayerPortal, v.NewState)
 			revMap[slot] = append(revMap[slot], revVariant{id: id, entry: NoPortal})
 		}
+		// Tick je Block statt je Variante (wie markSpan im Vorwärts-Scan);
+		// steps ist durch die Swap-Schleife oben schon vorbelastet
+		nextTick := steps + deadlockTickStep
 		for _, ip := range room.Incoming {
 			for _, span := range ip.VariantSpans {
-				for id := span.Start; id < span.Start+span.Count; id++ {
-					if steps++; steps%deadlockTickStep == 0 && !tick("backward verzeichnis", steps) {
-						return 0, false
+				for id, end := span.Start, span.Start+span.Count; id < end; {
+					chunk := end - id
+					if remain := nextTick - steps; chunk > remain {
+						chunk = remain
 					}
-					v := room.Variants.Get(id)
-					slot := revSlot(v.PlayerPortal, v.NewState)
-					revMap[slot] = append(revMap[slot], revVariant{id: id, entry: ip.Index})
+					for stop := id + chunk; id < stop; id++ {
+						v := room.Variants.Get(id)
+						slot := revSlot(v.PlayerPortal, v.NewState)
+						revMap[slot] = append(revMap[slot], revVariant{id: id, entry: ip.Index})
+					}
+					steps += chunk
+					if steps >= nextTick {
+						nextTick += deadlockTickStep
+						if !tick("backward verzeichnis", steps) {
+							return 0, false
+						}
+					}
 				}
 			}
 		}
@@ -270,10 +299,17 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 			stack = stack[:len(stack)-1]
 			for _, s := range maskStates[state] {
 				for exit := range room.Incoming {
-					for _, rv := range revMap[revSlot(uint32(exit), s)] {
-						if steps++; steps%deadlockTickStep == 0 && !tick("backward", steps) {
+					entries := revMap[revSlot(uint32(exit), s)]
+					// Tick je Slot statt je Eintrag (hält die Hotloop frei)
+					if steps += uint64(len(entries)); steps >= nextTick {
+						for nextTick <= steps {
+							nextTick += deadlockTickStep
+						}
+						if !tick("backward", steps) {
 							return 0, false
 						}
+					}
+					for _, rv := range entries {
 						if usedBackward[rv.id] {
 							continue
 						}

@@ -202,24 +202,31 @@ func newUsageAlphabet(room *Room, tick usageTick) *usageAlphabet {
 			}
 		}
 	}
-	for vid := uint64(0); vid < room.Variants.Count(); vid++ {
-		if tick != nil && vid%usageTickStep == 0 && !tick("alphabet", vid, room.Variants.Count()) {
+	// Tick je Block statt je Variante (hält die Hotloop frei)
+	for vid, count := uint64(0), room.Variants.Count(); vid < count; {
+		if tick != nil && !tick("alphabet", vid, count) {
 			return nil // Nutzer-Stop
 		}
-		v := room.Variants.Get(vid)
-		var exports []int
-		for _, bp := range v.BoxPortals {
-			exports = append(exports, int(bp))
+		stop := vid + usageTickStep
+		if stop > count {
+			stop = count
 		}
-		kind := usageKindVisit
-		if vid < room.StartVariantCount {
-			kind = usageKindStart
+		for ; vid < stop; vid++ {
+			v := room.Variants.Get(vid)
+			var exports []int
+			for _, bp := range v.BoxPortals {
+				exports = append(exports, int(bp))
+			}
+			kind := usageKindVisit
+			if vid < room.StartVariantCount {
+				kind = usageKindStart
+			}
+			exit := -1
+			if v.PlayerPortal != NoPortal {
+				exit = int(v.PlayerPortal)
+			}
+			a.variantSym[vid] = a.intern(kind, entryOf[vid], exit, exports)
 		}
-		exit := -1
-		if v.PlayerPortal != NoPortal {
-			exit = int(v.PlayerPortal)
-		}
-		a.variantSym[vid] = a.intern(kind, entryOf[vid], exit, exports)
 	}
 	return a
 }
@@ -279,24 +286,30 @@ func (g *usageGraph) buildSymbolIndex(tick usageTick) bool {
 	g.epsEdges = make([][]usageEdge, n)
 	g.outSyms = make([][]int32, n)
 	g.symOff = make([][]int32, n)
-	for id := range g.nodes {
-		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph indizieren", uint64(id), uint64(n)) {
+	for id := 0; id < n; { // Tick je Block statt je Knoten (Hotloop frei)
+		if tick != nil && !tick("graph indizieren", uint64(id), uint64(n)) {
 			return false
 		}
-		edges := g.edges[id]
-		sort.SliceStable(edges, func(i, j int) bool { return edges[i].symbol < edges[j].symbol })
-		prev := int32(-1)
-		for i, e := range edges {
-			if e.symbol != prev {
-				g.outSyms[id] = append(g.outSyms[id], e.symbol)
-				g.symOff[id] = append(g.symOff[id], int32(i))
-				prev = e.symbol
-			}
-			if g.alpha.list[e.symbol].eps {
-				g.epsEdges[id] = append(g.epsEdges[id], e)
-			}
+		stop := id + usageNodeTickStep
+		if stop > n {
+			stop = n
 		}
-		g.symOff[id] = append(g.symOff[id], int32(len(edges))) // Endmarke
+		for ; id < stop; id++ {
+			edges := g.edges[id]
+			sort.SliceStable(edges, func(i, j int) bool { return edges[i].symbol < edges[j].symbol })
+			prev := int32(-1)
+			for i, e := range edges {
+				if e.symbol != prev {
+					g.outSyms[id] = append(g.outSyms[id], e.symbol)
+					g.symOff[id] = append(g.symOff[id], int32(i))
+					prev = e.symbol
+				}
+				if g.alpha.list[e.symbol].eps {
+					g.epsEdges[id] = append(g.epsEdges[id], e)
+				}
+			}
+			g.symOff[id] = append(g.symOff[id], int32(len(edges))) // Endmarke
+		}
 	}
 	seen := map[int32]bool{}
 	for id := range g.nodes {
@@ -326,8 +339,11 @@ func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) b
 		}
 	}
 	// grobe Fortschritts-Skala: verarbeitete Varianten-Besuche (kann durch
-	// Sperr-Slots über die Gesamtzahl hinauslaufen - reine Anzeige)
+	// Sperr-Slots über die Gesamtzahl hinauslaufen - reine Anzeige); der
+	// Tick-Check läuft je Block statt je Variante (bleibt aus der Hotloop
+	// draußen, Max' Hinweis 2026-08-21)
 	var visited uint64
+	nextTick := uint64(usageTickStep)
 	g := &usageGraph{room: room, alpha: alpha, index: map[usageNodeKey]int{}}
 	nodeID := func(key usageNodeKey) int {
 		if id, exists := g.index[key]; exists {
@@ -400,15 +416,24 @@ func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) b
 				continue
 			}
 			span := ip.GetVariantSpan(key.state)
-			for vid := span.Start; vid < span.Start+span.Count; vid++ {
-				visited++
-				if tick != nil && visited%usageTickStep == 0 && !tick("graph", visited, room.Variants.Count()) {
-					return nil // Nutzer-Stop
+			for vid, end := span.Start, span.Start+span.Count; vid < end; {
+				chunk := end - vid
+				if remain := nextTick - visited; chunk > remain {
+					chunk = remain
 				}
-				if allowed != nil && !allowed(vid) {
-					continue
+				for stop := vid + chunk; vid < stop; vid++ {
+					if allowed != nil && !allowed(vid) {
+						continue
+					}
+					useVariant(vid)
 				}
-				useVariant(vid)
+				visited += chunk
+				if visited >= nextTick {
+					nextTick += usageTickStep
+					if tick != nil && !tick("graph", visited, room.Variants.Count()) {
+						return nil // Nutzer-Stop
+					}
+				}
 			}
 		}
 	}
@@ -435,12 +460,18 @@ func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
 	n := len(g.nodes)
 	total := uint64(n)
 	offsets := make([]int, n+1)
-	for id := range g.nodes {
-		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph aufräumen", uint64(id), total) {
+	for id := 0; id < n; { // Tick je Block statt je Knoten (Hotloop frei)
+		if tick != nil && !tick("graph aufräumen", uint64(id), total) {
 			return false
 		}
-		for _, e := range g.edges[id] {
-			offsets[e.to+1]++
+		stop := id + usageNodeTickStep
+		if stop > n {
+			stop = n
+		}
+		for ; id < stop; id++ {
+			for _, e := range g.edges[id] {
+				offsets[e.to+1]++
+			}
 		}
 	}
 	for i := 0; i < n; i++ {
@@ -451,18 +482,24 @@ func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
 	copy(fill, offsets[:n])
 	var queue []int
 	keep := make([]bool, n)
-	for id := range g.nodes {
-		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph aufräumen", uint64(id), total) {
+	for id := 0; id < n; {
+		if tick != nil && !tick("graph aufräumen", uint64(id), total) {
 			return false
 		}
-		for _, e := range g.edges[id] {
-			reverse[fill[e.to]] = int32(id)
-			fill[e.to]++
+		stop := id + usageNodeTickStep
+		if stop > n {
+			stop = n
 		}
-		// akzeptierende Knoten als Saat der Rückwärts-Erreichbarkeit
-		if g.nodes[id].state == 0 || len(g.ends[id]) > 0 {
-			keep[id] = true
-			queue = append(queue, id)
+		for ; id < stop; id++ {
+			for _, e := range g.edges[id] {
+				reverse[fill[e.to]] = int32(id)
+				fill[e.to]++
+			}
+			// akzeptierende Knoten als Saat der Rückwärts-Erreichbarkeit
+			if g.nodes[id].state == 0 || len(g.ends[id]) > 0 {
+				keep[id] = true
+				queue = append(queue, id)
+			}
 		}
 	}
 	processed := uint64(0)
@@ -495,17 +532,23 @@ func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
 			edges = append(edges, nil)
 		}
 	}
-	for id := range g.nodes {
-		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph aufräumen", uint64(id), total) {
+	for id := 0; id < n; {
+		if tick != nil && !tick("graph aufräumen", uint64(id), total) {
 			return false
 		}
-		if !keep[id] {
-			continue
+		stop := id + usageNodeTickStep
+		if stop > n {
+			stop = n
 		}
-		for _, e := range g.edges[id] {
-			if keep[e.to] {
-				e.to = remap[e.to]
-				edges[remap[id]] = append(edges[remap[id]], e)
+		for ; id < stop; id++ {
+			if !keep[id] {
+				continue
+			}
+			for _, e := range g.edges[id] {
+				if keep[e.to] {
+					e.to = remap[e.to]
+					edges[remap[id]] = append(edges[remap[id]], e)
+				}
 			}
 		}
 	}

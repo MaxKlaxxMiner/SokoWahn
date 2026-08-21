@@ -604,7 +604,7 @@ Tabelle nachziehen:
 
 | Anker-Langläufer                | i5 (64 GB) | Ultra 9 (128 GB) |
 |---------------------------------|-----------:|-----------------:|
-| 5018-Dominanz                   |      ~73 s |                ? |
+| 5018-Dominanz                   |      ~72 s |                ? |
 | Repro-5005 (alle 3 Tests)       |      ~33 s |                ? |
 | 202-Solver (frisch, Automatik)  |       ~6 s |                ? |
 
