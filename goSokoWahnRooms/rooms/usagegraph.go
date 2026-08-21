@@ -285,42 +285,40 @@ type usageGraph struct {
 	termSyms []int32       // alle Terminal-Symbole des Graphen (sortiert, unique)
 }
 
-// Tick-Schrittweite der Knoten-Schleifen von Aufräumen/Indizieren (je Knoten
-// hängt ein Kanten-Bündel dran, daher enger als usageTickStep)
-const usageNodeTickStep = 8192
-
 // leitet die vorsortierten Zugriffs-Strukturen aus edges/ends ab (nach dem
 // Pruning): Kanten je Knoten nach Symbol sortieren, outSyms/epsEdges/termSyms
-// füllen. tick (optional) meldet Fortschritt; false = Nutzer-Stop
+// füllen. tick (optional) meldet Fortschritt; false = Nutzer-Stop.
+// Die Tick-Kadenz bemisst sich an den verarbeiteten KANTEN, nicht an den
+// Knoten - die Kantenzahl je Knoten schwankt enorm, feste Knoten-Blöcke
+// wurden bei dicken Knoten viel zu groß (Max' Befund 2026-08-21)
 func (g *usageGraph) buildSymbolIndex(tick usageTick) bool {
 	n := len(g.nodes)
 	g.epsEdges = make([][]usageEdge, n)
 	g.outSyms = make([][]int32, n)
 	g.symOff = make([][]int32, n)
-	for id := 0; id < n; { // Tick je Block statt je Knoten (Hotloop frei)
-		if tick != nil && !tick("graph indizieren", uint64(id), uint64(n)) {
-			return false
-		}
-		stop := id + usageNodeTickStep
-		if stop > n {
-			stop = n
-		}
-		for ; id < stop; id++ {
-			edges := g.edges[id]
-			sort.SliceStable(edges, func(i, j int) bool { return edges[i].symbol < edges[j].symbol })
-			prev := int32(-1)
-			for i, e := range edges {
-				if e.symbol != prev {
-					g.outSyms[id] = append(g.outSyms[id], e.symbol)
-					g.symOff[id] = append(g.symOff[id], int32(i))
-					prev = e.symbol
-				}
-				if g.alpha.list[e.symbol].eps {
-					g.epsEdges[id] = append(g.epsEdges[id], e)
-				}
+	var work, nextWork uint64
+	for id := 0; id < n; id++ {
+		if work >= nextWork {
+			if tick != nil && !tick("graph indizieren", uint64(id), uint64(n)) {
+				return false
 			}
-			g.symOff[id] = append(g.symOff[id], int32(len(edges))) // Endmarke
+			nextWork = work + usageTickStep
 		}
+		edges := g.edges[id]
+		work += uint64(len(edges)) + 1
+		sort.SliceStable(edges, func(i, j int) bool { return edges[i].symbol < edges[j].symbol })
+		prev := int32(-1)
+		for i, e := range edges {
+			if e.symbol != prev {
+				g.outSyms[id] = append(g.outSyms[id], e.symbol)
+				g.symOff[id] = append(g.symOff[id], int32(i))
+				prev = e.symbol
+			}
+			if g.alpha.list[e.symbol].eps {
+				g.epsEdges[id] = append(g.epsEdges[id], e)
+			}
+		}
+		g.symOff[id] = append(g.symOff[id], int32(len(edges))) // Endmarke
 	}
 	seen := map[int32]bool{}
 	for id := range g.nodes {
@@ -470,19 +468,19 @@ func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
 	// Slice-Header und Abermillionen Einzel-Allokationen
 	n := len(g.nodes)
 	total := uint64(n)
+	// Tick-Kadenz nach verarbeiteten Kanten (siehe buildSymbolIndex)
+	var work, nextWork uint64
 	offsets := make([]int, n+1)
-	for id := 0; id < n; { // Tick je Block statt je Knoten (Hotloop frei)
-		if tick != nil && !tick("graph aufräumen", uint64(id), total) {
-			return false
-		}
-		stop := id + usageNodeTickStep
-		if stop > n {
-			stop = n
-		}
-		for ; id < stop; id++ {
-			for _, e := range g.edges[id] {
-				offsets[e.to+1]++
+	for id := 0; id < n; id++ {
+		if work >= nextWork {
+			if tick != nil && !tick("graph aufräumen", uint64(id), total) {
+				return false
 			}
+			nextWork = work + usageTickStep
+		}
+		work += uint64(len(g.edges[id])) + 1
+		for _, e := range g.edges[id] {
+			offsets[e.to+1]++
 		}
 	}
 	for i := 0; i < n; i++ {
@@ -493,33 +491,36 @@ func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
 	copy(fill, offsets[:n])
 	var queue []int
 	keep := make([]bool, n)
-	for id := 0; id < n; {
-		if tick != nil && !tick("graph aufräumen", uint64(id), total) {
-			return false
-		}
-		stop := id + usageNodeTickStep
-		if stop > n {
-			stop = n
-		}
-		for ; id < stop; id++ {
-			for _, e := range g.edges[id] {
-				reverse[fill[e.to]] = int32(id)
-				fill[e.to]++
+	for id := 0; id < n; id++ {
+		if work >= nextWork {
+			if tick != nil && !tick("graph aufräumen", uint64(id), total) {
+				return false
 			}
-			// akzeptierende Knoten als Saat der Rückwärts-Erreichbarkeit
-			if g.nodes[id].state == 0 || len(g.ends[id]) > 0 {
-				keep[id] = true
-				queue = append(queue, id)
-			}
+			nextWork = work + usageTickStep
+		}
+		work += uint64(len(g.edges[id])) + 1
+		for _, e := range g.edges[id] {
+			reverse[fill[e.to]] = int32(id)
+			fill[e.to]++
+		}
+		// akzeptierende Knoten als Saat der Rückwärts-Erreichbarkeit
+		if g.nodes[id].state == 0 || len(g.ends[id]) > 0 {
+			keep[id] = true
+			queue = append(queue, id)
 		}
 	}
 	processed := uint64(0)
 	for len(queue) > 0 {
 		id := queue[len(queue)-1]
 		queue = queue[:len(queue)-1]
-		if processed++; tick != nil && processed%usageNodeTickStep == 0 && !tick("graph aufräumen", processed, total) {
-			return false
+		processed++
+		if work >= nextWork {
+			if tick != nil && !tick("graph aufräumen", processed, total) {
+				return false
+			}
+			nextWork = work + usageTickStep
 		}
+		work += uint64(offsets[id+1]-offsets[id]) + 1
 		for _, from := range reverse[offsets[id]:offsets[id+1]] {
 			if !keep[from] {
 				keep[from] = true
@@ -543,23 +544,22 @@ func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
 			edges = append(edges, nil)
 		}
 	}
-	for id := 0; id < n; {
-		if tick != nil && !tick("graph aufräumen", uint64(id), total) {
-			return false
-		}
-		stop := id + usageNodeTickStep
-		if stop > n {
-			stop = n
-		}
-		for ; id < stop; id++ {
-			if !keep[id] {
-				continue
+	for id := 0; id < n; id++ {
+		if work >= nextWork {
+			if tick != nil && !tick("graph aufräumen", uint64(id), total) {
+				return false
 			}
-			for _, e := range g.edges[id] {
-				if keep[e.to] {
-					e.to = remap[e.to]
-					edges[remap[id]] = append(edges[remap[id]], e)
-				}
+			nextWork = work + usageTickStep
+		}
+		if !keep[id] {
+			work++
+			continue
+		}
+		work += uint64(len(g.edges[id])) + 1
+		for _, e := range g.edges[id] {
+			if keep[e.to] {
+				e.to = remap[e.to]
+				edges[remap[id]] = append(edges[remap[id]], e)
 			}
 		}
 	}

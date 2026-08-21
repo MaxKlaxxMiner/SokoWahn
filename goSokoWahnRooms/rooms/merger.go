@@ -312,8 +312,14 @@ func (m *Merger) Step4UpdatePortals() {
 }
 
 // Schritt 5: unbenutzte Zustände des neuen Raumes entfernen (samt Varianten,
-// deren Zielzustand wegfällt - Fixpunkt-Iteration, siehe optimize.go)
+// deren Zielzustand wegfällt - Fixpunkt-Iteration, siehe optimize.go).
+// Ab hier ist der Merge nicht mehr abbrechbar (Netzwerk-Umbau läuft) - die
+// Meldung ist reine Anzeige, damit die Statuszeile bei Monster-Räumen nicht
+// minutenlang auf dem letzten Schritt-3-Stand stehen bleibt
 func (m *Merger) Step5OptimizeStates() {
+	if m.info != nil {
+		m.info("merge: unbenutzte zustände aufräumen (nicht mehr abbrechbar)...", []*Room{m.room1, m.room2})
+	}
 	removeUnusedStates(m.NewRoom)
 }
 
@@ -776,6 +782,9 @@ func (n *Network) MergeRooms(room1, room2 *Room, maxMoves uint64, info ProgressF
 	// der Merge nachweislich nicht angefasst (nur Portal-Verweise, die die
 	// Struktur-Prüfung abdeckt) - ein Voll-Validate machte sonst JEDEN Merge
 	// so teuer wie die Monster-Räume des Netzwerks
+	if info != nil {
+		info("merge: validate...", []*Room{m.NewRoom}) // reine Anzeige (nicht mehr abbrechbar)
+	}
 	if err := n.ValidateRooms(m.NewRoom); err != nil {
 		return nil, fmt.Errorf("validate after merge: %w", err)
 	}

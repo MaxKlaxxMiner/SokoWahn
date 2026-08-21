@@ -379,6 +379,10 @@ async function doReset(): Promise<void> {
 async function doStop(): Promise<void> {
   try {
     await postJSON<{ stopping: boolean }>('/api/stop', {});
+    // der Stop wirkt erst am nächsten Prüfpunkt der Rechnung - bei
+    // Monster-Merges (Swap-Druck) kann das dauern, der Klick selbst
+    // soll aber sofort sichtbar quittiert werden
+    showStatus('Stop angefordert - die Rechnung endet am nächsten Prüfpunkt');
   } catch (err) {
     showError(err);
   }
