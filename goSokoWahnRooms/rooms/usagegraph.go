@@ -256,41 +256,47 @@ type usageGraph struct {
 	ends  [][]usageEnd
 	start int // -1 = der Raum hat keine einzige akzeptierende Nutzung
 
-	// Vorsortierung für die heiße Konfigurations-Rechnung
-	bySym    [][][]usageEdge // Symbol -> Kanten je Knoten (nil-Zeilen erlaubt)
-	epsEdges [][]usageEdge   // Epsilon-Kandidaten (exportlose Selbst-Besuche) je Knoten
-	outSyms  [][]int32       // je Knoten: Symbole der ausgehenden Kanten (sortiert, unique)
-	termSyms []int32         // alle Terminal-Symbole des Graphen (sortiert, unique)
+	// Vorsortierung für die heiße Konfigurations-Rechnung: die Kanten jedes
+	// Knotens liegen nach dem Indizieren nach Symbol sortiert, stepClose
+	// sucht binär (der frühere dichte Symbol->Knoten-Index hielt je Symbol
+	// ein Slice über ALLE Knoten plus eine Kopie aller Kanten und explodierte
+	// bei Monster-Räumen auf zig GB, Max' Befund 2026-08-21)
+	epsEdges [][]usageEdge // Epsilon-Kandidaten (exportlose Selbst-Besuche) je Knoten
+	outSyms  [][]int32     // je Knoten: Symbole der ausgehenden Kanten (sortiert, unique)
+	symOff   [][]int32     // je Knoten: Kanten-Offset je outSyms-Eintrag + Endmarke
+	termSyms []int32       // alle Terminal-Symbole des Graphen (sortiert, unique)
 }
 
-// leitet die vorsortierten Zugriffs-Strukturen aus edges/ends ab (nach Pruning)
-func (g *usageGraph) buildSymbolIndex() {
+// Tick-Schrittweite der Knoten-Schleifen von Aufräumen/Indizieren (je Knoten
+// hängt ein Kanten-Bündel dran, daher enger als usageTickStep)
+const usageNodeTickStep = 8192
+
+// leitet die vorsortierten Zugriffs-Strukturen aus edges/ends ab (nach dem
+// Pruning): Kanten je Knoten nach Symbol sortieren, outSyms/epsEdges/termSyms
+// füllen. tick (optional) meldet Fortschritt; false = Nutzer-Stop
+func (g *usageGraph) buildSymbolIndex(tick usageTick) bool {
 	n := len(g.nodes)
-	symCount := len(g.alpha.list)
-	g.bySym = make([][][]usageEdge, symCount)
 	g.epsEdges = make([][]usageEdge, n)
 	g.outSyms = make([][]int32, n)
+	g.symOff = make([][]int32, n)
 	for id := range g.nodes {
-		var syms []int32
-		for _, e := range g.edges[id] {
-			if g.bySym[e.symbol] == nil {
-				g.bySym[e.symbol] = make([][]usageEdge, n)
+		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph indizieren", uint64(id), uint64(n)) {
+			return false
+		}
+		edges := g.edges[id]
+		sort.SliceStable(edges, func(i, j int) bool { return edges[i].symbol < edges[j].symbol })
+		prev := int32(-1)
+		for i, e := range edges {
+			if e.symbol != prev {
+				g.outSyms[id] = append(g.outSyms[id], e.symbol)
+				g.symOff[id] = append(g.symOff[id], int32(i))
+				prev = e.symbol
 			}
-			g.bySym[e.symbol][id] = append(g.bySym[e.symbol][id], e)
 			if g.alpha.list[e.symbol].eps {
 				g.epsEdges[id] = append(g.epsEdges[id], e)
 			}
-			syms = append(syms, e.symbol)
 		}
-		sort.Slice(syms, func(i, j int) bool { return syms[i] < syms[j] })
-		g.outSyms[id] = syms[:0]
-		prev := int32(-1)
-		for _, s := range syms {
-			if s != prev {
-				g.outSyms[id] = append(g.outSyms[id], s)
-				prev = s
-			}
-		}
+		g.symOff[id] = append(g.symOff[id], int32(len(edges))) // Endmarke
 	}
 	seen := map[int32]bool{}
 	for id := range g.nodes {
@@ -302,6 +308,7 @@ func (g *usageGraph) buildSymbolIndex() {
 		}
 	}
 	sort.Slice(g.termSyms, func(i, j int) bool { return g.termSyms[i] < g.termSyms[j] })
+	return true
 }
 
 // baut den Nutzungs-Graphen eines Raums; alpha (optional) ist die geteilte
@@ -406,39 +413,69 @@ func buildUsageGraph(room *Room, alpha *usageAlphabet, allowed func(id uint64) b
 		}
 	}
 
-	// Aufräumen und Indizieren sind ebenfalls O(Knoten+Kanten) - vorher den
-	// Stop-Wunsch prüfen und die Phase sichtbar machen
-	if tick != nil && !tick("graph aufräumen", visited, room.Variants.Count()) {
+	// Aufräumen und Indizieren sind ebenfalls O(Knoten+Kanten) und laufen bei
+	// Monster-Graphen Minuten - beide melden eigenen Fortschritt und sind
+	// jederzeit abbrechbar (früher stand die letzte "graph"-Zeile stumm)
+	if !g.pruneNonAccepting(tick) {
 		return nil
 	}
-	g.pruneNonAccepting()
-	g.buildSymbolIndex()
+	if !g.buildSymbolIndex(tick) {
+		return nil
+	}
 	return g
 }
 
 // entfernt alle Knoten, von denen keine Akzeptanz (Zustand 0 oder End-Kante)
-// mehr erreichbar ist, und indiziert den Graphen neu
-func (g *usageGraph) pruneNonAccepting() {
-	// Rückwärts-Kanten sammeln, akzeptierende Knoten als Saat
-	reverse := make([][]int, len(g.nodes))
-	var queue []int
-	keep := make([]bool, len(g.nodes))
+// mehr erreichbar ist, und indiziert den Graphen neu. tick (optional) meldet
+// Fortschritt; false = Nutzer-Stop (der Graph ist dann unbrauchbar)
+func (g *usageGraph) pruneNonAccepting(tick usageTick) bool {
+	// Rückwärts-Kanten als flaches CSR-Array statt Slice je Knoten: bei
+	// Monster-Graphen (Hunderte Millionen Kanten) spart das etliche GB
+	// Slice-Header und Abermillionen Einzel-Allokationen
+	n := len(g.nodes)
+	total := uint64(n)
+	offsets := make([]int, n+1)
 	for id := range g.nodes {
-		for _, e := range g.edges[id] {
-			reverse[e.to] = append(reverse[e.to], id)
+		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph aufräumen", uint64(id), total) {
+			return false
 		}
+		for _, e := range g.edges[id] {
+			offsets[e.to+1]++
+		}
+	}
+	for i := 0; i < n; i++ {
+		offsets[i+1] += offsets[i]
+	}
+	reverse := make([]int32, offsets[n]) // Knoten-IDs passen in int32 (der Speicher wäre lange vorher am Ende)
+	fill := make([]int, n)
+	copy(fill, offsets[:n])
+	var queue []int
+	keep := make([]bool, n)
+	for id := range g.nodes {
+		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph aufräumen", uint64(id), total) {
+			return false
+		}
+		for _, e := range g.edges[id] {
+			reverse[fill[e.to]] = int32(id)
+			fill[e.to]++
+		}
+		// akzeptierende Knoten als Saat der Rückwärts-Erreichbarkeit
 		if g.nodes[id].state == 0 || len(g.ends[id]) > 0 {
 			keep[id] = true
 			queue = append(queue, id)
 		}
 	}
+	processed := uint64(0)
 	for len(queue) > 0 {
-		id := queue[0]
-		queue = queue[1:]
-		for _, from := range reverse[id] {
+		id := queue[len(queue)-1]
+		queue = queue[:len(queue)-1]
+		if processed++; tick != nil && processed%usageNodeTickStep == 0 && !tick("graph aufräumen", processed, total) {
+			return false
+		}
+		for _, from := range reverse[offsets[id]:offsets[id+1]] {
 			if !keep[from] {
 				keep[from] = true
-				queue = append(queue, from)
+				queue = append(queue, int(from))
 			}
 		}
 	}
@@ -459,6 +496,9 @@ func (g *usageGraph) pruneNonAccepting() {
 		}
 	}
 	for id := range g.nodes {
+		if tick != nil && id%usageNodeTickStep == 0 && !tick("graph aufräumen", uint64(id), total) {
+			return false
+		}
 		if !keep[id] {
 			continue
 		}
@@ -474,6 +514,7 @@ func (g *usageGraph) pruneNonAccepting() {
 		start = remap[g.start]
 	}
 	g.nodes, g.edges, g.ends, g.index, g.start = nodes, edges, ends, index, start
+	return true
 }
 
 func (g *usageGraph) nodeName(id int) string {
@@ -599,12 +640,28 @@ func (ws *usageWorkspace) relax(node int, c usageCost) {
 // wäre die verbotene Fusion, entsprechende Kanten existieren gar nicht.
 func (g *usageGraph) stepClose(src usageConfig, sym int32, ws *usageWorkspace) usageConfig {
 	ws.reset(len(g.nodes))
-	if int(sym) < len(g.bySym) && g.bySym[sym] != nil {
-		perNode := g.bySym[sym]
-		for _, entry := range src {
-			for _, e := range perNode[entry.node] {
-				ws.relax(e.to, entry.cost.add(e.cost))
+	for _, entry := range src {
+		// Kanten des Knotens sind nach Symbol sortiert (buildSymbolIndex);
+		// gesucht wird binär in der kompakten Symbol-Liste des Knotens
+		// (int32, cache-freundlich), symOff liefert den Kanten-Bereich -
+		// ersetzt den früheren dichten Symbol->Knoten-Index kostenneutral
+		syms := g.outSyms[entry.node]
+		lo, hi := 0, len(syms)
+		for lo < hi {
+			mid := int(uint(lo+hi) >> 1)
+			if syms[mid] < sym {
+				lo = mid + 1
+			} else {
+				hi = mid
 			}
+		}
+		if lo == len(syms) || syms[lo] != sym {
+			continue
+		}
+		edges := g.edges[entry.node]
+		off := g.symOff[entry.node]
+		for i := off[lo]; i < off[lo+1]; i++ {
+			ws.relax(edges[i].to, entry.cost.add(edges[i].cost))
 		}
 	}
 	exit := g.alpha.list[sym].exit

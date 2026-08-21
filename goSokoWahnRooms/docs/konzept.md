@@ -590,11 +590,23 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
 ## 8. Tests ohne C#-Orakel
 
 Zwei Stufen (Max, 2026-08-20 - "das nimmt langsam überhand"): der alltägliche
-`go test ./...` läuft in Sekunden; die Anker-LANGLÄUFER (5018-Dominanz ~70 s,
-Repro-5005 ~40 s, 202-Solver ~6 s) laufen nur auf Anforderung und gehören
-vor jeden Commit, der das Suchverhalten ändert:
+`go test ./...` läuft in Sekunden; die Anker-LANGLÄUFER laufen nur auf
+Anforderung und gehören vor jeden Commit, der das Suchverhalten ändert:
 
     SOKO_ANKER=1 go test ./...
+
+Die Anker-ERGEBNISWERTE (Knoten/Varianten/States) sind maschinenunabhängig;
+die LAUFZEITEN dagegen nicht - Max arbeitet abwechselnd auf mehreren Rechnern
+(Befund 2026-08-21: "72 s vs 80 s" entpuppte sich erst nach einer Baseline-
+Messung auf demselben Rechner als echte Regression). Vergleiche daher nur
+gegen die Spalte der eigenen Maschine; bei Änderungen am heißen Pfad die
+Tabelle nachziehen:
+
+| Anker-Langläufer                | i5 (64 GB) | Ultra 9 (128 GB) |
+|---------------------------------|-----------:|-----------------:|
+| 5018-Dominanz                   |      ~73 s |                ? |
+| Repro-5005 (alle 3 Tests)       |      ~33 s |                ? |
+| 202-Solver (frisch, Automatik)  |       ~6 s |                ? |
 
 - **Validate** als Invarianten-Test nach jedem Schritt (Init, Merge, Optimize).
 - **Mini-Levels mit handverifizierten Zahlen**: Zustände/Varianten je Raum nach

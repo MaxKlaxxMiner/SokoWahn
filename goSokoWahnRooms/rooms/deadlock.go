@@ -36,6 +36,25 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 	usedForward := make([]bool, variantCount)
 	usedBackward := make([]bool, variantCount)
 
+	// Fortschritt/Stop der heißen Schleifen: bei Monster-Räumen (zig Millionen
+	// Varianten) liefen beide Scan-Richtungen minutenlang stumm und ohne
+	// Abbruch-Möglichkeit (Max' Befund 2026-08-21). Abbruch lässt den Raum
+	// unverändert (die Umbauten passieren erst ganz am Ende).
+	throttle := &progressThrottle{}
+	aborted := false
+	tick := func(phase string, done uint64) bool {
+		if aborted {
+			return false
+		}
+		if info == nil || !throttle.due() {
+			return true
+		}
+		if !info(fmt.Sprintf("deadlock scan room %d: %s %s", room.Index, phase, tools.FormatInt(done)), []*Room{room}) {
+			aborted = true
+		}
+		return !aborted
+	}
+
 	// End-Varianten sind nur gültig, wenn alle dabei rausgeschobenen Kisten auf
 	// Zielfeldern landen - sonst wäre das Spiel gar nicht vorbei
 	endValid := func(v *VariantData) bool {
@@ -56,7 +75,10 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 		// (ohne Identität - der unveränderte Zustand läuft über den Regel-Zweig)
 		maskStates := buildMaskStates(len(room.Incoming), stateCount, false, func(portal int, state uint64) uint64 {
 			return room.Incoming[portal].GetBoxSwap(state)
-		})
+		}, func(done uint64) bool { return tick("forward masken", done) })
+		if maskStates == nil {
+			return 0, false
+		}
 
 		// Austritts-Situation: der Spieler hat den Raum über exitPortal verlassen
 		// (NoPortal = er war noch nie drin); blockSame sperrt den Wiedereintritt
@@ -68,6 +90,7 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 		}
 		seen := map[fwdTask]bool{}
 		var stack []fwdTask
+		var steps uint64 // besuchte Varianten (nur Fortschritts-Anzeige)
 		visit := func(t fwdTask) {
 			if !seen[t] {
 				seen[t] = true
@@ -130,6 +153,9 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 				}
 				span := ip.GetVariantSpan(task.state)
 				for id := span.Start; id < span.Start+span.Count; id++ {
+					if steps++; steps%deadlockTickStep == 0 && !tick("forward", steps) {
+						return 0, false
+					}
 					mark(id, ip.Index)
 				}
 			}
@@ -140,6 +166,9 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 				for _, ip := range room.Incoming {
 					span := ip.GetVariantSpan(s)
 					for id := span.Start; id < span.Start+span.Count; id++ {
+						if steps++; steps%deadlockTickStep == 0 && !tick("forward", steps) {
+							return 0, false
+						}
 						mark(id, ip.Index)
 					}
 				}
@@ -153,10 +182,14 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 			return 0, false
 		}
 		// Pull-Swaps: Umkehrung der BoxSwaps je Portal (Kiste wieder rausziehen)
+		var steps uint64 // besuchte Einträge/Varianten (nur Fortschritts-Anzeige)
 		pullSwaps := make([]map[uint64]uint64, len(room.Incoming))
 		for i, ip := range room.Incoming {
 			pull := make(map[uint64]uint64, len(ip.BoxSwap))
 			for from, to := range ip.BoxSwap {
+				if steps++; steps%deadlockTickStep == 0 && !tick("backward swaps", steps) {
+					return 0, false
+				}
 				pull[to] = from
 			}
 			pullSwaps[i] = pull
@@ -166,7 +199,10 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 				return next
 			}
 			return state
-		})
+		}, func(done uint64) bool { return tick("backward masken", done) })
+		if maskStates == nil {
+			return 0, false
+		}
 
 		// Rückwärts-Verzeichnis: (Austritts-Portal, Endzustand) -> Varianten samt
 		// Eintritts-Portal; Gruppe 0 = End-Varianten (werden nicht expandiert)
@@ -190,6 +226,9 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 		for _, ip := range room.Incoming {
 			for _, span := range ip.VariantSpans {
 				for id := span.Start; id < span.Start+span.Count; id++ {
+					if steps++; steps%deadlockTickStep == 0 && !tick("backward verzeichnis", steps) {
+						return 0, false
+					}
 					v := room.Variants.Get(id)
 					slot := revSlot(v.PlayerPortal, v.NewState)
 					revMap[slot] = append(revMap[slot], revVariant{id: id, entry: ip.Index})
@@ -232,6 +271,9 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 			for _, s := range maskStates[state] {
 				for exit := range room.Incoming {
 					for _, rv := range revMap[revSlot(uint32(exit), s)] {
+						if steps++; steps%deadlockTickStep == 0 && !tick("backward", steps) {
+							return 0, false
+						}
 						if usedBackward[rv.id] {
 							continue
 						}
@@ -265,6 +307,10 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 	return removed, true
 }
 
+// Tick-Schrittweite der heißen Deadlock-Schleifen (Fortschritt/Stop-Check;
+// die Zeitdrosselung übernimmt der tick-Callback selbst)
+const deadlockTickStep = 1 << 16
+
 // buildMaskStates liefert je Ausgangszustand alle Zustände, die durch eine
 // beliebige Portal-Teilmenge von Kisten-Zustandswechseln entstehen können;
 // includeIdentity nimmt die leere Teilmenge (= Zustand selbst) mit auf.
@@ -272,8 +318,9 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 // für Kisten-Mengen ist die Reihenfolge egal, nur bei Lücken in den
 // Zwischen-Zuständen könnte eine andere Reihenfolge theoretisch mehr finden
 // (Parität zum Original). swap liefert den Folgezustand (unverändert = Wechsel
-// nicht möglich).
-func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, swap func(portal int, state uint64) uint64) [][]uint64 {
+// nicht möglich). tick (optional) meldet den Fortschritt über die Zustände;
+// false = Nutzer-Stop, Ergebnis nil.
+func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, swap func(portal int, state uint64) uint64, tick func(done uint64) bool) [][]uint64 {
 	result := make([][]uint64, stateCount)
 	maskEnd := uint64(1) << portalCount
 	maskStart := uint64(1)
@@ -281,6 +328,9 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 		maskStart = 0
 	}
 	for state := uint64(0); state < stateCount; state++ {
+		if tick != nil && state%deadlockTickStep == 0 && !tick(state) {
+			return nil
+		}
 		seen := map[uint64]bool{}
 		var list []uint64
 		for mask := maskStart; mask < maskEnd; mask++ {
