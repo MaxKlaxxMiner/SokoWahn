@@ -37,14 +37,23 @@ func libraryUsable(meta rooms.LibraryMeta, maxMoves uint64) bool {
 	return meta.MaxMoves == 0 || (maxMoves > 0 && maxMoves <= meta.MaxMoves)
 }
 
+// paretoBetter meldet, ob Fassung a in keinem Parameter schlechter ist als b:
+// höchstens so viele Varianten und Zustände, mindestens so viele bewiesene
+// Min-Züge (gleiche Werte zählen mit - "gleich gut" gilt als ersetzbar)
+func paretoBetter(a, b rooms.LibraryMeta) bool {
+	return a.Variants <= b.Variants && a.States <= b.States && a.MinMoves >= b.MinMoves
+}
+
 type libraryJSON struct {
-	Name     string `json:"name"`
-	Fields   uint32 `json:"fields"`
-	States   uint64 `json:"states"`
-	Variants uint64 `json:"variants"`
-	MinMoves uint64 `json:"minMoves"`
-	MaxMoves uint64 `json:"maxMoves"` // Gültigkeits-Budget (0 = unbedingt)
-	Size     int64  `json:"size"`
+	Name       string   `json:"name"`
+	Start      uint32   `json:"start"` // kleinstes Feld (stabile Anzeige-Kennung)
+	Fields     uint32   `json:"fields"`
+	FieldsList []uint32 `json:"fieldsList"` // alle Felder (Einfüge-Vorschau der GUI)
+	States     uint64   `json:"states"`
+	Variants   uint64   `json:"variants"`
+	MinMoves   uint64   `json:"minMoves"`
+	MaxMoves   uint64   `json:"maxMoves"` // Gültigkeits-Budget (0 = unbedingt)
+	Size       int64    `json:"size"`
 }
 
 // GET /api/library?maxMoves=N: Bibliotheks-Räume des Levels, die zum
@@ -73,13 +82,22 @@ func (s *Server) handleLibrary(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		meta, err := rooms.ReadLibraryHeader(file)
+		meta, fields, err := rooms.ReadLibraryFields(n.Field, file)
 		file.Close()
 		if err != nil || !libraryUsable(meta, maxMoves) {
 			continue // kaputt oder Budget passt nicht: unsichtbar
 		}
+		start := ^uint32(0)
+		fieldsList := make([]uint32, len(fields))
+		for i, f := range fields {
+			fieldsList[i] = uint32(f)
+			if uint32(f) < start {
+				start = uint32(f)
+			}
+		}
 		items = append(items, libraryJSON{
-			Name: name, Fields: meta.Fields, States: meta.States, Variants: meta.Variants,
+			Name: name, Start: start, Fields: meta.Fields, FieldsList: fieldsList,
+			States: meta.States, Variants: meta.Variants,
 			MinMoves: meta.MinMoves, MaxMoves: meta.MaxMoves, Size: fi.Size(),
 		})
 	}
@@ -126,6 +144,38 @@ func (s *Server) handleLibrarySave(w http.ResponseWriter, r *http.Request) {
 		if err := os.MkdirAll(libraryDir, 0o755); err != nil {
 			return "", err
 		}
+
+		// Dubletten-Regel (Max, 2026-08-21), verglichen innerhalb gleicher
+		// Geometrie UND gleichem Budget: ist eine vorhandene Fassung nirgends
+		// schlechter, wird nicht gespeichert; ist die neue nirgends schlechter,
+		// ersetzt sie die alten; unvergleichbare Fassungen (z.B. mehr Min-Züge,
+		// aber mehr Varianten) bleiben nebeneinander bestehen
+		var replace []string
+		if entries, err := os.ReadDir(libraryDir); err == nil {
+			for _, entry := range entries {
+				name := entry.Name()
+				if entry.IsDir() || !strings.HasPrefix(name, libraryPrefix(n)) || !strings.HasSuffix(name, ".room") {
+					continue
+				}
+				file, err := os.Open(filepath.Join(libraryDir, name))
+				if err != nil {
+					continue
+				}
+				old, err := rooms.ReadLibraryHeader(file)
+				file.Close()
+				if err != nil || old.GeoCode != meta.GeoCode || old.MaxMoves != meta.MaxMoves {
+					continue
+				}
+				if paretoBetter(old, meta) {
+					return fmt.Sprintf("Raum nicht gespeichert - vorhandene Fassung ist nirgends schlechter (%s Varianten, min %s)",
+						tools.FormatInt(old.Variants), tools.FormatInt(old.MinMoves)), nil
+				}
+				if paretoBetter(meta, old) {
+					replace = append(replace, name)
+				}
+			}
+		}
+
 		base := fmt.Sprintf("%sg%016x_mm%d_%s", libraryPrefix(n), meta.GeoCode,
 			meta.MaxMoves, time.Now().Format("20060102-150405"))
 		path := filepath.Join(libraryDir, base+".room")
@@ -152,8 +202,16 @@ func (s *Server) handleLibrarySave(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("Raum gespeichert: %d Felder, %s Varianten (%s)",
-			meta.Fields, tools.FormatInt(meta.Variants), formatMB(fi.Size())), nil
+		// erst nach erfolgreichem Schreiben die ersetzten Fassungen entfernen
+		for _, name := range replace {
+			os.Remove(filepath.Join(libraryDir, name))
+		}
+		msg := fmt.Sprintf("Raum gespeichert: %d Felder, %s Varianten (%s)",
+			meta.Fields, tools.FormatInt(meta.Variants), formatMB(fi.Size()))
+		if len(replace) > 0 {
+			msg += fmt.Sprintf(" - ersetzt %d ältere Fassung(en)", len(replace))
+		}
+		return msg, nil
 	})
 	if !started {
 		writeError(w, http.StatusConflict, "es läuft bereits eine Rechnung")

@@ -364,7 +364,9 @@ async function doSnapshotDelete(): Promise<void> {
 // gültig) - das Backend listet nur Räume, die zum aktuellen Budget passen
 interface LibraryItem {
   name: string;
+  start: number; // kleinstes Feld (stabile Anzeige-Kennung)
   fields: number;
+  fieldsList: number[]; // alle Felder (Einfüge-Vorschau)
   states: number;
   variants: number;
   minMoves: number;
@@ -392,6 +394,7 @@ async function loadLibrary(): Promise<void> {
     const res = await getJSON<{ items: LibraryItem[] }>(`/api/library?maxMoves=${currentMaxMoves()}`);
     libItems = res.items;
     selectedLib = null;
+    canvas.clearInsertPreview();
     updateLibraryButtons();
     libraryList.reset(libItems.length);
   } catch (err) {
@@ -908,19 +911,24 @@ async function boot(): Promise<void> {
 
   // Raum-Bibliothek: zweizeilige Einträge (Varianten + min moves, darunter
   // Felder, Gültigkeits-Budget und Dateigröße)
+  // Einträge: "[Startfeld, Felderzahl]" und darunter der Raum-Effort in
+  // Kilo-Varianten (Max' Wunschformat, 2026-08-22)
   libraryList = new VirtualList<LibraryItem>(
     $('libList'),
     38,
     it => {
-      const mb = (it.size / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 });
-      return `${fmt(it.variants)} var - min ${fmt(it.minMoves)}<br>` +
-        `<span class="dim">${fmt(it.fields)} felder - mm ${it.maxMoves > 0 ? fmt(it.maxMoves) : '-'} - ${mb} MB</span>`;
+      const eff = it.variants >= 1000
+        ? `${fmt(Math.round(it.variants / 1000))} keff`
+        : `${fmt(it.variants)} eff`;
+      return `[${it.start}, ${it.fields}]<br><span class="dim">${eff}</span>`;
     },
     (offset, limit) => Promise.resolve({ total: libItems.length, offset, items: libItems.slice(offset, offset + limit) }),
   );
   libraryList.onSelect = it => {
     selectedLib = it;
     updateLibraryButtons();
+    // Einfüge-Vorschau: künftige Felder gelb, dabei aufgelöste Fremd-Felder rot
+    canvas.showInsertPreview(it.fieldsList);
   };
   void loadLibrary();
   ($('libSaveBtn') as HTMLButtonElement).addEventListener('click', () => void doLibrarySave());

@@ -65,6 +65,8 @@ export class FieldCanvas {
   private selection = new Set<number>(); // ausgewählte Räume (Einfüge-Reihenfolge bleibt erhalten)
   private selectable = true; // false im Solver-Modus: Maus ändert die Auswahl nicht
   private busyFields: number[] = []; // Wpos der gerade berechneten Räume (gelb)
+  private insertYellow: number[] = []; // Einfüge-Vorschau: künftige Felder (Feldindizes)
+  private insertRed: number[] = []; // dabei zu Einzelräumen zerfallende Fremd-Felder
   private active = -1; // aktiver Raum (zuletzt hinzugefügt) - die Listen folgen ihm
   private dragMode: 'add' | 'remove' | null = null; // laufende Maus-Geste
   private portals: Portal[] = []; // eingehende Portale des aktiven Raums
@@ -130,6 +132,8 @@ export class FieldCanvas {
       if (this.selection.has(room) && this.active === room) return; // nichts Neues
       this.selection.add(room);
       this.active = room;
+      this.insertYellow = []; // Auswahl-Arbeit beendet die Einfüge-Vorschau
+      this.insertRed = [];
     } else {
       if (!this.selection.has(room)) return;
       this.selection.delete(room);
@@ -212,7 +216,37 @@ export class FieldCanvas {
     this.selection.clear();
     this.active = -1;
     this.portals = [];
+    this.insertYellow = [];
+    this.insertRed = [];
     this.resetPreview();
+  }
+
+  // Einfüge-Vorschau eines Bibliotheks-Raums: die künftigen Felder gelb,
+  // die AUSSERHALB liegenden Felder überlappender Mehr-Feld-Räume rot (sie
+  // zerfallen beim Einfügen zu Einzelräumen)
+  showInsertPreview(fieldsWpos: number[]): void {
+    const inNew = new Set(fieldsWpos);
+    this.insertYellow = fieldsWpos.map(w => this.wposToIdx(w));
+    this.insertRed = [];
+    const marked = new Set<number>();
+    for (const w of fieldsWpos) {
+      const room = this.roomOf[w];
+      if (room === undefined || room < 0 || marked.has(room)) continue;
+      marked.add(room);
+      const fields = this.roomFields.get(room) ?? [];
+      if (fields.length <= 1) continue;
+      for (const idx of fields) {
+        if (!inNew.has(this.gridWpos[idx])) this.insertRed.push(idx);
+      }
+    }
+    this.draw();
+  }
+
+  clearInsertPreview(): void {
+    if (this.insertYellow.length === 0 && this.insertRed.length === 0) return;
+    this.insertYellow = [];
+    this.insertRed = [];
+    this.draw();
   }
 
   // schaltet die Raum-Auswahl per Maus ab/an (Solver-Modus: eine Auswahl
@@ -424,6 +458,17 @@ export class FieldCanvas {
         const idx = this.wposToIdx(wpos);
         ctx.fillRect((idx % f.width) * c, Math.floor(idx / f.width) * c, c, c);
       }
+    }
+
+    // --- Einfüge-Vorschau der Raum-Bibliothek: künftige Felder gelb, dabei
+    // zu Einzelräumen zerfallende Fremd-Felder rot ---
+    ctx.fillStyle = 'rgba(255, 220, 0, 0.35)';
+    for (const idx of this.insertYellow) {
+      ctx.fillRect((idx % f.width) * c, Math.floor(idx / f.width) * c, c, c);
+    }
+    ctx.fillStyle = 'rgba(255, 64, 64, 0.4)';
+    for (const idx of this.insertRed) {
+      ctx.fillRect((idx % f.width) * c, Math.floor(idx / f.width) * c, c, c);
     }
 
     // --- Basis-Konturen aller Räume (dunkelblau, unter den Figuren; die

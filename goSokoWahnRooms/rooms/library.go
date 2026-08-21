@@ -109,6 +109,19 @@ func ReadLibraryHeader(r io.Reader) (LibraryMeta, error) {
 	return readLibraryHeader(&snapReader{r: bufio.NewReader(r)})
 }
 
+// ReadLibraryFields liest Kopf UND Feldliste (sie steht als erstes im
+// Raum-Block) - billig genug für die Liste, die GUI markiert damit die
+// Einfüge-Vorschau (betroffene Felder und aufzulösende Räume)
+func ReadLibraryFields(field *soko.Field, r io.Reader) (LibraryMeta, []soko.Wpos, error) {
+	sr := &snapReader{r: bufio.NewReader(r)}
+	meta, err := readLibraryHeader(sr)
+	if err != nil {
+		return meta, nil, err
+	}
+	fields := sr.wposList(field.WalkEof())
+	return meta, fields, sr.err
+}
+
 // ReadLibraryRoom liest eine Bibliotheks-Datei komplett; der FieldCrc im
 // Kopf muss zum Level passen. Der Raum ist noch UNVERLINKT (kein FromRoom/
 // Opposite/Outgoing) - das übernimmt InsertRoom.
