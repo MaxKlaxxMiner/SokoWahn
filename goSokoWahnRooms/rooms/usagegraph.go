@@ -101,18 +101,28 @@ type usageAlphabet struct {
 	list       []usageSymbolData
 	variantSym []int32 // Symbol je Varianten-ID des Raums
 	insertSym  []int32 // Symbol je Portal-Slot (Einschub E@p)
+	keyBuf     []byte  // wiederverwendeter Intern-Schlüssel (Binär-Encoding)
 }
 
+// exports darf ein wiederverwendeter Buffer sein - gespeichert wird eine Kopie
 func (a *usageAlphabet) intern(kind byte, entry, exit int, exports []int) int32 {
-	key := fmt.Sprintf("%c|%d|%d|%v", kind, entry, exit, exports)
-	if id, exists := a.index[key]; exists {
+	// Binär-Schlüssel statt fmt.Sprintf: intern läuft je Variante, bei
+	// Monster-Räumen (zig Millionen) dominieren sonst die String-Formatierungen
+	buf := append(a.keyBuf[:0], kind)
+	buf = binary.AppendVarint(buf, int64(entry))
+	buf = binary.AppendVarint(buf, int64(exit))
+	for _, e := range exports {
+		buf = binary.AppendVarint(buf, int64(e))
+	}
+	a.keyBuf = buf
+	if id, exists := a.index[string(buf)]; exists { // alloc-freier Map-Lookup
 		return id
 	}
-	d := usageSymbolData{kind: kind, entry: entry, exit: exit, exports: exports}
-	d.eps = kind == usageKindVisit && entry == exit && len(exports) == 0
+	d := usageSymbolData{kind: kind, entry: entry, exit: exit, exports: append([]int(nil), exports...)}
+	d.eps = kind == usageKindVisit && entry == exit && len(d.exports) == 0
 	d.name = a.symbolName(d)
 	id := int32(len(a.list))
-	a.index[key] = id
+	a.index[string(buf)] = id
 	a.list = append(a.list, d)
 	return id
 }
@@ -203,6 +213,7 @@ func newUsageAlphabet(room *Room, tick usageTick) *usageAlphabet {
 		}
 	}
 	// Tick je Block statt je Variante (hält die Hotloop frei)
+	var exports []int // wiederverwendeter Buffer (intern kopiert bei Bedarf)
 	for vid, count := uint64(0), room.Variants.Count(); vid < count; {
 		if tick != nil && !tick("alphabet", vid, count) {
 			return nil // Nutzer-Stop
@@ -213,7 +224,7 @@ func newUsageAlphabet(room *Room, tick usageTick) *usageAlphabet {
 		}
 		for ; vid < stop; vid++ {
 			v := room.Variants.Get(vid)
-			var exports []int
+			exports = exports[:0]
 			for _, bp := range v.BoxPortals {
 				exports = append(exports, int(bp))
 			}

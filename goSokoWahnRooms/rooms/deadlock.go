@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"fmt"
+	"slices"
 
 	"goSokoWahnRooms/tools"
 )
@@ -88,11 +89,24 @@ func (n *Network) DeadlockScan(room *Room, info ProgressFunc) (removed uint64, o
 			blockSame  bool
 			state      uint64
 		}
-		seen := map[fwdTask]bool{}
+		// Aufgaben-Dedup dicht statt als Map: der Schlüsselraum
+		// Zustand x Portal-Slot (inkl. NoPortal) x blockSame ist kompakt
+		seen := make([]bool, stateCount*uint64(len(room.Incoming)+1)*2)
+		taskSlot := func(t fwdTask) uint64 {
+			slot := uint64(0)
+			if t.exitPortal != NoPortal {
+				slot = uint64(t.exitPortal) + 1
+			}
+			slot = (slot*stateCount + t.state) * 2
+			if t.blockSame {
+				slot++
+			}
+			return slot
+		}
 		var stack []fwdTask
 		visit := func(t fwdTask) {
-			if !seen[t] {
-				seen[t] = true
+			if slot := taskSlot(t); !seen[slot] {
+				seen[slot] = true
 				stack = append(stack, t)
 			}
 		}
@@ -367,7 +381,6 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 		if tick != nil && state%deadlockTickStep == 0 && !tick(state) {
 			return nil
 		}
-		seen := map[uint64]bool{}
 		var list []uint64
 		for mask := maskStart; mask < maskEnd; mask++ {
 			s := state
@@ -383,10 +396,9 @@ func buildMaskStates(portalCount int, stateCount uint64, includeIdentity bool, s
 				}
 				s = next
 			}
-			if !valid || seen[s] {
-				continue
+			if !valid || slices.Contains(list, s) {
+				continue // Dedup linear - die Liste hat höchstens 2^Portale Einträge
 			}
-			seen[s] = true
 			list = append(list, s)
 		}
 		result[state] = list

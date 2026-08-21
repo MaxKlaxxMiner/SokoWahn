@@ -69,7 +69,7 @@ type reducer struct {
 	alpha      *usageAlphabet
 	env        *usageEnv
 	full       *usageGraph
-	removed    map[uint64]bool
+	removed    []bool // je Varianten-ID gestrichen (dicht - heißer als jede Map)
 	maxConfigs int
 	moveLimit  int64 // > 0: Nutzungen über diesem Moves-Budget sind irrelevant
 	aborted    bool  // Nutzer-Abbruch über den info-Callback
@@ -124,7 +124,7 @@ func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 	if candidate == nil {
 		// Nutzer-Stop mitten im Graph-Aufbau: Gruppe konservativ behalten
 		for _, vid := range batch {
-			delete(r.removed, vid)
+			r.removed[vid] = false
 		}
 		return usageUndecided
 	}
@@ -142,7 +142,7 @@ func (r *reducer) tryRemove(batch []uint64) usageVerdict {
 		return verdict
 	}
 	for _, vid := range batch {
-		delete(r.removed, vid)
+		r.removed[vid] = false
 	}
 	return verdict
 }
@@ -175,7 +175,7 @@ func (r *reducer) shrinkVariants(batch []uint64) {
 
 // alle noch vorhandenen Varianten, die einen Zustand der Gruppe berühren
 func (r *reducer) touching(states []uint64) []uint64 {
-	inGroup := map[uint64]bool{}
+	inGroup := make([]bool, r.room.States.Count())
 	for _, s := range states {
 		inGroup[s] = true
 	}
@@ -267,7 +267,7 @@ func reduceVariants(room *Room, env *usageEnv, maxConfigs int, moveLimit int64, 
 		alpha:      alpha,
 		env:        env,
 		full:       full,
-		removed:    map[uint64]bool{},
+		removed:    make([]bool, room.Variants.Count()),
 		maxConfigs: maxConfigs,
 		moveLimit:  moveLimit,
 		harvest:    harvest,
