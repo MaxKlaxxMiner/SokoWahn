@@ -140,6 +140,7 @@ function updateMergeButton(selection: number[]): void {
   ($('optimizeBtn') as HTMLButtonElement).disabled = mergeBusy || selection.length < 1;
   ($('solveBtn') as HTMLButtonElement).disabled = mergeBusy;
   updateSnapshotButtons();
+  updateLibraryButtons();
 }
 
 // ---------- Aktionen (M3) ----------
@@ -209,6 +210,7 @@ function showSolverPanel(open: boolean): void {
     statesList?.refresh();
     variantsList?.refresh();
     snapshotsList?.refresh();
+    libraryList?.refresh();
   }
 }
 
@@ -355,6 +357,77 @@ async function doSnapshotDelete(): Promise<void> {
   }
 }
 
+// ---------- Raum-Bibliothek (M8): einzelne Räume speichern/einfügen ----------
+
+// ein Bibliotheks-Raum (Datei in temp/room-library, Metadaten aus dem Kopf);
+// maxMoves ist das Gültigkeits-Budget der Streichungs-Beweise (0 = unbedingt
+// gültig) - das Backend listet nur Räume, die zum aktuellen Budget passen
+interface LibraryItem {
+  name: string;
+  fields: number;
+  states: number;
+  variants: number;
+  minMoves: number;
+  maxMoves: number;
+  size: number;
+}
+
+let libItems: LibraryItem[] = [];
+let selectedLib: LibraryItem | null = null;
+let libraryList: VirtualList<LibraryItem>;
+
+// aktueller Wert des max-moves-Feldes (0 = leer/kein Budget)
+function currentMaxMoves(): number {
+  return Math.max(0, Number(($('maxMoves') as HTMLInputElement).value) || 0);
+}
+
+function updateLibraryButtons(): void {
+  ($('libSaveBtn') as HTMLButtonElement).disabled = mergeBusy || (canvas ? canvas.getActiveRoom() : -1) < 0;
+  ($('libLoadBtn') as HTMLButtonElement).disabled = mergeBusy || !selectedLib;
+  ($('libDeleteBtn') as HTMLButtonElement).disabled = mergeBusy || !selectedLib;
+}
+
+async function loadLibrary(): Promise<void> {
+  try {
+    const res = await getJSON<{ items: LibraryItem[] }>(`/api/library?maxMoves=${currentMaxMoves()}`);
+    libItems = res.items;
+    selectedLib = null;
+    updateLibraryButtons();
+    libraryList.reset(libItems.length);
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function doLibrarySave(): Promise<void> {
+  const active = canvas.getActiveRoom();
+  if (mergeBusy || active < 0) return;
+  try {
+    await postJSON<{ started: boolean }>('/api/library', { room: active, maxMoves: currentMaxMoves() });
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function doLibraryLoad(): Promise<void> {
+  if (mergeBusy || !selectedLib) return;
+  try {
+    await postJSON<{ started: boolean }>('/api/library/load', { name: selectedLib.name, maxMoves: currentMaxMoves() });
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function doLibraryDelete(): Promise<void> {
+  if (!selectedLib) return;
+  try {
+    await postJSON<{ ok: boolean }>('/api/library/delete', { name: selectedLib.name });
+    await loadLibrary();
+  } catch (err) {
+    showError(err);
+  }
+}
+
 // Entf-Taste: NUR den aktiven Raum (zuletzt angeklickt, hellblau) auf seine
 // Ein-Feld-Start-Räume zurücksetzen - Entf auf der ganzen Auswahl hat
 // wiederholt zu viele Räume gekillt (Max, 2026-08-21); wer mehrere löschen
@@ -465,6 +538,7 @@ function connectProgress(): void {
       }
     }
     void loadSnapshots(); // z.B. nach "Speichern" die Liste nachziehen
+    void loadLibrary(); // Bibliothek ebenso (Raum gespeichert/eingefügt)
     void reloadNetwork().then(async () => {
       if (p.kind === 'solve') await loadSolution(); // Lösung steppbar laden + max moves
       if (p.error) showError(new Error(p.error));
@@ -831,6 +905,29 @@ async function boot(): Promise<void> {
     updateSnapshotButtons();
   };
   void loadSnapshots();
+
+  // Raum-Bibliothek: zweizeilige Einträge (Varianten + min moves, darunter
+  // Felder, Gültigkeits-Budget und Dateigröße)
+  libraryList = new VirtualList<LibraryItem>(
+    $('libList'),
+    38,
+    it => {
+      const mb = (it.size / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 });
+      return `${fmt(it.variants)} var - min ${fmt(it.minMoves)}<br>` +
+        `<span class="dim">${fmt(it.fields)} felder - mm ${it.maxMoves > 0 ? fmt(it.maxMoves) : '-'} - ${mb} MB</span>`;
+    },
+    (offset, limit) => Promise.resolve({ total: libItems.length, offset, items: libItems.slice(offset, offset + limit) }),
+  );
+  libraryList.onSelect = it => {
+    selectedLib = it;
+    updateLibraryButtons();
+  };
+  void loadLibrary();
+  ($('libSaveBtn') as HTMLButtonElement).addEventListener('click', () => void doLibrarySave());
+  ($('libLoadBtn') as HTMLButtonElement).addEventListener('click', () => void doLibraryLoad());
+  ($('libDeleteBtn') as HTMLButtonElement).addEventListener('click', () => void doLibraryDelete());
+  // geändertes max moves filtert die Bibliothek neu (Budget-Sichtbarkeit)
+  ($('maxMoves') as HTMLInputElement).addEventListener('change', () => void loadLibrary());
 
   connectProgress();
 

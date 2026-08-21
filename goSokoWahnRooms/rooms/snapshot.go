@@ -151,90 +151,99 @@ func (n *Network) WriteSnapshot(w io.Writer, info ProgressFunc) error {
 			!info(fmt.Sprintf("save: raum %d/%d", i+1, len(n.Rooms)), []*Room{room}) {
 			return fmt.Errorf("save: abgebrochen")
 		}
-		sw.wposList(room.Fields)
-		sw.wposList(room.Goals)
-		sw.wposList(room.StartBoxes)
-		sw.u32(room.MaxBoxes)
-		sw.u64(room.StartState)
-		sw.u64(room.StartVariantCount)
-
-		// Zustände: Offsets + flacher Kisten-Puffer (Rohformat der StateList)
-		sw.u64(uint64(len(room.States.offs)))
-		for _, o := range room.States.offs {
-			sw.u32(o)
-		}
-		sw.u64(uint64(len(room.States.buf)))
-		for _, p := range room.States.buf {
-			sw.u32(uint32(p))
-		}
-
-		// Varianten
-		sw.u64(room.Variants.Count())
-		for id := range room.Variants.data {
-			v := &room.Variants.data[id]
-			sw.u64(v.OldState)
-			sw.u64(v.NewState)
-			sw.u32(v.Moves)
-			sw.u32(v.Pushes)
-			sw.u32(uint32(len(v.BoxPortals)))
-			for _, b := range v.BoxPortals {
-				sw.u32(b)
-			}
-			sw.u32(v.PlayerPortal)
-			// Zugfolge materialisiert (Zuganzahl + dichte 2-Bit-Codes): die
-			// Datei bleibt selbsttragend, und nur lebende Ketten werden
-			// geschrieben - der Snapshot-Roundtrip wirkt damit als
-			// Kompaktierung des PathStore (verwaiste Ketten bleiben zurück)
-			data, moves := room.Paths.ExportPacked(v.Path)
-			sw.u32(uint32(moves))
-			if sw.err == nil && len(data) > 0 {
-				_, sw.err = sw.w.Write(data)
-			}
-		}
-
-		// eingehende Portale: Verzeichnisse mit sortierten Schlüsseln
-		// (deterministische Dateien, Map-Reihenfolge wäre zufällig)
-		sw.u32(uint32(len(room.Incoming)))
-		for _, p := range room.Incoming {
-			sw.u32(uint32(p.From))
-			sw.u32(uint32(p.To))
-			sw.u8(p.Dir)
-			blocked := byte(0)
-			if p.BlockedBox {
-				blocked = 1
-			}
-			sw.u8(blocked)
-
-			swapKeys := make([]uint64, 0, len(p.BoxSwap))
-			for k := range p.BoxSwap {
-				swapKeys = append(swapKeys, k)
-			}
-			slices.Sort(swapKeys)
-			sw.u64(uint64(len(swapKeys)))
-			for _, k := range swapKeys {
-				sw.u64(k)
-				sw.u64(p.BoxSwap[k])
-			}
-
-			spanKeys := make([]uint64, 0, len(p.VariantSpans))
-			for k := range p.VariantSpans {
-				spanKeys = append(spanKeys, k)
-			}
-			slices.Sort(spanKeys)
-			sw.u64(uint64(len(spanKeys)))
-			for _, k := range spanKeys {
-				span := p.VariantSpans[k]
-				sw.u64(k)
-				sw.u64(span.Start)
-				sw.u64(span.Count)
-			}
-		}
+		writeRoomBlock(sw, room)
 	}
 
 	if sw.err == nil {
 		sw.err = sw.w.Flush()
 	}
 	return sw.err
+}
+
+// writeRoomBlock schreibt einen selbsttragenden Raum-Block (Fields bis
+// Portale samt Verzeichnissen) - gemeinsames Format von Snapshot (alle
+// Räume) und Raum-Bibliothek (ein Raum, siehe library.go). Raum-Verweise
+// (FromRoom, Opposite, Outgoing) stehen nicht im Block, sie entstehen beim
+// Laden über die Feld-Paare neu.
+func writeRoomBlock(sw *snapWriter, room *Room) {
+	sw.wposList(room.Fields)
+	sw.wposList(room.Goals)
+	sw.wposList(room.StartBoxes)
+	sw.u32(room.MaxBoxes)
+	sw.u64(room.StartState)
+	sw.u64(room.StartVariantCount)
+
+	// Zustände: Offsets + flacher Kisten-Puffer (Rohformat der StateList)
+	sw.u64(uint64(len(room.States.offs)))
+	for _, o := range room.States.offs {
+		sw.u32(o)
+	}
+	sw.u64(uint64(len(room.States.buf)))
+	for _, p := range room.States.buf {
+		sw.u32(uint32(p))
+	}
+
+	// Varianten
+	sw.u64(room.Variants.Count())
+	for id := range room.Variants.data {
+		v := &room.Variants.data[id]
+		sw.u64(v.OldState)
+		sw.u64(v.NewState)
+		sw.u32(v.Moves)
+		sw.u32(v.Pushes)
+		sw.u32(uint32(len(v.BoxPortals)))
+		for _, b := range v.BoxPortals {
+			sw.u32(b)
+		}
+		sw.u32(v.PlayerPortal)
+		// Zugfolge materialisiert (Zuganzahl + dichte 2-Bit-Codes): die
+		// Datei bleibt selbsttragend, und nur lebende Ketten werden
+		// geschrieben - der Snapshot-Roundtrip wirkt damit als
+		// Kompaktierung des PathStore (verwaiste Ketten bleiben zurück)
+		data, moves := room.Paths.ExportPacked(v.Path)
+		sw.u32(uint32(moves))
+		if sw.err == nil && len(data) > 0 {
+			_, sw.err = sw.w.Write(data)
+		}
+	}
+
+	// eingehende Portale: Verzeichnisse mit sortierten Schlüsseln
+	// (deterministische Dateien, Map-Reihenfolge wäre zufällig)
+	sw.u32(uint32(len(room.Incoming)))
+	for _, p := range room.Incoming {
+		sw.u32(uint32(p.From))
+		sw.u32(uint32(p.To))
+		sw.u8(p.Dir)
+		blocked := byte(0)
+		if p.BlockedBox {
+			blocked = 1
+		}
+		sw.u8(blocked)
+
+		swapKeys := make([]uint64, 0, len(p.BoxSwap))
+		for k := range p.BoxSwap {
+			swapKeys = append(swapKeys, k)
+		}
+		slices.Sort(swapKeys)
+		sw.u64(uint64(len(swapKeys)))
+		for _, k := range swapKeys {
+			sw.u64(k)
+			sw.u64(p.BoxSwap[k])
+		}
+
+		spanKeys := make([]uint64, 0, len(p.VariantSpans))
+		for k := range p.VariantSpans {
+			spanKeys = append(spanKeys, k)
+		}
+		slices.Sort(spanKeys)
+		sw.u64(uint64(len(spanKeys)))
+		for _, k := range spanKeys {
+			span := p.VariantSpans[k]
+			sw.u64(k)
+			sw.u64(span.Start)
+			sw.u64(span.Count)
+		}
+	}
 }
 
 // ---------- Laden ----------
@@ -256,6 +265,110 @@ func ReadSnapshotHeader(r io.Reader) (fieldCrc uint64, effort string, err error)
 	fieldCrc = sr.u64()
 	effort = sr.str()
 	return fieldCrc, effort, sr.err
+}
+
+// readRoomBlock liest einen selbsttragenden Raum-Block (Gegenstück zu
+// writeRoomBlock); index wird als Raum-Index gesetzt, eof prüft die
+// Feldgrenzen. Raum-Verweise verlinkt der Aufrufer über die Feld-Paare.
+func readRoomBlock(sr *snapReader, index uint32, eof soko.Wpos) (*Room, error) {
+	room := &Room{Index: index, States: NewStateList(), Variants: NewVariantList(), Paths: NewPathStore()}
+	room.Fields = sr.wposList(eof)
+	room.Goals = sr.wposList(eof)
+	room.StartBoxes = sr.wposList(eof)
+	room.MaxBoxes = sr.u32()
+	room.StartState = sr.u64()
+	room.StartVariantCount = sr.u64()
+
+	offsCount := sr.u64()
+	if sr.err != nil {
+		return nil, sr.err
+	}
+	if offsCount == 0 {
+		return nil, fmt.Errorf("snapshot: raum %d ohne Zustands-Offsets", index)
+	}
+	room.States.offs = make([]uint32, offsCount)
+	for j := range room.States.offs {
+		room.States.offs[j] = sr.u32()
+	}
+	bufCount := sr.u64()
+	if sr.err != nil {
+		return nil, sr.err
+	}
+	room.States.buf = make([]soko.Wpos, bufCount)
+	for j := range room.States.buf {
+		room.States.buf[j] = soko.Wpos(sr.u32())
+	}
+
+	variantCount := sr.u64()
+	if sr.err != nil {
+		return nil, sr.err
+	}
+	room.Variants.data = make([]VariantData, variantCount)
+	for j := range room.Variants.data {
+		v := &room.Variants.data[j]
+		v.OldState = sr.u64()
+		v.NewState = sr.u64()
+		v.Moves = sr.u32()
+		v.Pushes = sr.u32()
+		if boxCount := sr.u32(); sr.err == nil && boxCount > 0 {
+			v.BoxPortals = make([]uint32, boxCount)
+			for b := range v.BoxPortals {
+				v.BoxPortals[b] = sr.u32()
+			}
+		}
+		v.PlayerPortal = sr.u32()
+		if moves := sr.u32(); sr.err == nil && moves > 0 {
+			data := make([]byte, (moves+3)/4)
+			if _, sr.err = io.ReadFull(sr.r, data); sr.err == nil {
+				v.Path = room.Paths.AddPacked(data, int(moves))
+			}
+		}
+		if sr.err != nil {
+			return nil, sr.err
+		}
+	}
+
+	portalCount := sr.u32()
+	if sr.err != nil {
+		return nil, sr.err
+	}
+	room.Incoming = make([]*Portal, portalCount)
+	for pi := range room.Incoming {
+		p := &Portal{
+			ToRoom:       room,
+			Index:        uint32(pi),
+			BoxSwap:      map[uint64]uint64{},
+			VariantSpans: map[uint64]Span{},
+		}
+		p.From = soko.Wpos(sr.u32())
+		p.To = soko.Wpos(sr.u32())
+		p.Dir = sr.u8()
+		p.BlockedBox = sr.u8() != 0
+		if sr.err == nil && (p.From >= eof || p.To >= eof) {
+			return nil, fmt.Errorf("snapshot: portal ausserhalb des Feldes")
+		}
+		swapCount := sr.u64()
+		if sr.err != nil {
+			return nil, sr.err
+		}
+		for range swapCount {
+			k := sr.u64()
+			p.BoxSwap[k] = sr.u64()
+		}
+		spanCount := sr.u64()
+		if sr.err != nil {
+			return nil, sr.err
+		}
+		for range spanCount {
+			k := sr.u64()
+			p.VariantSpans[k] = Span{Start: sr.u64(), Count: sr.u64()}
+		}
+		room.Incoming[pi] = p
+	}
+	if sr.err != nil {
+		return nil, sr.err
+	}
+	return room, nil
 }
 
 // ReadSnapshot liest einen kompletten Netzwerk-Stand und baut alle
@@ -292,99 +405,9 @@ func ReadSnapshot(field *soko.Field, scan *BoxScan, r io.Reader, info ProgressFu
 			!info(fmt.Sprintf("load: raum %d/%d", i+1, roomCount), nil) {
 			return nil, fmt.Errorf("load: abgebrochen")
 		}
-		room := &Room{Index: uint32(i), States: NewStateList(), Variants: NewVariantList(), Paths: NewPathStore()}
-		room.Fields = sr.wposList(eof)
-		room.Goals = sr.wposList(eof)
-		room.StartBoxes = sr.wposList(eof)
-		room.MaxBoxes = sr.u32()
-		room.StartState = sr.u64()
-		room.StartVariantCount = sr.u64()
-
-		offsCount := sr.u64()
-		if sr.err != nil {
-			return nil, sr.err
-		}
-		if offsCount == 0 {
-			return nil, fmt.Errorf("snapshot: raum %d ohne Zustands-Offsets", i)
-		}
-		room.States.offs = make([]uint32, offsCount)
-		for j := range room.States.offs {
-			room.States.offs[j] = sr.u32()
-		}
-		bufCount := sr.u64()
-		if sr.err != nil {
-			return nil, sr.err
-		}
-		room.States.buf = make([]soko.Wpos, bufCount)
-		for j := range room.States.buf {
-			room.States.buf[j] = soko.Wpos(sr.u32())
-		}
-
-		variantCount := sr.u64()
-		if sr.err != nil {
-			return nil, sr.err
-		}
-		room.Variants.data = make([]VariantData, variantCount)
-		for j := range room.Variants.data {
-			v := &room.Variants.data[j]
-			v.OldState = sr.u64()
-			v.NewState = sr.u64()
-			v.Moves = sr.u32()
-			v.Pushes = sr.u32()
-			if boxCount := sr.u32(); sr.err == nil && boxCount > 0 {
-				v.BoxPortals = make([]uint32, boxCount)
-				for b := range v.BoxPortals {
-					v.BoxPortals[b] = sr.u32()
-				}
-			}
-			v.PlayerPortal = sr.u32()
-			if moves := sr.u32(); sr.err == nil && moves > 0 {
-				data := make([]byte, (moves+3)/4)
-				if _, sr.err = io.ReadFull(sr.r, data); sr.err == nil {
-					v.Path = room.Paths.AddPacked(data, int(moves))
-				}
-			}
-			if sr.err != nil {
-				return nil, sr.err
-			}
-		}
-
-		portalCount := sr.u32()
-		if sr.err != nil {
-			return nil, sr.err
-		}
-		room.Incoming = make([]*Portal, portalCount)
-		for pi := range room.Incoming {
-			p := &Portal{
-				ToRoom:       room,
-				Index:        uint32(pi),
-				BoxSwap:      map[uint64]uint64{},
-				VariantSpans: map[uint64]Span{},
-			}
-			p.From = soko.Wpos(sr.u32())
-			p.To = soko.Wpos(sr.u32())
-			p.Dir = sr.u8()
-			p.BlockedBox = sr.u8() != 0
-			if sr.err == nil && (p.From >= eof || p.To >= eof) {
-				return nil, fmt.Errorf("snapshot: portal ausserhalb des Feldes")
-			}
-			swapCount := sr.u64()
-			if sr.err != nil {
-				return nil, sr.err
-			}
-			for range swapCount {
-				k := sr.u64()
-				p.BoxSwap[k] = sr.u64()
-			}
-			spanCount := sr.u64()
-			if sr.err != nil {
-				return nil, sr.err
-			}
-			for range spanCount {
-				k := sr.u64()
-				p.VariantSpans[k] = Span{Start: sr.u64(), Count: sr.u64()}
-			}
-			room.Incoming[pi] = p
+		room, err := readRoomBlock(sr, uint32(i), eof)
+		if err != nil {
+			return nil, err
 		}
 		roomList[i] = room
 	}

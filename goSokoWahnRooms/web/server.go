@@ -61,6 +61,12 @@ func New(network *rooms.Network, title string) *Server {
 	s.mux.HandleFunc("POST /api/snapshots", s.handleSnapshotSave)
 	s.mux.HandleFunc("POST /api/snapshots/load", s.handleSnapshotLoad)
 	s.mux.HandleFunc("POST /api/snapshots/delete", s.handleSnapshotDelete)
+	// Raum-Bibliothek (M8): einzelne Räume speichern/einfügen; Liste liest
+	// nur Datei-Köpfe (Lesesperre), Save/Load laufen als Hintergrund-Jobs
+	s.mux.HandleFunc("GET /api/library", s.read(s.handleLibrary))
+	s.mux.HandleFunc("POST /api/library", s.handleLibrarySave)
+	s.mux.HandleFunc("POST /api/library/load", s.handleLibraryLoad)
+	s.mux.HandleFunc("POST /api/library/delete", s.handleLibraryDelete)
 	// Solver-Sitzung (M7): Start als Hintergrund-Job unter der Lesesperre,
 	// Steuerung (Bulk/Auto) und Lösungs-Abfrage wie in brute
 	s.mux.HandleFunc("POST /api/solve", s.handleSolve)

@@ -583,6 +583,26 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Vorwärts-Dedup hätte damit still Stellungen verschmelzen können; seit dem
   SplitMix64-Zobrist-Mix (stateMix/taskKey) laufen 202 und Vanilla mit
   0 Kollisionen.
+- **M8 - Raum-Bibliothek** ERLEDIGT (2026-08-21, Max' Raumsalat-Konzept):
+  einzelne Räume als Dateien in temp/room-library (rooms/library.go,
+  Dateiformat = eigener Kopf + Raum-Block des Snapshot-Formats, Portale
+  "nackt" über Feld-Paare). Kern-Einsicht: alle Streichungs-Beweise
+  (Dominanz, Deadlock, Budget) sind Aussagen über das LEVEL, nicht über die
+  Aufteilung - ein unter Budget B optimierter Raum ist in jeder Konstellation
+  gültig, solange das aktuelle max moves <= B ist (0 = ohne Budget = unbedingt
+  gültig). Die Bibliotheks-Liste filtert danach: unpassende Budgets werden
+  unsichtbar statt giftig. Einfügen (InsertRoom) löst überlappende gemergte
+  Räume per ResetRooms auf Einzelfelder auf und verlinkt die Portale über die
+  Feld-Paare neu. Workflow-Idee dahinter: verschiedene Konstellationen heben
+  die bewiesenen Min-Züge (Slack schrumpft), damit lassen sich Fokus-Räume
+  weiter eindampfen (Beobachtung 201er: 7,9M -> 6,3M Effort; 5005er mit
+  Budget 630 und Min-Züge 520: 80M+ -> <800), und die besten Stände je
+  Geometrie wandern als Bausteine in die Bibliothek. GUI: rechte Spalte
+  unter den Snapshots (Raum speich./laden/löschen + Liste; gespeichert wird
+  der aktive Raum, das max-moves-Feld filtert die Liste live).
+  Ausbaustufen (offen): Snapshots als Verweis-Listen auf Bibliotheks-Räume;
+  Min-Züge-Atlas (Minima disjunkter Geometrien sind addierbar - beste
+  disjunkte Überdeckung als externe Rest-Schranke für OptimizeRooms).
 - **Später**: Optimizer bestehender Lösungen, Lösungshilfe, ProfileFilter-Ideen
   (Merge-Simulation, Nachbarraum-Scans); M5 (Automerge) und M6 (Path-Mapping)
   siehe oben, beide noch offen.

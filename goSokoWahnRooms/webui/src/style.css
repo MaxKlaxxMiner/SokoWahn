@@ -176,9 +176,10 @@ main {
   display: block;
 }
 
-/* Snapshot-Liste unter den Speichern/Laden/Löschen-Buttons: zweizeilige
-   Einträge (Effort in e-Schreibweise, Dateigröße dezent darunter) */
-#snapList {
+/* Snapshot-Liste unter den Speichern/Laden/Löschen-Buttons und die
+   Raum-Bibliothek darunter: zweizeilige Einträge */
+#snapList,
+#libList {
   flex: 1;
   min-height: 60px;
 }
