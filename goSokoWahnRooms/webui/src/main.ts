@@ -50,7 +50,6 @@ let currentState: StateItem | null = null;
 let variantsFetch: ((offset: number, limit: number) => Promise<Page<VRow>>) | null = null;
 let networkEffort = ''; // Effort des ganzen Netzwerks (Anzeige ohne Auswahl)
 let levelSeq = -1; // Level-Wechsel-Zähler des Servers (Strg+V kann das Feld ersetzen)
-let clearSelection = false; // nach einem Reset (Entf) die Auswahl nicht wiederherstellen
 let mergeBusy = false;
 let solveRunning = false; // Solver-Sitzung aktiv (Panel ersetzt die linken Listen)
 let solveClosing = false; // Esc gedrückt: Sitzung endet, nachlaufende Events öffnen das Panel nicht neu
@@ -356,16 +355,22 @@ async function doSnapshotDelete(): Promise<void> {
   }
 }
 
-// Entf-Taste: gemergte Räume der Auswahl auf ihre Ein-Feld-Start-Räume
-// zurücksetzen (Fehlgriff beim Mergen), ohne das ganze Level neu zu laden
+// Entf-Taste: NUR den aktiven Raum (zuletzt angeklickt, hellblau) auf seine
+// Ein-Feld-Start-Räume zurücksetzen - Entf auf der ganzen Auswahl hat
+// wiederholt zu viele Räume gekillt (Max, 2026-08-21); wer mehrere löschen
+// will, kickt sie einzeln
 async function doReset(): Promise<void> {
-  const selection = canvas.getSelection();
-  if (mergeBusy || selection.length < 1) return;
+  const active = canvas.getActiveRoom();
+  if (mergeBusy || active < 0) return;
   try {
-    await postJSON<{ started: boolean }>('/api/reset', { rooms: selection });
-    // die zurückgesetzten Räume nach dem Reload NICHT wieder selektieren -
-    // sonst bliebe je gelöschtem Raum ein 1-Feld-Raum markiert stehen
-    clearSelection = true;
+    await postJSON<{ started: boolean }>('/api/reset', { rooms: [active] });
+    // den zurückgesetzten Raum sofort abwählen - sonst bliebe nach dem
+    // Reload ein 1-Feld-Raum an seiner Stelle markiert; der Rest der
+    // Auswahl bleibt erhalten (nächster wird aktiv)
+    const rest = canvas.getSelection().filter(r => r !== active);
+    const nextActive = rest.length > 0 ? rest[rest.length - 1] : -1;
+    canvas.setSelection(rest, nextActive);
+    void handleSelection(rest, nextActive, false);
   } catch (err) {
     showError(err);
   }
@@ -504,9 +509,8 @@ async function reloadNetwork(): Promise<void> {
   variantsList.reset(0);
   $('info').textContent = 'Effort: ' + summary.effort;
 
-  if (levelChanged || clearSelection) {
-    // neues Level bzw. Reset: alte Auswahl nicht wiederherstellen
-    clearSelection = false;
+  if (levelChanged) {
+    // neues Level: alte Auswahl nicht wiederherstellen
     updateMergeButton([]);
     return;
   }

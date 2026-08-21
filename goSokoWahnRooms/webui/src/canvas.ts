@@ -149,6 +149,11 @@ export class FieldCanvas {
     return [...this.selection];
   }
 
+  // der aktive Raum (zuletzt angeklickt, hellblaue Kontur; -1 = keiner)
+  getActiveRoom(): number {
+    return this.active;
+  }
+
   // Hatch-Muster des Originals nachgebildet (GDI+ zeichnet Hatches in Gerätepixeln,
   // daher bleiben die Kacheln unabhängig von der Zoomstufe 8x8 Pixel groß)
   private makePatterns(): void {
