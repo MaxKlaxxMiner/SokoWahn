@@ -63,6 +63,7 @@ export class FieldCanvas {
   private resizeObserver: ResizeObserver | null = null;
 
   private selection = new Set<number>(); // ausgewählte Räume (Einfüge-Reihenfolge bleibt erhalten)
+  private selectable = true; // false im Solver-Modus: Maus ändert die Auswahl nicht
   private busyFields: number[] = []; // Wpos der gerade berechneten Räume (gelb)
   private active = -1; // aktiver Raum (zuletzt hinzugefügt) - die Listen folgen ihm
   private dragMode: 'add' | 'remove' | null = null; // laufende Maus-Geste
@@ -91,7 +92,7 @@ export class FieldCanvas {
     // Raumselektion wie im C#-FormDebugger: Linksklick fügt den Raum zur Auswahl
     // hinzu, gedrückt halten und ziehen fügt mehrere hinzu, Rechtsklick entfernt
     canvas.addEventListener('mousedown', ev => {
-      if (ev.button !== 0 && ev.button !== 2) return;
+      if (!this.selectable || (ev.button !== 0 && ev.button !== 2)) return;
       this.dragMode = ev.button === 0 ? 'add' : 'remove';
       this.applyDrag(this.roomAt(ev));
       ev.preventDefault();
@@ -207,6 +208,18 @@ export class FieldCanvas {
     this.active = -1;
     this.portals = [];
     this.resetPreview();
+  }
+
+  // schaltet die Raum-Auswahl per Maus ab/an (Solver-Modus: eine Auswahl
+  // hätte dort keine Funktion und ihr resetPreview würde die Replay-Anzeige
+  // der Lösung zerstören); beim Abschalten verschwindet die bestehende Auswahl
+  setSelectable(on: boolean): void {
+    this.selectable = on;
+    if (!on) {
+      this.dragMode = null;
+      this.clearSelection();
+      this.draw();
+    }
   }
 
   // je ausgewähltem Raum ein Feld (Wpos) als stabile Kennung: Raum-Indizes

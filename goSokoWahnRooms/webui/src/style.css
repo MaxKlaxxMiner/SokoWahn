@@ -162,6 +162,20 @@ main {
   cursor: default;
 }
 
+/* Solver-Modus: die rechte Spalte zeigt nur den Zurück-Button (Merge/Optimize
+   & Co. samt Snapshot-Liste haben dort keine Funktion und lenken nur ab) */
+#backBtn {
+  display: none;
+}
+
+#buttonsCol.solver > :not(#backBtn) {
+  display: none;
+}
+
+#buttonsCol.solver #backBtn {
+  display: block;
+}
+
 /* Snapshot-Liste unter den Speichern/Laden/Löschen-Buttons: zweizeilige
    Einträge (Effort in e-Schreibweise, Dateigröße dezent darunter) */
 #snapList {

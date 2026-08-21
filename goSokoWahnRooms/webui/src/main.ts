@@ -191,16 +191,37 @@ async function doPaste(text: string): Promise<void> {
 // blendet das Solver-Panel ein/aus (es nimmt den Platz von Räume- und
 // States/Variants-Spalte ein - kein neues Fenster, wie mit Max besprochen)
 function showSolverPanel(open: boolean): void {
+  if (open === solverPanelOpen()) return; // nur echte Übergänge (SSE tickt oft)
   ($('solverCol') as HTMLElement).hidden = !open;
   ($('roomsCol') as HTMLElement).hidden = open;
   ($('midCol') as HTMLElement).hidden = open;
-  if (!open) {
+  // rechte Spalte: im Solver-Modus nur der Zurück-Button (per CSS-Klasse)
+  $('buttonsCol').classList.toggle('solver', open);
+  // im Solver-Modus gibt es keine Raum-Auswahl: die bestehende verschwindet
+  // (weder hellblau noch aktiv-Kontur), Klicks/Drags aufs Feld bleiben ohne
+  // Wirkung - sie würden sonst die Replay-Anzeige der Lösung zerstören
+  canvas.setSelectable(!open);
+  if (open) {
+    void handleSelection([], -1, false); // Buttons/Listen/Info auf "keine Auswahl"
+  } else {
     // wieder eingeblendete Listen neu rendern: solange sie display:none
     // waren, hat ein reset() nur die Overscan-Zeilen erzeugt (Höhe 0)
     roomsList?.refresh();
     statesList?.refresh();
     variantsList?.refresh();
+    snapshotsList?.refresh();
   }
+}
+
+// verlässt den Solver-Modus (Esc oder Zurück-Button): eine laufende Sitzung
+// endet per Stop-Kommando (der Stop-Button gehört zu Merge/Optimize), eine
+// bis dahin gefundene Lösung bleibt erhalten
+function closeSolver(): void {
+  if (solveRunning) {
+    solveClosing = true;
+    void sendSolveCmd({ stop: true });
+  }
+  showSolverPanel(false); // zurück zu den Listen
 }
 
 function solverPanelOpen(): boolean {
@@ -372,9 +393,12 @@ function connectProgress(): void {
     error: string;
   }
   let doneSeq = -1; // zuletzt behandeltes Abschluss-Event (dedupliziert Reconnects)
+  let firstMsg = true; // das erste Event nach dem Verbinden zeigt nur den ALTEN Stand
   const source = new EventSource('/api/progress');
   source.onmessage = ev => {
     const p = JSON.parse(ev.data) as ProgressMsg;
+    const live = !firstMsg; // Abschluss während dieser Seiten-Sitzung (kein Seiten-Reload)
+    firstMsg = false;
     const stopBtn = $('stopBtn') as HTMLButtonElement;
     if (p.busy) {
       mergeBusy = true;
@@ -403,6 +427,7 @@ function connectProgress(): void {
     stopBtn.disabled = true;
     canvas.setBusyFields([]);
     mergeBusy = false;
+    const wasClosing = solveClosing; // Esc beendete die Sitzung - Panel zu lassen
     if (solveRunning) {
       solveRunning = false;
       solveClosing = false;
@@ -413,12 +438,22 @@ function connectProgress(): void {
     // Ergebnis-Event (Erkennung über die Sequenznummer, nicht über busy)
     if ((p.result === '' && p.error === '') || p.seq === doneSeq) return;
     doneSeq = p.seq;
-    if (p.kind === 'solve' && solverPanelOpen()) {
+    if (p.kind === 'solve') {
       // das Ergebnis auch im Panel zeigen: der SSE-Stream tastet nur den
       // jeweils letzten Stand ab - endet eine Sitzung innerhalb eines Bulks,
       // wird der "fertig"-Status vom Abschluss-Event verschluckt und die
       // Tiefenzeilen blieben sonst scheinbar unverändert stehen
-      $('solverLog').textContent += '\n\n' + (p.error ? 'Fehler: ' + p.error : p.result);
+      const resText = p.error ? 'Fehler: ' + p.error : p.result;
+      if (solverPanelOpen()) {
+        $('solverLog').textContent += '\n\n' + resText;
+      } else if (live && !wasClosing) {
+        // Blitz-Abschluss (z.B. Voll-Merge: das Ergebnis steht schon nach
+        // den Startvarianten fest): die Sitzung war nie als busy sichtbar,
+        // das Panel wurde also nie geöffnet - jetzt öffnen, samt Ergebnis
+        showSolverPanel(true);
+        $('solverLog').textContent = resText;
+        renderSolverHint();
+      }
     }
     void loadSnapshots(); // z.B. nach "Speichern" die Liste nachziehen
     void reloadNetwork().then(async () => {
@@ -736,13 +771,7 @@ async function boot(): Promise<void> {
       }
     }
     if (ev.key === 'Escape' && solverPanelOpen()) {
-      if (solveRunning) {
-        // Esc beendet die Sitzung (der Stop-Button gehört zu Merge/Optimize);
-        // eine bis dahin gefundene Lösung bleibt erhalten
-        solveClosing = true;
-        void sendSolveCmd({ stop: true });
-      }
-      showSolverPanel(false); // zurück zu den Listen
+      closeSolver();
       return;
     }
     if (ev.key === 'c' && !solveRunning && solverPanelOpen() && solutionPath) {
@@ -768,6 +797,7 @@ async function boot(): Promise<void> {
       ' - links/rechts = Kistenschübe, Klick auf die Variante = Animation';
   });
 
+  ($('backBtn') as HTMLButtonElement).addEventListener('click', () => closeSolver());
   ($('mergeBtn') as HTMLButtonElement).addEventListener('click', () => void doMerge());
   ($('optimizeBtn') as HTMLButtonElement).addEventListener('click', () => void doOptimize());
   ($('stopBtn') as HTMLButtonElement).addEventListener('click', () => void doStop());
