@@ -33,7 +33,6 @@ type roomReverse struct {
 	byExitPush []map[uint64][]uint64 // je Austritts-Portal: NewState -> Push-Varianten
 	byExitWalk []map[uint64][]uint64 // je Austritts-Portal: Zustand -> Lauf-Varianten (OldState == NewState)
 	invSwap    []map[uint64][]uint64 // je Austritts-Portal: invertierter BoxSwap des Nachbarn (Nachher -> mögliche Vorher)
-	pushExit   []bool                // je Austritts-Portal: tritt hier überhaupt eine Push-Variante aus?
 
 	endVariants []uint64 // End-Varianten (PlayerPortal == NoPortal) mit gelöstem NewState
 }
@@ -60,7 +59,6 @@ func (s *Solver) buildReverse() {
 		portalCount := len(room.Outgoing)
 		rev.byExitPush = make([]map[uint64][]uint64, portalCount)
 		rev.byExitWalk = make([]map[uint64][]uint64, portalCount)
-		rev.pushExit = make([]bool, portalCount)
 		for id := room.StartVariantCount; id < room.Variants.Count(); id++ {
 			v := room.Variants.Get(id)
 			if v.PlayerPortal == NoPortal {
@@ -72,7 +70,6 @@ func (s *Solver) buildReverse() {
 			byExit := rev.byExitWalk
 			if v.Pushes > 0 {
 				byExit = rev.byExitPush
-				rev.pushExit[v.PlayerPortal] = true
 			}
 			m := byExit[v.PlayerPortal]
 			if m == nil {
@@ -138,12 +135,24 @@ func (s *Solver) processTaskBackward(task []uint64) {
 	s.baseHash, s.baseRemain = statesHash, remainSum
 	s.bwd.processed++
 
+	// kanonische Aufgabe (kein Kiste auf dem Eintritts-Feld): der Vorgänger-
+	// Push kann über JEDE Kante des Feldes gekommen sein - alle Gruppen-
+	// Portale zurücknehmen; kantenspezifische Aufgabe (Kiste liegt dort,
+	// siehe emitBackTask): nur die eigene Kante
 	room := s.rooms[roomPortal>>32]
-	ip := room.Incoming[uint32(roomPortal)]
-	from := ip.FromRoom
-	exitIdx := ip.Opposite.Index // Position des Portals in from.Outgoing (Validate: Outgoing[i].Opposite == Incoming[i])
-	for _, id := range s.rev[from.Index].byExitPush[exitIdx][states[from.Index]] {
-		s.pullVariant(uint32(s.bwd.depth), states, from, id)
+	p := uint32(roomPortal)
+	group := s.portalGroup[room.Index][p]
+	if stateHasBox(room, states[room.Index], room.Incoming[p].To) {
+		single := [1]uint32{p}
+		group = single[:]
+	}
+	for _, pIdx := range group {
+		ip := room.Incoming[pIdx]
+		from := ip.FromRoom
+		exitIdx := ip.Opposite.Index // Position des Portals in from.Outgoing (Validate: Outgoing[i].Opposite == Incoming[i])
+		for _, id := range s.rev[from.Index].byExitPush[exitIdx][states[from.Index]] {
+			s.pullVariant(uint32(s.bwd.depth), states, from, id)
+		}
 	}
 }
 
@@ -248,13 +257,33 @@ func (s *Solver) emitPull(d uint32, states []uint64, changes []stateChange, room
 		from := ip.FromRoom
 		exitIdx := ip.Opposite.Index
 
-		// Vorgänger-Aufgabe an diesem Eintrittspunkt - aber nur, wenn dort
-		// überhaupt eine Push-Variante hereinführen kann: sonst existiert
-		// weder ein Vorwärts-Partner (Vorwärts-Aufgaben entstehen nur durch
-		// Pushes) noch eine Rückwärts-Fortsetzung
-		if s.rev[from.Index].pushExit[exitIdx] {
+		// Vorgänger-Aufgabe an diesem Eintritts-Feld: kanonisches Portal,
+		// außer eine Kiste liegt dort (Ankunfts-Richtung semantisch, siehe
+		// emitPush) - dann bleibt die Kante im Schlüssel. Erzeugt wird nur,
+		// wenn eine Push-Variante mit dem KONKRETEN Zustand ihres Vor-Raums
+		// hereinführen kann: sonst existiert weder ein Vorwärts-Partner
+		// (dessen Aufgaben entstehen genau durch solche Pushes) noch eine
+		// Rückwärts-Fortsetzung. (Früher wurde nur zustandsUNabhängig
+		// geprüft, ob am Portal je eine Push-Variante austritt - das ließ
+		// tote Rückwärts-Aufgaben durch.)
+		taskPortal := entry
+		group := [1]uint32{entry}
+		members := group[:]
+		if !stateHasBox(st.room, cur(st.room.Index), ip.To) {
+			taskPortal = s.canonPortal[st.room.Index][entry]
+			members = s.portalGroup[st.room.Index][taskPortal]
+		}
+		viable := false
+		for _, pIdx := range members {
+			gip := st.room.Incoming[pIdx]
+			if len(s.rev[gip.FromRoom.Index].byExitPush[gip.Opposite.Index][cur(gip.FromRoom.Index)]) > 0 {
+				viable = true
+				break
+			}
+		}
+		if viable {
 			s.emitBackTask(uint64(d)+uint64(st.moves), states, changes, newHash, remainSum,
-				uint64(st.room.Index)<<32|uint64(entry), list, int32(i))
+				uint64(st.room.Index)<<32|uint64(taskPortal), list, int32(i))
 		}
 
 		// Kette verlängern: Lauf-Varianten des Vor-Raums, die hier austreten

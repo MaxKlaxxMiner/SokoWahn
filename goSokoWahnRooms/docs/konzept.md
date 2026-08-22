@@ -583,6 +583,19 @@ Zustands- und Variantenlisten großer Räume können mehrere Mio Einträge haben
   Vorwärts-Dedup hätte damit still Stellungen verschmelzen können; seit dem
   SplitMix64-Zobrist-Mix (stateMix/taskKey) laufen 202 und Vanilla mit
   0 Kollisionen.
+  **Portal-Kanonisierung** (2026-08-22, Max' Befund "brute braucht weniger
+  Hash-Einträge"): Portale mit gleichem To sind verschiedene Kanten zum
+  selben Feld - Aufgaben-Schlüssel normalisieren auf das kanonische Portal
+  je Eintritts-Feld (brutes Normalform "Kisten + Spielerfeld"), expandiert
+  wird die Vereinigung der Gruppen-Spans. AUSNAHME Kiste auf dem Eintritts-
+  Feld: die Ankunfts-Richtung ist dann semantisch (der Ankunfts-Schritt hat
+  sie physisch schon geschoben, die Buchung übernimmt die nächste Variante) -
+  solche Aufgaben bleiben kantenspezifisch. Dazu das schärfere Rückwärts-Tor:
+  Vorgänger-Aufgaben entstehen nur, wenn eine Push-Variante mit dem KONKRETEN
+  Zustand ihres Vor-Raums hereinführen kann (statt zustandsunabhängig).
+  Effekt 202 frisch: Hash 1,62M -> 1,19M (-27%), verarbeitete Aufgaben
+  vorwärts -39%, ~6,0 s statt ~6,95 s; Level 200 rückwärts -36% Aufgaben
+  (Vanilla-Zahlen oben stammen von VOR der Kanonisierung).
 - **M8 - Raum-Bibliothek** ERLEDIGT (2026-08-21, Max' Raumsalat-Konzept):
   einzelne Räume als Dateien in temp/room-library (rooms/library.go,
   Dateiformat = eigener Kopf + Raum-Block des Snapshot-Formats, Portale

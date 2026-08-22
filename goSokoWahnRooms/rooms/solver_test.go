@@ -185,9 +185,20 @@ func TestSolveBudget(t *testing.T) {
 func TestSolve202Fresh(t *testing.T) {
 	skipAnker(t)
 	n := buildNetwork(t, maps.Map202)
-	sol := runSolver(t, n, 0)
+	s, err := NewSolver(n, 0)
+	if err != nil {
+		t.Fatal("new solver:", err)
+	}
+	for !s.Step(100000) {
+	}
+	if err := s.Err(); err != nil {
+		t.Fatal("solver:", err)
+	}
+	sol := s.Solution()
 	checkSolution(t, n, sol, 83)
-	t.Logf("202 frisch: %d moves / %d pushes", sol.Moves, sol.Pushes)
+	t.Logf("202 frisch: %d moves / %d pushes - hash %d+%d, verarbeitet %d+%d (übersprungen %d+%d)",
+		sol.Moves, sol.Pushes, len(s.fwd.hash), len(s.bwd.hash),
+		s.fwd.processed, s.bwd.processed, s.fwd.skipped, s.bwd.skipped)
 }
 
 // Vanilla (Optimum 230 Züge / 97 Pushes, brute: 8,7 Mio. Knoten) läuft NICHT

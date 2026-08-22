@@ -155,6 +155,26 @@ type Solver struct {
 	fwd, bwd solveFront
 	rev      []roomReverse // je Raum die Rückwärts-Verzeichnisse (siehe solverback.go)
 
+	// Portal-Kanonisierung (2026-08-22, Max' Befund "brute braucht weniger
+	// Hash-Einträge"): Portale mit gleichem To sind verschiedene KANTEN zum
+	// selben Feld - ohne Normalisierung liegt dieselbe physische Stellung
+	// (Zustände + Spielerfeld) bis zu 4x im Hash, je Herkunfts-Richtung eine
+	// Kopie. Aufgaben-Schlüssel benutzen daher das kanonische Portal je
+	// Eintritts-Feld (= brutes Normalform), die Expansion läuft über die
+	// VEREINIGUNG der Spans aller Portale der Gruppe (die kantenspezifischen
+	// Rücklauf-Ausschlüsse der Spans sind Dominanz-Abkürzungen - die
+	// Vereinigung enthält nur legale Züge, die Ketten-Dedup fängt Duplikate).
+	// AUSNAHME: liegt im Aufgaben-Zustand eine KISTE auf dem Eintritts-Feld,
+	// ist die Ankunfts-Richtung semantisch - der Ankunfts-Schritt (gebucht
+	// als Austritts-Zug der Vor-Variante) hat sie physisch bereits in seine
+	// Richtung geschoben, nur die Buchung (BoxPortals/BoxSwap) übernimmt die
+	// nächste Variante. Solche Aufgaben behalten ihr kantenspezifisches
+	// Portal (gleiche Zustände + gleiches Feld sind dann VERSCHIEDENE
+	// physische Stellungen; Lehre vom ersten Anlauf: kanonisiert spielte
+	// Level 200 "spielbar, aber nicht gelöst").
+	canonPortal [][]uint32   // je Raum, je Portal: kanonischer Index (kleinster mit gleichem To)
+	portalGroup [][][]uint32 // je Raum, je kanonischem Index: alle Portale mit gleichem To (sonst nil)
+
 	// Richtungswahl: Automatik einmal je Gesamttiefe, manuell übersteuerbar
 	dirMode    DirMode
 	dirDepth   int // Gesamttiefe der letzten Automatik-Entscheidung (-1 = noch keine)
@@ -218,6 +238,26 @@ func NewSolver(n *Network, maxMoves uint32) (*Solver, error) {
 	s.visited = make([][]uint64, len(s.rooms))
 	for i, room := range s.rooms {
 		s.visited[i] = make([]uint64, room.Variants.Count())
+	}
+	// Portal-Kanonisierung: je Eintritts-Feld (To) das kleinste Portal als
+	// Vertreter, die Gruppe sammelt alle Kanten zum selben Feld
+	s.canonPortal = make([][]uint32, len(s.rooms))
+	s.portalGroup = make([][][]uint32, len(s.rooms))
+	for i, room := range s.rooms {
+		canon := make([]uint32, len(room.Incoming))
+		group := make([][]uint32, len(room.Incoming))
+		first := map[soko.Wpos]uint32{}
+		for p, ip := range room.Incoming {
+			c, ok := first[ip.To]
+			if !ok {
+				c = uint32(p)
+				first[ip.To] = c
+			}
+			canon[p] = c
+			group[c] = append(group[c], uint32(p))
+		}
+		s.canonPortal[i] = canon
+		s.portalGroup[i] = group
 	}
 	if maxMoves > 0 {
 		s.budget = maxMoves
@@ -461,6 +501,17 @@ func taskKey(statesHash, roomPortal uint64) uint64 {
 	return mix64(statesHash ^ mix64(roomPortal+0x9e3779b97f4a7c15))
 }
 
+// liegt im Zustand eines Raums eine Kiste auf dem Feld pos?
+// (die Kisten-Listen der Zustände sind aufsteigend sortiert)
+func stateHasBox(room *Room, state uint64, pos soko.Wpos) bool {
+	for _, b := range room.States.Get(state) {
+		if b >= pos {
+			return b == pos
+		}
+	}
+	return false
+}
+
 // importiert den Laufweg einer Raum-Variante in den Solver-Store
 // (memoisiert je Quell-Store: jede Variante wird höchstens einmal kopiert)
 func (s *Solver) importPath(room *Room, id PathID) PathID {
@@ -527,13 +578,31 @@ func (s *Solver) resolveTask(d uint32, states []uint64, base PathID, room *Room,
 	list := s.chainList[:0]
 	gen := s.nextGen()
 
-	span := Span{Start: 0, Count: room.StartVariantCount}
-	if portalIdx != NoPortal {
-		span = room.Incoming[portalIdx].GetVariantSpan(states[room.Index])
-	}
-	for id := span.Start; id < span.Start+span.Count; id++ {
-		s.visited[room.Index][id] = gen
-		list = append(list, chainStep{parent: -1, room: room, variant: id})
+	if portalIdx == NoPortal {
+		for id := uint64(0); id < room.StartVariantCount; id++ {
+			s.visited[room.Index][id] = gen
+			list = append(list, chainStep{parent: -1, room: room, variant: id})
+		}
+	} else if stateHasBox(room, states[room.Index], room.Incoming[portalIdx].To) {
+		// Kiste auf dem Eintritts-Feld: die Aufgabe ist kantenspezifisch
+		// (der Ankunfts-Schritt hat die Kiste bereits in SEINE Richtung
+		// geschoben) - nur der eigene Span darf expandieren
+		span := room.Incoming[portalIdx].GetVariantSpan(states[room.Index])
+		for id := span.Start; id < span.Start+span.Count; id++ {
+			s.visited[room.Index][id] = gen
+			list = append(list, chainStep{parent: -1, room: room, variant: id})
+		}
+	} else {
+		// portalIdx ist kanonisch: die Aufgabe vertritt alle Ankünfte auf
+		// diesem Feld - expandiert wird die Vereinigung der Gruppen-Spans
+		// (disjunkte Varianten-Bereiche, kein Dedup nötig)
+		for _, pIdx := range s.portalGroup[room.Index][portalIdx] {
+			span := room.Incoming[pIdx].GetVariantSpan(states[room.Index])
+			for id := span.Start; id < span.Start+span.Count; id++ {
+				s.visited[room.Index][id] = gen
+				list = append(list, chainStep{parent: -1, room: room, variant: id})
+			}
+		}
 	}
 
 	// --- Lauf-Expansion (Einfüge-Reihenfolge, veraltete Einträge überspringen) ---
@@ -697,8 +766,15 @@ func (s *Solver) emitPush(d uint32, states []uint64, list []chainStep, i int32) 
 
 	// Hash-Dedup beim ERZEUGEN (sonst fluten Duplikate die Tiefenlisten);
 	// eine billigere Kopie entwertet die teurere über den Veraltet-Check
-	// beim Abholen (processTask)
-	roomPortal := uint64(toRoom.Index)<<32 | uint64(op.Index)
+	// beim Abholen (processTask). Der Schlüssel trägt das KANONISCHE Portal
+	// des Eintritts-Feldes (Ankünfte über verschiedene Kanten sind dieselbe
+	// physische Stellung) - AUSSER eine Kiste liegt auf dem Feld, dann ist
+	// die Ankunfts-Richtung semantisch und die Kante bleibt im Schlüssel
+	portalIdx := uint64(op.Index)
+	if !stateHasBox(toRoom, cur(toRoom.Index), op.To) {
+		portalIdx = uint64(s.canonPortal[toRoom.Index][op.Index])
+	}
+	roomPortal := uint64(toRoom.Index)<<32 | portalIdx
 	k := taskKey(newHash, roomPortal)
 	if old, ok := s.fwd.hash[k]; ok && old>>32 <= endMoves {
 		return
